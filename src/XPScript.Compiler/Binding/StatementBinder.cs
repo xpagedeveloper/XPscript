@@ -349,7 +349,10 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                 }
             }
             var scope = _symbols.CreateChildScope();
-            var alias = new VariableSymbol(syntax.IdentifierToken.Text, csvElement.RuntimeType, csvElement);
+            var alias = new VariableSymbol(syntax.IdentifierToken.Text, csvElement.RuntimeType, csvElement)
+            {
+                IsForAllAlias = true
+            };
             scope.Declare(alias);
             var binder = new StatementBinder(scope, _returnType, _allowsReturnValue, _allowDynamicMembers,
                 functionName, functionResult, procedureIdentity, _forAllDepth + 1);
