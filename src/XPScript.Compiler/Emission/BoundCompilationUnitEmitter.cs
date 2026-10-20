@@ -38,7 +38,7 @@ public sealed class BoundCompilationUnitEmitter
                 type = $"Xp{semantic.Name}";
             type = BoundExpressionEmitter.RuntimeObjectType(declaration.Local.SemanticType?.Name ?? "") ?? type;
             type = BoundMethodEmitter.SemanticStorageType(declaration.Local, type);
-            var initialValue = declaration.Local.IsDynamicArray || declaration.Local.Type.IsArray
+            var initialValue = declaration.Local.IsDynamicArray || declaration.Local.Type.IsArray || declaration.Local.Type == typeof(Array) || declaration.Local.SemanticType?.IsArray == true
                 ? BoundArrayAllocation.Emit(declaration.Local, declaration.EmptyArray, declaration.ArrayLength)
                 : declaration.Local.SemanticType?.IsList == true ? $"new {type}()"
                 : declaration.Local.Type == typeof(string) ? "string.Empty" : $"default({type})";

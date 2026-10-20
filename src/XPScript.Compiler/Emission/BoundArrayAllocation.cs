@@ -11,7 +11,7 @@ internal static class BoundArrayAllocation
         var element = local.SemanticType?.ElementType ?? XpTypeSymbol.FromClr(local.Type.GetElementType() ?? typeof(object));
         var elementType = BoundMethodEmitter.CSharpType(element);
         if (empty || local.IsDynamicArray) return $"new {elementType}[0]";
-        if (local.ArrayRank > 1 || local.ArrayLowerBound != 0)
+        if (local.ArrayRank > 1 || local.ArrayBounds.Count > 0 || local.ArrayLowerBound != 0)
         {
             var lengths = string.Join(", ", local.ArrayBounds.Select(bound => (bound.Upper - bound.Lower + 1).ToString(CultureInfo.InvariantCulture)));
             var lowers = string.Join(", ", local.ArrayBounds.Select(bound => bound.Lower.ToString(CultureInfo.InvariantCulture)));
