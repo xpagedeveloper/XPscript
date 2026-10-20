@@ -192,6 +192,12 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private (Type RuntimeType, XpTypeSymbol SemanticType) ResolveDimType(string? name, bool isArray = false, int? arrayLength = null, bool isList = false, int arrayRank = 1)
     {
+        // XPJSONElement is a deliberately case-sensitive compatibility spelling.
+        // The language is case-insensitive, so resolve this exact Notes JSON name
+        // before the native XPJsonElement TypeSymbol can win the lookup.
+        var compatibilityType = name is "XPJSONObject" or "XPJSONArray" or "XPJSONElement"
+            ? XpTypeSymbol.User(name)
+            : null;
         var result = name?.Trim().ToUpperInvariant() switch
         {
             "BOOLEAN" => (typeof(bool), XpTypeSymbol.FromClr(typeof(bool))),
@@ -199,9 +205,9 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             "STRING" => (typeof(string), XpTypeSymbol.FromClr(typeof(string))),
             "INTEGER" or "LONG" => (typeof(long), XpTypeSymbol.FromClr(typeof(long))),
             "SINGLE" or "DOUBLE" or "CURRENCY" => (typeof(double), XpTypeSymbol.FromClr(typeof(double))),
-            _ => (typeof(object), string.IsNullOrWhiteSpace(name) ? XpTypeSymbol.Variant :
+            _ => (typeof(object), compatibilityType ?? (string.IsNullOrWhiteSpace(name) ? XpTypeSymbol.Variant :
                 AstClassConstructorSupport.Find(_symbols, name.Trim())?.SemanticReturnType ??
-                _symbols.LookupAll(name.Trim()).OfType<TypeSymbol>().FirstOrDefault()?.SemanticType ?? XpTypeSymbol.User(name.Trim()))
+                _symbols.LookupAll(name.Trim()).OfType<TypeSymbol>().FirstOrDefault()?.SemanticType ?? XpTypeSymbol.User(name.Trim())))
         };
         if (isList) return (typeof(object), XpTypeSymbol.ListOf(result.Item2));
         if (!isArray) return result;
