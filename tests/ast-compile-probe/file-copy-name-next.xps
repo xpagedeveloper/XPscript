@@ -1,0 +1,9 @@
+Option Explicit
+
+Sub Main()
+    FileCopy "tests/ast-compile-probe/file-attributes-next.xps", "out/ast-filecopy-test/copied.txt"
+    If Not IsFile("out/ast-filecopy-test/copied.txt") Then Error 9857, "FileCopy did not create the destination"
+    Name "out/ast-filecopy-test/copied.txt" As "out/ast-filecopy-test/renamed.txt"
+    If Not IsFile("out/ast-filecopy-test/renamed.txt") Then Error 9858, "Name did not move the file"
+    Print "FILE_COPY_NAME_AST_OK"
+End Sub

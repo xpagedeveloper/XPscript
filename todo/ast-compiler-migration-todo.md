@@ -396,6 +396,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [x] Bind AST `ChDrive` to the shared platform-aware file runtime; `chdrive-next.xps` verifies the missing-drive error contract.
   - [x] Bind AST `FileDateTime` to the shared file runtime with the same missing-file contract as `FileLen`; `file-date-time-next.xps` verifies the returned date/time value.
   - [x] Bind AST `Dir` to the shared filesystem enumeration contract; `dir-next.xps` verifies wildcard matching and continuation with `Dir()`.
+  - [x] Bind AST `FileCopy` and `Name ... As ...` statements to file operations; `file-copy-name-next.xps` verifies copy and rename execution.
 - [ ] Remove sample-specific identifiers and type coercions from binders/emission and runtime scaffolding.
   - [x] Remove the unconditional `matrix` local-symbol scaffold; undeclared `matrix` now follows normal XPS2008 binding diagnostics.
   - [x] Remove global `ForAll` alias scaffolding; undeclared array/string/dynamic aliases are now created in the loop body scope and existing aliases retain their normal symbol semantics.

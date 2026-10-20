@@ -259,6 +259,13 @@ if ($LASTEXITCODE -ne 0) { throw 'AST GetFileAttr compilation failed.' }
 $fileAttributesResult = dotnet (Join-Path $fileAttributesOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($fileAttributesResult -join "`n") -ne 'FILE_ATTRIBUTES_AST_OK') { throw 'AST GetFileAttr regression failed.' }
 Write-Host 'AST_FILE_ATTRIBUTES_OK'
+$fileCopyNameOutput = Join-Path $output 'file-copy-name-next'
+New-Item -ItemType Directory -Force -Path 'out/ast-filecopy-test' | Out-Null
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-copy-name-next.xps') -o $fileCopyNameOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST FileCopy/Name compilation failed.' }
+$fileCopyNameResult = dotnet (Join-Path $fileCopyNameOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($fileCopyNameResult -join "`n") -ne 'FILE_COPY_NAME_AST_OK') { throw 'AST FileCopy/Name regression failed.' }
+Write-Host 'AST_FILE_COPY_NAME_OK'
 
 $inputBoxOutput = Join-Path $output 'inputbox-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inputbox-next.xps') -o $inputBoxOutput

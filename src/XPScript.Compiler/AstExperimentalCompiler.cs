@@ -71,6 +71,8 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Print\s+#(?<file>[^,\s]+)\s*,\s*(?<value>[^\r\n]+)\r?$", "${indent}Call AstPrintFile(${file}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Line\s+Input\s+#?(?<file>[^,\s]+)\s*,\s*(?<target>[A-Za-z_]\w*)\s*$", "${indent}${target} = AstLineInput(${file})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Kill\s+(?<path>[^\r\n]+)\r?$", "${indent}Call AstKill(${path})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)FileCopy\s+(?<source>.+?)\s*,\s*(?<destination>[^\r\n]+)\r?$", "${indent}Call AstFileCopy(${source}, ${destination})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Name\s+(?<source>.+?)\s+As\s+(?<destination>[^\r\n]+)\r?$", "${indent}Call AstNameFile(${source}, ${destination})");
         source = Regex.Replace(source, @"(?<![\w.])Input\$\s*\(\s*(?<count>[^,()]+)\s*,\s*#\s*(?<file>[^)]+)\)", "AstInputChars(${count}, ${file})", RegexOptions.IgnoreCase);
         source = source.Replace("Error$", "ErrorValue()", StringComparison.OrdinalIgnoreCase);
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)p\.[A-Za-z_]\w*(?:\s*=.*)?$", "${indent}Call AstNoOp()");
@@ -270,6 +272,8 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("FileDateTime", typeof(DateTime), [typeof(string)], XpTypeSymbol.FromClr(typeof(DateTime)), [XpTypeSymbol.FromClr(typeof(string))]));
         symbols.Declare(new FunctionSymbol("GetFileAttr", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("SetFileAttr", typeof(void), [typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstFileCopy", typeof(void), [typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstNameFile", typeof(void), [typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Dir", typeof(string), [], XpTypeSymbol.FromClr(typeof(string)), []));
         for (var dirArgumentCount = 1; dirArgumentCount <= 3; dirArgumentCount++)
             symbols.Declare(new FunctionSymbol("Dir", typeof(string), Enumerable.Repeat(typeof(object), dirArgumentCount).ToArray(), XpTypeSymbol.FromClr(typeof(string)), Enumerable.Repeat(XpTypeSymbol.Variant, dirArgumentCount).ToArray()));
@@ -1012,6 +1016,8 @@ internal static class Program
     public static object GetObject(object? value, object? context) => new ExpandoObject();
     public static string AstLineInput(object? file) => LSFileRuntime.LineInput(checked((int)XPScriptRuntime.CLng(file)));
     public static void AstKill(object? path) => File.Delete(CStr(path));
+    public static void AstFileCopy(object? source, object? destination) => File.Copy(CStr(source), CStr(destination), true);
+    public static void AstNameFile(object? source, object? destination) => File.Move(CStr(source), CStr(destination), true);
     public static string AstInputChars(object? count, object? file) => LSFileRuntime.InputChars(checked((int)XPScriptRuntime.CLng(file)), checked((int)XPScriptRuntime.CLng(count)));
     public static void AstNoOp() { }
     public sealed class XpDate : IComparable<XpDate> {
