@@ -50,4 +50,5 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Platform follow-up: the Kestrel smoke project restored and built with 0 warnings/errors, but its runtime suite currently fails in `AssertRequestHeadersTimeoutAsync` at `tests/WebKestrelSmoke/Program.cs:950` with `SocketError (10053)`, before CGI/FastCGI were run. This is the next investigation point; no platform commit was made.
 - CGI verification is green: `WEB-CGI-SMOKE=OK` after restoring its project assets.
 - FastCGI verification is green: `WEB-FASTCGI-SMOKE=OK` after fixing concurrent same-file web-log opening/writes with process-wide synchronization and `FileShare.ReadWrite`.
+- The complete `tests/ast-compile-probe/run-ast-cli.ps1` suite completed successfully with `AST CLI compilation probe passed.` It covered the current include/use, file-error, database, system inventory, constructors/destructors, properties, arrays, ByRef, JSON/XML/CSV, HTTP/TLS, XPAI, Notes HTTP, UI/runtime and control-flow probes.
 
