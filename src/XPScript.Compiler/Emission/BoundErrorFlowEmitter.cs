@@ -144,6 +144,8 @@ internal sealed class BoundErrorFlowEmitter
             case BoundForAllStatement loop:
                 var items = _output.Temporary(); var itemIndex = _output.Temporary();
                 var isList = loop.Collection.SemanticType.IsList;
+                if (loop.Variable.Symbol is VariableSymbol { IsForAllAlias: true })
+                    _storage.Add($"{BoundMethodEmitter.CSharpType(loop.Variable.Type)} {loop.Variable.Symbol.Name} = default!;");
                 _storage.Add(isList
                     ? $"LSListAlias<{BoundMethodEmitter.CSharpType(loop.Collection.SemanticType.ElementType!)}>[] {items} = []; int {itemIndex} = 0;"
                     : $"object?[] {items} = []; int {itemIndex} = 0;");

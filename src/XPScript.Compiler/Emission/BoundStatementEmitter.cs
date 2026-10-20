@@ -338,7 +338,10 @@ public sealed class BoundStatementEmitter
                 Line($"foreach (var {item} in LSForAllRuntime.Enumerate({_expressions.Emit(forAll.Collection)}))");
                 output.Write("{", indent);
                 var itemValue = _expressions.IterationValue(forAll.Variable, item);
-                output.Write($"{_expressions.Emit(forAll.Variable)} = {itemValue};", indent + 1, forAll.Variable.Span);
+                var variable = _expressions.Emit(forAll.Variable);
+                output.Write(forAll.Variable.Symbol is VariableSymbol { IsForAllAlias: true }
+                    ? $"var {variable} = {itemValue};"
+                    : $"{variable} = {itemValue};", indent + 1, forAll.Variable.Span);
                 foreach (var child in forAll.Statements)
                     EmitStatement(output, child, indent + 1);
                 output.Write("}", indent);

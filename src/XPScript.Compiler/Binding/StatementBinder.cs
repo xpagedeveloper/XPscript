@@ -393,7 +393,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                 : collection.Type == typeof(string)
                     ? XpTypeSymbol.FromClr(typeof(string))
                     : XpTypeSymbol.Variant;
-            var alias = new VariableSymbol(syntax.IdentifierToken.Text, aliasType.RuntimeType, aliasType);
+            var alias = new VariableSymbol(syntax.IdentifierToken.Text, aliasType.RuntimeType, aliasType) { IsForAllAlias = true };
             bodyScope.Declare(alias);
             variable = new BoundNameExpression(alias);
         }
