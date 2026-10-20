@@ -424,6 +424,11 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Explode", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FullTrim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
+        symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.User("Debugger")));
+        symbols.Declare(new FunctionSymbol("Debugger.Print", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant])
+        { NativeTargetName = "XPScriptDebugRuntime.Print" });
+        symbols.Declare(new FunctionSymbol("Debugger.UpdateVar", typeof(void), [typeof(string), typeof(object)], null,
+            [XpTypeSymbol.FromClr(typeof(string)), XpTypeSymbol.Variant]) { NativeTargetName = "XPScriptDebugRuntime.UpdateDebuggerVar" });
         symbols.Declare(new PropertySymbol("Date.OSDateFormatting", typeof(string), XpTypeSymbol.FromClr(typeof(string))));
         symbols.Declare(new PropertySymbol("Date.OSTimeFormatting", typeof(string), XpTypeSymbol.FromClr(typeof(string))));
         symbols.Declare(new FunctionSymbol("Date.Adjust", typeof(object),
