@@ -309,6 +309,8 @@ public static class XPScriptCompilerCommandLine
         var debug = false;
         var resultFormat = "text";
         string? runtimeIdentifier = null;
+        var selfContained = false;
+        var singleFile = true;
         for (var i = 1; i < args.Length; i++)
         {
             if ((args[i] == "-o" || args[i] == "--output") && i + 1 < args.Length)
@@ -317,6 +319,18 @@ public static class XPScriptCompilerCommandLine
                 debug = true;
             else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
                 runtimeIdentifier = args[++i].ToLowerInvariant();
+            else if (args[i].StartsWith("--runtime=", StringComparison.OrdinalIgnoreCase))
+                selfContained = ParseBooleanCompileOption("--runtime", args[i]["--runtime=".Length..]);
+            else if (args[i] == "--runtime" && i + 1 < args.Length)
+                selfContained = ParseBooleanCompileOption("--runtime", args[++i]);
+            else if (args[i].StartsWith("--single-file=", StringComparison.OrdinalIgnoreCase))
+                singleFile = ParseBooleanCompileOption("--single-file", args[i]["--single-file=".Length..]);
+            else if (args[i] == "--single-file" && i + 1 < args.Length)
+                singleFile = ParseBooleanCompileOption("--single-file", args[++i]);
+            else if (args[i].StartsWith("--singlefile=", StringComparison.OrdinalIgnoreCase))
+                singleFile = ParseBooleanCompileOption("--singlefile", args[i]["--singlefile=".Length..]);
+            else if (args[i] == "--singlefile" && i + 1 < args.Length)
+                singleFile = ParseBooleanCompileOption("--singlefile", args[++i]);
             else if (args[i] == "--result-format" && i + 1 < args.Length)
                 resultFormat = args[++i].ToLowerInvariant();
             else
@@ -325,6 +339,11 @@ public static class XPScriptCompilerCommandLine
 
         try
         {
+            // AST output is always a framework-dependent Generated.dll; retain the
+            // compile-command switches for CLI compatibility and validate them even
+            // though they do not alter this artifact layout.
+            _ = selfContained;
+            _ = singleFile;
             if (resultFormat is not ("text" or "json" or "xml"))
                 throw new ArgumentException("--result-format must be text, json, or xml.");
             if (runtimeIdentifier is not null && !CompilerDriver.SupportedRuntimes.Contains(runtimeIdentifier, StringComparer.OrdinalIgnoreCase))
