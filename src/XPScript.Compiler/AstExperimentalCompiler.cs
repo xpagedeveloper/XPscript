@@ -661,7 +661,8 @@ internal static class Program
     public static bool True = true;
     public static bool False = false;
     public static dynamic Console = CreateConsole();
-    private static dynamic CreateConsole() { dynamic console = new ExpandoObject(); console.AndroidLog = (Action<string, bool>?)null; console.WriteLine = (Action<object?>)(value => { var text = Convert.ToString(value) ?? string.Empty; if (console.AndroidLog is Action<string, bool> log) log(text, false); else System.Console.WriteLine(value); }); return console; }
+    private static dynamic CreateConsole() { dynamic console = new ExpandoObject(); console.AndroidLog = (Action<string, bool>?)null; console.WriteLine = (Action<object?>)(value => { var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty; if (console.AndroidLog is Action<string, bool> log) log(text, false); else System.Console.WriteLine(text); }); return console; }
+    public static string AstPrintText(object? value) => XPScriptNullRuntime.IsNull(value) ? "Variable is null" : value is ILSObjectReference reference && reference.IsNothing ? "Variable is Nothing" : value is DateTime date ? date.ToString(CultureInfo.InvariantCulture) : Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
     public static dynamic RequestScope = new ExpandoObject();
     public static dynamic Err => XPScriptErrorRuntime.Err;
     public static dynamic SEARCH_BREADTH = 1723L;

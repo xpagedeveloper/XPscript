@@ -284,7 +284,7 @@ public sealed class BoundStatementEmitter
                 Line($"XPScriptErrorRuntime.Raise(Convert.ToInt32({_expressions.Emit(error.Number)}), {description});");
                 break;
             case BoundPrintStatement print:
-                Line($"Console.WriteLine(XPScriptRuntime.PrintText({_expressions.Emit(print.Expression)}));");
+                Line($"Console.WriteLine(Program.AstPrintText({_expressions.Emit(print.Expression)}));");
                 break;
             case BoundReturnStatement @return:
                 var returnedValue = @return.Expression is null ? null : _expressions.Emit(@return.Expression);
