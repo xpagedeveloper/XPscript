@@ -35,6 +35,23 @@ try
         Console.WriteLine("AST_XPAI_STREAM_OK");
         return;
     }
+    if (args.Contains("--ai-only"))
+    {
+        var isolatedAiOutput = Path.Combine(output, "ai");
+        await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/xpai-request-success-next.xps"), "-o", isolatedAiOutput]);
+        if ((await Run("dotnet", [Path.Combine(isolatedAiOutput, "Generated.dll")])).Trim() != "XPAI_REQUEST_SUCCESS_OK")
+            throw new Exception("XPAi provider-success regression failed.");
+        var isolatedAiToolOutput = Path.Combine(output, "ai-tool-loop");
+        await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/xpai-tool-loop-next.xps"), "-o", isolatedAiToolOutput]);
+        if ((await Run("dotnet", [Path.Combine(isolatedAiToolOutput, "Generated.dll")])).Trim() != "XPAI_TOOL_LOOP_OK")
+            throw new Exception("XPAi tool-loop regression failed.");
+        var isolatedAiTimeoutOutput = Path.Combine(output, "ai-tool-timeout");
+        await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/xpai-tool-timeout-next.xps"), "-o", isolatedAiTimeoutOutput]);
+        if ((await Run("dotnet", [Path.Combine(isolatedAiTimeoutOutput, "Generated.dll")])).Trim() != "XPAI_TOOL_TIMEOUT_OK")
+            throw new Exception("XPAi timeout regression failed.");
+        Console.WriteLine("AST_XPAI_PROVIDER_TOOL_OK");
+        return;
+    }
     var streamProbeOutput = Path.Combine(output, "ai-stream");
     await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/xpai-stream-next.xps"), "-o", streamProbeOutput]);
     if ((await Run("dotnet", [Path.Combine(streamProbeOutput, "Generated.dll")])).Trim() != "XPAI_STREAM_OK")
@@ -81,6 +98,7 @@ try
     if ((await Run("dotnet", [Path.Combine(aiTimeoutOutput, "Generated.dll")] )).Trim() != "XPAI_TOOL_TIMEOUT_OK")
         throw new Exception("XPAi tool-timeout regression failed.");
     Console.WriteLine("AST_XPAI_TOOL_TIMEOUT_OK");
+    Console.WriteLine("AST_XPAI_PROVIDER_TOOL_OK");
     var notesHttpOutput = Path.Combine(output, "notes-http-request");
     await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/notes-http-request-next.xps"), "-o", notesHttpOutput]);
     if ((await Run("dotnet", [Path.Combine(notesHttpOutput, "Generated.dll")] )).Trim() != "NOTES_HTTP_REQUEST_OK")
