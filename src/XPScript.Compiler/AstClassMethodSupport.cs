@@ -293,7 +293,9 @@ internal static class AstClassMethodSupport
             foreach (var parameter in parameters) scope.Declare(parameter);
             var hasResult = function is not null || property?.IsGetter == true;
             var returnType = hasResult ? AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) : typeof(void);
-            var semanticResult = property?.IsGetter == true ? DeclaredType(property.Type, globals) : XpTypeSymbol.FromClr(returnType);
+            var semanticResult = property?.IsGetter == true ? DeclaredType(property.Type, globals) :
+                resultTypeName is not null && globals.LookupAll(resultTypeName).OfType<TypeSymbol>().Any()
+                    ? XpTypeSymbol.User(resultTypeName) : XpTypeSymbol.FromClr(returnType);
             var result = hasResult ? new LocalSymbol("__xps_class_result", returnType, semanticResult) : null;
             var bound = AstExperimentalCompiler.BindProcedure(statements, scope, parameters,
                 hasResult ? semanticResult : null, hasResult ? name : null, result,

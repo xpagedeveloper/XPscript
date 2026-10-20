@@ -188,10 +188,13 @@ public static class AstExperimentalCompiler
                     if (method.Visibility?.Kind == SyntaxKind.PrivateKeyword) continue;
                     if (current != classDeclaration && classDeclaration.Members.OfType<FunctionDeclarationSyntax>().Any(own => SameClassMethodSignature(own, method)))
                         continue;
-                    var returnType = ResolveRuntimeType(method.ReturnType?.Identifier.Text);
+                    var returnName = method.ReturnType?.Identifier.Text;
+                    var returnType = ResolveRuntimeType(returnName);
                     var parameterTypes = method.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
                     var qualifiedMethodName = $"{classDeclaration.Identifier.Text}.{method.Identifier.Text}";
-                    symbols.Declare(new FunctionSymbol(qualifiedMethodName, returnType, parameterTypes.Select(type => type.RuntimeType).ToArray(), XpTypeSymbol.FromClr(returnType), parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
+                    var semanticReturnType = returnName is not null && classes.ContainsKey(returnName)
+                        ? XpTypeSymbol.User(returnName) : XpTypeSymbol.FromClr(returnType);
+                    symbols.Declare(new FunctionSymbol(qualifiedMethodName, returnType, parameterTypes.Select(type => type.RuntimeType).ToArray(), semanticReturnType, parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
                     DeclareOptionalSignatures(symbols, qualifiedMethodName, returnType, method.Parameters);
                 }
             }
