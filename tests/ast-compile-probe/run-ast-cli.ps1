@@ -5,6 +5,12 @@ $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
 $output = Join-Path $outputRoot 'ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$includeUseOutput = Join-Path $output 'include-use-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-use-next.xps') -o $includeUseOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Include/Use compilation failed.' }
+$includeUseResult = dotnet (Join-Path $includeUseOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($includeUseResult -join "`n") -ne 'AST_INCLUDE_USE_OK') { throw 'AST Include/Use deduplication or relative resolution failed.' }
+Write-Host 'AST_INCLUDE_USE_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'
