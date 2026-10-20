@@ -556,6 +556,7 @@ internal static class Script
         var msSqlPackage = usesMsSql
             ? $"""
     <PackageReference Include="Microsoft.Data.SqlClient" Version="{MicrosoftDataSqlClientVersion}" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="{ApplicationDependencyCatalog.CryptographyPkcsVersion}" />
 """
             : string.Empty;
         var imagePackage = usesImage

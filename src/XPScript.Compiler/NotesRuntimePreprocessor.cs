@@ -4,7 +4,7 @@ namespace XPScript.Compiler;
 
 internal sealed class NotesRuntimePreprocessor
 {
-    private const string NotesTypePattern = "NotesSession|NotesMail|NotesDatabase|NotesDatabaseAccess|NotesView|NotesDocumentCollection|NotesNoteCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesRichTextNavigator|NotesRichTextParagraphStyle|NotesRichTextRange|NotesRichTextSection|NotesRichTextStyle|NotesRichTextTab|NotesRichTextTable|NotesRichTextDocLink|NotesName|NotesDateTime|NotesAgentResult|NotesAgent|NotesStream|NotesDXLImporter|NotesDXLExporter";
+    private const string NotesTypePattern = "NotesSession|NotesMail|NotesLTPA|NotesDatabase|NotesDatabaseAccess|NotesView|NotesDocumentCollection|NotesNoteCollection|NotesDocument|NotesItem|NotesRichTextItem|NotesRichTextNavigator|NotesRichTextParagraphStyle|NotesRichTextRange|NotesRichTextSection|NotesRichTextStyle|NotesRichTextTab|NotesRichTextTable|NotesRichTextDocLink|NotesName|NotesDateTime|NotesAgentResult|NotesAgent|NotesStream|NotesDXLImporter|NotesDXLExporter";
 
     private static readonly Dictionary<string, string[]> NothingReturningMethods = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -65,6 +65,7 @@ internal sealed class NotesRuntimePreprocessor
             rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_DEPTH\b", "XPScriptNotesConst.SEARCH_DEPTH", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_BREADTH\b", "XPScriptNotesConst.SEARCH_BREADTH", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+NotesSession\s*\((.*)\)", "XPScriptNotes.CreateSession($1)", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+NotesLTPA\s*\((.*)\)", "new XPScriptNotesLTPA($1)", RegexOptions.IgnoreCase);
 
             if (Regex.IsMatch(rewritten, @"\.GetFirstDocumentByKey\s*\(", RegexOptions.IgnoreCase))
                 throw new CompilerException("NotesView.GetFirstDocumentByKey has been renamed to NotesView.GetDocumentByKey.");

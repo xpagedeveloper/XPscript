@@ -13,6 +13,7 @@ public static class ApplicationDependencyCatalog
     public const string MySqlConnectorVersion = "2.6.2";
     public const string NpgsqlVersion = "10.0.3";
     public const string MimeKitVersion = "4.17.0";
+    public const string CryptographyPkcsVersion = "10.0.13";
     public const string MagickNetVersion = "14.17.1";
     public const string SharpCompressVersion = "0.50.4";
 
@@ -27,6 +28,7 @@ public static class ApplicationDependencyCatalog
         new("MySqlConnector", MySqlConnectorVersion, "MySQL database"),
         new("Npgsql", NpgsqlVersion, "PostgreSQL/Supabase database"),
         new("MimeKit", MimeKitVersion, "Notes MIME support"),
+        new("System.Security.Cryptography.Pkcs", CryptographyPkcsVersion, "Cryptography security updates"),
         new("Magick.NET-Q16-AnyCPU", MagickNetVersion, "XPImage runtime"),
         new("SharpCompress", SharpCompressVersion, "Extended Archive runtime")
     ];
@@ -71,6 +73,8 @@ public static class ApplicationDependencyCatalog
             Add(result, "Npgsql", NpgsqlVersion, "PostgreSQL/Supabase database");
         if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal) || generatedSource.Contains("NotesMIMEEntity", StringComparison.Ordinal))
             Add(result, "MimeKit", MimeKitVersion, "Notes MIME support");
+        if (result.Any(package => package.Name is "MimeKit" or "Microsoft.Data.SqlClient"))
+            Add(result, "System.Security.Cryptography.Pkcs", CryptographyPkcsVersion, "Cryptography security updates");
         if (generatedSource.Contains("internal sealed class XPImage", StringComparison.Ordinal))
             Add(result, "Magick.NET-Q16-AnyCPU", MagickNetVersion, "XPImage runtime");
         if (generatedSource.Contains("XPScriptExtendedArchive", StringComparison.Ordinal))

@@ -667,6 +667,7 @@ public sealed class CompilerDriver
         {
             itemGroup.AppendLine("  <ItemGroup>");
             itemGroup.Append("    <PackageReference Include=\"MimeKit\" Version=\"").Append(MimeKitVersion).AppendLine("\" />");
+            itemGroup.Append("    <PackageReference Include=\"System.Security.Cryptography.Pkcs\" Version=\"").Append(ApplicationDependencyCatalog.ResolveVersion("System.Security.Cryptography.Pkcs", ApplicationDependencyCatalog.CryptographyPkcsVersion)).AppendLine("\" />");
             itemGroup.AppendLine("  </ItemGroup>");
         }
 

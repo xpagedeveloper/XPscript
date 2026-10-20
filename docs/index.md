@@ -20,6 +20,7 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 - [Dependency security and package patching](dependency-security-and-patching.md): application-specific dependency inspection, NuGet vulnerability checks, security modes, version-scoped compatible patches, `patch all`, and `--security-only`.
 - [Runtime API reference](api-reference.md): HTTP, JSON, native Notes/Domino, databases, XPAi/AITool, UIForm/UIListView and web/REST runtime objects with the same searchable five-field format.
 - [Native Notes/Domino C API](notes-c-api.md): `NotesSession`, databases, views, documents, items, names, date/time values, agents and native lifecycle semantics.
+- [NotesLTPA](notes-ltpa.md): Domino-key LTPA token generation from `names.nsf` SSO configuration.
 - [Notes MIME](notes-mime-entity.md): native `NotesMIMEEntity`/`NotesMIMEHeader` traversal, nested mutation, headers, parameters, streams and attachment handling.
 - [Compact command index](commands.md): the older compact overview. Use the references above for the complete searchable catalog.
 

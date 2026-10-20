@@ -17,7 +17,8 @@ var samplePaths = new[]
     Path.Combine(repoRoot, "samples", "notes-database-query-access-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-dbdirectory-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-mime-entity-surface.xps"),
-    Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps")
+    Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps"),
+    Path.Combine(repoRoot, "samples", "notes-ltpa-runtime-test.xps")
 };
 foreach (var samplePath in samplePaths)
 {
@@ -48,6 +49,7 @@ if (parseErrors.Length != 0)
 var classes = new[]
 {
     (Runtime: "XPScriptNotesSession", Surface: "NotesSession", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesLTPA", Surface: "NotesLTPA", Anchor: (string?)null),
     (Runtime: "XPScriptNotesDocument", Surface: "NotesDocument", Anchor: (string?)"NoteID"),
     (Runtime: "XPScriptNotesDatabase", Surface: "NotesDatabase", Anchor: (string?)"QueryAccess"),
     (Runtime: "XPScriptNotesDatabaseAccess", Surface: "NotesDatabaseAccess", Anchor: (string?)null),
