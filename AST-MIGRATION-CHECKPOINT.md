@@ -77,6 +77,8 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 
 - Fixed the nested array-signature harness: expected negative compiler cases now run through `Start-Process`, preserving exit code and diagnostics without PowerShell native-command termination. The isolated suite passes `AST_ARRAY_SIGNATURES_OK` with exit code 0. The full wrapper still needs separate timing/termination investigation.
 
+- Full AST wrapper re-run was observed as a live process rather than a false immediate failure: it passed the nested suite and more than 100 subsequent markers, including file IO, IsDir drive handling, database/AI/XPAI, class methods/properties, HTTP collections and initialized module storage. Observation was stopped after the normal-compiler `array-storage-parity` phase produced its output but did not return a visible process; the full wrapper is not yet claimed green.
+
 - Native database class-property regression exposed unsafe generated dependency runtime; added AllowUnsafeBlocks to generated legacy/dependency projects.
 - Verified compiler Release build and focused class-properties-native AST compile/run with SystemInventorySnapshot, XPDBSQLite and XPDbSupabase accessors: CLASS_PROPERTIES_NATIVE_OK.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.
