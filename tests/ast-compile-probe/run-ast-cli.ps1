@@ -272,6 +272,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST ChDir compilation failed.' }
 $chDirResult = dotnet (Join-Path $chDirOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($chDirResult -join "`n") -ne 'CHDIR_AST_OK') { throw 'AST ChDir regression failed.' }
 Write-Host 'AST_CHDIR_OK'
+$fileExistsAliasesOutput = Join-Path $output 'file-exists-aliases-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-exists-aliases-next.xps') -o $fileExistsAliasesOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST FileExists/DirExists compilation failed.' }
+$fileExistsAliasesResult = dotnet (Join-Path $fileExistsAliasesOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($fileExistsAliasesResult -join "`n") -ne 'FILE_EXISTS_ALIASES_AST_OK') { throw 'AST FileExists/DirExists regression failed.' }
+Write-Host 'AST_FILE_EXISTS_ALIASES_OK'
 
 $inputBoxOutput = Join-Path $output 'inputbox-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inputbox-next.xps') -o $inputBoxOutput

@@ -1,0 +1,7 @@
+Option Explicit
+
+Sub Main()
+    If Not FileExists("tests/ast-compile-probe/file-exists-aliases-next.xps") Then Error 9860, "FileExists alias failed"
+    If Not DirExists("tests/ast-compile-probe") Then Error 9861, "DirExists alias failed"
+    Print "FILE_EXISTS_ALIASES_AST_OK"
+End Sub

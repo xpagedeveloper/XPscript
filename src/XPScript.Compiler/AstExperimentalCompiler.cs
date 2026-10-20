@@ -278,7 +278,7 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Dir", typeof(string), [], XpTypeSymbol.FromClr(typeof(string)), []));
         for (var dirArgumentCount = 1; dirArgumentCount <= 3; dirArgumentCount++)
             symbols.Declare(new FunctionSymbol("Dir", typeof(string), Enumerable.Repeat(typeof(object), dirArgumentCount).ToArray(), XpTypeSymbol.FromClr(typeof(string)), Enumerable.Repeat(XpTypeSymbol.Variant, dirArgumentCount).ToArray()));
-        foreach (var fileFunction in new[] { "ReadFile", "ReadLines", "ReadBytes", "FileHash", "Files", "Directories", "CopyFile", "MoveFile", "IsFile", "IsDir", "FileEquals", "WriteFile", "AppendFile", "WriteLines", "WriteBytes", "FileInfo", "MkDir", "RmDir" })
+        foreach (var fileFunction in new[] { "ReadFile", "ReadLines", "ReadBytes", "FileHash", "Files", "Directories", "CopyFile", "MoveFile", "FileExists", "DirExists", "IsFile", "IsDir", "FileEquals", "WriteFile", "AppendFile", "WriteLines", "WriteBytes", "FileInfo", "MkDir", "RmDir" })
             for (var parameterCount = 1; parameterCount <= 4; parameterCount++)
                 symbols.Declare(new FunctionSymbol(fileFunction, typeof(object), Enumerable.Repeat(typeof(object), parameterCount).ToArray(), XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, parameterCount).ToArray()));
         symbols.Declare(new FunctionSymbol("FreeFile", typeof(long), []));
@@ -757,6 +757,8 @@ internal static class Program
     public static object Directories(params object?[] a) => System.IO.Directory.GetDirectories(CStr(a[0]));
     public static object IsFile(params object?[] a) => System.IO.File.Exists(CStr(a[0]));
     public static object IsDir(params object?[] a) => System.IO.Directory.Exists(NormalizeDirectoryProbe(CStr(a[0])));
+    public static object FileExists(params object?[] a) => System.IO.File.Exists(CStr(a[0]));
+    public static object DirExists(params object?[] a) => System.IO.Directory.Exists(NormalizeDirectoryProbe(CStr(a[0])));
     private static string NormalizeDirectoryProbe(string path) =>
         OperatingSystem.IsWindows() && path.Length == 2 && char.IsLetter(path[0]) && path[1] == ':'
             ? path + System.IO.Path.DirectorySeparatorChar
