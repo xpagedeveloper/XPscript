@@ -495,6 +495,7 @@ internal sealed class NotesHTTPRequest
     private string? _proxyPassword;
     private string[] _responseHeaders = [];
     private readonly XPScriptTlsValidationState _tls = new();
+    private bool _allowPrivateNetwork;
 
     public NotesHTTPRequest() => ResetHeaders();
 
@@ -503,6 +504,7 @@ internal sealed class NotesHTTPRequest
     public int MaxRedirects { get; set; } = 0;
     public bool PreferStrings { get; set; }
     public bool PreferJSONNavigator { get; set; }
+    public bool AllowPrivateNetwork { get => _allowPrivateNetwork; set => _allowPrivateNetwork = value; }
     public string CertificateValidation { get => _tls.Mode; set => _tls.Mode = value; }
     public bool PreferUTF8 => !PreferStrings && !PreferJSONNavigator;
 
@@ -559,6 +561,7 @@ internal sealed class NotesHTTPRequest
         var url = XPScriptRuntime.CStr(rawUrl).Trim();
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
             throw new XPScriptRuntimeException(5, "Invalid HTTP URL: " + url);
+        ValidateOutboundTarget(uri, _allowPrivateNetwork);
 
         try
         {
@@ -657,6 +660,38 @@ internal sealed class NotesHTTPRequest
         handler.UseProxy = true;
         handler.Proxy = proxy;
         return handler;
+    }
+
+    private static void ValidateOutboundTarget(Uri uri, bool allowPrivateNetwork)
+    {
+        if (!string.IsNullOrEmpty(uri.UserInfo) || uri.HostNameType == UriHostNameType.Unknown || string.IsNullOrWhiteSpace(uri.Host))
+            throw new XPScriptRuntimeException(5, "HTTP target host is invalid.");
+        if (allowPrivateNetwork) return;
+
+        System.Net.IPAddress[] addresses;
+        if (System.Net.IPAddress.TryParse(uri.Host, out var literal))
+            addresses = [literal];
+        else
+        {
+            try { addresses = System.Net.Dns.GetHostAddresses(uri.Host); }
+            catch (Exception ex) when (ex is System.Net.Sockets.SocketException or System.ArgumentException)
+            { throw new XPScriptRuntimeException(5, "HTTP target host could not be resolved."); }
+        }
+
+        if (addresses.Any(IsPrivateOrLocalAddress))
+            throw new XPScriptRuntimeException(5, "HTTP target resolves to a private or local network address. Set AllowPrivateNetwork=True only for trusted intranet or local endpoints.");
+    }
+
+    private static bool IsPrivateOrLocalAddress(System.Net.IPAddress address)
+    {
+        if (System.Net.IPAddress.IsLoopback(address)) return true;
+        if (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            var bytes = address.GetAddressBytes();
+            return bytes[0] == 10 || bytes[0] == 127 || (bytes[0] == 172 && bytes[1] is >= 16 and <= 31) || (bytes[0] == 192 && bytes[1] == 168) || (bytes[0] == 169 && bytes[1] == 254);
+        }
+        var text = address.ToString().ToLowerInvariant();
+        return text == "::1" || text.StartsWith("fc", StringComparison.Ordinal) || text.StartsWith("fd", StringComparison.Ordinal) || text.StartsWith("fe8", StringComparison.Ordinal) || text.StartsWith("fe9", StringComparison.Ordinal) || text.StartsWith("fea", StringComparison.Ordinal) || text.StartsWith("feb", StringComparison.Ordinal);
     }
 }
 """;

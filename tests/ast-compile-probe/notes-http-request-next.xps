@@ -4,6 +4,14 @@ Sub Main()
     Dim http As New NotesHTTPRequest
     http.PreferStrings = True
     Dim result As Variant
+    Dim blocked As New NotesHTTPRequest
+    Dim failure As Long
+    On Error Resume Next
+    Set result = blocked.Get(Environ("XPSCRIPT_NOTES_HTTP_TEST_URL"))
+    failure = Err
+    On Error GoTo 0
+    If failure <> 5 Then Error 4264
+    http.AllowPrivateNetwork = True
     Set result = http.Get(Environ("XPSCRIPT_NOTES_HTTP_TEST_URL"))
     If http.ResponseCode <> 200 Then Error 4265
     If CStr(result) <> "notes-http-ok" Then Error 4266
