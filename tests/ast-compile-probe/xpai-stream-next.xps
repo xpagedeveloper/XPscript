@@ -1,0 +1,15 @@
+Public chunks As String
+
+Sub OnChunk(ByVal text As String)
+    chunks = chunks & text
+End Sub
+
+Sub Main()
+    Dim ai As New XPAi(Environ("XPSCRIPT_AI_STREAM_TEST_AI"), "XPAI_STREAM_SECRET")
+    ai.Model = "test-model"
+    ai.UserPrompt = "stream"
+    Dim response As XPAiResponse
+    Set response = ai.Stream("OnChunk")
+    If chunks <> "hello world" Or response.Text <> "hello world" Then Error 4279
+    Print "XPAI_STREAM_OK"
+End Sub
