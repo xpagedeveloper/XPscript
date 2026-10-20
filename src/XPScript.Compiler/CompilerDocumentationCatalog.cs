@@ -15,6 +15,9 @@ public static class CompilerDocumentationCatalog
             Define("api.XPJsonSchema", "api", "XPJsonSchema"),
             Define("api.XPJsonSchema.Parse", "api", "XPJsonSchema.Parse"),
             Define("api.XPJsonSchema.FromJson", "api", "XPJsonSchema.FromJson"),
+            Define("api.XPJsonSchema.Type", "api", "XPJsonSchema.Type"),
+            Define("api.XPJsonSchema.AdditionalProperties", "api", "XPJsonSchema.AdditionalProperties"),
+            Define("api.XPJsonSchema.AddString", "api", "XPJsonSchema.AddString"),
             Define("api.XPJsonSchema.Validate", "api", "XPJsonSchema.Validate"),
             Define("api.XPJsonSchema.IsValid", "api", "XPJsonSchema.IsValid"),
             Define("api.UIForm.SetValidationSchema", "api", "UIForm.SetValidationSchema"),
@@ -106,7 +109,11 @@ public static class CompilerDocumentationCatalog
             Define("target.ServerSide", "target", "ServerSide"),
             Define("security.Shell", "security", "Shell"),
             Define("security.DependencyAudit", "security", "dependency-audit")
-        }.Concat(AstApplicationSupport.Catalog.Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Select(x => Define(x.DocumentationId, "api", x.Name)))
+        }.Concat(new[]
+        {
+            "XPAi", "XPAi.Model", "XPAi.Endpoint", "XPAi.Provider", "XPAi.CertificateValidation", "XPAi.EndpointPath", "XPAi.Timeout", "XPAi.Temperature", "XPAi.MaxOutputTokens", "XPAi.CollectStreamedResponse", "XPAi.ThrowOnHttpError", "XPAi.SystemPrompt", "XPAi.UserPrompt", "XPAi.JsonSchemaName", "XPAi.JsonSchemaStrict", "XPAi.HasJsonSchema", "XPAi.AddMessage", "XPAi.ClearMessages", "XPAi.GetMessages", "XPAi.SetOption", "XPAi.RemoveOption", "XPAi.ClearOptions", "XPAi.SetHeader", "XPAi.RemoveHeader", "XPAi.ClearHeaders", "XPAi.SetPrompt", "XPAi.ClearPrompt", "XPAi.SetResultClass", "XPAi.SetJsonSchema", "XPAi.ClearJsonSchema", "XPAi.Cancel", "XPAi.Complete", "XPAi.Stream", "XPAi.StreamCallback", "XPAi.NewRequest", "XPAi.Dispose", "XPAi.AddTool", "XPAi.HasTool", "XPAi.GetTool", "XPAi.GetToolNames", "XPAi.ToolCount", "XPAi.RemoveTool", "XPAi.ClearTools", "XPAi.AutoExecuteTools", "XPAi.MaxToolIterations", "XPAi.SessionId", "XPAi.HasSession", "XPAi.SessionRequestProperty", "XPAi.ResetSession", "XPAiResponse", "XPAiResponse.StatusCode", "XPAiResponse.IsSuccess", "XPAiResponse.Model", "XPAiResponse.Text", "XPAiResponse.Content", "XPAiResponse.RawJson", "XPAiResponse.Usage", "XPAiResponse.HasJsonResult", "XPAiResponse.ResultJson", "XPAITool", "XPAITool.Name", "XPAITool.Description", "XPAITool.Timeout", "XPAITool.AddFunction", "XPAITool.AddParameter", "XPAITool.HasFunction", "XPAITool.FunctionCount", "XPAITool.RemoveFunction", "XPAITool.GetFunction", "XPAITool.GetFunctionNames", "XPAITool.SetRequestProperty", "XPAITool.RemoveRequestProperty", "XPAITool.ClearRequestProperties", "XPAITool.GetRequestContext", "XPAITool.ToJsonObject", "XPAITool.ToJson", "XPAIToolFunction", "XPAIToolFunction.ToolName", "XPAIToolFunction.Name", "XPAIToolFunction.Description", "XPAIToolFunction.CallbackName", "XPAIToolFunction.AddParameter", "XPAIToolFunction.RemoveParameter", "XPAIToolFunction.HasParameter", "XPAIToolFunction.ParameterCount", "XPAIToolCall", "XPAIToolCall.ToolName", "XPAIToolCall.FunctionName", "XPAIToolCall.CallId", "XPAIToolCall.Arguments", "XPAIToolCall.SessionId"
+        }.Select(name => Define("api." + name, "api", name)))
+        .Concat(AstApplicationSupport.Catalog.Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Concat(AstSystemInventorySupport.Catalog).Concat(AstSqliteSupport.Catalog).Concat(AstMySqlSupport.Catalog).Concat(AstMsSqlSupport.Catalog).Concat(AstSupabaseSupport.Catalog).Select(x => Define(x.DocumentationId, "api", x.Name)))
         .DistinctBy(x => x.Id, StringComparer.OrdinalIgnoreCase).ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerDocumentationDefinition? Find(string id)
