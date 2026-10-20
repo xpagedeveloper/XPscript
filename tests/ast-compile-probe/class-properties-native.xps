@@ -35,6 +35,9 @@ Class Counter
     Public Property Get MsSqlDatabase As XPDbMsSql
         MsSqlDatabase = Nothing
     End Property
+    Public Property Get Attachments As XPAttachmentCollection
+        Attachments = Nothing
+    End Property
     Private Property Get Secret As Long
         Secret = stored
     End Property

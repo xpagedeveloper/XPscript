@@ -26,6 +26,7 @@ internal static class AstClassMethodSupport
             "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
             "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo" }
             .Contains(name, StringComparer.OrdinalIgnoreCase) ||
+        string.Equals(name, "XPAttachmentCollection", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(name, "XPJsonSchema", StringComparison.OrdinalIgnoreCase) ||
         new[] { "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall" }
             .Contains(name, StringComparer.OrdinalIgnoreCase) ||

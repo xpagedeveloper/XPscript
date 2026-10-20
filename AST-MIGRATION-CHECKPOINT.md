@@ -76,3 +76,7 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Graphify update attempted; still fails with uv trampoline canonicalize error.
 
 - Extended focused native class-property regression to XPDbMySql and XPDbMsSql; AST compile/run remains green with CLASS_PROPERTIES_NATIVE_OK.
+
+- Extended native class-property support with XPAttachmentCollection; compiler Release build and focused class-properties-native run passed.
+- HTTP/XML collection accessor experiment exposed duplicate generated HTTP runtime definitions and was reverted; this remains a separate follow-up investigation.
+- Graphify update attempted; still fails with uv trampoline canonicalize error.
