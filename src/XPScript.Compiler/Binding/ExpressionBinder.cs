@@ -711,6 +711,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         if (op is SyntaxKind.LessToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterToken or SyntaxKind.GreaterOrEqualsToken &&
             left.Type == right.Type && (left.Type == typeof(long) || left.Type == typeof(double)))
             return new BoundBinaryExpression(left, op, right, typeof(bool));
+        // XPscript equality is value-oriented across Variant/native boundaries.
+        // Keep mixed typed operands dynamic so native values (for example JSON
+        // element metadata) can be compared with string/number literals without
+        // forcing an invalid CLR operator during generated-code compilation.
+        if (_allowDynamicMembers && op is SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken && left.Type != right.Type)
+            return new BoundBinaryExpression(left, op, right, typeof(object));
         if (op is SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken && left.Type == right.Type)
             return new BoundBinaryExpression(left, op, right, typeof(bool));
         if (op == SyntaxKind.IsKeyword && (left.Type == typeof(object) || right.Type == typeof(object)))
