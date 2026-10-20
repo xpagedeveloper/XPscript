@@ -36,3 +36,10 @@ The AST target-matrix probe also passed with `TARGET_MATRIX_OK` after an externa
 
 The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-COMPILER-PROBE=OK`. The probe validates Android AST backend/project generation for the configured Android RIDs; physical device/emulator installation remains outside this run.
 
+## Current continuation state (2026-10-20)
+
+- The REST smoke test exposed two AST/web issues: explicit routes with a wrong HTTP method now return 405, and JSON binding exceptions are mapped to 400.
+- The web compiler's JSON-schema helper declaration was renamed from the reserved `__xps_rest_json_schema_runtime` identifier to `xpsCompilerGeneratedJsonSchemaRuntime`.
+- These three source changes are currently uncommitted while verification is blocked: `src/XPScript.Web.Compiler/XpsRestRouteIndex.cs`, `src/XPScript.Web.Compiler/XpsWebDispatcher.cs`, and `src/XPScript.Web.Compiler/XpsWebCompiler.cs`.
+- Verification is currently blocked by the local MSBuild/workload resolver: normal `dotnet build` reports `Build FAILED` with zero diagnostics, while direct `CoreCompile` shows missing `System`/framework references. Do not mark the REST item green or commit it as complete until the normal build/test path works again.
+
