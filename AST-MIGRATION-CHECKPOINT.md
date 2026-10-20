@@ -30,3 +30,5 @@ Updated 2026-10-20 on branch `investigate-ast-compiler`.
 
 The completed run covered the AST CLI language/runtime probes, including constructors, destructors, properties, indexed properties, arrays/redim, lists, ByRef/reference storage, XML/CSV/JSON, HTTP/XPAI, XPImage, Notes HTTP, control flow, static initialization, and object/class lifecycle.
 
+The legacy command-line compatibility baseline also passed with `tests/cli-compatibility/run-cli-compatibility.ps1` (`CLI_COMMAND_LINE_COMPATIBILITY_OK`). This verifies the currently implemented AST option surface; complete legacy `--target` behavior parity remains open in `todo/ast-compiler-migration-todo.md`.
+
