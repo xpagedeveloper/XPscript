@@ -268,6 +268,8 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("TypeName", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FileLen", typeof(long), [typeof(string)]));
         symbols.Declare(new FunctionSymbol("FileDateTime", typeof(DateTime), [typeof(string)], XpTypeSymbol.FromClr(typeof(DateTime)), [XpTypeSymbol.FromClr(typeof(string))]));
+        symbols.Declare(new FunctionSymbol("GetFileAttr", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("SetFileAttr", typeof(void), [typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Dir", typeof(string), [], XpTypeSymbol.FromClr(typeof(string)), []));
         for (var dirArgumentCount = 1; dirArgumentCount <= 3; dirArgumentCount++)
             symbols.Declare(new FunctionSymbol("Dir", typeof(string), Enumerable.Repeat(typeof(object), dirArgumentCount).ToArray(), XpTypeSymbol.FromClr(typeof(string)), Enumerable.Repeat(XpTypeSymbol.Variant, dirArgumentCount).ToArray()));
@@ -687,6 +689,8 @@ internal static class Program
     public static string TypeName(object? value) => XPScriptNullRuntime.TypeName(value);
     public static long FileLen(string path) => new System.IO.FileInfo(RequireExistingFilePath(path)).Length;
     public static DateTime FileDateTime(string path) => System.IO.File.GetLastWriteTime(RequireExistingFilePath(path));
+    public static long GetFileAttr(object? path) => (long)System.IO.File.GetAttributes(RequireExistingFilePath(path));
+    public static void SetFileAttr(object? path, object? attributes) => System.IO.File.SetAttributes(RequireExistingFilePath(path), (System.IO.FileAttributes)XPScriptRuntime.CLng(attributes));
     private static System.Collections.Generic.IEnumerator<string>? __xpsDirEnumerator;
     public static string Dir(params object?[] args)
     {
