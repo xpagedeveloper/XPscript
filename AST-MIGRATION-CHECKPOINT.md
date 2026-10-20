@@ -32,3 +32,5 @@ The completed run covered the AST CLI language/runtime probes, including constru
 
 The legacy command-line compatibility baseline also passed with `tests/cli-compatibility/run-cli-compatibility.ps1` (`CLI_COMMAND_LINE_COMPATIBILITY_OK`). This verifies the currently implemented AST option surface; complete legacy `--target` behavior parity remains open in `todo/ast-compiler-migration-todo.md`.
 
+The AST target-matrix probe also passed with `TARGET_MATRIX_OK` after an external NuGet restore. The probe verifies the configured desktop/browser target metadata and target routing; physical Android device/emulator validation remains a local setup gate.
+
