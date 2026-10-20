@@ -80,3 +80,7 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Extended native class-property support with XPAttachmentCollection; compiler Release build and focused class-properties-native run passed.
 - HTTP/XML collection accessor experiment exposed duplicate generated HTTP runtime definitions and was reverted; this remains a separate follow-up investigation.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.
+
+- Fixed false database attachment feature activation: source declarations named Attachments no longer inject duplicate HTTP/attachment runtime; actual .Attachments(...) calls still inject and execute correctly.
+- Verified compiler Release build, CLASS_PROPERTIES_NATIVE_OK and DATABASE_ATTACHMENTS_OK.
+- Graphify update attempted; still fails with uv trampoline canonicalize error.
