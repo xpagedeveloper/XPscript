@@ -863,8 +863,16 @@ if ($LASTEXITCODE -ne 0 -or ($arrayParityResult -join "`n") -ne "-3`n-1`n7`nARRA
 $normalArray = Join-Path $output $(if ($IsWindows) { 'normal-array.exe' } else { 'normal-array' })
 dotnet $compiler compile (Join-Path $PSScriptRoot 'array-storage-parity.xps') -o $normalArray --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal array parity compilation failed.' }
-$normalArrayResult = & $normalArray
-if ($LASTEXITCODE -ne 0 -or ($normalArrayResult -join "`n") -ne ($arrayParityResult -join "`n")) { throw 'Normal/AST array storage parity failed.' }
+$normalStdout = [System.IO.Path]::GetTempFileName()
+$normalStderr = [System.IO.Path]::GetTempFileName()
+try {
+    $normalProcess = Start-Process -FilePath $normalArray -RedirectStandardOutput $normalStdout -RedirectStandardError $normalStderr -NoNewWindow -Wait -PassThru
+    $normalArrayResult = if (Test-Path $normalStdout) { Get-Content -LiteralPath $normalStdout } else { @() }
+    if ($normalProcess.ExitCode -ne 0 -or ($normalArrayResult -join "`n") -ne ($arrayParityResult -join "`n")) { throw 'Normal/AST array storage parity failed.' }
+}
+finally {
+    Remove-Item -LiteralPath $normalStdout, $normalStderr -Force -ErrorAction SilentlyContinue
+}
 dotnet run --project (Join-Path $root 'tests/AstApplicationRuntimeProbe') -c Release
 if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime regression failed.' }
 & (Join-Path $PSScriptRoot 'run-ast-constructor.ps1')

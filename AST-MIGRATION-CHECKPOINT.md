@@ -79,6 +79,8 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 
 - Full AST wrapper re-run was observed as a live process rather than a false immediate failure: it passed the nested suite and more than 100 subsequent markers, including file IO, IsDir drive handling, database/AI/XPAI, class methods/properties, HTTP collections and initialized module storage. Observation was stopped after the normal-compiler `array-storage-parity` phase produced its output but did not return a visible process; the full wrapper is not yet claimed green.
 
+- Hardened the normal/AST array-parity wrapper to execute the legacy apphost with `Start-Process` and captured stdout/stderr. The isolated legacy executable produced `-3`, `-1`, `7`, `ARRAY_STORAGE_PARITY_OK` and exited 0; the former direct invocation was the unstable step.
+
 - Native database class-property regression exposed unsafe generated dependency runtime; added AllowUnsafeBlocks to generated legacy/dependency projects.
 - Verified compiler Release build and focused class-properties-native AST compile/run with SystemInventorySnapshot, XPDBSQLite and XPDbSupabase accessors: CLASS_PROPERTIES_NATIVE_OK.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.
