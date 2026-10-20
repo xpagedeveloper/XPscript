@@ -651,6 +651,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{(AstSqliteSupport.Uses(fullSource) ? SqliteDbRuntimeSource.Code : "")}}
 {{(AstMsSqlSupport.Uses(fullSource) ? MsSqlDbRuntimeSource.Code : "")}}
 {{(AstSupabaseSupport.Uses(fullSource) ? HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + SupabaseDbRuntimeSource.Code : "")}}
+{{(usesDatabaseDynamicRuntime ? DatabaseUiDataSourceRuntimeSource.Build(AstSqliteSupport.Uses(fullSource), AstMsSqlSupport.Uses(fullSource), false) : "")}}
 {{AstHttpSupport.RuntimeCode(fullSource)}}
 {{(AstNotesJsonSupport.Uses(fullSource) || Regex.IsMatch(fullSource, @"(?i)\bNotesHTTPRequest\b") ? JsonHttpCompatibilityRuntimeSource.Code + (AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) || runtimeFeatures.Http ? "" : AstTlsRuntimeCode()) : "")}}
 {{((AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
