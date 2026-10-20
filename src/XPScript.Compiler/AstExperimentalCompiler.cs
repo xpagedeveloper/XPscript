@@ -22,7 +22,8 @@ public static class AstExperimentalCompiler
         source = includeResult.Source;
         var fullSource = source;
         ValidateAstAiCallbacks(fullSource);
-        var usesAi = RuntimeFeatures.Detect(fullSource).Ai;
+        var runtimeFeatures = RuntimeFeatures.Detect(fullSource);
+        var usesAi = runtimeFeatures.Ai;
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
             if (definition!.Route == AstObjectSupportRegistry.CompilationRoute.LegacyFallback)
@@ -617,7 +618,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstArrayRuntimeCode()}}
 {{AstFileRuntimeCode()}}
 {{AstCallbackRuntimeCode()}}
-{{(!AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) ? AstTlsRuntimeCode() : "")}}
+{{((runtimeFeatures.Http || usesAi) && !AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) ? AstTlsRuntimeCode() : "")}}
 {{AstErrorRuntimeCode()}}
 internal static class LSCoreCompare
 {
