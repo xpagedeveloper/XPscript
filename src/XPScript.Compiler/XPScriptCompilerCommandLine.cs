@@ -306,6 +306,7 @@ public static class XPScriptCompilerCommandLine
 
         var sourcePath = Path.GetFullPath(args[0]);
         var outputDirectory = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourcePath)!, "ast-output"));
+        string? target = null;
         var debug = false;
         var resultFormat = "text";
         string? runtimeIdentifier = null;
@@ -322,6 +323,8 @@ public static class XPScriptCompilerCommandLine
                 outputDirectory = Path.GetFullPath(args[++i]);
             else if (args[i] == "--debug")
                 debug = true;
+            else if (args[i] == "--target" && i + 1 < args.Length)
+                target = args[++i].ToLowerInvariant();
             else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
                 runtimeIdentifier = args[++i].ToLowerInvariant();
             else if (args[i].StartsWith("--runtime=", StringComparison.OrdinalIgnoreCase))
@@ -366,6 +369,13 @@ public static class XPScriptCompilerCommandLine
             _ = singleFile;
             if (resultFormat is not ("text" or "json" or "xml"))
                 throw new ArgumentException("--result-format must be text, json, or xml.");
+            if (target is not null && !target.Equals("desktop", StringComparison.OrdinalIgnoreCase) &&
+                !target.Equals("console", StringComparison.OrdinalIgnoreCase))
+            {
+                if (target.Equals("webiis", StringComparison.OrdinalIgnoreCase))
+                    throw new ArgumentException("--target webiis is not yet migrated to the AST compiler. Use the legacy compile command until the AST web target is implemented.");
+                throw new ArgumentException($"Unsupported AST target '{target}'. Supported AST targets are desktop and console.");
+            }
             if (runtimeIdentifier is not null && !CompilerDriver.SupportedRuntimes.Contains(runtimeIdentifier, StringComparer.OrdinalIgnoreCase))
                 throw new ArgumentException("Unsupported runtime identifier '" + runtimeIdentifier + "'.");
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);

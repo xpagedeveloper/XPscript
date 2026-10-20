@@ -39,4 +39,11 @@ if ($LASTEXITCODE -ne 0 -or $aliasOutputText -notlike '*AST compilation succeede
     throw "AST compile-option/security regression: $aliasOutputText"
 }
 
+$targetOutput = dotnet $compiler ast-compile $astSource --target webiis --result-format json | Out-String
+if ($LASTEXITCODE -ne 1) { throw "AST target validation regression: $targetOutput" }
+$targetResult = $targetOutput | ConvertFrom-Json
+if ($targetResult.result -ne 'error' -or $targetResult.errors[0].description -notlike '*not yet migrated to the AST compiler*') {
+    throw 'AST webiis target must report an explicit migration diagnostic.'
+}
+
 Write-Host 'CLI_COMMAND_LINE_COMPATIBILITY_OK'
