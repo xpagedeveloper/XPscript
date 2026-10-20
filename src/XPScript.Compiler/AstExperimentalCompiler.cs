@@ -653,7 +653,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{(usesDatabaseDynamicRuntime ? CaseInsensitiveDynamicObjectRuntimeSource.Code : "")}}
 {{(AstSqliteSupport.Uses(fullSource) ? SqliteDbRuntimeSource.Code : "")}}
 {{(AstMsSqlSupport.Uses(fullSource) ? MsSqlDbRuntimeSource.Code : "")}}
-{{(AstSupabaseSupport.Uses(fullSource) ? HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + SupabaseDbRuntimeSource.Code : "")}}
+{{(AstSupabaseSupport.Uses(fullSource) ? SupabaseDbRuntimeSource.Code : "")}}
 {{(usesDatabaseDynamicRuntime ? DatabaseUiDataSourceRuntimeSource.Build(AstSqliteSupport.Uses(fullSource), AstMsSqlSupport.Uses(fullSource), true) : "")}}
 {{(usesDatabaseDynamicRuntime ? HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + AstTlsRuntimeCode() + DatabaseAttachmentRuntimeV2Source.Build(AstSqliteSupport.Uses(fullSource), AstMsSqlSupport.Uses(fullSource)) + DatabaseAttachmentRuntimeV3Source.Code : "")}}
 {{AstHttpSupport.RuntimeCode(fullSource)}}
@@ -663,7 +663,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstArrayRuntimeCode()}}
 {{AstFileRuntimeCode()}}
 {{AstCallbackRuntimeCode()}}
-{{((runtimeFeatures.Http || AstSupabaseSupport.Uses(fullSource) || usesAi) && !AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) ? AstTlsRuntimeCode() : "")}}
+{{((runtimeFeatures.Http || usesAi) && !AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) ? AstTlsRuntimeCode() : "")}}
 {{AstErrorRuntimeCode()}}
 internal static class LSCoreCompare
 {
