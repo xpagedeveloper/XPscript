@@ -186,6 +186,7 @@ if (Should-Run 'runtime') {
   $httpAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstHttpRuntimeProbe','-c','Release') 180000 'native HTTP accessor reference/multipart/disposal/security coverage and HTTP/TLS AST/normal parity'
   if ($httpAst.ExitCode -ne 0 -or $httpAst.Output -notmatch 'AST_XPAI_STREAM_OK') { throw 'XPAI streaming regression failed.' }
   if ($httpAst.ExitCode -ne 0 -or $httpAst.Output -notmatch 'AST_XPAI_PROVIDER_TOOL_OK') { throw 'XPAI provider/tool regression failed.' }
+  if ($httpAst.ExitCode -ne 0 -or $httpAst.Output -notmatch 'AST_NOTES_HTTP_REQUEST_OK') { throw 'NotesHTTPRequest regression failed.' }
   if ($httpAst.ExitCode -ne 0 -or $httpAst.Output -notmatch 'AST_HTTP_ACCESSORS_OK' -or $httpAst.Output -notmatch 'AST_HTTP_TLS_RUNTIME_OK') { throw 'Native HTTP accessor/TLS runtime regression failed.' }
   $generatedDependencies = Invoke-Bounded 'dotnet' @('run','--project','./tests/GeneratedDependencyProbe/GeneratedDependencyProbe.csproj','-c','Release') 240000 'generated addon packages, native runtime assets and exact license graph'
   if ($generatedDependencies.ExitCode -ne 0 -or $generatedDependencies.Output -notmatch 'GENERATED_DEPENDENCIES_OK') { throw 'Generated addon dependency packaging regression failed.' }

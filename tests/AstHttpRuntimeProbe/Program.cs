@@ -52,6 +52,15 @@ try
         Console.WriteLine("AST_XPAI_PROVIDER_TOOL_OK");
         return;
     }
+    if (args.Contains("--notes-only"))
+    {
+        var notesOutput = Path.Combine(output, "notes-http-request");
+        await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/notes-http-request-next.xps"), "-o", notesOutput]);
+        if ((await Run("dotnet", [Path.Combine(notesOutput, "Generated.dll")])).Trim() != "NOTES_HTTP_REQUEST_OK")
+            throw new Exception("NotesHTTPRequest regression failed.");
+        Console.WriteLine("AST_NOTES_HTTP_REQUEST_OK");
+        return;
+    }
     var streamProbeOutput = Path.Combine(output, "ai-stream");
     await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/xpai-stream-next.xps"), "-o", streamProbeOutput]);
     if ((await Run("dotnet", [Path.Combine(streamProbeOutput, "Generated.dll")])).Trim() != "XPAI_STREAM_OK")
