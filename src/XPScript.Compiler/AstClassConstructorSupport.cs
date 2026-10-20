@@ -37,7 +37,7 @@ internal static class AstClassConstructorSupport
                 if (!signatures.Add(signature))
                     throw AstExperimentalCompiler.MappedDiagnostic(constructor!.Span, path, source,
                         "Duplicate constructor parameter signature.", CompilerDiagnosticCodes.DuplicateOverload, "semantic");
-                symbols.Declare(new FunctionSymbol(declaration.Identifier.Text + ".New", typeof(object), types.Select(t => t.RuntimeType).ToArray(),
+                symbols.Declare(new FunctionSymbol(declaration.Identifier.Text + ".New", typeof(object), types.Select((t, i) => parameters[i].IsArray ? typeof(Array) : t.RuntimeType).ToArray(),
                     XpTypeSymbol.User(declaration.Identifier.Text), types, parameters.Select(parameter => parameter.IsByRef).ToArray())
                 {
                     IsUserConstructor = true,
@@ -109,9 +109,11 @@ internal static class AstClassConstructorSupport
             // never Me, fields or body locals: the instance does not exist yet.
             var scope = symbols.CreateChildScope();
             foreach (var parameter in constructor?.Parameters ?? Array.Empty<ParameterSyntax>())
+            {
+                var semanticType = AstExperimentalCompiler.ResolveParameterType(parameter, symbols);
                 scope.Declare(new ParameterSymbol(parameter.Identifier.Text,
-                    AstExperimentalCompiler.ResolveParameterType(parameter, symbols).RuntimeType, parameter.IsByRef,
-                    AstExperimentalCompiler.ResolveParameterType(parameter, symbols)));
+                    parameter.IsArray ? typeof(Array) : semanticType.RuntimeType, parameter.IsByRef, semanticType));
+            }
             var binder = new ExpressionBinder(scope);
             var syntax = new NewExpressionSyntax(new SyntaxToken(SyntaxKind.NewKeyword, "New", null, call?.Span ?? parent.Span),
                 parent.Identifier, call?.OpenParenToken, call?.Arguments ?? [], call?.CommaTokens ?? [], call?.CloseParenToken);
@@ -123,7 +125,11 @@ internal static class AstClassConstructorSupport
         }
         if (constructor is null) return $"public {name}(){initializer} {{ }}";
         var parameters = string.Join(", ", constructor.Parameters.Select(p =>
-            (p.IsByRef ? "ref " : "") + BoundMethodEmitter.CSharpType(AstExperimentalCompiler.ResolveParameterType(p, symbols)) + " " + p.Identifier.Text));
+        {
+            var semanticType = AstExperimentalCompiler.ResolveParameterType(p, symbols);
+            var type = p.IsArray ? "System.Array" : BoundMethodEmitter.CSharpType(semanticType);
+            return (p.IsByRef ? "ref " : "") + type + " " + p.Identifier.Text;
+        }));
         var arguments = string.Join(", ", constructor.Parameters.Select(p => (p.IsByRef ? "ref " : "") + p.Identifier.Text));
         var visibility = constructor.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public";
         var suffix = Suffix(declaration, constructor);

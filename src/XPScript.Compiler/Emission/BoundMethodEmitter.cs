@@ -66,7 +66,7 @@ public sealed class BoundMethodEmitter
     {
         var mode = parameter.IsByRef ? "ref " : string.Empty;
         var type = parameter.SemanticType?.IsList == true ? $"LSList<{CSharpType(parameter.SemanticType.ElementType!)}>" : CSharpType(parameter.Type);
-        type = parameter.Type == typeof(Array) && parameter.SemanticType?.IsArray == true
+        type = parameter.SemanticType?.IsArray == true
             ? "System.Array"
             : parameter.SemanticType is { } semantic ? CSharpType(semantic) : type;
         return mode + type + " " + parameter.Name;
@@ -102,6 +102,8 @@ public sealed class BoundMethodEmitter
         "BOOLEAN" => "bool",
         "STRING" => "string",
         "VARIANT" => "object",
+        "VOID" => "void",
+        _ when type.RuntimeType == typeof(object) && !type.IsVariant && !type.IsObject && !type.IsNothing && !type.IsNull && !type.IsEmpty && !type.IsList => "Xp" + type.Name,
         _ => CSharpNativeType(type)
     };
 
@@ -110,7 +112,7 @@ public sealed class BoundMethodEmitter
         : type.IsList
         ? $"LSList<{CSharpType(type.ElementType!)}>"
         : type.IsArray
-        ? CSharpType(type.RuntimeType)
+        ? "System.Array"
         : BoundExpressionEmitter.RuntimeObjectType(type.Name) ??
           (type.RuntimeType == typeof(object) && !type.IsVariant && !type.IsObject && !type.IsNothing && !type.IsNull && !type.IsEmpty
               ? "Xp" + type.Name : CSharpType(type.RuntimeType));

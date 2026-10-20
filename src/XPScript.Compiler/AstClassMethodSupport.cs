@@ -256,18 +256,20 @@ internal static class AstClassMethodSupport
                         continue;
                     var rt = ownFunction is null ? typeof(void) : AstExperimentalCompiler.ResolveRuntimeType(ownFunction.ReturnType?.Identifier.Text);
                     var parameterTypes = ps.Select(p => AstExperimentalCompiler.ResolveParameterType(p, globals)).ToArray();
-                    var symbol = new FunctionSymbol(methodName, rt, parameterTypes.Select(p => p.RuntimeType).ToArray(),
+                    var symbol = new FunctionSymbol(methodName, rt, parameterTypes.Select((p, i) => ps[i].IsArray ? typeof(Array) : p.RuntimeType).ToArray(),
                         XpTypeSymbol.FromClr(rt), parameterTypes, ps.Select(p => p.IsByRef).ToArray());
                     classScope.Declare(symbol);
                     classScope.Declare(symbol with { Name = declaration.Identifier.Text + "." + methodName });
                 }
             }
             var scope = classScope.CreateChildScope();
-            var parameters = syntaxParameters.Select((p, i) => new ParameterSymbol(p.Identifier.Text,
-                AstExperimentalCompiler.ResolveParameterType(p, globals).RuntimeType, p.IsByRef,
-                AstExperimentalCompiler.ResolveParameterType(p, globals))
+            var parameters = syntaxParameters.Select((p, i) =>
+            {
+                var semanticType = AstExperimentalCompiler.ResolveParameterType(p, globals);
+                return new ParameterSymbol(p.Identifier.Text, p.IsArray ? typeof(Array) : semanticType.RuntimeType, p.IsByRef, semanticType)
             {
                 IsBorrowedImageSnapshot = isObjectSetter && i == syntaxParameters.Count - 1 && p.IsByRef && AstImageSupport.IsImage(p.Type?.Identifier.Text)
+            };
             }).ToArray();
             // Bind defaults in the instance declaration scope, exposing only earlier
             // indexes. Accessor locals and the incoming setter value are unavailable.

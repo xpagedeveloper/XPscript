@@ -21,7 +21,7 @@ internal static class AstAttachmentSupport
         new("XPAttachmentCollection", "SendToBrowser", "bool", ["object", "object"], ["attachmentId", "downloadName"], false, false, false),
         new("XPAttachmentCollection", "Delete", "bool", ["object"], ["attachmentId"], false, false, false)
     ];
-    internal static string RuntimeType(string name) => name.Equals("XPAttachmentCollection", StringComparison.OrdinalIgnoreCase) ? "XPScriptAttachmentCollectionV3" : name;
+    internal static string? RuntimeType(string name) => name.Equals("XPAttachmentCollection", StringComparison.OrdinalIgnoreCase) ? "XPScriptAttachmentCollectionV3" : null;
     internal static void Import(SymbolTable symbols) => AstNativeObjectSurface.Import(symbols, Members, LanguageType);
     private static string LanguageType(string type) => type.TrimEnd('?') switch { "object" => "Variant", "bool" => "Boolean", _ => type.TrimEnd('?') };
 }
