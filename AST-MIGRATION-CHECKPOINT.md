@@ -52,4 +52,5 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - FastCGI verification is green: `WEB-FASTCGI-SMOKE=OK` after fixing concurrent same-file web-log opening/writes with process-wide synchronization and `FileShare.ReadWrite`.
 - The complete `tests/ast-compile-probe/run-ast-cli.ps1` suite completed successfully with `AST CLI compilation probe passed.` It covered the current include/use, file-error, database, system inventory, constructors/destructors, properties, arrays, ByRef, JSON/XML/CSV, HTTP/TLS, XPAI, Notes HTTP, UI/runtime and control-flow probes.
 - The legacy CLI compatibility probe `tests/cli-compatibility/run-cli-compatibility.ps1` completed successfully with `CLI_COMMAND_LINE_COMPATIBILITY_OK`.
+- Target verification is green: `TARGET_MATRIX_OK`, all native target RID/multiline/fallback markers, `ANDROID_AST_BACKEND_OK`, and `ANDROID-AST-COMPILER-PROBE=OK`. The builds produced no compiler errors; restore emitted only `NU1900` because the NuGet vulnerability service index was unavailable.
 
