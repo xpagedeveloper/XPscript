@@ -166,7 +166,7 @@ async Task<string> Run(string file, string[] commandArguments)
     var start = new ProcessStartInfo(file) { RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = repo };
     foreach (var (name, value) in new[] { ("XPSCRIPT_HTTP_TEST_HTTP", arguments[0]), ("XPSCRIPT_HTTP_TEST_TLS", arguments[1]),
         ("XPSCRIPT_HTTP_TEST_MISMATCH", arguments[2]), ("XPSCRIPT_HTTP_TEST_EXPIRED", arguments[3]),
-        ("XPSCRIPT_AI_TEST_AI", arguments[0] + "/ai"), ("XPSCRIPT_AI_TIMEOUT_TEST_AI", arguments[0] + "/ai-timeout"), ("XPSCRIPT_NOTES_HTTP_TEST_URL", arguments[0] + "/notes"), ("XPSCRIPT_NOTES_JSON_TEST_URL", arguments[0] + "/notes-json") }) start.Environment[name] = value;
+        ("XPSCRIPT_AI_TEST_AI", arguments[0] + "/ai"), ("XPSCRIPT_AI_TIMEOUT_TEST_AI", arguments[0] + "/ai-timeout"), ("XPSCRIPT_NOTES_HTTP_TEST_URL", arguments[0] + "/notes"), ("XPSCRIPT_NOTES_JSON_TEST_URL", arguments[0] + "/notes-json"), ("XPSCRIPT_NOTES_REDIRECT_TEST_URL", arguments[0] + "/redirect") }) start.Environment[name] = value;
     foreach (var value in commandArguments) start.ArgumentList.Add(value);
     using var process = Process.Start(start)!;
     var stdout = process.StandardOutput.ReadToEndAsync(); var stderr = process.StandardError.ReadToEndAsync();

@@ -26,5 +26,13 @@ Sub Main()
     Dim responseHeaders As Variant
     responseHeaders = http.GetResponseHeaders()
     If UBound(responseHeaders) < 0 Then Error 4270
+    http.PreferJSONNavigator = False
+    http.PreferStrings = True
+    http.MaxRedirects = 0
+    Set result = http.Get(Environ("XPSCRIPT_NOTES_REDIRECT_TEST_URL"))
+    If http.ResponseCode <> 302 Then Error 4271
+    http.MaxRedirects = 1
+    Set result = http.Get(Environ("XPSCRIPT_NOTES_REDIRECT_TEST_URL"))
+    If http.ResponseCode <> 200 Or CStr(result) <> "GET|" Then Error 4272, CStr(result)
     Print "NOTES_HTTP_REQUEST_OK"
 End Sub
