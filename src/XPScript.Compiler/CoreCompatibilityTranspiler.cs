@@ -206,6 +206,7 @@ internal sealed class CoreCompatibilityTranspiler
 
         foreach (var part in SplitArguments(raw))
         {
+            var isWebBindingParameter = Regex.IsMatch(part, @"^\s*\[(?:FromRoute|FromQuery|FromBody|FromHeader)(?::[^\]]+)?\]", RegexOptions.IgnoreCase);
             var clean = Regex.Replace(part.Trim(), @"\b(LMBCS|Unicode)\b", "", RegexOptions.IgnoreCase).Trim();
             clean = Regex.Replace(clean, @"^\[(?:FromRoute|FromQuery|FromBody|FromHeader)(?::(?:""[^""]+""|[^\]]+))?\]\s*", "", RegexOptions.IgnoreCase).Trim();
             var match = Regex.Match(clean, @"^(?:(ByVal|ByRef)\s+)?([A-Za-z_]\w*)\s*(\(\))?\s*(List)?\s*(?:As\s+([A-Za-z_]\w*))?$", RegexOptions.IgnoreCase);
@@ -215,7 +216,7 @@ internal sealed class CoreCompatibilityTranspiler
                 throw SyntaxFailure("Unsupported parameter declaration: " + foundToken, sourceName, lineNumber, sourceLine ?? raw, "parameter declaration", foundToken);
             }
             var mode = match.Groups[1].Value;
-            var byRef = mode.Equals("ByRef", StringComparison.OrdinalIgnoreCase) || (treatOmittedAsByRef && !mode.Equals("ByVal", StringComparison.OrdinalIgnoreCase));
+            var byRef = !isWebBindingParameter && (mode.Equals("ByRef", StringComparison.OrdinalIgnoreCase) || (treatOmittedAsByRef && !mode.Equals("ByVal", StringComparison.OrdinalIgnoreCase)));
             var name = match.Groups[2].Value;
             var type = string.IsNullOrWhiteSpace(match.Groups[5].Value) ? ResolveDefaultType(name) : match.Groups[5].Value;
             result.Add(new ParameterInfo(name, type, byRef, !string.IsNullOrWhiteSpace(match.Groups[3].Value), !string.IsNullOrWhiteSpace(match.Groups[4].Value)));

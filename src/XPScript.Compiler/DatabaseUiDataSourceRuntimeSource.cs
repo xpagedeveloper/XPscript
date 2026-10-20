@@ -2,6 +2,8 @@ namespace XPScript.Compiler;
 
 internal static class DatabaseUiDataSourceRuntimeSource
 {
+    public static string BuildHttpDatabaseExtensions() => HttpDatabaseCode;
+
     public static string Build(bool usesSqlite, bool usesMsSql, bool usesHttpDatabase)
     {
         var code = new System.Text.StringBuilder();

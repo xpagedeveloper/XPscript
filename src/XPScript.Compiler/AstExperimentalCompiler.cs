@@ -10,6 +10,26 @@ namespace XPScript.Compiler;
 /// <summary>Experimental CLI bridge for the currently supported AST compilation slice.</summary>
 public static class AstExperimentalCompiler
 {
+    public static string EnsureAttachmentRuntime(string generated)
+    {
+        ArgumentNullException.ThrowIfNull(generated);
+        if (!generated.Contains("XPScriptAttachmentCollectionV3", StringComparison.Ordinal) ||
+            generated.Contains("internal sealed class XPScriptAttachmentCollectionV3", StringComparison.Ordinal))
+            return generated;
+        var runtime = generated;
+        if (!generated.Contains("XPScriptHttpDbSupabase", StringComparison.Ordinal))
+            runtime += Environment.NewLine + HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code +
+                (generated.Contains("XPScriptTlsValidationState", StringComparison.Ordinal) ? string.Empty : AstTlsRuntimeCode());
+        if (!generated.Contains("XPScriptHttpDatabaseDataSourceExtensions", StringComparison.Ordinal))
+            runtime += Environment.NewLine + DatabaseUiDataSourceRuntimeSource.BuildHttpDatabaseExtensions();
+        if (!generated.Contains("XPScriptDatabaseDataSourceRuntime", StringComparison.Ordinal))
+            runtime += Environment.NewLine + DatabaseUiDataSourceRuntimeSource.Build(true, true, true);
+        return runtime + Environment.NewLine + DatabaseAttachmentRuntimeV2Source.Build(
+            generated.Contains("XPScriptDbSqlite", StringComparison.Ordinal),
+            generated.Contains("XPScriptDbMsSql", StringComparison.Ordinal)) +
+            Environment.NewLine + DatabaseAttachmentRuntimeV3Source.Code;
+    }
+
     public static Task<string> CompileAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken = default)
         => CompileAsync(sourcePath, outputDirectory, null, cancellationToken: cancellationToken);
 
@@ -454,7 +474,12 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         var usesApplication = AstApplicationSupport.UsesApplication(fullSource);
         var usesDatabaseDynamicRuntime = AstSqliteSupport.Uses(fullSource) || AstMySqlSupport.Uses(fullSource) ||
-            AstMsSqlSupport.Uses(fullSource) || AstSupabaseSupport.Uses(fullSource);
+            AstMsSqlSupport.Uses(fullSource) || AstSupabaseSupport.Uses(fullSource) ||
+            source.Contains("XPScriptDbSqlite", StringComparison.OrdinalIgnoreCase) ||
+            source.Contains("XPScriptDbMsSql", StringComparison.OrdinalIgnoreCase) ||
+            source.Contains("XPDBSQLite", StringComparison.OrdinalIgnoreCase) ||
+            source.Contains("XPDbMsSql", StringComparison.OrdinalIgnoreCase) ||
+            source.Contains("Attachments", StringComparison.OrdinalIgnoreCase);
         if (usesApplication)
             foreach (var mainSymbol in symbols.LookupAll("Main").OfType<FunctionSymbol>())
                 mainSymbol.NativeTargetName = "__xps_application_main";
@@ -655,7 +680,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{(AstMsSqlSupport.Uses(fullSource) ? MsSqlDbRuntimeSource.Code : "")}}
 {{(AstSupabaseSupport.Uses(fullSource) ? SupabaseDbRuntimeSource.Code : "")}}
 {{(usesDatabaseDynamicRuntime ? DatabaseUiDataSourceRuntimeSource.Build(AstSqliteSupport.Uses(fullSource), AstMsSqlSupport.Uses(fullSource), true) : "")}}
-{{(usesDatabaseDynamicRuntime ? HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + AstTlsRuntimeCode() + DatabaseAttachmentRuntimeV2Source.Build(AstSqliteSupport.Uses(fullSource), AstMsSqlSupport.Uses(fullSource)) + DatabaseAttachmentRuntimeV3Source.Code : "")}}
+{{((usesDatabaseDynamicRuntime || source.Contains("Attachments", StringComparison.OrdinalIgnoreCase)) ? HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + AstTlsRuntimeCode() + DatabaseAttachmentRuntimeV2Source.Build(AstSqliteSupport.Uses(fullSource) || source.Contains("XPDBSQLite", StringComparison.OrdinalIgnoreCase), AstMsSqlSupport.Uses(fullSource) || source.Contains("XPDbMsSql", StringComparison.OrdinalIgnoreCase)) + DatabaseAttachmentRuntimeV3Source.Code : "")}}
 {{AstHttpSupport.RuntimeCode(fullSource)}}
 {{(AstNotesJsonSupport.Uses(fullSource) || Regex.IsMatch(fullSource, @"(?i)\bNotesHTTPRequest\b") ? JsonHttpCompatibilityRuntimeSource.Code + (AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) || runtimeFeatures.Http ? "" : AstTlsRuntimeCode()) : "")}}
 {{((AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
@@ -1110,6 +1135,7 @@ internal static class Program
 {{androidEntryPoint}}
 }
 """;
+        generated = EnsureAttachmentRuntime(generated);
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode;
         using var assetScope = UIFormAssetCompileContext.Push(embedAssets);

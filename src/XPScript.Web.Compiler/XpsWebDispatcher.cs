@@ -62,6 +62,11 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
                 scriptPath = explicitMatch.ScriptPath;
                 requestedRoute = explicitMatch.ProcedureName;
                 context.SetRouteValues(explicitMatch.RouteValues);
+                if (!explicitMatch.MethodAllowed && !context.Request.Method.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase))
+                {
+                    WriteTerminalResponse(context.Response, 405, "Method Not Allowed", context.Request.Method);
+                    return;
+                }
             }
             else
             {
@@ -144,6 +149,24 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             throw;
+        }
+        catch (XpsRestBindingException ex)
+        {
+            WriteDebugException(context, ex, scriptPath, requestedRoute);
+            if (!context.Response.Completed)
+            {
+                XpsWebResponseRestExtensions.BadRequest(context.Response, ex.Message);
+                context.Response.Complete();
+            }
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            WriteDebugException(context, ex, scriptPath, requestedRoute);
+            if (!context.Response.Completed)
+            {
+                XpsWebResponseRestExtensions.BadRequest(context.Response, "Request body contains invalid JSON.");
+                context.Response.Complete();
+            }
         }
         catch (Exception ex)
         {

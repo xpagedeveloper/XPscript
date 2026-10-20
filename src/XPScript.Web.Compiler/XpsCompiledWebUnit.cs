@@ -14,6 +14,7 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
     private Assembly? _assembly;
     private readonly IReadOnlyDictionary<string, XpsWebRouteDescriptor> _routes;
     private readonly IReadOnlyList<string> _precompileTargets;
+    private readonly string? _webRootPath;
     private readonly Func<string, XpsWebContext, Task>? _syntheticHandler;
     private readonly object _jsonSchemaCacheGate = new();
     private readonly Dictionary<string, CachedJsonSchema> _jsonSchemaCache = new(StringComparer.Ordinal);
@@ -22,12 +23,14 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         AssemblyLoadContext loadContext,
         Assembly assembly,
         IReadOnlyDictionary<string, XpsWebRouteDescriptor> routes,
-        IReadOnlyList<string> precompileTargets)
+        IReadOnlyList<string> precompileTargets,
+        string? webRootPath = null)
     {
         _loadContext = loadContext;
         _assembly = assembly;
         _routes = routes;
         _precompileTargets = precompileTargets;
+        _webRootPath = webRootPath;
     }
 
     internal XpsCompiledWebUnit(
@@ -72,33 +75,37 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.IgnoreCase)
             ?? throw new XpsWebRouteException($"Exported route procedure '{procedureName}' was not found in the compiled unit.");
 
+        SchemaValidationFailure? schemaValidationFailure = null;
         if (descriptor.JsonSchema is not null)
         {
-            var schemaValidation = ValidateJsonSchemaWithXpRuntime(assembly, context, descriptor.JsonSchema);
-            if (schemaValidation.Errors.Count > 0)
-            {
-                XpsWebResponseRestExtensions.Problem(
-                    context.Response,
-                    400,
-                    "JSON Schema validation failed",
-                    "The request body does not satisfy the route XPJsonSchema.",
-                    schemaValidation.Errors,
-                    new Dictionary<string, object?> { ["validationErrors"] = schemaValidation.Details });
-                if (!context.Response.Completed) XpsWebSecurity.ApplyResponseSecurityHeaders(context.Response);
-                return;
-            }
+            schemaValidationFailure = ValidateJsonSchemaWithXpRuntime(assembly, context, descriptor.JsonSchema);
         }
 
         if (!XpsRestBinder.TryBind(method, context, descriptor, out var arguments, out var errors))
         {
             if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal))
                 Console.Error.WriteLine($"REST binding failed for {procedureName}: {System.Text.Json.JsonSerializer.Serialize(errors)}");
+            var combinedErrors = MergeValidationErrors(schemaValidationFailure?.Errors, errors);
             XpsWebResponseRestExtensions.Problem(
                 context.Response,
                 400,
-                "Validation failed",
-                "One or more request values are invalid.",
-                errors);
+                schemaValidationFailure is not null ? "JSON Schema validation failed" : "Validation failed",
+                schemaValidationFailure is not null ? "The request body does not satisfy the route XPJsonSchema." : "One or more request values are invalid.",
+                combinedErrors,
+                schemaValidationFailure is null ? null : new Dictionary<string, object?> { ["validationErrors"] = schemaValidationFailure.Details });
+            if (!context.Response.Completed) XpsWebSecurity.ApplyResponseSecurityHeaders(context.Response);
+            return;
+        }
+
+        if (schemaValidationFailure is { Errors.Count: > 0 })
+        {
+            XpsWebResponseRestExtensions.Problem(
+                context.Response,
+                400,
+                "JSON Schema validation failed",
+                "The request body does not satisfy the route XPJsonSchema.",
+                schemaValidationFailure.Errors,
+                new Dictionary<string, object?> { ["validationErrors"] = schemaValidationFailure.Details });
             if (!context.Response.Completed) XpsWebSecurity.ApplyResponseSecurityHeaders(context.Response);
             return;
         }
@@ -134,12 +141,30 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         IReadOnlyDictionary<string, string[]> Errors,
         IReadOnlyList<IReadOnlyDictionary<string, string>> Details);
 
+    private static IReadOnlyDictionary<string, string[]> MergeValidationErrors(
+        IReadOnlyDictionary<string, string[]>? first,
+        IReadOnlyDictionary<string, string[]> second)
+    {
+        var merged = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        if (first is not null)
+            foreach (var item in first)
+                merged[item.Key] = item.Value.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        foreach (var item in second)
+        {
+            if (!merged.TryGetValue(item.Key, out var messages))
+                merged[item.Key] = messages = [];
+            foreach (var message in item.Value)
+                if (!messages.Contains(message, StringComparer.OrdinalIgnoreCase)) messages.Add(message);
+        }
+        return merged.ToDictionary(item => item.Key, item => item.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
+    }
+
     private SchemaValidationFailure ValidateJsonSchemaWithXpRuntime(Assembly assembly, XpsWebContext context, string schemaPath)
     {
         string candidate;
         try
         {
-            candidate = XpsJsonSchemaPath.ResolveInsideRoot(context.Server.RootPath, schemaPath);
+            candidate = XpsJsonSchemaPath.ResolveInsideRoot(_webRootPath ?? context.Server.RootPath, schemaPath);
         }
         catch (ArgumentException ex)
         {
@@ -188,10 +213,10 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         {
             if (context.Request.Body.Length > 1_048_576)
                 throw new InvalidOperationException("Request body exceeds the configured 1048576 byte text limit.");
-            var node = JsonNode.Parse(
-                context.Request.Body.Span,
-                nodeOptions: null,
-                documentOptions: new System.Text.Json.JsonDocumentOptions { MaxDepth = 64 });
+            using var jsonDocument = System.Text.Json.JsonDocument.Parse(
+                context.Request.Body.ToArray(),
+                new System.Text.Json.JsonDocumentOptions { MaxDepth = 64 });
+            var node = JsonElementToNode(jsonDocument.RootElement);
             document = fromNode.Invoke(null, [node])
                 ?? throw new XpsWebRouteException("XPJson runtime node bridge returned no document.");
         }
@@ -199,6 +224,12 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         {
             return new SchemaValidationFailure(
                 new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = ["Invalid JSON input."] },
+                []);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new SchemaValidationFailure(
+                new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase) { ["body"] = [ex.Message] },
                 []);
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
@@ -233,9 +264,16 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
             var error = getError.Invoke(result, [i]);
             if (error is null) continue;
             var get = error.GetType().GetMethod("Get", BindingFlags.Instance | BindingFlags.Public);
-            if (get is null) continue;
+            var stringify = error.GetType().GetMethod("Stringify", BindingFlags.Instance | BindingFlags.Public);
+            using var errorDocument = stringify?.Invoke(error, null) is string errorText
+                ? System.Text.Json.JsonDocument.Parse(errorText)
+                : null;
             string Field(string name, string fallback = "") =>
-                Convert.ToString(get.Invoke(error, [name]), System.Globalization.CultureInfo.InvariantCulture) ?? fallback;
+                get is not null && get.Invoke(error, [name]) is object value
+                    ? Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? fallback
+                    : errorDocument?.RootElement.TryGetProperty(name, out var property) == true
+                        ? property.ToString()
+                        : fallback;
             var path = Field("path", "$");
             var message = Field("message", "JSON Schema validation failed.");
             if (!errors.TryGetValue(path, out var messages)) errors[path] = messages = [];
@@ -253,6 +291,34 @@ public sealed class XpsCompiledWebUnit : IAsyncDisposable
         return new SchemaValidationFailure(
             errors.ToDictionary(x => x.Key, x => x.Value.ToArray(), StringComparer.OrdinalIgnoreCase),
             details);
+    }
+
+    private static JsonNode? JsonElementToNode(System.Text.Json.JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            System.Text.Json.JsonValueKind.Object => BuildObject(element),
+            System.Text.Json.JsonValueKind.Array => BuildArray(element),
+            System.Text.Json.JsonValueKind.String => JsonValue.Create(element.GetString()),
+            System.Text.Json.JsonValueKind.Number => element.TryGetInt64(out var integer) ? JsonValue.Create(integer) : JsonValue.Create(element.GetDouble()),
+            System.Text.Json.JsonValueKind.True => JsonValue.Create(true),
+            System.Text.Json.JsonValueKind.False => JsonValue.Create(false),
+            _ => null
+        };
+    }
+
+    private static JsonObject BuildObject(System.Text.Json.JsonElement element)
+    {
+        var result = new JsonObject();
+        foreach (var property in element.EnumerateObject()) result[property.Name] = JsonElementToNode(property.Value);
+        return result;
+    }
+
+    private static JsonArray BuildArray(System.Text.Json.JsonElement element)
+    {
+        var result = new JsonArray();
+        foreach (var item in element.EnumerateArray()) result.Add(JsonElementToNode(item));
+        return result;
     }
 
     private static object? TaskResult(Task task)

@@ -72,7 +72,7 @@ public sealed class XpsWebCompiler
             var pdbPath = Path.Combine(artifactDirectory, "XPScript.WebUnit.pdb");
             var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
             TouchPersistentArtifact(artifactDirectory);
-            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, artifactDirectory);
+            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, artifactDirectory, fullSourceRoot);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or BadImageFormatException or XpsWebCompilationException)
         {
@@ -109,15 +109,19 @@ public sealed class XpsWebCompiler
 
         if (parsed.Routes.Count == 0) throw new XpsWebCompilationException("Web source must export at least one route using web route attributes.");
 
-        var compilerSource = EnsureCompilerEntryPoint(NormalizeVariantSetAssignments(parsed.Source));
+        var compilerSource = NormalizeVariantSetAssignments(ForceRouteParametersByVal(parsed.Source, parsed.Routes.Values));
         if (parsed.Routes.Values.Any(route => route.JsonSchema is not null))
-            compilerSource += "\nDim __xps_rest_json_schema_runtime As XPJsonSchema\n";
+            compilerSource += "\nPrivate Sub XpsCompilerGeneratedJsonSchemaRuntime()\n    Dim xpsCompilerGeneratedJsonSchema As XPJsonSchema\nEnd Sub\n";
+        if (compilerSource.Contains(".Attachments", StringComparison.OrdinalIgnoreCase))
+            compilerSource += "\n' XPScript compiler runtime feature: XPDBSQLite Attachments\n";
+        compilerSource = EnsureCompilerEntryPoint(compilerSource);
         string generated;
         try
         {
             DebugStep("transpile:start", fullSourcePath);
             generated = new XPScriptTranspiler().TranspileRestricted(compilerSource, fullSourcePath, CompilerDriver.CurrentRuntimeIdentifier(), [fullSourceRoot]);
             generated = InjectWebObjects(generated);
+            generated = AstExperimentalCompiler.EnsureAttachmentRuntime(generated);
             DebugStep("transpile:done", fullSourcePath);
         }
         catch (CompilerException ex)
@@ -162,14 +166,14 @@ public sealed class XpsWebCompiler
             }
 
             DebugStep("load:start", fullSourcePath);
-            var unit = LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, dependencyDirectory);
+            var unit = LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, dependencyDirectory, fullSourceRoot);
             DebugStep("load:done", fullSourcePath);
             return unit;
         }
         finally { try { Directory.Delete(workspace, recursive: true); } catch { } }
     }
 
-    private static XpsCompiledWebUnit LoadCompiledUnit(byte[] assemblyBytes, byte[]? pdbBytes, XpsWebRouteParseResult parsed, string dependencyDirectory)
+    private static XpsCompiledWebUnit LoadCompiledUnit(byte[] assemblyBytes, byte[]? pdbBytes, XpsWebRouteParseResult parsed, string dependencyDirectory, string webRootPath)
     {
         var loadContext = new AssemblyLoadContext("XPScriptWeb-" + Guid.NewGuid().ToString("N"), isCollectible: true);
         var componentAssemblyPath = Path.Combine(dependencyDirectory, "XPScript.WebUnit.dll");
@@ -207,7 +211,7 @@ public sealed class XpsWebCompiler
             }
             else assembly = loadContext.LoadFromStream(assemblyStream);
             ValidateCompiledRoutes(assembly, parsed.Routes);
-            return new XpsCompiledWebUnit(loadContext, assembly, parsed.Routes, parsed.PrecompileTargets);
+            return new XpsCompiledWebUnit(loadContext, assembly, parsed.Routes, parsed.PrecompileTargets, webRootPath);
         }
         catch
         {
@@ -528,6 +532,19 @@ internal static class Script
     }
 
     private static string EnsureCompilerEntryPoint(string source) => MainOrInitialize.IsMatch(source) ? source : source + Environment.NewLine + Environment.NewLine + "Public Sub Main()" + Environment.NewLine + "End Sub" + Environment.NewLine;
+
+    private static string ForceRouteParametersByVal(string source, IEnumerable<XpsWebRouteDescriptor> routes)
+    {
+        foreach (var route in routes)
+        {
+            foreach (var binding in route.ParameterBindings ?? [])
+            {
+                var pattern = $@"(?is)(\b(?:Sub|Function)\s+{Regex.Escape(route.ProcedureName)}\s*\([^)]*?)(?<![A-Za-z0-9_]){Regex.Escape(binding.ParameterName)}\s+(As\b)";
+                source = Regex.Replace(source, pattern, $"$1ByVal {binding.ParameterName} $2", RegexOptions.CultureInvariant);
+            }
+        }
+        return source;
+    }
 
     private static void ValidateRoutesExist(string generated, IReadOnlyDictionary<string, XpsWebRouteDescriptor> routes)
     {

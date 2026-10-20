@@ -8,7 +8,8 @@ internal sealed record XpsExplicitRouteMatch(
     string ScriptPath,
     string ProcedureName,
     XpsWebRouteDescriptor Descriptor,
-    IReadOnlyDictionary<string, string> RouteValues);
+    IReadOnlyDictionary<string, string> RouteValues,
+    bool MethodAllowed);
 
 internal sealed class XpsRestRouteIndex
 {
@@ -46,7 +47,8 @@ internal sealed class XpsRestRouteIndex
             selected.Entry.ScriptPath,
             selected.Entry.Descriptor.ProcedureName,
             selected.Entry.Descriptor,
-            selected.Values);
+            selected.Values,
+            methodMatch.Entry is not null);
     }
 
     private void Refresh(bool force)

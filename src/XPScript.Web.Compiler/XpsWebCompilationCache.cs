@@ -11,7 +11,7 @@ public sealed class XpsWebCompilationCacheOptions
     public long MaxSourceBytes { get; init; } = 4 * 1024 * 1024;
     public TimeSpan IdleTtl { get; init; } = TimeSpan.FromMinutes(20);
     public TimeSpan FailureBackoff { get; init; } = TimeSpan.FromSeconds(2);
-    public string ConfigurationIdentity { get; init; } = "default";
+    public string ConfigurationIdentity { get; init; } = "ast-compiler-2026-10-20";
     public bool EnablePersistentCache { get; init; } = true;
     public string? PersistentCacheDirectory { get; init; }
 
