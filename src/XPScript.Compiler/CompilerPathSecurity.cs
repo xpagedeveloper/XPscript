@@ -103,7 +103,26 @@ internal static class CompilerPathSecurity
         if (IsLinkOrReparsePoint(rootInfo))
             throw TemporaryWorkspaceSecurity("Refusing to recursively clean a compiler temporary workspace that is itself a symbolic link or reparse point.");
 
-        DeleteDirectoryWithoutFollowingLinks(rootInfo);
+        // dotnet/MSBuild can release file handles just after the child process
+        // exits. Retry the removal briefly so normal transient sharing
+        // violations do not leave one run-build-* directory per invocation.
+        Exception? lastError = null;
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            try
+            {
+                DeleteDirectoryWithoutFollowingLinks(rootInfo);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                lastError = ex;
+                if (attempt == 3) break;
+                Thread.Sleep(50 * (attempt + 1));
+            }
+        }
+
+        if (lastError is not null) throw lastError;
     }
 
     private static string CanonicalizeExistingDirectory(string path)
