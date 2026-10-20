@@ -315,6 +315,7 @@ public static class XPScriptCompilerCommandLine
         ApplicationSecurityMode? securityMode = null;
         var sourceRoots = new List<string>();
         var sourcePreprocessors = new List<string>();
+        var embedAssets = false;
         for (var i = 1; i < args.Length; i++)
         {
             if ((args[i] == "-o" || args[i] == "--output") && i + 1 < args.Length)
@@ -348,6 +349,8 @@ public static class XPScriptCompilerCommandLine
             }
             else if (args[i] == "--preprocessor" && i + 1 < args.Length)
                 sourcePreprocessors.Add(args[++i]);
+            else if (args[i] == "--embed-assets")
+                embedAssets = true;
             else if (args[i] == "--result-format" && i + 1 < args.Length)
                 resultFormat = args[++i].ToLowerInvariant();
             else
@@ -367,7 +370,7 @@ public static class XPScriptCompilerCommandLine
                 throw new ArgumentException("Unsupported runtime identifier '" + runtimeIdentifier + "'.");
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier,
-                securityMode ?? ApplicationSecurityMode.Off, restricted, sourceRoots, sourcePreprocessors).ConfigureAwait(false);
+                securityMode ?? ApplicationSecurityMode.Off, restricted, sourceRoots, sourcePreprocessors, embedAssets).ConfigureAwait(false);
             var result = CompileResult.Ok(assemblyPath)
                 .WithOperation("ast-compile")
                 .WithContext(sourcePath, runtimeIdentifier);

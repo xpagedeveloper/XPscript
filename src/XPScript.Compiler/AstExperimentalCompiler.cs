@@ -16,6 +16,7 @@ public static class AstExperimentalCompiler
     public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, string? runtimeIdentifier,
         ApplicationSecurityMode securityMode = ApplicationSecurityMode.Off, bool restricted = false,
         IReadOnlyList<string>? sourceRoots = null, IReadOnlyList<string>? sourcePreprocessors = null,
+        bool embedAssets = false,
         CancellationToken cancellationToken = default)
     {
         using var securityScope = ApplicationSecurityModeContext.Push(securityMode);
@@ -1041,6 +1042,8 @@ internal static class Program
 """;
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode;
+        using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
+        generated = UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);
         if (usesAi)
         {
             generated += Environment.NewLine + AiRuntimeSource.Code + Environment.NewLine + AiToolRuntimeSource.Code;
