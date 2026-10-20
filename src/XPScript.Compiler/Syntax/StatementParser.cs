@@ -149,6 +149,20 @@ public sealed class StatementParser
             return new ExpressionStatementSyntax(new CallExpressionSyntax(target, open, [argument], [], close));
         }
 
+        // LotusScript/VB-compatible statement calls may omit parentheses for
+        // the common single-argument dialog helpers (for example `MsgBox
+        // "message"`). Keep this in the syntax parser so the AST path does
+        // not need a text-rewrite compatibility pass.
+        if (IsIdentifier("MsgBox") || IsIdentifier("InputBox"))
+        {
+            var nameToken = NextToken();
+            var argument = ParseExpressionUntilLineEnd();
+            var open = new SyntaxToken(SyntaxKind.OpenParenToken, "(", null, new TextSpan(nameToken.Span.End, 0));
+            var close = new SyntaxToken(SyntaxKind.CloseParenToken, ")", null, new TextSpan(argument.Span.End, 0));
+            var target = new NameExpressionSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, nameToken.Text, null, nameToken.Span));
+            return new ExpressionStatementSyntax(new CallExpressionSyntax(target, open, [argument], [], close));
+        }
+
         var equalsIndex = FindTopLevelEqualsIndex(_position);
         return equalsIndex >= 0
             ? ParseAssignmentStatement(equalsIndex)
