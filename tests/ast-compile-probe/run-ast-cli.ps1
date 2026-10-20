@@ -279,6 +279,13 @@ $fileExistsAliasesResult = dotnet (Join-Path $fileExistsAliasesOutput 'Generated
 if ($LASTEXITCODE -ne 0 -or ($fileExistsAliasesResult -join "`n") -ne 'FILE_EXISTS_ALIASES_AST_OK') { throw 'AST FileExists/DirExists regression failed.' }
 Write-Host 'AST_FILE_EXISTS_ALIASES_OK'
 
+$pathObjectOutput = Join-Path $output 'path-object-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'path-object-next.xps') -o $pathObjectOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Path object compilation failed.' }
+$pathObjectResult = dotnet (Join-Path $pathObjectOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($pathObjectResult -join "`n") -ne 'PATH_OBJECT_AST_OK') { throw 'AST Path object regression failed.' }
+Write-Host 'AST_PATH_OBJECT_OK'
+
 $inputBoxOutput = Join-Path $output 'inputbox-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inputbox-next.xps') -o $inputBoxOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST InputBox compilation failed.' }

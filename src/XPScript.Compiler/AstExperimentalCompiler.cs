@@ -799,7 +799,7 @@ internal static class Program
         public string FileName() => System.IO.Path.GetFileName(_path);
         public string FileNameWithoutExtension() => System.IO.Path.GetFileNameWithoutExtension(_path);
         public string Extension() => System.IO.Path.GetExtension(_path);
-        public string Directory() => System.IO.Path.GetDirectoryName(_path) ?? string.Empty;
+        public string Directory() => System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(_path)) ?? string.Empty;
         public string Root() => System.IO.Path.GetPathRoot(System.IO.Path.GetFullPath(_path)) ?? string.Empty;
         public bool Exists() => System.IO.File.Exists(_path) || System.IO.Directory.Exists(_path);
         public string Parent() => System.IO.Path.GetDirectoryName(_path) ?? string.Empty;
@@ -807,7 +807,7 @@ internal static class Program
         public string Normalize() => System.IO.Path.GetFullPath(_path);
         public string ChangeExtension(string extension) => System.IO.Path.ChangeExtension(_path, extension) ?? string.Empty;
         public bool IsAbsolute() => System.IO.Path.IsPathRooted(_path);
-        public string Relative(string other) => System.IO.Path.GetRelativePath(_path, other);
+        public string Relative(string other) => System.IO.Path.GetRelativePath(System.IO.Path.GetFullPath(_path), System.IO.Path.GetFullPath(other));
         public string Combine(string child) => System.IO.Path.Combine(_path, child);
     }
     public static object FileInfo(params object?[] a) {

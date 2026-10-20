@@ -1,0 +1,22 @@
+Option Explicit
+
+Sub Main()
+    Dim p As Variant
+    p = New Path("tests/ast-compile-probe/file-exists-aliases-next.xps")
+
+    If p.FileName() <> "file-exists-aliases-next.xps" Then Error 9870, "Path.FileName failed"
+    If p.FileNameWithoutExtension() <> "file-exists-aliases-next" Then Error 9871, "Path.FileNameWithoutExtension failed"
+    If p.Extension() <> ".xps" Then Error 9872, "Path.Extension failed"
+    If p.Directory() = "" Or p.Root() = "" Then Error 9873, "Path.Directory/Root failed"
+    If p.IsAbsolute() Then Error 9874, "relative Path reported absolute"
+    If Not p.Exists() Then Error 9875, "Path.Exists failed"
+    If p.Absolute() = "" Or p.Normalize() = "" Then Error 9876, "Path absolute/normalize failed"
+    If p.ChangeExtension(".json") = "" Then Error 9877, "Path.ChangeExtension failed"
+    If p.Combine("child.txt") = "" Then Error 9879, "Path.Combine failed"
+
+    Dim rootPath As Variant
+    rootPath = New Path("tests/ast-compile-probe")
+    If rootPath.Relative("tests/ast-compile-probe/file-exists-aliases-next.xps") <> "file-exists-aliases-next.xps" Then Error 9878, "Path.Relative failed"
+
+    Print "PATH_OBJECT_AST_OK"
+End Sub
