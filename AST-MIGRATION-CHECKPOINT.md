@@ -7,7 +7,7 @@ Updated 2026-10-20 on branch `investigate-ast-compiler`.
 - Latest pushed commit: `af85d0ec` (`Normalize numeric arrays for XPImage byte input`).
 - Working tree was clean when this checkpoint was written.
 - The focused XPImage AST regression passed, including byte-array interop and image getters/setters/indexed properties.
-- The full AST CLI suite is currently running from `tests/ast-compile-probe/run-ast-cli.ps1` in the existing PowerShell session (session `48478`). Do not restart it; poll the existing session and record the next result/failure.
+- The full AST CLI suite was run from `tests/ast-compile-probe/run-ast-cli.ps1` in PowerShell session `48478` and completed successfully.
 - The latest full-suite markers reached before this checkpoint include `AST_TIME_PARTS_OK`, followed by shell-id, MsgBox, file runtime/get/text/input/lock, and `AST_ISDIR_DRIVE_OK` markers.
 - The full AST CLI suite subsequently completed successfully with exit code 0 and `AST CLI compilation probe passed.` in session `48478`.
 
