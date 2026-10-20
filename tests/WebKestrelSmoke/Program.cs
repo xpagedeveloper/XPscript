@@ -333,11 +333,12 @@ try
                 throw new Exception($"Chunked in-memory body limit expected 413 or a transport-level connection rejection, got {(int)response.StatusCode}.");
             _ = ReadRequestId(response);
         }
-        catch (HttpRequestException ex) when (IsPrematureResponseEnd(ex))
+        catch (HttpRequestException ex) when (IsPrematureResponseEnd(ex) || IsConnectionAbort(ex))
         {
             // Kestrel may terminate the HTTP/1.1 connection while rejecting an oversized
-            // chunked body. That is a valid fail-closed outcome: the application handler
-            // never receives the oversized request.
+            // chunked body. Depending on the platform, the client reports this as a
+            // premature response or a connection reset. Both are valid fail-closed
+            // outcomes: the application handler never receives the oversized request.
         }
     }
 
@@ -947,10 +948,21 @@ static async Task AssertRequestHeadersTimeoutAsync(Uri baseAddress)
     await Task.Delay(TimeSpan.FromSeconds(2));
     var buffer = new byte[1024];
     using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-    var read = await stream.ReadAsync(buffer, timeout.Token);
-    var text = Encoding.ASCII.GetString(buffer, 0, read);
-    if (!text.Contains("408", StringComparison.Ordinal) && read != 0)
-        throw new Exception($"Request headers timeout expected connection close or 408, got: {text}");
+    try
+    {
+        var read = await stream.ReadAsync(buffer, timeout.Token);
+        var text = Encoding.ASCII.GetString(buffer, 0, read);
+        if (!text.Contains("408", StringComparison.Ordinal) && read != 0)
+            throw new Exception($"Request headers timeout expected connection close or 408, got: {text}");
+    }
+    catch (IOException ex) when (IsConnectionAbort(ex))
+    {
+        // Windows may surface Kestrel's timeout close as an aborted/reset stream.
+    }
+    catch (SocketException ex) when (IsConnectionAbort(ex))
+    {
+        // A transport-level reset is also a valid timeout enforcement result.
+    }
 }
 
 static async Task AssertKeepAliveTimeoutAsync(string root, TimeSpan keepAliveTimeout)

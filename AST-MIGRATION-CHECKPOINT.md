@@ -60,3 +60,5 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - WebHostConfigSmoke API-doc regression fixed: fixture now includes explicit [JsonSchema] and typed fallback endpoints; WebHostConfigSmoke green.
 - WebIisPackageProbe green, including missing-main.xps rejection.
 - Graphify query/update attempted; graphify binary still fails with uv trampoline canonicalize error.
+
+- Kestrel smoke is green after accepting Windows transport-level connection reset/aborted outcomes for oversized chunked bodies and request-header timeout enforcement; handler-reachability assertions remain active.
