@@ -12,13 +12,7 @@ internal static class AstClassMethodSupport
     private static bool UnsupportedNativeAccessorType(string? name) =>
         name is not null && name.Trim().ToUpperInvariant() is not ("BYTE" or "BOOLEAN" or "STRING" or "INTEGER" or "LONG" or "SINGLE" or "DOUBLE" or "CURRENCY" or "DATE") &&
         BoundExpressionEmitter.RuntimeObjectType(name ?? "") is not null &&
-        !AstXmlSupport.IsXml(name) &&
-        !AstCsvSupport.IsCsv(name) &&
-        !AstSpreadsheetSupport.IsSpreadsheet(name) &&
-        !AstHttpSupport.IsHttp(name) &&
-        !AstImageSupport.IsImage(name) &&
-        !(new[] { "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement" }
-            .Contains(name, StringComparer.OrdinalIgnoreCase));
+        !SupportedNativeClassMethodType(name);
 
     private static bool SupportedNativeClassMethodType(string? name) =>
         string.Equals(name, "Object", StringComparison.OrdinalIgnoreCase) ||

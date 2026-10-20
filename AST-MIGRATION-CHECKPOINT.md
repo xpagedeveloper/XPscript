@@ -62,3 +62,7 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Graphify query/update attempted; graphify binary still fails with uv trampoline canonicalize error.
 
 - Kestrel smoke is green after accepting Windows transport-level connection reset/aborted outcomes for oversized chunked bodies and request-header timeout enforcement; handler-reachability assertions remain active.
+
+- Unified native class property Get/Let/Set type gating with the supported class-method native signature matrix; DB, SystemInventory, XPAI and Notes native accessor signatures no longer hit the stale rejection list.
+- Compiler Release build and complete tests/ast-compile-probe/run-ast-cli.ps1 passed with AST CLI compilation probe passed.
+- Graphify update attempted after source change; still fails with uv trampoline canonicalize error.
