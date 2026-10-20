@@ -21,6 +21,7 @@ internal static class AstSqliteSupport
         new("XPDBSQLite", "BeginTransaction", "void", [], [], false, false, false),
         new("XPDBSQLite", "Commit", "void", [], [], false, false, false),
         new("XPDBSQLite", "Rollback", "void", [], [], false, false, false),
+        new("XPDBSQLite", "Dispose", "void", [], [], false, false, false),
         new("XPDBSQLite", "DatabasePath", "string", [], [], false, true, false),
         new("XPDBSQLite", "ReadOnly", "bool", [], [], false, true, false),
         new("XPDBSQLite", "IsOpen", "bool", [], [], false, true, false),

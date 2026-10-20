@@ -20,6 +20,7 @@ internal static class AstMySqlSupport
         new("XPDbMySql", "BeginTransaction", "void", [], [], false, false, false),
         new("XPDbMySql", "Commit", "void", [], [], false, false, false),
         new("XPDbMySql", "Rollback", "void", [], [], false, false, false),
+        new("XPDbMySql", "Dispose", "void", [], [], false, false, false),
         new("XPDbMySql", "DataSource", "string", [], [], false, true, false),
         new("XPDbMySql", "Database", "string", [], [], false, true, false),
         new("XPDbMySql", "ServerVersion", "string", [], [], false, true, false),

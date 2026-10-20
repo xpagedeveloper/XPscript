@@ -46,6 +46,7 @@ public static class CompilerDocumentationCatalog
             Define("api.XPDBSQLite.BeginTransaction", "api", "XPDBSQLite.BeginTransaction"),
             Define("api.XPDBSQLite.Commit", "api", "XPDBSQLite.Commit"),
             Define("api.XPDBSQLite.Rollback", "api", "XPDBSQLite.Rollback"),
+            Define("api.XPDBSQLite.Dispose", "api", "XPDBSQLite.Dispose"),
             Define("api.XPDBSQLite.LastInsertRowId", "api", "XPDBSQLite.LastInsertRowId"),
             Define("api.XPDBSQLite.DatabasePath", "api", "XPDBSQLite.DatabasePath"),
             Define("api.XPDBSQLite.ReadOnly", "api", "XPDBSQLite.ReadOnly"),

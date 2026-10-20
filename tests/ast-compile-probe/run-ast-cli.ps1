@@ -387,6 +387,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST database class-method parameter compilatio
 $databaseClassMethodResult = dotnet (Join-Path $databaseClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($databaseClassMethodResult -join "`n") -ne "True`nTrue`nTrue`nTrue`nTrue") { throw 'AST database class-method parameter execution failed.' }
 Write-Host 'AST_DATABASE_CLASS_METHOD_PARAMETERS_OK'
+$databaseDisposeOutput = Join-Path $output 'database-dispose-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'database-dispose-next.xps') -o $databaseDisposeOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST database Dispose compilation failed.' }
+$databaseDisposeResult = dotnet (Join-Path $databaseDisposeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($databaseDisposeResult -join "`n") -ne 'DATABASE_DISPOSE_OK') { throw 'AST database Dispose regression failed.' }
+Write-Host 'AST_DATABASE_DISPOSE_OK'
 $inventoryClassMethodOutput = Join-Path $output 'class-method-system-inventory-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-system-inventory-next.xps') -o $inventoryClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST SystemInventory class-method parameter compilation failed.' }

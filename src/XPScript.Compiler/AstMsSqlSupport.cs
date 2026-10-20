@@ -20,6 +20,7 @@ internal static class AstMsSqlSupport
         new("XPDbMsSql", "BeginTransaction", "void", [], [], false, false, false),
         new("XPDbMsSql", "Commit", "void", [], [], false, false, false),
         new("XPDbMsSql", "Rollback", "void", [], [], false, false, false),
+        new("XPDbMsSql", "Dispose", "void", [], [], false, false, false),
         new("XPDbMsSql", "DataSource", "string", [], [], false, true, false),
         new("XPDbMsSql", "Database", "string", [], [], false, true, false),
         new("XPDbMsSql", "IsOpen", "bool", [], [], false, true, false),

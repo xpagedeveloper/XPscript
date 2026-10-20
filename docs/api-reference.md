@@ -184,6 +184,7 @@ See [SQLite database](sqlite.md) for path/security rules.
 | `XPDBSQLite.BeginTransaction` | `db.BeginTransaction()` | none | Starts one transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.Commit` | `db.Commit()` | none | Commits the transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.Rollback` | `db.Rollback()` | none | Rolls back the transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.Dispose` | `db.Dispose()` | none | Closes the database and releases its connection resources. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.LastInsertRowId` | `db.LastInsertRowId` | none | Returns SQLite `last_insert_rowid()` for this connection. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.DatabasePath` | `db.DatabasePath` | none | Returns resolved file path or `:memory:`. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.ReadOnly` | `db.ReadOnly` | none | Reports read-only mode. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
@@ -207,6 +208,7 @@ See [SQL Server database](mssql.md).
 | `XPDbMsSql.BeginTransaction` | `db.BeginTransaction()` | none | Starts one transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.Commit` | `db.Commit()` | none | Commits active transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.Rollback` | `db.Rollback()` | none | Rolls back active transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.Dispose` | `db.Dispose()` | none | Closes the connection and releases its resources. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.DataSource` | `db.DataSource` | none | Returns connected server name while open. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.Database` | `db.Database` | none | Returns connected database name while open. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.IsOpen` | `db.IsOpen` | none | Reports open state. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |

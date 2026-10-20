@@ -28,6 +28,7 @@ internal static class AstSupabaseSupport
         new("XPDbSupabase", "Delete", "XPJsonDocument", ["object", "object"], ["table", "filter"], false, false, false),
         new("XPDbSupabase", "Rpc", "XPJsonDocument", ["object", "object"], ["functionName", "args"], false, false, false),
         new("XPDbSupabase", "Eq", "string", ["object", "object"], ["column", "value"], false, false, false),
+        new("XPDbSupabase", "Dispose", "void", [], [], false, false, false),
         new("XPDbSupabase", "Mode", "string", [], [], false, true, false),
         new("XPDbSupabase", "IsOpen", "bool", [], [], false, true, false),
         new("XPDbSupabase", "Database", "string", [], [], false, true, false),
