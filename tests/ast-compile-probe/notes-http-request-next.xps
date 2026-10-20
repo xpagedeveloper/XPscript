@@ -18,5 +18,10 @@ Sub Main()
     Set result = http.Post(Environ("XPSCRIPT_NOTES_HTTP_TEST_URL"), "notes-http-request")
     If http.ResponseCode <> 200 Then Error 4267
     If CStr(result) <> "notes-http-ok" Then Error 4268
+    http.PreferStrings = False
+    http.PreferJSONNavigator = True
+    Dim navigator As XPJSONNavigator
+    Set navigator = http.Get(Environ("XPSCRIPT_NOTES_JSON_TEST_URL"))
+    If http.ResponseCode <> 200 Or navigator.GetElementByName("name").Value <> "Fredrik" Then Error 4269
     Print "NOTES_HTTP_REQUEST_OK"
 End Sub
