@@ -23,5 +23,8 @@ Sub Main()
     Dim navigator As XPJSONNavigator
     Set navigator = http.Get(Environ("XPSCRIPT_NOTES_JSON_TEST_URL"))
     If http.ResponseCode <> 200 Or navigator.GetElementByName("name").Value <> "Fredrik" Then Error 4269
+    Dim responseHeaders As Variant
+    responseHeaders = http.GetResponseHeaders()
+    If UBound(responseHeaders) < 0 Then Error 4270
     Print "NOTES_HTTP_REQUEST_OK"
 End Sub
