@@ -34,3 +34,5 @@ The legacy command-line compatibility baseline also passed with `tests/cli-compa
 
 The AST target-matrix probe also passed with `TARGET_MATRIX_OK` after an external NuGet restore. The probe verifies the configured desktop/browser target metadata and target routing; physical Android device/emulator validation remains a local setup gate.
 
+The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-COMPILER-PROBE=OK`. The probe validates Android AST backend/project generation for the configured Android RIDs; physical device/emulator installation remains outside this run.
+
