@@ -424,6 +424,17 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Explode", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FullTrim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
+        symbols.Declare(new PropertySymbol("Date.OSDateFormatting", typeof(string), XpTypeSymbol.FromClr(typeof(string))));
+        symbols.Declare(new PropertySymbol("Date.OSTimeFormatting", typeof(string), XpTypeSymbol.FromClr(typeof(string))));
+        symbols.Declare(new FunctionSymbol("Date.Adjust", typeof(object),
+            [typeof(long), typeof(long), typeof(long), typeof(long), typeof(long), typeof(long)],
+            XpTypeSymbol.User("Date"),
+            [XpTypeSymbol.FromClr(typeof(long)), XpTypeSymbol.FromClr(typeof(long)), XpTypeSymbol.FromClr(typeof(long)),
+             XpTypeSymbol.FromClr(typeof(long)), XpTypeSymbol.FromClr(typeof(long)), XpTypeSymbol.FromClr(typeof(long))]));
+        symbols.Declare(new FunctionSymbol("Date.Difference", typeof(double), [typeof(object)],
+            XpTypeSymbol.FromClr(typeof(double)), [XpTypeSymbol.User("Date")]));
+        symbols.Declare(new FunctionSymbol("Format$", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Format$", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         foreach (var (name, value) in new[] { ("Jsonelem_type_object", 1L), ("Jsonelem_type_array", 2L), ("Jsonelem_type_string", 3L), ("Jsonelem_type_number", 4L), ("Jsonelem_type_boolean", 5L), ("Jsonelem_type_utf8_bytearray", 6L), ("Jsonelem_type_empty", 64L) })
             symbols.Declare(new VariableSymbol(name, typeof(long), XpTypeSymbol.FromClr(typeof(long))));
         foreach (var name in new[] { "Date", "Date$", "Format", "Format$", "InputBox", "MsgBox", "ChDrive", "Erase", "JsonParse" })
@@ -1027,6 +1038,7 @@ internal static class Program
     public static void AstNoOp() { }
     public sealed class XpDate : IComparable<XpDate> {
         public DateTime Value { get; }
+        public XpDate() : this(default) { }
         public XpDate(DateTime value) { Value = value; }
         public XpDate Adjust(long years, long months, long days, long hours, long minutes, long seconds) => new(Value.AddYears((int)years).AddMonths((int)months).AddDays(days).AddHours(hours).AddMinutes(minutes).AddSeconds(seconds));
         public double Difference(object? other) => (other as XpDate)?.Value is DateTime date ? (date - Value).TotalSeconds : 0;
