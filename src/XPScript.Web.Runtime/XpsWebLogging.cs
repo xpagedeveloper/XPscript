@@ -51,6 +51,7 @@ public sealed class XpsWebLogManager : IDisposable
         "http.request.resend_count", "error.type", "event.category", "event.outcome",
         "request.id", "session.id", "user.id", "duration.ms"
     };
+    private static readonly object ProcessFileWriteSync = new();
 
     private readonly object _sync = new();
     private readonly XpsServerInfo _server;
@@ -223,13 +224,16 @@ public sealed class XpsWebLogManager : IDisposable
     {
         var timestamp = DateTimeOffset.UtcNow;
         var line = Serialize(timestamp, severity, eventName, body, attributes);
-        lock (_sync)
+        lock (ProcessFileWriteSync)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            var file = GetFile(kind, timestamp, Encoding.UTF8.GetByteCount(line) + 1);
-            file.Writer.WriteLine(line);
-            file.Writer.Flush();
-            file.Bytes += Encoding.UTF8.GetByteCount(line) + 1;
+            lock (_sync)
+            {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                var file = GetFile(kind, timestamp, Encoding.UTF8.GetByteCount(line) + 1);
+                file.Writer.WriteLine(line);
+                file.Writer.Flush();
+                file.Bytes += Encoding.UTF8.GetByteCount(line) + 1;
+            }
         }
     }
 
@@ -257,7 +261,7 @@ public sealed class XpsWebLogManager : IDisposable
             sequence++;
         } while (File.Exists(path) && new FileInfo(path).Length >= _options.MaxFileBytes);
 
-        var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read,
+        var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.ReadWrite,
             16 * 1024, FileOptions.WriteThrough);
         var writer = new StreamWriter(stream, new UTF8Encoding(false)) { AutoFlush = true };
         var file = new LogFile(path, utcDate, stream.Length, writer);

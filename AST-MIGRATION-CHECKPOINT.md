@@ -46,4 +46,8 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - The latest attempted schema-detail fix is retained in the working tree: `minimum` validation now reports the expected value as `>= 18`, and the web adapter can read validation details through `Stringify()` fallback when reflective `Get()` extraction is unavailable.
 - Graphify was invoked for the current codebase query and still fails before execution with `uv trampoline failed to canonicalize script path`; the required post-change `graphify update .` remains pending for the same environment issue.
 - Focused verification is green: `dotnet build tests/WebRestApiSmoke/WebRestApiSmoke.csproj -c Release --no-restore -p:UseSharedCompilation=false` produced 0 warnings and 0 errors, and `dotnet run --project tests/WebRestApiSmoke/WebRestApiSmoke.csproj -c Release --no-build` reached `WEB-REST-API-SMOKE=OK`.
+- Commit `ebdf8e48` (`Complete AST web REST validation and binding`) was pushed to `origin/investigate-ast-compiler`.
+- Platform follow-up: the Kestrel smoke project restored and built with 0 warnings/errors, but its runtime suite currently fails in `AssertRequestHeadersTimeoutAsync` at `tests/WebKestrelSmoke/Program.cs:950` with `SocketError (10053)`, before CGI/FastCGI were run. This is the next investigation point; no platform commit was made.
+- CGI verification is green: `WEB-CGI-SMOKE=OK` after restoring its project assets.
+- FastCGI verification is green: `WEB-FASTCGI-SMOKE=OK` after fixing concurrent same-file web-log opening/writes with process-wide synchronization and `FileShare.ReadWrite`.
 
