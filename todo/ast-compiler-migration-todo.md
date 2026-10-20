@@ -394,6 +394,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [x] Bind AST byte-range `Lock`/`Unlock` to `LSFileRuntime`; `file-lock-next.xps` verifies the interval and closed-handle error contract.
   - [x] Bind AST `InputBox` overloads to the shared console input runtime; `inputbox-next.xps` verifies prompt input while desktop-specific dialog behavior remains target-specific.
   - [x] Bind AST `ChDrive` to the shared platform-aware file runtime; `chdrive-next.xps` verifies the missing-drive error contract.
+  - [x] Bind AST `FileDateTime` to the shared file runtime with the same missing-file contract as `FileLen`; `file-date-time-next.xps` verifies the returned date/time value.
 - [ ] Remove sample-specific identifiers and type coercions from binders/emission and runtime scaffolding.
   - [x] Remove the unconditional `matrix` local-symbol scaffold; undeclared `matrix` now follows normal XPS2008 binding diagnostics.
   - [x] Remove global `ForAll` alias scaffolding; undeclared array/string/dynamic aliases are now created in the loop body scope and existing aliases retain their normal symbol semantics.

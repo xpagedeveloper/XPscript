@@ -267,6 +267,7 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("LenB", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("TypeName", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FileLen", typeof(long), [typeof(string)]));
+        symbols.Declare(new FunctionSymbol("FileDateTime", typeof(DateTime), [typeof(string)], XpTypeSymbol.FromClr(typeof(DateTime)), [XpTypeSymbol.FromClr(typeof(string))]));
         foreach (var fileFunction in new[] { "ReadFile", "ReadLines", "ReadBytes", "FileHash", "Files", "Directories", "CopyFile", "MoveFile", "IsFile", "IsDir", "FileEquals", "WriteFile", "AppendFile", "WriteLines", "WriteBytes", "FileInfo", "MkDir", "RmDir" })
             for (var parameterCount = 1; parameterCount <= 4; parameterCount++)
                 symbols.Declare(new FunctionSymbol(fileFunction, typeof(object), Enumerable.Repeat(typeof(object), parameterCount).ToArray(), XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, parameterCount).ToArray()));
@@ -682,6 +683,7 @@ internal static class Program
     public static long LenB(object? value) => XPScriptRuntime.LenB(value);
     public static string TypeName(object? value) => XPScriptNullRuntime.TypeName(value);
     public static long FileLen(string path) => new System.IO.FileInfo(RequireExistingFilePath(path)).Length;
+    public static DateTime FileDateTime(string path) => System.IO.File.GetLastWriteTime(RequireExistingFilePath(path));
     public static object ReadFile(params object?[] a) => XPScriptTextFileRuntime.ReadFile(a[0], a.Length > 1 ? a[1] : null);
     public static object ReadLines(params object?[] a) => System.IO.File.ReadAllLines(RequireExistingFilePath(a[0]));
     public static object ReadBytes(params object?[] a) => System.IO.File.ReadAllBytes(RequireExistingFilePath(a[0]));

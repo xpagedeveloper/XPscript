@@ -241,6 +241,13 @@ $isDirDriveResult = dotnet (Join-Path $isDirDriveOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($isDirDriveResult -join "`n") -ne 'ISDIR_DRIVE_OK') { throw 'AST IsDir drive regression failed.' }
 Write-Host 'AST_ISDIR_DRIVE_OK'
 
+$fileDateTimeOutput = Join-Path $output 'file-date-time-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-date-time-next.xps') -o $fileDateTimeOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST FileDateTime compilation failed.' }
+$fileDateTimeResult = dotnet (Join-Path $fileDateTimeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($fileDateTimeResult -join "`n") -ne 'FILE_DATETIME_OK') { throw 'AST FileDateTime regression failed.' }
+Write-Host 'AST_FILE_DATETIME_OK'
+
 $inputBoxOutput = Join-Path $output 'inputbox-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inputbox-next.xps') -o $inputBoxOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST InputBox compilation failed.' }
