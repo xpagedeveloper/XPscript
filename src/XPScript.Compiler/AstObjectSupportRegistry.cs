@@ -35,7 +35,7 @@ internal static class AstObjectSupportRegistry
         "XPJsonSchema",
         "XPJsonArray",
         "XPJsonObject",
-        "XPJsonElement", "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall", "XPAttachmentCollection",
+        "XPJsonElement", "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall", "XPAttachmentCollection", "Path",
         "NotesHTTPRequest", "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement",
         "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
         "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",

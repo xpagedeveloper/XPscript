@@ -310,7 +310,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         }
         // CLR object storage also backs declared user types. Only the XPscript
         // Variant semantic type authorizes unresolved dynamic member lookup.
-        return _allowDynamicMembers && receiver.SemanticType.IsVariant
+        return _allowDynamicMembers && (receiver.SemanticType.IsVariant || receiver.SemanticType.Name.Equals("Variant", StringComparison.OrdinalIgnoreCase))
             ? new BoundMemberAccessExpression(receiver, syntax.NameToken.Text, typeof(object), XpTypeSymbol.Variant)
             : Error(syntax.NameToken, CompilerDiagnosticCodes.UnknownMember, $"Undefined member '{syntax.NameToken.Text}' on '{receiver.SemanticType.Name}'.");
     }

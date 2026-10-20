@@ -207,6 +207,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             "STRING" => (typeof(string), XpTypeSymbol.FromClr(typeof(string))),
             "INTEGER" or "LONG" => (typeof(long), XpTypeSymbol.FromClr(typeof(long))),
             "SINGLE" or "DOUBLE" or "CURRENCY" => (typeof(double), XpTypeSymbol.FromClr(typeof(double))),
+            "VARIANT" => (typeof(object), XpTypeSymbol.Variant),
             _ => (typeof(object), compatibilityType ?? (string.IsNullOrWhiteSpace(name) ? XpTypeSymbol.Variant :
                 AstClassConstructorSupport.Find(_symbols, name.Trim())?.SemanticReturnType ??
                 _symbols.LookupAll(name.Trim()).OfType<TypeSymbol>().FirstOrDefault()?.SemanticType ?? XpTypeSymbol.User(name.Trim())))

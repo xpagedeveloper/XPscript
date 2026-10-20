@@ -67,9 +67,9 @@ public sealed class BoundExpressionEmitter
             $"XPScriptNativeXml.RequireElement({Emit(member.Receiver)}).{AstXmlSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
         BoundMemberAccessExpression member when AstXmlSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } xmlType =>
             $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? xmlType : $"(({xmlType})({Emit(member.Receiver)}))")}.{AstXmlSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
-        BoundMemberAccessExpression member when RuntimeObjectType(member.Receiver.SemanticType.Name) is { } jsonType => $"(({jsonType})({Emit(member.Receiver)})).{JsonMemberName(member.Name)}",
+        BoundMemberAccessExpression member when !member.Receiver.SemanticType.IsVariant && !member.Receiver.SemanticType.Name.Equals("Variant", StringComparison.OrdinalIgnoreCase) && RuntimeObjectType(member.Receiver.SemanticType.Name) is { } jsonType => $"(({jsonType})({Emit(member.Receiver)})).{JsonMemberName(member.Name)}",
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("http", StringComparison.OrdinalIgnoreCase) && member.Receiver.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"http.{member.Name}",
-        BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
+        BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant || member.Receiver.SemanticType.Name.Equals("Variant", StringComparison.OrdinalIgnoreCase) ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index when index.Expression.SemanticType.IsList => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
         BoundIndexExpression index when index.Expression.SemanticType.IsVariant => $"LSArrayRuntime.Index({Emit(index.Expression)}, {Emit(index.Index)})",
         BoundIndexExpression index when AstCsvSupport.RuntimeType(index.Expression.SemanticType.Name) is { } csvType =>
@@ -168,6 +168,7 @@ public sealed class BoundExpressionEmitter
         "XPAITOOL" => "XPScriptAiTool",
         "XPAITOOLFUNCTION" => "XPScriptAiToolFunction",
         "XPAITOOLCALL" => "XPScriptAiToolCall",
+        "PATH" => "XpPath",
         _ => null
     });
 
