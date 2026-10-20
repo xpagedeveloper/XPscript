@@ -103,7 +103,6 @@ public sealed class BoundMethodEmitter
         "STRING" => "string",
         "VARIANT" => "object",
         "VOID" => "void",
-        _ when type.RuntimeType == typeof(object) && !type.IsVariant && !type.IsObject && !type.IsNothing && !type.IsNull && !type.IsEmpty && !type.IsList => "Xp" + type.Name,
         _ => CSharpNativeType(type)
     };
 
