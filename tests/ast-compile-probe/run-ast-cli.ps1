@@ -266,6 +266,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST FileCopy/Name compilation failed.' }
 $fileCopyNameResult = dotnet (Join-Path $fileCopyNameOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($fileCopyNameResult -join "`n") -ne 'FILE_COPY_NAME_AST_OK') { throw 'AST FileCopy/Name regression failed.' }
 Write-Host 'AST_FILE_COPY_NAME_OK'
+$chDirOutput = Join-Path $output 'chdir-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'chdir-next.xps') -o $chDirOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST ChDir compilation failed.' }
+$chDirResult = dotnet (Join-Path $chDirOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($chDirResult -join "`n") -ne 'CHDIR_AST_OK') { throw 'AST ChDir regression failed.' }
+Write-Host 'AST_CHDIR_OK'
 
 $inputBoxOutput = Join-Path $output 'inputbox-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inputbox-next.xps') -o $inputBoxOutput

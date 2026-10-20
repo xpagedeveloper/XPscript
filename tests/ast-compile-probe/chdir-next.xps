@@ -1,0 +1,7 @@
+Option Explicit
+
+Sub Main()
+    ChDir "tests/ast-compile-probe"
+    If Not IsFile("file-attributes-next.xps") Then Error 9859, "ChDir did not change the current directory"
+    Print "CHDIR_AST_OK"
+End Sub
