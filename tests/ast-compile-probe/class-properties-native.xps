@@ -20,6 +20,9 @@ Class Counter
     Public Property Let WriteOnly As Long
         stored = WriteOnly
     End Property
+    Public Property Get InventorySnapshot As SystemInventorySnapshot
+        InventorySnapshot = Nothing
+    End Property
     Private Property Get Secret As Long
         Secret = stored
     End Property

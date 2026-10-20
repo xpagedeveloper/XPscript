@@ -66,3 +66,7 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Unified native class property Get/Let/Set type gating with the supported class-method native signature matrix; DB, SystemInventory, XPAI and Notes native accessor signatures no longer hit the stale rejection list.
 - Compiler Release build and complete tests/ast-compile-probe/run-ast-cli.ps1 passed with AST CLI compilation probe passed.
 - Graphify update attempted after source change; still fails with uv trampoline canonicalize error.
+
+- Added focused class-property regression for a native SystemInventorySnapshot accessor; AST compile and execution passed with CLASS_PROPERTIES_NATIVE_OK.
+- Full AST CLI probe had already passed before this focused fixture extension.
+- Graphify update attempted; still fails with uv trampoline canonicalize error.
