@@ -72,7 +72,9 @@ internal static class XPScriptRuntime
     public static int CInt(object? value) => Convert.ToInt32(value, CultureInfo.CurrentCulture);
     public static long CLng(object? value) => Convert.ToInt64(value, CultureInfo.CurrentCulture);
     public static double CDbl(object? value) =>
-        value is DateTime dt ? dt.ToOADate() : Convert.ToDouble(value, CultureInfo.CurrentCulture);
+        value is DateTime dt ? dt.ToOADate() :
+        value?.GetType().Name == "XpDate" && value.GetType().GetProperty("Value")?.GetValue(value) is DateTime xpDate ? xpDate.ToOADate() :
+        Convert.ToDouble(value, CultureInfo.CurrentCulture);
     public static float CSng(object? value) => Convert.ToSingle(value, CultureInfo.CurrentCulture);
     public static decimal CCur(object? value) => Convert.ToDecimal(value, CultureInfo.CurrentCulture);
     public static bool CBool(object? value) => Convert.ToBoolean(value, CultureInfo.CurrentCulture);
