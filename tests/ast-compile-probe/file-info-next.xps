@@ -1,0 +1,25 @@
+Sub Main()
+    Dim info As Variant
+    info = FileInfo("tests/ast-compile-probe/file-exists-aliases-next.xps")
+    Print info.Name
+    Print info.Extension
+    Print info.IsFile
+    Print info.IsDirectory
+    Print info.Length > 0
+    Print info.FullPath <> ""
+    Dim created As Variant
+    Dim modified As Variant
+    Dim accessed As Variant
+    created = info.Created
+    modified = info.Modified
+    accessed = info.Accessed
+
+    Dim directoryInfo As Variant
+    directoryInfo = FileInfo("tests/ast-compile-probe")
+    Print directoryInfo.Name
+    Print directoryInfo.Extension = ""
+    Print directoryInfo.IsFile
+    Print directoryInfo.IsDirectory
+
+    Print "FILE_INFO_AST_OK"
+End Sub

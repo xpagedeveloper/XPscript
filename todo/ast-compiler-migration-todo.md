@@ -400,6 +400,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [x] Bind AST `ChDir` to the shared current-directory contract; `chdir-next.xps` verifies directory changes affect relative file lookup.
   - [x] Bind AST `FileExists` and `DirExists` aliases to the same filesystem predicates as `IsFile` and `IsDir`; `file-exists-aliases-next.xps` verifies both documented aliases.
   - [x] Bind the documented AST `Path` object surface; `path-object-next.xps` verifies construction and all documented path methods.
+  - [x] Bind the documented AST `FileInfo` metadata surface for files and directories; `file-info-next.xps` verifies metadata, flags and timestamps.
 - [ ] Remove sample-specific identifiers and type coercions from binders/emission and runtime scaffolding.
   - [x] Remove the unconditional `matrix` local-symbol scaffold; undeclared `matrix` now follows normal XPS2008 binding diagnostics.
   - [x] Remove global `ForAll` alias scaffolding; undeclared array/string/dynamic aliases are now created in the loop body scope and existing aliases retain their normal symbol semantics.

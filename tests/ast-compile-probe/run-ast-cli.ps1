@@ -285,6 +285,16 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Path object compilation failed.' }
 $pathObjectResult = dotnet (Join-Path $pathObjectOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($pathObjectResult -join "`n") -ne 'PATH_OBJECT_AST_OK') { throw 'AST Path object regression failed.' }
 Write-Host 'AST_PATH_OBJECT_OK'
+$fileInfoOutput = Join-Path $output 'file-info-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-info-next.xps') -o $fileInfoOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST FileInfo compilation failed.' }
+$fileInfoResult = dotnet (Join-Path $fileInfoOutput 'Generated.dll')
+$expectedFileInfoResult = @(
+    'file-exists-aliases-next.xps', '.xps', 'True', 'False', 'True', 'True',
+    'ast-compile-probe', 'True', 'False', 'True', 'FILE_INFO_AST_OK'
+)
+if ($LASTEXITCODE -ne 0 -or ($fileInfoResult -join "`n") -ne ($expectedFileInfoResult -join "`n")) { throw 'AST FileInfo regression failed.' }
+Write-Host 'AST_FILE_INFO_OK'
 
 $inputBoxOutput = Join-Path $output 'inputbox-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inputbox-next.xps') -o $inputBoxOutput
