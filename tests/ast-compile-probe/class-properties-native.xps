@@ -23,6 +23,12 @@ Class Counter
     Public Property Get InventorySnapshot As SystemInventorySnapshot
         InventorySnapshot = Nothing
     End Property
+    Public Property Get SqliteDatabase As XPDBSQLite
+        SqliteDatabase = Nothing
+    End Property
+    Public Property Get SupabaseDatabase As XPDbSupabase
+        SupabaseDatabase = Nothing
+    End Property
     Private Property Get Secret As Long
         Secret = stored
     End Property

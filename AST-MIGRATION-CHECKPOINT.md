@@ -70,3 +70,7 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Added focused class-property regression for a native SystemInventorySnapshot accessor; AST compile and execution passed with CLASS_PROPERTIES_NATIVE_OK.
 - Full AST CLI probe had already passed before this focused fixture extension.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.
+
+- Native database class-property regression exposed unsafe generated dependency runtime; added AllowUnsafeBlocks to generated legacy/dependency projects.
+- Verified compiler Release build and focused class-properties-native AST compile/run with SystemInventorySnapshot, XPDBSQLite and XPDbSupabase accessors: CLASS_PROPERTIES_NATIVE_OK.
+- Graphify update attempted; still fails with uv trampoline canonicalize error.

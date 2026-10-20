@@ -322,6 +322,7 @@ internal static class RunCompiler
     <TargetFramework>{targetFramework}</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <UseAppHost>false</UseAppHost>
     <NuGetAudit>{(ApplicationSecurityModeContext.Current != ApplicationSecurityMode.Off).ToString().ToLowerInvariant()}</NuGetAudit>
