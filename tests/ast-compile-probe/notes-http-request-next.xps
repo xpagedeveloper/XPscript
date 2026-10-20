@@ -34,5 +34,12 @@ Sub Main()
     http.MaxRedirects = 1
     Set result = http.Get(Environ("XPSCRIPT_NOTES_REDIRECT_TEST_URL"))
     If http.ResponseCode <> 200 Or CStr(result) <> "GET|" Then Error 4272, CStr(result)
+    http.MaxRedirects = 0
+    Set result = http.Put(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/methods", "put-body")
+    If http.ResponseCode <> 200 Or CStr(result) <> "PUT||put-body" Then Error 4273
+    Set result = http.Patch(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/methods", "patch-body")
+    If http.ResponseCode <> 200 Or CStr(result) <> "PATCH||patch-body" Then Error 4274
+    Set result = http.DeleteResource(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/methods")
+    If http.ResponseCode <> 200 Or CStr(result) <> "DELETE|" Then Error 4275
     Print "NOTES_HTTP_REQUEST_OK"
 End Sub
