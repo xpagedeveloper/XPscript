@@ -49,6 +49,9 @@ public static class AstExperimentalCompiler
         // AST compiler has the same multi-file source contract as the legacy path.
         var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
         source = includeResult.Source;
+        var usesArchive = PreprocessorFeatureGate.ContainsTypeReference(source, "Archive", "ArchiveEntry");
+        if (usesArchive)
+            source = new ArchiveObjectPreprocessor().Transform(source, sourcePath);
         var fullSource = source;
         ValidateAstAiCallbacks(fullSource);
         var runtimeFeatures = RuntimeFeatures.Detect(fullSource);
@@ -668,6 +671,8 @@ using XpJsonObject = XPScriptJsonObject;
 using XpJsonArray = XPScriptJsonArray;
 using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
+{{(usesArchive ? ArchiveRuntimeSource.Code + ArchiveMemoryRuntimeSource.Code + ArchiveIteratorRuntimeSource.Code : "")}}
+{{(usesArchive && source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ? ArchiveExtendedReaderRuntimeSource.Code + ArchiveExtendedWriterRuntimeSource.Code + ArchiveExtendedWriterFactoryRuntimeSource.Code : "")}}
 {{((usesAi || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema")) ? JsonSchemaRuntimeSource.Code : "")}}
 {{AstRuntimeSource.Code}}
 {{AstImageSupport.RuntimeCode(fullSource)}}

@@ -74,6 +74,10 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Migrated AST `--target webiis` from an explicit rejection to the deployable WebIIS package path, preserving `--runtime`, `--output`, and result-format behavior. The CLI compatibility fixture now compiles `demo/webiis/main.xps` in AST mode and requires a successful `.zip` package.
 - Focused verification is green: Release compiler build (only the existing NU1900 vulnerability-service warning) and `tests/cli-compatibility/run-cli-compatibility.ps1` reached `CLI_COMMAND_LINE_COMPATIBILITY_OK`.
 
+- Migrated the AST ZIP/in-memory `Archive` path through the existing `ArchiveObjectPreprocessor` and archive runtime sources. The AST compiler now lowers `New Archive`, archive members, and memory round-trips without routing the source to legacy; extended archive formats remain separately gated.
+- Added the AST Archive memory check to the permanent archive FullTest. Direct verification is green: `archive-memory.xps` prints `Format: ZIP`, `Files: 2`, and `hello from memory`; `ArchiveCapabilityProbe` reaches `ARCHIVE-CAPABILITY-PROBE=OK`.
+- The full archive FullTest was attempted but stopped before the new AST case because the environment lacks the required `bzip2` executable. No software or MSI was installed.
+
 - Added focused class-property regression for a native SystemInventorySnapshot accessor; AST compile and execution passed with CLASS_PROPERTIES_NATIVE_OK.
 - Full AST CLI probe had already passed before this focused fixture extension.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.
