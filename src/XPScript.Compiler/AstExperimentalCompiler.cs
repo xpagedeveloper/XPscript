@@ -20,10 +20,16 @@ public static class AstExperimentalCompiler
         if (!generated.Contains("XPScriptHttpDbSupabase", StringComparison.Ordinal))
             runtime += Environment.NewLine + HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code +
                 (generated.Contains("XPScriptTlsValidationState", StringComparison.Ordinal) ? string.Empty : AstTlsRuntimeCode());
-        if (!generated.Contains("XPScriptHttpDatabaseDataSourceExtensions", StringComparison.Ordinal))
+        if (!runtime.Contains("class XPScriptHttpDatabaseDataSourceExtensions", StringComparison.Ordinal))
             runtime += Environment.NewLine + DatabaseUiDataSourceRuntimeSource.BuildHttpDatabaseExtensions();
-        if (!generated.Contains("XPScriptDatabaseDataSourceRuntime", StringComparison.Ordinal))
-            runtime += Environment.NewLine + DatabaseUiDataSourceRuntimeSource.Build(true, true, true);
+        if (!runtime.Contains("class XPScriptDatabaseDataSourceRuntime", StringComparison.Ordinal))
+            runtime += Environment.NewLine + DatabaseUiDataSourceRuntimeSource.Build(true, true, false);
+        if (!runtime.Contains("class XPScriptDbSqlite", StringComparison.Ordinal))
+            runtime += Environment.NewLine + SqliteDbRuntimeSource.Code;
+        if (!runtime.Contains("class XPScriptDbMsSql", StringComparison.Ordinal))
+            runtime += Environment.NewLine + MsSqlDbRuntimeSource.Code;
+        if (!runtime.Contains("class XPScriptCaseInsensitiveDynamicObject", StringComparison.Ordinal))
+            runtime += Environment.NewLine + CaseInsensitiveDynamicObjectRuntimeSource.Code;
         return runtime + Environment.NewLine + DatabaseAttachmentRuntimeV2Source.Build(
             generated.Contains("XPScriptDbSqlite", StringComparison.Ordinal),
             generated.Contains("XPScriptDbMsSql", StringComparison.Ordinal)) +

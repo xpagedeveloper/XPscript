@@ -457,6 +457,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST database attachments compilation failed.' 
 $databaseAttachmentsResult = dotnet (Join-Path $databaseAttachmentsOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($databaseAttachmentsResult -join "`n") -ne 'DATABASE_ATTACHMENTS_OK') { throw 'AST database attachments regression failed.' }
 Write-Host 'AST_DATABASE_ATTACHMENTS_OK'
+$attachmentClassMethodOutput = Join-Path $output 'class-method-attachments-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-attachments-next.xps') -o $attachmentClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST attachment class-method parameter compilation failed.' }
+$attachmentClassMethodResult = dotnet (Join-Path $attachmentClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($attachmentClassMethodResult -join "`n") -ne 'AST_ATTACHMENT_CLASS_METHOD_OK') { throw 'AST attachment class-method parameter regression failed.' }
+Write-Host 'AST_ATTACHMENT_CLASS_METHOD_OK'
 $inventoryClassMethodOutput = Join-Path $output 'class-method-system-inventory-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-system-inventory-next.xps') -o $inventoryClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST SystemInventory class-method parameter compilation failed.' }
