@@ -700,7 +700,7 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
 
 Next implementation order:
 
-- [ ] Make the AST CLI regression fixtures independent of the caller's working directory and clean up generated test files reliably, then require a complete green run in the permanent FullTest workflow.
+- [x] Make the AST CLI regression fixtures independent of the caller's working directory. `run-ast-cli.ps1` now normalizes to the repository root; the repository-relative `FileDateTime` fixture passes when launched from `out/`. Generated-file cleanup and the remaining full-suite lock investigation stay open before requiring a complete green FullTest run.
 - [ ] Complete the legacy-vs-AST compatibility corpus: compile success/failure, diagnostics, observable output and target behavior for every supported sample; record intentional legacy defects separately.
 - [ ] Audit every legacy command-line parameter and add parity tests for aliases, defaults, validation, diagnostics and execution semantics.
 - [ ] Verify web/REST execution under Kestrel, IIS, CGI and FastCGI; IIS execution still requires an IIS-enabled environment.
