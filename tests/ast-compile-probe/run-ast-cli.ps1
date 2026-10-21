@@ -126,6 +126,10 @@ if ($LASTEXITCODE -ne 0) { throw 'AST ArrayGetIndex regression compilation faile
 $arrayIndexResult = dotnet (Join-Path $arrayIndexOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($arrayIndexResult -join "`n") -notmatch 'APPEND=1:6:One\|Two\|Three\|Four\|Five\|Six' -or ($arrayIndexResult -join "`n") -notmatch 'GETINDEX=5' -or ($arrayIndexResult -join "`n") -notmatch 'GETINDEX-MISS-NULL=OK' -or ($arrayIndexResult -join "`n") -notmatch 'EXPLODE=A\|a\|B\|b\|B' -or ($arrayIndexResult -join "`n") -notmatch 'UNIQUE=A\|B' -or ($arrayIndexResult -join "`n") -notmatch 'SLICE=a\|B\|b' -or ($arrayIndexResult -join "`n") -notmatch 'SPLICE-REMOVED=a\|B' -or ($arrayIndexResult -join "`n") -notmatch 'SPLICE-ARRAY=A\|X\|Y\|b\|B' -or ($arrayIndexResult -join "`n") -notmatch 'BRACE=Hello "Fredrik"' -or ($arrayIndexResult -join "`n") -notmatch 'BAR=Hello \| Fredrik') { throw 'AST operator-array compatibility regression failed.' }
 Write-Host 'AST_ARRAY_GET_INDEX_NULL_OK'
+$stringOverloadOutput = Join-Path $output 'native-http-resource-limits'
+dotnet $compiler ast-compile (Join-Path $root 'samples/native-http-resource-limits.xps') -o $stringOverloadOutput
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $stringOverloadOutput 'Generated.dll'))) { throw 'AST String(count, value) overload regression failed.' }
+Write-Host 'AST_STRING_OVERLOAD_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'
