@@ -193,6 +193,8 @@ public sealed class StatementParser
                 ? ParseRuntimeFileStatement()
                 : Current.Kind == SyntaxKind.ErrorKeyword
                 ? ParseErrorStatement()
+                : Current.Kind == SyntaxKind.SetKeyword
+                ? ParseSetStatement(inlineElseIndex >= 0 ? inlineElseIndex : FindLineEndIndex(_position))
                 : ParseInlineStatement(inlineElseIndex >= 0 ? inlineElseIndex : FindLineEndIndex(_position));
             var inlineElseStatements = new List<StatementSyntax>();
             if (Current.Kind == SyntaxKind.ElseKeyword)
@@ -204,6 +206,8 @@ public sealed class StatementParser
                         ? ParseRuntimeFileStatement()
                         : Current.Kind == SyntaxKind.ErrorKeyword
                         ? ParseErrorStatement()
+                        : Current.Kind == SyntaxKind.SetKeyword
+                        ? ParseSetStatement(FindLineEndIndex(_position))
                         : ParseInlineStatement(FindLineEndIndex(_position));
                     inlineElseStatements.Add(inlineElseStatement);
                 }
@@ -283,6 +287,8 @@ public sealed class StatementParser
                 ? ParseRuntimeFileStatement()
                 : Current.Kind == SyntaxKind.ErrorKeyword
                 ? ParseErrorStatement()
+                : Current.Kind == SyntaxKind.SetKeyword
+                ? ParseSetStatement(FindLineEndIndex(_position))
                 : ParseInlineStatement(FindLineEndIndex(_position));
             if (Current.Kind == SyntaxKind.NewLineToken)
                 NextToken();
@@ -892,10 +898,10 @@ public sealed class StatementParser
         return new AssignmentStatementSyntax(target, equalsToken, expression);
     }
 
-    private StatementSyntax ParseSetStatement()
+    private StatementSyntax ParseSetStatement(int? inlineEnd = null)
     {
         var setKeyword = NextToken();
-        var equalsIndex = FindTopLevelEqualsIndex(_position);
+        var equalsIndex = inlineEnd is { } limit ? FindTopLevelEqualsIndex(_position, limit) : FindTopLevelEqualsIndex(_position);
         if (equalsIndex < 0)
         {
             _diagnostics.Add(new SyntaxDiagnostic(
@@ -919,7 +925,11 @@ public sealed class StatementParser
         var targetExpression = ParseExpressionRange(_position, equalsIndex, _tokens[equalsIndex].Span.Start);
         _position = equalsIndex;
         var equalsToken = NextToken();
-        var expression = ParseExpressionUntilLineEnd();
+        var expression = inlineEnd is { } end
+            ? ParseExpressionRange(_position, end, _tokens[end].Span.Start)
+            : ParseExpressionUntilLineEnd();
+        if (inlineEnd is { } inlinePosition)
+            _position = inlinePosition;
 
         if (targetExpression.Kind is not SyntaxKind.NameExpression
             and not SyntaxKind.MemberAccessExpression

@@ -92,6 +92,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST inline If assignment compilation failed.' 
 $inlineAssignmentResult = dotnet (Join-Path $inlineAssignmentOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($inlineAssignmentResult -join "`n") -ne '1') { throw 'AST inline If assignment regression failed.' }
 Write-Host 'AST_INLINE_IF_ASSIGNMENT_OK'
+$inlineSetOutput = Join-Path $output 'if-inline-set'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'if-inline-set.xps') -o $inlineSetOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST inline If Set compilation failed.' }
+$inlineSetResult = dotnet (Join-Path $inlineSetOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($inlineSetResult -join "`n") -ne 'True') { throw 'AST inline If Set regression failed.' }
+Write-Host 'AST_INLINE_IF_SET_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'

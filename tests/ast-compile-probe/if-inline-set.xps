@@ -1,0 +1,8 @@
+Class InlineSetBox
+End Class
+
+Sub Main()
+    Dim value As InlineSetBox
+    If True Then Set value = New InlineSetBox Else Set value = Nothing
+    Print Not (value Is Nothing)
+End Sub
