@@ -1,0 +1,4 @@
+Sub Main()
+    If True Then Exit Sub Else Print "INLINE_EXIT_BAD"
+    Print "INLINE_EXIT_AFTER_BAD"
+End Sub

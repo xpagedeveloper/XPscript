@@ -193,6 +193,8 @@ public sealed class StatementParser
                 ? ParseRuntimeFileStatement()
                 : Current.Kind == SyntaxKind.ErrorKeyword
                 ? ParseErrorStatement()
+                : Current.Kind == SyntaxKind.ExitKeyword
+                ? ParseExitStatement()
                 : Current.Kind == SyntaxKind.SetKeyword
                 ? ParseSetStatement(inlineElseIndex >= 0 ? inlineElseIndex : FindLineEndIndex(_position))
                 : ParseInlineStatement(inlineElseIndex >= 0 ? inlineElseIndex : FindLineEndIndex(_position));
@@ -206,6 +208,8 @@ public sealed class StatementParser
                         ? ParseRuntimeFileStatement()
                         : Current.Kind == SyntaxKind.ErrorKeyword
                         ? ParseErrorStatement()
+                        : Current.Kind == SyntaxKind.ExitKeyword
+                        ? ParseExitStatement()
                         : Current.Kind == SyntaxKind.SetKeyword
                         ? ParseSetStatement(FindLineEndIndex(_position))
                         : ParseInlineStatement(FindLineEndIndex(_position));
@@ -287,6 +291,8 @@ public sealed class StatementParser
                 ? ParseRuntimeFileStatement()
                 : Current.Kind == SyntaxKind.ErrorKeyword
                 ? ParseErrorStatement()
+                : Current.Kind == SyntaxKind.ExitKeyword
+                ? ParseExitStatement()
                 : Current.Kind == SyntaxKind.SetKeyword
                 ? ParseSetStatement(FindLineEndIndex(_position))
                 : ParseInlineStatement(FindLineEndIndex(_position));
