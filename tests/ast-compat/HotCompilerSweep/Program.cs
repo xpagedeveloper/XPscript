@@ -55,7 +55,10 @@ for (var index = 0; index < positive.Length; index++)
     catch (Exception ex)
     {
         failures.Add(relative);
-        Console.WriteLine($"AST_REPOSITORY_SKIPPED_EXCEPTION={relative} type={ex.GetType().Name}");
+        var detail = ex.Message
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault()?.Trim() ?? string.Empty;
+        Console.WriteLine($"AST_REPOSITORY_SKIPPED_EXCEPTION={relative} type={ex.GetType().Name} detail={detail}");
         continue;
     }
 
