@@ -104,6 +104,8 @@ public sealed class BoundExpressionEmitter
             $"new XPScriptHttpDbDominoRest({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPPathValue", StringComparison.OrdinalIgnoreCase) =>
             $"new XpPath({Emit(@new.Arguments[0])})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPFileInfoValue", StringComparison.OrdinalIgnoreCase) =>
+            $"((XpFileInfo)Program.FileInfo({Emit(@new.Arguments[0])}))",
         BoundNewExpression @new when AstImageSupport.IsImage(@new.SemanticType.Name) =>
             $"new XPImage({string.Join(", ", @new.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), i < 2 ? "int" : "string")))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Path", StringComparison.OrdinalIgnoreCase) => $"new XpPath({string.Join(", ", @new.Arguments.Select(Emit))})",

@@ -102,6 +102,8 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 
 - Migrating `XPPathValue` onto the existing AST `XpPath` runtime with typed path operations and Platform FullTest coverage.
 
+- Migrating `XPFileInfoValue` onto the existing AST `XpFileInfo` runtime; added typed metadata and a safe existing-file regression.
+
 - Current continuation checkpoint: branch `investigate-ast-compiler` is clean apart from the unrelated untracked `scripts/restart-chatgpt-after-5-minutes.ps1`. The next open implementation audit is full legacy CLI `--target` behavior parity; AST currently parses the compatibility switches but still explicitly rejects `--target webiis`. The HTTP/XML collection-property duplicate-runtime experiment was reverted and remains uncommitted/open.
 
 - Follow-up verification: the isolated `run-ast-array-signature.ps1` suite passes, but the full `run-ast-cli.ps1` wrapper currently terminates after entering that nested suite without exposing a PowerShell exception. No harness change was kept; this wrapper issue must be isolated before claiming the full AST suite green.

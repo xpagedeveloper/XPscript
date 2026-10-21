@@ -1,0 +1,10 @@
+Option Declare
+
+Sub Main()
+    Dim info As New XPFileInfoValue("src/XPScript.Compiler/AstExperimentalCompiler.cs")
+    If Not info.IsFile Then Error 1201, "File info did not identify a file"
+    If info.Length <= 0 Then Error 1202, "File info length missing"
+    If info.FullPath = "" Then Error 1203, "File info path missing"
+    If info.Name <> "AstExperimentalCompiler.cs" Then Error 1204, "File info name mismatch"
+    Print "FILE_INFO_AST_SAFE_OK"
+End Sub

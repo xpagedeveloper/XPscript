@@ -425,6 +425,11 @@ if (Should-Run 'platform') {
   $astPathExecutable = if ($IsWindows) { Join-Path $astPathOutput 'Generated.exe' } else { Join-Path $astPathOutput 'Generated' }
   $astPathRun = Invoke-Bounded (if (Test-Path $astPathExecutable) { $astPathExecutable } else { 'dotnet' }) (if (Test-Path $astPathExecutable) { @() } else { @((Join-Path $astPathOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST path value safe runtime'
   if ($astPathRun.ExitCode -ne 0 -or $astPathRun.Output -notmatch 'PATH_VALUE_AST_SAFE_OK') { throw 'AST path value safe regression did not complete.' }
+  $astFileInfoOutput = './out/fulltest/file-info-ast-safe'
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/file-info-native-safe.xps','-o',$astFileInfoOutput) $compileTimeoutMilliseconds 'AST file info safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  $astFileInfoExecutable = if ($IsWindows) { Join-Path $astFileInfoOutput 'Generated.exe' } else { Join-Path $astFileInfoOutput 'Generated' }
+  $astFileInfoRun = Invoke-Bounded (if (Test-Path $astFileInfoExecutable) { $astFileInfoExecutable } else { 'dotnet' }) (if (Test-Path $astFileInfoExecutable) { @() } else { @((Join-Path $astFileInfoOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST file info safe runtime'
+  if ($astFileInfoRun.ExitCode -ne 0 -or $astFileInfoRun.Output -notmatch 'FILE_INFO_AST_SAFE_OK') { throw 'AST file info safe regression did not complete.' }
   Run-Xps ./samples/systeminventory-local-smoke.xps systeminventory-local-smoke | Out-Null
   Write-Host 'PLATFORM_FULLTEST: passed'
 }
