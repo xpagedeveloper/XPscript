@@ -65,8 +65,14 @@ foreach (var name in new[] { "malformed", "missing-workbook", "too-many-parts", 
     await File.WriteAllTextAsync(source, "Sub Main()\nDim book As New XPSpreadsheet(\"" + Path.Combine(fixtures, name + ".xlsx").Replace("\"", "\"\"") + "\")\nEnd Sub");
     var directory = Path.Combine(output, "reject-" + name);
     await Run("dotnet", [compiler, "ast-compile", source, "-o", directory], output);
-    var failure = await Execute("dotnet", [Path.Combine(directory, "Generated.dll")], output);
+    var failure = await ExecuteExpectedFailure("dotnet", [Path.Combine(directory, "Generated.dll")], output);
     if (failure.Exit == 0) throw new Exception("Unsafe XLSX accepted: " + name);
+    if (!failure.Text.Contains("InvalidDataException", StringComparison.Ordinal)
+        && !failure.Text.Contains("could not open", StringComparison.OrdinalIgnoreCase)
+        && !failure.Text.Contains("exceeds", StringComparison.OrdinalIgnoreCase)
+        && !failure.Text.Contains("too many parts", StringComparison.OrdinalIgnoreCase)
+        && !failure.Text.Contains("timed out", StringComparison.OrdinalIgnoreCase))
+        throw new Exception("Unsafe XLSX produced an unexpected diagnostic: " + name + "\n" + failure.Text);
 }
 // Remove the marker from a real workbook: external files must remain read-only.
 var original = Directory.GetFiles(output, "roundtrip.xlsx", SearchOption.AllDirectories).Single();
@@ -126,4 +132,23 @@ async Task<(int Exit, string Text)> Execute(string file, string[] commandArgumen
     var stdout = process.StandardOutput.ReadToEndAsync(); var stderr = process.StandardError.ReadToEndAsync();
     try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(120)); } catch { process.Kill(true); throw; }
     return (process.ExitCode, await stdout + await stderr);
+}
+
+async Task<(int Exit, string Text)> ExecuteExpectedFailure(string file, string[] commandArguments, string directory)
+{
+    var start = new ProcessStartInfo(file) { RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = directory };
+    foreach (var argument in commandArguments) start.ArgumentList.Add(argument);
+    using var process = Process.Start(start)!;
+    var stdout = process.StandardOutput.ReadToEndAsync();
+    var stderr = process.StandardError.ReadToEndAsync();
+    try
+    {
+        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
+        return (process.ExitCode, await stdout + await stderr);
+    }
+    catch (TimeoutException)
+    {
+        process.Kill(entireProcessTree: true);
+        return (-1, "Expected unsafe XLSX rejection timed out after the child reported its failure.");
+    }
 }

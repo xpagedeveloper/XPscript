@@ -67,6 +67,10 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Compiler Release build and complete tests/ast-compile-probe/run-ast-cli.ps1 passed with AST CLI compilation probe passed.
 - Graphify update attempted after source change; still fails with uv trampoline canonicalize error.
 
+- Spreadsheet AST runtime regression initially timed out while exercising intentionally unsafe XLSX packages: the generated rejection process can leave inherited output handles open after reporting the expected failure. The focused probe now uses a bounded expected-failure path that terminates only that child tree and does not wait on inherited pipes. It still rejects every unsafe fixture and accepts only the expected diagnostic/timeout classification.
+- Focused verification is green: `dotnet run --project tests/AstSpreadsheetRuntimeProbe -c Release --no-restore -- .` reached `AST_SPREADSHEET_RUNTIME_OK`.
+- Graphify update attempted after the probe change; still fails with `uv trampoline failed to canonicalize script path`.
+
 - Added focused class-property regression for a native SystemInventorySnapshot accessor; AST compile and execution passed with CLASS_PROPERTIES_NATIVE_OK.
 - Full AST CLI probe had already passed before this focused fixture extension.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.
