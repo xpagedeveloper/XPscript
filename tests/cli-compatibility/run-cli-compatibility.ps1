@@ -27,6 +27,9 @@ if ($LASTEXITCODE -ne 1 -or $astHelp -notlike '*ast-compile requires an .xps sou
 
 $astSource = Join-Path $root 'tests/ast-compile-probe/application-newline.xps'
 $resultRoot = Join-Path $root 'tests/cli-compatibility/.tmp-result-format'
+if (Test-Path -LiteralPath $resultRoot) {
+    Remove-Item -LiteralPath $resultRoot -Recurse -Force
+}
 New-Item -ItemType Directory -Force -Path $resultRoot | Out-Null
 $jsonOutput = dotnet $compiler ast-compile $astSource -o (Join-Path $resultRoot 'json') --result-format json | Out-String
 if ($LASTEXITCODE -ne 0) { throw "AST JSON result-format regression: $jsonOutput" }
