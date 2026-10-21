@@ -119,6 +119,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"'{typeName}' requires {required} constructor arguments.");
             return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User(typeName));
         }
+        if (typeName.Equals("XPDbMsSql", StringComparison.OrdinalIgnoreCase) || typeName.Equals("XPDBMsSQL", StringComparison.OrdinalIgnoreCase))
+        {
+            if (syntax.Arguments.Count != 1)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"'{typeName}' requires a connection string argument.");
+            return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User(typeName));
+        }
         if (AstSpreadsheetSupport.IsSpreadsheet(typeName))
         {
             if (!typeName.Equals("XPSpreadsheet", StringComparison.OrdinalIgnoreCase))

@@ -400,6 +400,11 @@ if (Should-Run 'platform') {
   $astHttpDbExecutable = if ($IsWindows) { Join-Path $astHttpDbOutput 'Generated.exe' } else { Join-Path $astHttpDbOutput 'Generated' }
   $astHttpDbRun = Invoke-Bounded (if (Test-Path $astHttpDbExecutable) { $astHttpDbExecutable } else { 'dotnet' }) (if (Test-Path $astHttpDbExecutable) { @() } else { @((Join-Path $astHttpDbOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST HTTP database safe runtime'
   if ($astHttpDbRun.ExitCode -ne 0 -or $astHttpDbRun.Output -notmatch 'HTTP_DATABASE_AST_SAFE_OK') { throw 'AST HTTP database safe regression did not complete.' }
+  $astMsSqlAliasOutput = './out/fulltest/mssql-alias-ast-safe'
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/mssql-alias-native-safe.xps','-o',$astMsSqlAliasOutput) $compileTimeoutMilliseconds 'AST MSSQL alias safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  $astMsSqlAliasExecutable = if ($IsWindows) { Join-Path $astMsSqlAliasOutput 'Generated.exe' } else { Join-Path $astMsSqlAliasOutput 'Generated' }
+  $astMsSqlAliasRun = Invoke-Bounded (if (Test-Path $astMsSqlAliasExecutable) { $astMsSqlAliasExecutable } else { 'dotnet' }) (if (Test-Path $astMsSqlAliasExecutable) { @() } else { @((Join-Path $astMsSqlAliasOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST MSSQL alias safe runtime'
+  if ($astMsSqlAliasRun.ExitCode -ne 0 -or $astMsSqlAliasRun.Output -notmatch 'MSSQL_ALIAS_AST_SAFE_OK') { throw 'AST MSSQL alias safe regression did not complete.' }
   Run-Xps ./samples/systeminventory-local-smoke.xps systeminventory-local-smoke | Out-Null
   Write-Host 'PLATFORM_FULLTEST: passed'
 }
