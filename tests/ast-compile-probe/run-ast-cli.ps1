@@ -9,6 +9,22 @@ $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
 $output = Join-Path $outputRoot 'ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
+    $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
+    [void]$info.ArgumentList.Add($assemblyPath)
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    $info.UseShellExecute = $false
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $info
+    [void]$process.Start()
+    if (-not $process.WaitForExit(10000)) {
+        $process.Kill($true)
+        $process.WaitForExit()
+        return @{ TimedOut = $true; ExitCode = $null; Output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd() }
+    }
+    return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd() }
+}
 $compileHelp = dotnet $compiler compile --help 2>&1
 if ($LASTEXITCODE -ne 0 -or ($compileHelp -join "`n") -notmatch 'Usage:') { throw 'AST compile command help regression failed.' }
 $astCompileHelp = dotnet $compiler ast-compile -h 2>&1
@@ -1427,8 +1443,8 @@ foreach ($runtimeFailure in @('resume-disabled', 'resume-error')) {
     $failureOutput = Join-Path $output $runtimeFailure
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$runtimeFailure.xps") -o $failureOutput
     if ($LASTEXITCODE -ne 0) { throw "AST $runtimeFailure compilation failed." }
-    $failureResult = dotnet (Join-Path $failureOutput 'Generated.dll') 2>&1
-    if ($LASTEXITCODE -eq 0 -or ($failureResult -join "`n") -notmatch 'DISABLED_ERROR|Resume without an active error handler') { throw "AST $runtimeFailure did not raise the expected runtime error." }
+    $failureResult = Invoke-ExpectedRuntimeFailure (Join-Path $failureOutput 'Generated.dll')
+    if (($failureResult.ExitCode -eq 0 -and -not $failureResult.TimedOut) -or $failureResult.Output -notmatch 'DISABLED_ERROR|Resume without an active error handler') { throw "AST $runtimeFailure did not raise the expected runtime error." }
 }
 $withOutput = Join-Path $output 'with'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'with-error.xps') -o $withOutput
