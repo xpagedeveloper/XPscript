@@ -101,6 +101,7 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Put\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>[^\r\n]+)\r?$", "${indent}AstPut(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Get\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>[A-Za-z_]\w*)\s*$", "${indent}${value} = AstGet(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Seek\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^\r\n]+)\r?$", "${indent}Call AstSeek(${file}, ${position})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Reset\s*$", "${indent}Call AstReset()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)ChDrive\s+(?<drive>[^\r\n]+)\r?$", "${indent}Call AstChDrive(${drive})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)ChDir\s+(?<path>[^\r\n]+)\r?$", "${indent}Call AstChDir(${path})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?<operation>Lock|Unlock)\s+#?(?<file>[^,\s]+)\s*,\s*(?<start>[^\s]+)\s+To\s+(?<end>[^\r\n]+)\r?$", "${indent}Call Ast${operation}Bytes(${file}, ${start}, ${end})");
@@ -337,6 +338,7 @@ public static class AstExperimentalCompiler
             for (var parameterCount = 1; parameterCount <= 4; parameterCount++)
                 symbols.Declare(new FunctionSymbol(fileFunction, typeof(object), Enumerable.Repeat(typeof(object), parameterCount).ToArray(), XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, parameterCount).ToArray()));
         symbols.Declare(new FunctionSymbol("FreeFile", typeof(long), []));
+        symbols.Declare(new FunctionSymbol("Seek", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CInt", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CLng", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CDbl", typeof(double), [typeof(object)], XpTypeSymbol.FromClr(typeof(double)), [XpTypeSymbol.Variant]));
@@ -371,6 +373,7 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("AstPut", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstGet", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstSeek", typeof(void), [typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("AstReset", typeof(void), []));
         symbols.Declare(new FunctionSymbol("AstChDrive", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstChDir", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("AstLockBytes", typeof(void), [typeof(object), typeof(object), typeof(object)], null, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -936,7 +939,8 @@ internal static class Program
     }
     public static object MkDir(params object?[] a) { System.IO.Directory.CreateDirectory(CStr(a[0])); return true; }
     public static object RmDir(params object?[] a) { System.IO.Directory.Delete(CStr(a[0]), true); return true; }
-    public static long FreeFile() => 1;
+    public static long FreeFile() => LSFileRuntime.FreeFile();
+    public static long Seek(object? file) => LSFileRuntime.Seek(checked((int)XPScriptRuntime.CLng(file)));
     public static long CInt(object value) => XPScriptRuntime.CInt(value);
     public static long CLng(object value) => XPScriptRuntime.CLng(value);
     public static double CDbl(object value) => XPScriptRuntime.CDbl(value);
@@ -1208,6 +1212,7 @@ internal static class Program
     public static void AstPut(object? file, object? position, object? value) => LSFileRuntime.Put(checked((int)XPScriptRuntime.CLng(file)), position, value, value switch { byte => "byte", bool => "boolean", short or int => "integer", long => "long", float => "single", double => "double", decimal => "currency", DateTime => "date", _ => "string" });
     public static object? AstGet(object? file, object? position, object? current) => LSFileRuntime.GetValue(checked((int)XPScriptRuntime.CLng(file)), position, current switch { byte => "byte", bool => "boolean", short or int => "integer", long => "long", float => "single", double => "double", decimal => "currency", DateTime => "date", _ => "string" }, current);
     public static void AstSeek(object? file, object? position) => LSFileRuntime.SeekSet(checked((int)XPScriptRuntime.CLng(file)), XPScriptRuntime.CLng(position));
+    public static void AstReset() => LSFileRuntime.Close();
     public static void AstChDrive(object? drive) => LSFileRuntime.ChDrive(drive);
     public static void AstLockBytes(object? file, object? start, object? end) => LSFileRuntime.LockBytes(checked((int)XPScriptRuntime.CLng(file)), XPScriptRuntime.CLng(start), XPScriptRuntime.CLng(end));
     public static void AstUnlockBytes(object? file, object? start, object? end) => LSFileRuntime.UnlockBytes(checked((int)XPScriptRuntime.CLng(file)), XPScriptRuntime.CLng(start), XPScriptRuntime.CLng(end));

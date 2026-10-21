@@ -932,8 +932,10 @@ internal static class LSFileRuntime
 
     private static State BinaryState(string path, string mode, int recordLength)
     {
-        var fileMode = mode == "binary" ? FileMode.Open : FileMode.OpenOrCreate;
-        var stream = new FileStream(path, fileMode, FileAccess.ReadWrite, FileShare.Read);
+        // Binary files are created on first Open, matching LotusScript/legacy
+        // behavior for a new output file.
+        var fileMode = FileMode.OpenOrCreate;
+        var stream = new FileStream(path, fileMode, FileAccess.ReadWrite, FileShare.ReadWrite);
         return new State { Stream = stream, Mode = mode, RecordLength = recordLength };
     }
 }
