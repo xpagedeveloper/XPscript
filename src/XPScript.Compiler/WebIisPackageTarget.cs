@@ -53,7 +53,9 @@ internal static class WebIisPackageTarget
         {
             "publish", project, "-c", "Release", "-o", destination,
             "--self-contained", selfContained ? "true" : "false",
-            "-p:SkipUnifiedPublish=true"
+            "-p:SkipUnifiedPublish=true",
+            "--no-restore",
+            "--nologo"
         };
         if (selfContained)
         {
