@@ -670,6 +670,8 @@ Audit result: all five scoped increments passed their focused probes and the com
 - [x] Replace the AST Print file-output regex with lexer token boundaries so commas inside string literals are not misclassified. The print-parentheses-literal fixture now matches published main output.
 Nested-call verification completed: focused legacy/AST execution, production MCP validation and the complete Windows Language FullTest passed. Published main reproduces the original compile failure; its SHA-256 remains unchanged.
 
+- [x] Reverify the SQLite native-surface fixture through both compiler commands. `ast-compile tests/ast-compile-probe/sqlite-native-next.xps` succeeds and produces the expected AST assembly; `legacy-compile` fails in generated `Program.cs` because the legacy path does not emit `XPScriptAttachmentCollectionV3` (line 9791). This is recorded as a legacy compiler defect rather than an AST parity regression.
+
 ## Final migration item
 
 - [ ] Import the OpenAPI REST server and REST client import/export work from every branch whose name starts with `test-openapi`. Reconcile multi-definition handling, generated server/client contracts, regeneration/update behavior and AST/compiler integration before marking the OpenAPI migration complete.
