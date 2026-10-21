@@ -1,0 +1,11 @@
+Option Declare
+
+Sub Main()
+    Dim supabase As New XPHttpDbSupabase("https://example.invalid", "test-key")
+    Dim domino As New XPHttpDbDominoRest("https://example.invalid", "test-token", "db.nsf")
+    supabase.Timeout = 12
+    domino.CertificateValidation = "strict"
+    If supabase.BaseUrl = "" Then Error 1201, "Supabase AST binding failed"
+    If domino.DataSource = "" Then Error 1202, "Domino REST AST binding failed"
+    Print "HTTP_DATABASE_AST_SAFE_OK"
+End Sub

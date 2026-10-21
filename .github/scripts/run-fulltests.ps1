@@ -395,6 +395,11 @@ if (Should-Run 'platform') {
   $astNetworkExecutable = if ($IsWindows) { Join-Path $astNetworkOutput 'Generated.exe' } else { Join-Path $astNetworkOutput 'Generated' }
   $astNetworkRun = Invoke-Bounded (if (Test-Path $astNetworkExecutable) { $astNetworkExecutable } else { 'dotnet' }) (if (Test-Path $astNetworkExecutable) { @() } else { @((Join-Path $astNetworkOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST NetworkTools safe runtime'
   if ($astNetworkRun.ExitCode -ne 0 -or $astNetworkRun.Output -notmatch 'NETWORKTOOLS_AST_SAFE_OK') { throw 'AST NetworkTools safe regression did not complete.' }
+  $astHttpDbOutput = './out/fulltest/http-database-ast-safe'
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/http-database-native-safe.xps','-o',$astHttpDbOutput) $compileTimeoutMilliseconds 'AST HTTP database safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  $astHttpDbExecutable = if ($IsWindows) { Join-Path $astHttpDbOutput 'Generated.exe' } else { Join-Path $astHttpDbOutput 'Generated' }
+  $astHttpDbRun = Invoke-Bounded (if (Test-Path $astHttpDbExecutable) { $astHttpDbExecutable } else { 'dotnet' }) (if (Test-Path $astHttpDbExecutable) { @() } else { @((Join-Path $astHttpDbOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST HTTP database safe runtime'
+  if ($astHttpDbRun.ExitCode -ne 0 -or $astHttpDbRun.Output -notmatch 'HTTP_DATABASE_AST_SAFE_OK') { throw 'AST HTTP database safe regression did not complete.' }
   Run-Xps ./samples/systeminventory-local-smoke.xps systeminventory-local-smoke | Out-Null
   Write-Host 'PLATFORM_FULLTEST: passed'
 }

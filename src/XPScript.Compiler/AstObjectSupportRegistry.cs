@@ -41,7 +41,7 @@ internal static class AstObjectSupportRegistry
         "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
         "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
         ,"NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo", "NetworkHostResult", "NetworkSubnetInfo", "NetworkTlsVersionResult", "NetworkCertificateResult", "NetworkHttpHeadersResult", "NetworkHttpSecurityHeadersResult", "NetworkRedirectResult", "NetworkBannerResult", "NetworkPortExposureInfo"
-        ,"XPDBSQLite", "XPDbMySql", "XPDbMsSql", "XPDbSupabase", "XPSupabaseDB"
+        ,"XPDBSQLite", "XPDbMySql", "XPDbMsSql", "XPDbSupabase", "XPSupabaseDB", "XPHttpDbSupabase", "XPHttpDbDominoRest"
     };
 
     private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

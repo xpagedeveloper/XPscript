@@ -90,6 +90,8 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Full AST CLI probe had already passed before this focused fixture extension.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.
 
+- Migrated `XPHttpDbSupabase` and `XPHttpDbDominoRest` constructors, typed members, runtime type emission, and HTTP database runtime activation into the AST compiler. Added permanent Platform FullTest coverage via `http-database-native-safe.xps`; focused AST compile/run passed `HTTP_DATABASE_AST_SAFE_OK`. Release build passed with the existing NU1900 vulnerability-service warning. Graphify update attempted again; still fails with uv trampoline canonicalize error.
+
 - Current continuation checkpoint: branch `investigate-ast-compiler` is clean apart from the unrelated untracked `scripts/restart-chatgpt-after-5-minutes.ps1`. The next open implementation audit is full legacy CLI `--target` behavior parity; AST currently parses the compatibility switches but still explicitly rejects `--target webiis`. The HTTP/XML collection-property duplicate-runtime experiment was reverted and remains uncommitted/open.
 
 - Follow-up verification: the isolated `run-ast-array-signature.ps1` suite passes, but the full `run-ast-cli.ps1` wrapper currently terminates after entering that nested suite without exposing a PowerShell exception. No harness change was kept; this wrapper issue must be isolated before claiming the full AST suite green.

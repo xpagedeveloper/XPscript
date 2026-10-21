@@ -98,6 +98,10 @@ public sealed class BoundExpressionEmitter
             $"XPScriptSpreadsheetFactory.Create({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("NetworkTools", StringComparison.OrdinalIgnoreCase) =>
             "XPScriptNetworkToolsFactory.Create()",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpDbSupabase", StringComparison.OrdinalIgnoreCase) =>
+            $"new XPScriptHttpDbSupabase({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpDbDominoRest", StringComparison.OrdinalIgnoreCase) =>
+            $"new XPScriptHttpDbDominoRest({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when AstImageSupport.IsImage(@new.SemanticType.Name) =>
             $"new XPImage({string.Join(", ", @new.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), i < 2 ? "int" : "string")))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Path", StringComparison.OrdinalIgnoreCase) => $"new XpPath({string.Join(", ", @new.Arguments.Select(Emit))})",
@@ -157,7 +161,7 @@ public sealed class BoundExpressionEmitter
         _ => RuntimeObjectTypeCore(name)
     };
 
-    private static string? RuntimeObjectTypeCore(string name) => AstApplicationSupport.RuntimeType(name) ?? AstSpreadsheetSupport.RuntimeType(name) ?? AstHttpSupport.RuntimeType(name) ?? AstNotesJsonSupport.RuntimeType(name) ?? AstSystemInventorySupport.RuntimeType(name) ?? AstSqliteSupport.RuntimeType(name) ?? AstMySqlSupport.RuntimeType(name) ?? AstMsSqlSupport.RuntimeType(name) ?? AstSupabaseSupport.RuntimeType(name) ?? AstAttachmentSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
+    private static string? RuntimeObjectTypeCore(string name) => AstApplicationSupport.RuntimeType(name) ?? AstSpreadsheetSupport.RuntimeType(name) ?? AstHttpSupport.RuntimeType(name) ?? AstHttpDatabaseSupport.RuntimeType(name) ?? AstNotesJsonSupport.RuntimeType(name) ?? AstSystemInventorySupport.RuntimeType(name) ?? AstSqliteSupport.RuntimeType(name) ?? AstMySqlSupport.RuntimeType(name) ?? AstMsSqlSupport.RuntimeType(name) ?? AstSupabaseSupport.RuntimeType(name) ?? AstAttachmentSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
     {
         "XPIMAGE" => "XPImage",
         "XPJSONDOCUMENT" => "XPScriptJsonDocument",

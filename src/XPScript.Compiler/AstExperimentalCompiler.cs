@@ -481,7 +481,7 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         var usesApplication = AstApplicationSupport.UsesApplication(fullSource);
         var usesDatabaseAttachments = Regex.IsMatch(source, @"(?i)\.\s*Attachments\s*\(");
-        var usesDatabaseDynamicRuntime = AstSqliteSupport.Uses(fullSource) || AstMySqlSupport.Uses(fullSource) ||
+        var usesDatabaseDynamicRuntime = AstSqliteSupport.Uses(fullSource) || AstMySqlSupport.Uses(fullSource) || AstHttpDatabaseSupport.Uses(fullSource) ||
             AstMsSqlSupport.Uses(fullSource) || AstSupabaseSupport.Uses(fullSource) ||
             source.Contains("XPScriptDbSqlite", StringComparison.OrdinalIgnoreCase) ||
             source.Contains("XPScriptDbMsSql", StringComparison.OrdinalIgnoreCase) ||
