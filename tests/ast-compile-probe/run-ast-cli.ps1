@@ -159,6 +159,12 @@ $shellArgsOutput = Join-Path $output 'shell-structured-arguments'
 dotnet $compiler ast-compile (Join-Path $root 'samples/shell-structured-arguments.xps') -o $shellArgsOutput
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $shellArgsOutput 'Generated.dll'))) { throw 'AST ShellArgs regression failed.' }
 Write-Host 'AST_SHELL_ARGS_OK'
+$jsonSchemaOutput = Join-Path $output 'xpjsonschema-boolean-runtime'
+dotnet $compiler ast-compile (Join-Path $root 'samples/xpjsonschema-boolean-runtime.xps') -o $jsonSchemaOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST JSON schema boolean regression compilation failed.' }
+$jsonSchemaResult = dotnet (Join-Path $jsonSchemaOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($jsonSchemaResult -join "`n") -notmatch 'XPJSONSCHEMA-BOOLEAN-RUNTIME=OK') { throw 'AST JSON schema boolean regression failed.' }
+Write-Host 'AST_JSON_SCHEMA_BOOLEAN_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'

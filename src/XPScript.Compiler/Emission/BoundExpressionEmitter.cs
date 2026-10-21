@@ -314,6 +314,8 @@ public sealed class BoundExpressionEmitter
         if (functionName.Equals("JsonParse", StringComparison.OrdinalIgnoreCase)) functionName = "XPScriptNativeJson.Parse";
         if (functionName.Equals("StrTemplate", StringComparison.OrdinalIgnoreCase)) functionName = "Program.StrTemplate";
         if (functionName.Equals("Seek", StringComparison.OrdinalIgnoreCase)) functionName = "Program.Seek";
+        if (call.Target is BoundNameExpression { Symbol: TypeSymbol { Name: "XPJsonSchema" } } && call.Function.Name is "Parse" or "FromJson")
+            return $"XPScriptJsonSchema.{call.Function.Name}({string.Join(", ", arguments)})";
         if (call.Target is null && functionName.Equals("CDate", StringComparison.OrdinalIgnoreCase))
             return $"Program.CDate({string.Join(", ", arguments)})";
         if (call.Target is null && functionName.ToUpperInvariant() is "CSTR" or "CINT" or "CLNG" or "CDBL" or "CBOOL" or "CBYTE" or "CCUR" or "CSNG" or "CVAR" or "CDATE" or "LEN" or "LENB" or "TRIM" or "UCASE" or "LCASE" or "ENVIRON" or "ISARRAY" or "ISDATE" or "ISNUMERIC")

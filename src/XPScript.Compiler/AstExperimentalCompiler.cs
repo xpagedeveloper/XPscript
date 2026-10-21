@@ -277,6 +277,9 @@ public static class AstExperimentalCompiler
         }
         foreach (var compatibilityName in AstObjectSupportRegistry.CompatibilityNames)
             symbols.Declare(new VariableSymbol(compatibilityName, typeof(object), XpTypeSymbol.Variant));
+        symbols.Declare(new TypeSymbol("XPJsonSchema", typeof(object), XpTypeSymbol.User("XPJsonSchema")));
+        DeclareNativeStatic(symbols, "XPJsonSchema.Parse", [typeof(object)], "XPScriptJsonSchema.Parse");
+        DeclareNativeStatic(symbols, "XPJsonSchema.FromJson", [typeof(object)], "XPScriptJsonSchema.FromJson");
         if (usesArchive)
         {
             symbols.Declare(new TypeSymbol("XPScriptArchiveFactory", typeof(object), XpTypeSymbol.User("XPScriptArchiveFactory")));
@@ -1321,6 +1324,9 @@ internal static class Program
         if (usesNetworkTools)
             generated = NetworkToolsPhase2RuntimePostProcessor.Transform(generated);
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
+        generated = generated.Replace("XPJsonSchema.", "XPScriptJsonSchema.", StringComparison.Ordinal);
+        generated = generated.Replace("((XPScriptJsonSchema)(XPJsonSchema)).Parse", "XPScriptJsonSchema.Parse", StringComparison.Ordinal)
+            .Replace("((XPScriptJsonSchema)(XPJsonSchema)).FromJson", "XPScriptJsonSchema.FromJson", StringComparison.Ordinal);
         generated = jsonNameMetadata.ApplyToGeneratedCode(generated);
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode;
         using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
