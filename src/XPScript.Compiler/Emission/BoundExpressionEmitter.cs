@@ -324,7 +324,10 @@ public sealed class BoundExpressionEmitter
     }
 
     private string EmitBinary(BoundBinaryExpression binary) => binary.OperatorKind == SyntaxKind.IsKeyword
-        ? $"object.ReferenceEquals({Emit(binary.Left)}, {Emit(binary.Right)})"
+        ? binary.Right is BoundUnaryExpression { OperatorKind: SyntaxKind.NotKeyword } notExpression
+            && (notExpression.Operand.SemanticType.IsNothing || notExpression.Operand.SemanticType.IsNull || notExpression.Operand.SemanticType.IsEmpty)
+            ? $"!object.ReferenceEquals({Emit(binary.Left)}, {Emit(notExpression.Operand)})"
+            : $"object.ReferenceEquals({Emit(binary.Left)}, {Emit(binary.Right)})"
         : binary.Type == typeof(object)
         ? $"((dynamic)({Emit(binary.Left)}) {EmitBinaryOperator(binary.OperatorKind, binary.Type)} (dynamic)({Emit(binary.Right)}))"
         : binary.OperatorKind == SyntaxKind.PlusToken && binary.Type == typeof(string)

@@ -279,6 +279,9 @@ public static class AstExperimentalCompiler
             symbols.Declare(new TypeSymbol("XPScriptArchiveIteratorRuntime", typeof(object), XpTypeSymbol.User("XPScriptArchiveIteratorRuntime")));
             DeclareNativeStatic(symbols, "XPScriptArchiveIteratorRuntime.GetFirstEntry", [typeof(object)], "XPScriptArchiveIteratorRuntime.GetFirstEntry");
             DeclareNativeStatic(symbols, "XPScriptArchiveIteratorRuntime.GetNextEntry", [typeof(object), typeof(object)], "XPScriptArchiveIteratorRuntime.GetNextEntry");
+            DeclareNativeStatic(symbols, "XPScriptArchiveIteratorRuntime.EnumerateEntries", [typeof(object)], "XPScriptArchiveIteratorRuntime.EnumerateEntries");
+            DeclareNativeStatic(symbols, "XPScriptArchiveIteratorRuntime.EnumerateFiles", [typeof(object)], "XPScriptArchiveIteratorRuntime.EnumerateFiles");
+            DeclareNativeStatic(symbols, "XPScriptArchiveIteratorRuntime.EnumerateFolders", [typeof(object)], "XPScriptArchiveIteratorRuntime.EnumerateFolders");
         }
         var moduleFieldStorage = AstModuleFieldSupport.Find(moduleSource, symbols);
         foreach (var field in moduleFieldStorage)

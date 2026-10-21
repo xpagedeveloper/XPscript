@@ -61,7 +61,17 @@ internal sealed class ArchiveObjectPreprocessor
 
             var forAll = Regex.Match(line, @"^ForAll\s+([A-Za-z_]\w*)\s+In\s+([A-Za-z_]\w*)\s*\.\s*(?:Entries|Files\s*\(\s*\)|Folders\s*\(\s*\))\s*$", RegexOptions.IgnoreCase);
             if (forAll.Success && archiveVariables.Contains(forAll.Groups[2].Value))
+            {
                 archiveEntryVariables.Add(forAll.Groups[1].Value);
+                var collectionMember = Regex.Match(line, @"\.\s*(Entries|Files|Folders)", RegexOptions.IgnoreCase).Groups[1].Value;
+                var helper = collectionMember.Equals("Files", StringComparison.OrdinalIgnoreCase)
+                    ? "EnumerateFiles"
+                    : collectionMember.Equals("Folders", StringComparison.OrdinalIgnoreCase)
+                        ? "EnumerateFolders"
+                        : "EnumerateEntries";
+                output.Add(indent + $"ForAll {forAll.Groups[1].Value} In XPScriptArchiveIteratorRuntime.{helper}({forAll.Groups[2].Value})");
+                continue;
+            }
 
             var rewritten = Regex.Replace(line, @"\bNew\s+Archive\s*(?:\(\s*\))?", "XPScriptArchiveFactory.Create()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+Archive\s*\((.*)\)", m => CreateArchiveExpression(m.Groups[1].Value, sourceName, lineIndex + 1, raw), RegexOptions.IgnoreCase);
