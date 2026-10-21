@@ -67,7 +67,7 @@ public sealed class BoundExpressionEmitter
             $"XPScriptNativeXml.RequireElement({Emit(member.Receiver)}).{AstXmlSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
         BoundMemberAccessExpression member when AstXmlSupport.RuntimeType(member.Receiver.SemanticType.Name) is { } xmlType =>
             $"{(member.Receiver is BoundNameExpression { Symbol: TypeSymbol } ? xmlType : $"(({xmlType})({Emit(member.Receiver)}))")}.{AstXmlSupport.MemberName(member.Receiver.SemanticType.Name, member.Name)}",
-        BoundMemberAccessExpression member when !member.Receiver.SemanticType.IsVariant && !member.Receiver.SemanticType.Name.Equals("Variant", StringComparison.OrdinalIgnoreCase) && RuntimeObjectType(member.Receiver.SemanticType.Name) is { } jsonType => $"(({jsonType})({Emit(member.Receiver)})).{JsonMemberName(member.Name)}",
+        BoundMemberAccessExpression member when !member.Receiver.SemanticType.IsVariant && !member.Receiver.SemanticType.Name.Equals("Variant", StringComparison.OrdinalIgnoreCase) && IsJsonCompatibilityType(member.Receiver.SemanticType.Name) && RuntimeObjectType(member.Receiver.SemanticType.Name) is { } jsonType => $"(({jsonType})({Emit(member.Receiver)})).{JsonMemberName(member.Name)}",
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("http", StringComparison.OrdinalIgnoreCase) && member.Receiver.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"http.{member.Name}",
         BoundMemberAccessExpression member => $"{(member.Receiver.SemanticType.IsVariant || member.Receiver.SemanticType.Name.Equals("Variant", StringComparison.OrdinalIgnoreCase) ? $"((dynamic)({Emit(member.Receiver)}))" : Emit(member.Receiver))}.{member.Name}",
         BoundIndexExpression index when index.Expression.SemanticType.IsList => $"{Emit(index.Expression)}[{Emit(index.Index)}]",
@@ -186,6 +186,11 @@ public sealed class BoundExpressionEmitter
         ? $"({nativeType})({value})" : variable.Type == typeof(long) ? $"XPScriptRuntime.CLng({value})"
         : variable.Type == typeof(string) ? $"(string)({value})" : value;
 
+    private static bool IsJsonCompatibilityType(string name) =>
+        name.StartsWith("XPJson", StringComparison.OrdinalIgnoreCase) ||
+        name.StartsWith("XPJSON", StringComparison.OrdinalIgnoreCase) ||
+        name is "NotesHTTPRequest" or "XPJSONNavigator" or "XPJSONObject" or "XPJSONArray" or "XPJSONElement";
+
     private static string JsonMemberName(string name) => name.ToUpperInvariant() switch
     {
         "ROOT" => "Root", "TYPE" => "Type", "VALUE" => "Value", "COUNT" => "Count",
@@ -299,7 +304,9 @@ public sealed class BoundExpressionEmitter
             if (!byRef && call.Function.SemanticParameterTypes is null && call.Function.ParameterTypes[index].IsArray)
                 return $"({BoundMethodEmitter.CSharpType(call.Function.ParameterTypes[index])})({Emit(argument)})";
             if (!byRef && call.Function.SemanticParameterTypes is { } parameterTypes &&
-                RuntimeObjectType(parameterTypes[index].Name) is { } nativeType)
+                RuntimeObjectType(parameterTypes[index].Name) is { } nativeType &&
+                argument is not BoundLiteralExpression &&
+                argument is not BoundConversionExpression { Expression: BoundLiteralExpression })
                 return $"({nativeType})({Emit(argument)})";
             return (byRef ? "ref " : "") + Emit(argument);
         });
@@ -351,12 +358,20 @@ public sealed class BoundExpressionEmitter
     private string EmitConversion(BoundConversionExpression expression)
     {
         var value = Emit(expression.Expression);
+        if (expression.Expression is BoundLiteralExpression && expression.Conversion.Kind is ConversionKind.ToVariant or ConversionKind.ToObject)
+            return value;
         if (expression.SemanticType.IsArray && expression.Conversion.Kind == ConversionKind.FromVariant)
             return $"LSArrayRuntime.RequireArray<{BoundMethodEmitter.CSharpType(expression.SemanticType.ElementType!)}>({value}, {expression.SemanticType.ArrayRank})";
         if (expression.SemanticType.IsList && expression.Conversion.Kind == ConversionKind.FromVariant)
             return $"(LSList<{BoundMethodEmitter.CSharpType(expression.SemanticType.ElementType!)}>)({value})";
+        if (expression.Expression is BoundLiteralExpression &&
+            (expression.SemanticType.IsVariant || expression.SemanticType.IsObject || RuntimeObjectType(expression.SemanticType.Name) == "object"))
+            return value;
         if (RuntimeObjectType(expression.SemanticType.Name) is { } jsonType && expression.Conversion.Kind is ConversionKind.FromVariant or ConversionKind.ReferenceUpcast)
             return $"({jsonType})({value})";
+        if (expression.Type == typeof(object) && expression.Conversion.Kind == ConversionKind.FromVariant)
+            if (expression.Expression is BoundLiteralExpression)
+                return value;
         if (expression.Type == typeof(object) && expression.Conversion.Kind == ConversionKind.FromVariant)
             return expression.SemanticType.IsVariant || expression.SemanticType.IsObject ? value
                 : $"({BoundMethodEmitter.CSharpType(expression.SemanticType)})({value})";
