@@ -365,6 +365,10 @@ if (Should-Run 'platform') {
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./demo/archive/archive-memory.xps','-o',$astArchiveOutput) $compileTimeoutMilliseconds 'AST Archive memory compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $astArchiveExecutable = if ($IsWindows) { Join-Path $astArchiveOutput 'Generated.exe' } else { Join-Path $astArchiveOutput 'Generated' }
   $r = Invoke-Bounded $astArchiveExecutable @() $runtimeTimeoutMilliseconds 'AST Archive memory runtime'; if ($r.ExitCode -ne 0 -or $r.Output -notmatch 'Format: ZIP' -or $r.Output -notmatch 'Files: 2' -or $r.Output -notmatch 'hello from memory') { throw 'AST Archive memory regression did not complete.' }
+  $astExtendedArchiveOutput = './out/fulltest/archive-extended-memory-ast'
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./demo/archive/archive-extended-memory.xps','-o',$astExtendedArchiveOutput) $compileTimeoutMilliseconds 'AST extended Archive memory compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  $astExtendedArchiveExecutable = if ($IsWindows) { Join-Path $astExtendedArchiveOutput 'Generated.exe' } else { Join-Path $astExtendedArchiveOutput 'Generated' }
+  $r = Invoke-Bounded $astExtendedArchiveExecutable @() $runtimeTimeoutMilliseconds 'AST extended Archive memory runtime'; if ($r.ExitCode -ne 0 -or $r.Output -notmatch 'ARCHIVE_EXTENDED_MEMORY_OK') { throw 'AST extended Archive memory regression did not complete.' }
   Compile-Xps ./demo/archive/archive-security-reject-zip.xps archive-security-reject-zip
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/traversal.zip','10000','2147483647','1000') 'path traversal'
   Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/absolute-unix.zip','10000','2147483647','1000') 'absolute Unix path'
