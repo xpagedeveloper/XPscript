@@ -19,8 +19,12 @@ Run or compile:
 ```text
 xpscript run app.xps
 xpscript compile app.xps -o app
-xpscriptc app.xps -o app
+xpscript ast-compile app.xps -o app
+xpscript legacy-compile app.xps -o app
+xpscript legacy-run app.xps
 ```
+
+`compile` and `run` use AST by default. `ast-compile` and `ast-run` are explicit AST aliases; `legacy-compile`/`compilev1` and `legacy-run`/`runv1` select the legacy path.
 
 Target a runtime:
 

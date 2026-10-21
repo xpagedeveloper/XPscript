@@ -20,6 +20,8 @@ When syntax or behavior is uncertain, consult these files in this order:
 
 Do not invent a built-in or class member because it exists in a related language.
 
+The normal CLI `compile` and `run` commands use the AST compiler. Use `ast-compile` or `ast-run` to make that selection explicit. During migration, `legacy-compile`/`compilev1` and `legacy-run`/`runv1` invoke the legacy compiler; do not document legacy behavior as the default.
+
 ## Core language model
 
 XPscript is case-insensitive and VB/LotusScript-like, but it has its own runtime and compatibility rules.

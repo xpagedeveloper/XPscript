@@ -2,12 +2,19 @@
 
 This page is the searchable reference for the XPScript compiler and host command-line interface. Each command/option includes syntax, parameter meaning, behavior, and a complete `.xps` program that can be used with it.
 
-## `xpscript` compiler and runtime\n\nRunning `xpscript` with no arguments prints the built-in CLI usage reference. For `run` and `compile`, `--info` may be placed before or after the command name. Program arguments for `run` are accepted only through `--Args`, which keeps XPScript CLI options unambiguous regardless of their position.\n
+## `xpscript` compiler and runtime
+
+Running `xpscript` with no arguments prints the built-in CLI usage reference. `compile` and `run` use the AST compiler by default. The explicit `ast-compile` and `ast-run` names are available when a script or automation wants to state that choice directly. During migration, `legacy-compile`/`compilev1` and `legacy-run`/`runv1` retain the previous compiler behavior. For `run` and `compile`, `--info` may be placed before or after the command name. Program arguments for `run` are accepted only through `--Args`, which keeps XPScript CLI options unambiguous regardless of their position.
+
 
 | Command/option | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| compile | `xpscriptc source.xps -o output [options]` | `source.xps`: source file; `output`: generated application path. | Compiles an XPScript program and reports progress/timing to stderr while keeping result output on stdout. | [hello.xps](../demo/console/hello.xps) |
+| compile | `xpscript compile source.xps -o output [options]` | `source.xps`: source file; `output`: generated application path. | Compiles an XPScript program through the AST compiler and reports progress/timing to stderr while keeping result output on stdout. | [hello.xps](../demo/console/hello.xps) |
+| `ast-compile` | `xpscript ast-compile source.xps -o output [options]` | source file and output path. | Explicit AST compiler spelling; equivalent to `compile`. | [hello.xps](../demo/console/hello.xps) |
+| `legacy-compile` / `compilev1` | `xpscript legacy-compile source.xps -o output [options]` | source file and output path. | Uses the legacy compiler during migration. `compilev1` is an equivalent compatibility alias. | [hello.xps](../demo/console/hello.xps) |
 | `run` | `xpscript run source.xps [--Args "arg1 arg2 ..."]` | `source.xps`: program to compile/run; `--Args`: explicit argument string whose values are exposed through `Application.Args`. | Builds into an isolated framework-dependent temporary output and runs the program immediately. Compiler lifecycle output is quiet by default. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `ast-run` | `xpscript ast-run source.xps [--Args "arg1 arg2 ..."]` | source and optional explicit program arguments. | Explicit AST compiler spelling; equivalent to `run`. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `legacy-run` / `runv1` | `xpscript legacy-run source.xps [options]` | source and legacy run options. | Uses the legacy compiler/runtime path during migration. `runv1` is an equivalent compatibility alias. | [application-runtime.xps](../samples/application-runtime.xps) |
 | `--info` | `xpscript --info run source.xps` or `xpscript run source.xps --info` | none | Shows run compilation progress and automatically enables application dependency security warning mode unless `--security=off` is explicit. | [application-runtime.xps](../samples/application-runtime.xps) |
 | `--security` | `--security=off|warn|strict` | security mode. | Controls NuGet application dependency auditing. `warn` reports findings; `strict` also fails when audit data is unavailable and blocks high/critical findings. | [Dependency security and package patching](dependency-security-and-patching.md) |
 | `-o` | `-o path` | `path`: output executable/application path. | Selects the compiler output path. | [hello.xps](../demo/console/hello.xps) |
