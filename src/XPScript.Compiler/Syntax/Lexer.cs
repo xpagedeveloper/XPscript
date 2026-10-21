@@ -148,7 +148,7 @@ public sealed class Lexer
                 value.Append(Current);
                 _position++;
             }
-            return new SyntaxToken(SyntaxKind.StringToken, _text[start.._position], value.ToString().Replace("\"", "", StringComparison.Ordinal), Span(start, _position - start));
+            return new SyntaxToken(SyntaxKind.StringToken, _text[start.._position], value.ToString(), Span(start, _position - start));
         }
 
         if (char.IsLetter(Current) || Current is '_' or '$')
