@@ -84,6 +84,8 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Began NetworkTools AST migration using the existing object preprocessor, native runtime, and Phase-2 postprocessor. NetworkTools/result types are now AST-routed; `New NetworkTools` has native constructor binding/emission and generated code includes the required certificate namespaces.
 - Added `tests/ast-compile-probe/networktools-local-safe.xps` to Platform FullTest. Focused verification is green with `NETWORKTOOLS_AST_SAFE_OK`; the broader port-enumeration sample remains sensitive to OS access restrictions and is not claimed green here.
 
+- Expanded the NetworkTools AST safe regression to cover Phase-2 address-family, link-local, multicast, subnet parsing and containment methods. The fixture still passes with `NETWORKTOOLS_AST_SAFE_OK`.
+
 - Added focused class-property regression for a native SystemInventorySnapshot accessor; AST compile and execution passed with CLASS_PROPERTIES_NATIVE_OK.
 - Full AST CLI probe had already passed before this focused fixture extension.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.
