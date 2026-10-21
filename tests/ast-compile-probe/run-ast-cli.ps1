@@ -53,12 +53,36 @@ if ($LASTEXITCODE -ne 0) { throw 'AST MySQL native-surface compilation failed.' 
 $mysqlResult = dotnet (Join-Path $mysqlOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($mysqlResult -join "`n") -ne 'MYSQL_AST_OK') { throw 'AST MySQL native-surface regression failed.' }
 Write-Host 'AST_MYSQL_OK'
+$legacyMysqlOutput = Join-Path $output $(if ($IsWindows) { 'mysql-native-legacy.exe' } else { 'mysql-native-legacy' })
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'mysql-native-next.xps') -o $legacyMysqlOutput --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Legacy MySQL native-surface compilation failed.' }
+$legacyMysqlStdout = [System.IO.Path]::GetTempFileName()
+try {
+    $legacyMysqlProcess = Start-Process -FilePath $legacyMysqlOutput -RedirectStandardOutput $legacyMysqlStdout -NoNewWindow -Wait -PassThru
+    $legacyMysqlResult = if (Test-Path $legacyMysqlStdout) { Get-Content -LiteralPath $legacyMysqlStdout } else { @() }
+    if ($legacyMysqlProcess.ExitCode -ne 0 -or ($legacyMysqlResult -join "`n") -notmatch 'MYSQL_AST_OK') { throw 'Legacy MySQL native-surface regression failed.' }
+} finally {
+    Remove-Item -LiteralPath $legacyMysqlStdout -Force -ErrorAction SilentlyContinue
+}
+Write-Host 'LEGACY_MYSQL_OK'
 $mssqlOutput = Join-Path $output 'mssql-native-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'mssql-native-next.xps') -o $mssqlOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST SQL Server native-surface compilation failed.' }
 $mssqlResult = dotnet (Join-Path $mssqlOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($mssqlResult -join "`n") -ne 'MSSQL_AST_OK') { throw 'AST SQL Server native-surface regression failed.' }
 Write-Host 'AST_MSSQL_OK'
+$legacyMssqlOutput = Join-Path $output $(if ($IsWindows) { 'mssql-native-legacy.exe' } else { 'mssql-native-legacy' })
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'mssql-native-next.xps') -o $legacyMssqlOutput --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Legacy MSSQL native-surface compilation failed.' }
+$legacyMssqlStdout = [System.IO.Path]::GetTempFileName()
+try {
+    $legacyMssqlProcess = Start-Process -FilePath $legacyMssqlOutput -RedirectStandardOutput $legacyMssqlStdout -NoNewWindow -Wait -PassThru
+    $legacyMssqlResult = if (Test-Path $legacyMssqlStdout) { Get-Content -LiteralPath $legacyMssqlStdout } else { @() }
+    if ($legacyMssqlProcess.ExitCode -ne 0 -or ($legacyMssqlResult -join "`n") -notmatch 'MSSQL_AST_OK') { throw 'Legacy MSSQL native-surface regression failed.' }
+} finally {
+    Remove-Item -LiteralPath $legacyMssqlStdout -Force -ErrorAction SilentlyContinue
+}
+Write-Host 'LEGACY_MSSQL_OK'
 $supabaseOutput = Join-Path $output 'supabase-native-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'supabase-native-next.xps') -o $supabaseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Supabase native-surface compilation failed.' }
