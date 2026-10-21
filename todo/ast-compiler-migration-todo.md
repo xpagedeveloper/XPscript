@@ -712,6 +712,7 @@ Next implementation order:
 - [ ] Verify web/REST execution under Kestrel, IIS, CGI and FastCGI; IIS execution still requires an IIS-enabled environment.
 - [ ] Migrate the Android branch `origin/android-runtime-uiform-mobile` into AST and complete local APK/device verification when the Android SDK is available.
 - [x] Make the Android AST backend probe environment-aware: without an installed local Android SDK it reports `ANDROID_AST_BACKEND_SKIPPED=ANDROID_SDK_NOT_AVAILABLE` and exits successfully; with the SDK it still performs the real `android-x64`/`android-arm64` APK checks.
+- [x] Extend contextual identifier support into `Dim` declarations so names such as `output` remain valid when tokenized as keywords. The archive security fixture now compiles through AST and has permanent `AST_ARCHIVE_SECURITY_FIXTURE_OK` coverage.
 - [ ] Finish class/property and remaining special-construct migration, remove unjustified legacy fallback and obsolete regex lowering.
 - [ ] Import and reconcile REST server/client OpenAPI work from all `test-openapi*` branches, including regeneration and multi-definition behavior.
 - [ ] Complete the Definition of Done audit before changing the package version to `0.9.4 Beta`.

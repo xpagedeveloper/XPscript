@@ -730,7 +730,7 @@ public sealed class StatementParser
     private StatementSyntax ParseDimStatement()
     {
         var dimKeyword = NextToken();
-        var identifier = Match(SyntaxKind.IdentifierToken);
+        var identifier = MatchIdentifier();
         // XPscript permits collection qualifiers such as `Dim values List As Variant`.
         var isList = false;
         if (Current.Kind == SyntaxKind.IdentifierToken && Current.Text.Equals("List", StringComparison.OrdinalIgnoreCase))
@@ -1484,6 +1484,20 @@ public sealed class StatementParser
             $"Expected {kind} but found {Current.Kind}.",
             span));
         return new SyntaxToken(kind, string.Empty, null, span);
+    }
+
+    private SyntaxToken MatchIdentifier()
+    {
+        if (Current.Kind == SyntaxKind.IdentifierToken)
+            return NextToken();
+
+        if (Current.Kind is SyntaxKind.CallKeyword or SyntaxKind.OutputKeyword)
+        {
+            var token = NextToken();
+            return new SyntaxToken(SyntaxKind.IdentifierToken, token.Text, token.Value, token.Span);
+        }
+
+        return Match(SyntaxKind.IdentifierToken);
     }
 
     private SyntaxToken Current => _tokens[Math.Min(_position, _tokens.Length - 1)];

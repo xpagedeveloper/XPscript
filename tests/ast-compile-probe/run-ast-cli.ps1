@@ -361,6 +361,10 @@ if ($LASTEXITCODE -ne 0) { throw 'AST AI tool reserved parameter compilation fai
 $aiReservedParameterResult = dotnet (Join-Path $aiReservedParameterOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($aiReservedParameterResult -join "`n") -ne 'AI_CALL_PARAMETER_OK') { throw 'AST AI tool reserved parameter regression failed.' }
 Write-Host 'AST_AI_RESERVED_PARAMETER_OK'
+$archiveSecurityOutput = Join-Path $output 'archive-security-fixtures'
+dotnet $compiler ast-compile (Join-Path $root 'demo/archive/archive-security-fixtures.xps') -o $archiveSecurityOutput
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $archiveSecurityOutput 'Generated.dll'))) { throw 'AST archive security fixture compilation failed.' }
+Write-Host 'AST_ARCHIVE_SECURITY_FIXTURE_OK'
 $aiNativeOutput = Join-Path $output 'ai-native-metadata-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-native-metadata-next.xps') -o $aiNativeOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST native AI metadata compilation failed.' }
