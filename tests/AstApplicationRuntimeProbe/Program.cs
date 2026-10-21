@@ -41,7 +41,7 @@ foreach (var name in new[] { "application-with", "application-native", "applicat
     if (name == "application-with") continue;
     var normalDirectory = Path.Combine(output, name, "normal"); Directory.CreateDirectory(normalDirectory);
     var normalProgram = Path.Combine(normalDirectory, OperatingSystem.IsWindows() ? "program.exe" : "program");
-    await Run("dotnet", [compiler, "compile", source, "-o", normalProgram, "--single-file=false", "--runtime=false"]);
+    await Run("dotnet", [compiler, "legacy-compile", source, "-o", normalProgram, "--single-file=false", "--runtime=false"]);
     var normal = await Execute(normalProgram, arguments);
     if (normal.Exit != expectedExit || normal.Text.Trim() != result.Text.Trim()) throw new Exception("Normal/AST Application parity failed: " + name + normal.Text);
 }

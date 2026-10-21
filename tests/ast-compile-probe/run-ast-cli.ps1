@@ -855,7 +855,7 @@ if ($LASTEXITCODE -ne 0) { throw 'AST array parity compilation failed.' }
 $arrayParityResult = dotnet (Join-Path $arrayParityOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($arrayParityResult -join "`n") -ne "-3`n-1`n7`nARRAY_STORAGE_PARITY_OK") { throw 'AST array parity execution failed.' }
 $normalArray = Join-Path $output $(if ($IsWindows) { 'normal-array.exe' } else { 'normal-array' })
-dotnet $compiler compile (Join-Path $PSScriptRoot 'array-storage-parity.xps') -o $normalArray --single-file=false --runtime=false
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'array-storage-parity.xps') -o $normalArray --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal array parity compilation failed.' }
 $normalStdout = [System.IO.Path]::GetTempFileName()
 try {
