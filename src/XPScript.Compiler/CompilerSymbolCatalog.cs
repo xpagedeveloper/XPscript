@@ -26,6 +26,7 @@ public static class CompilerSymbolCatalog
                 [new("value", "Variant")], "XPJsonSchema", "api.XPJsonSchema.FromJson"),
             Define("XPJsonSchema.Type", "property", "XPJsonSchema.Type As String", [], "String", "api.XPJsonSchema.Type"),
             Define("XPJsonSchema.AdditionalProperties", "property", "XPJsonSchema.AdditionalProperties As Boolean", [], "Boolean", "api.XPJsonSchema.AdditionalProperties"),
+            Define("XPJsonSchema.Set", "method", "XPJsonSchema.Set(name As String, value As Variant) As XPJsonSchema", [new("name", "String"), new("value", "Variant")], "XPJsonSchema", "api.XPJsonSchema.Set"),
             Define("XPJsonSchema.AddString", "method", "XPJsonSchema.AddString(name As String, required As Boolean)", [new("name", "String"), new("required", "Boolean")], "XPJsonSchema", "api.XPJsonSchema.AddString"),
             Define("XPJsonSchema.Validate", "method", "XPJsonSchema.Validate(json As Variant) As XPJsonValidationResult",
                 [new("json", "Variant")], "XPJsonValidationResult", "api.XPJsonSchema.Validate"),
@@ -204,7 +205,7 @@ public static class CompilerSymbolCatalog
             ,Define("XPAIToolCall.CallId", "property", "XPAIToolCall.CallId As String", [], "String", "api.XPAIToolCall.CallId")
             ,Define("XPAIToolCall.Arguments", "property", "XPAIToolCall.Arguments As XPJsonObject", [], "XPJsonObject", "api.XPAIToolCall.Arguments")
             ,Define("XPAIToolCall.SessionId", "property", "XPAIToolCall.SessionId As String", [], "String", "api.XPAIToolCall.SessionId")
-        }.Where(x => !AstHttpSupport.OwnsSymbol(x.Name) && !AstHttpDatabaseSupport.OwnsSymbol(x.Name) && !AstApplicationSupport.OwnsSymbol(x.Name) && !AstSqliteSupport.OwnsSymbol(x.Name) && !AstMySqlSupport.OwnsSymbol(x.Name) && !AstMsSqlSupport.OwnsSymbol(x.Name) && !AstSupabaseSupport.OwnsSymbol(x.Name)).Concat(AstApplicationSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstHttpDatabaseSupport.Catalog).Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).Concat(AstSystemInventorySupport.Catalog).Concat(AstSqliteSupport.Catalog).Concat(AstMySqlSupport.Catalog).Concat(AstMsSqlSupport.Catalog).Concat(AstSupabaseSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
+        }.Where(x => !AstHttpSupport.OwnsSymbol(x.Name) && !AstHttpDatabaseSupport.OwnsSymbol(x.Name) && !AstJsonValidationSupport.OwnsSymbol(x.Name) && !AstApplicationSupport.OwnsSymbol(x.Name) && !AstSqliteSupport.OwnsSymbol(x.Name) && !AstMySqlSupport.OwnsSymbol(x.Name) && !AstMsSqlSupport.OwnsSymbol(x.Name) && !AstSupabaseSupport.OwnsSymbol(x.Name)).Concat(AstApplicationSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstHttpDatabaseSupport.Catalog).Concat(AstJsonValidationSupport.Catalog).Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).Concat(AstSystemInventorySupport.Catalog).Concat(AstSqliteSupport.Catalog).Concat(AstMySqlSupport.Catalog).Concat(AstMsSqlSupport.Catalog).Concat(AstSupabaseSupport.Catalog).ToDictionary(x => x.Name, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerSymbolDefinition? Find(string name)
     {
