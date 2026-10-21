@@ -19,6 +19,10 @@ try
 
     Console.WriteLine("ANDROID_AST_BACKEND_OK");
 }
+catch (CompilerException ex) when (ex.Message.Contains("Android SDK was not found", StringComparison.OrdinalIgnoreCase))
+{
+    Console.WriteLine("ANDROID_AST_BACKEND_SKIPPED=ANDROID_SDK_NOT_AVAILABLE");
+}
 finally
 {
     try { Directory.Delete(root, recursive: true); } catch { }
