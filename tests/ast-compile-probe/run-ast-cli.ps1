@@ -83,6 +83,18 @@ try {
     Remove-Item -LiteralPath $legacyMssqlStdout -Force -ErrorAction SilentlyContinue
 }
 Write-Host 'LEGACY_MSSQL_OK'
+$legacySupabaseOutput = Join-Path $output $(if ($IsWindows) { 'supabase-native-legacy.exe' } else { 'supabase-native-legacy' })
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'supabase-native-next.xps') -o $legacySupabaseOutput --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Legacy Supabase native-surface compilation failed.' }
+$legacySupabaseStdout = [System.IO.Path]::GetTempFileName()
+try {
+    $legacySupabaseProcess = Start-Process -FilePath $legacySupabaseOutput -RedirectStandardOutput $legacySupabaseStdout -NoNewWindow -Wait -PassThru
+    $legacySupabaseResult = if (Test-Path $legacySupabaseStdout) { Get-Content -LiteralPath $legacySupabaseStdout } else { @() }
+    if ($legacySupabaseProcess.ExitCode -ne 0 -or ($legacySupabaseResult -join "`n") -notmatch 'SUPABASE_AST_OK') { throw 'Legacy Supabase native-surface regression failed.' }
+} finally {
+    Remove-Item -LiteralPath $legacySupabaseStdout -Force -ErrorAction SilentlyContinue
+}
+Write-Host 'LEGACY_SUPABASE_OK'
 $supabaseOutput = Join-Path $output 'supabase-native-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'supabase-native-next.xps') -o $supabaseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Supabase native-surface compilation failed.' }
