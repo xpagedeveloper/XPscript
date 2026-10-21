@@ -859,7 +859,7 @@ internal static class Program
     }
     public sealed class XpPath {
         private readonly string _path;
-        public XpPath(string path) { _path = path; }
+        public XpPath(object? path) { _path = XPScriptRuntime.CStr(path); }
         public string FileName() => System.IO.Path.GetFileName(_path);
         public string FileNameWithoutExtension() => System.IO.Path.GetFileNameWithoutExtension(_path);
         public string Extension() => System.IO.Path.GetExtension(_path);
@@ -869,10 +869,10 @@ internal static class Program
         public string Parent() => System.IO.Path.GetDirectoryName(_path) ?? string.Empty;
         public string Absolute() => System.IO.Path.GetFullPath(_path);
         public string Normalize() => System.IO.Path.GetFullPath(_path);
-        public string ChangeExtension(string extension) => System.IO.Path.ChangeExtension(_path, extension) ?? string.Empty;
+        public string ChangeExtension(object? extension) => System.IO.Path.ChangeExtension(_path, XPScriptRuntime.CStr(extension)) ?? string.Empty;
         public bool IsAbsolute() => System.IO.Path.IsPathRooted(_path);
-        public string Relative(string other) => System.IO.Path.GetRelativePath(System.IO.Path.GetFullPath(_path), System.IO.Path.GetFullPath(other));
-        public string Combine(string child) => System.IO.Path.Combine(_path, child);
+        public string Relative(object? other) => System.IO.Path.GetRelativePath(System.IO.Path.GetFullPath(_path), System.IO.Path.GetFullPath(XPScriptRuntime.CStr(other)));
+        public string Combine(object? child) => System.IO.Path.Combine(_path, XPScriptRuntime.CStr(child));
     }
     public static object FileInfo(params object?[] a) {
         var path = System.IO.Path.GetFullPath(CStr(a[0]));
