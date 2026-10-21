@@ -9,6 +9,11 @@ $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
 $output = Join-Path $outputRoot 'ast-cli'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+$compileHelp = dotnet $compiler compile --help 2>&1
+if ($LASTEXITCODE -ne 0 -or ($compileHelp -join "`n") -notmatch 'Usage:') { throw 'AST compile command help regression failed.' }
+$astCompileHelp = dotnet $compiler ast-compile -h 2>&1
+if ($LASTEXITCODE -ne 0 -or ($astCompileHelp -join "`n") -notmatch 'Usage:') { throw 'AST compile alias help regression failed.' }
+Write-Host 'AST_COMMAND_HELP_OK'
 $includeUseOutput = Join-Path $output 'include-use-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-use-next.xps') -o $includeUseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Include/Use compilation failed.' }

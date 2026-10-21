@@ -16,6 +16,13 @@ public static class XPScriptCompilerCommandLine
             return 0;
         }
 
+        if (args.Length > 1 && args[1] is "--help" or "-h" &&
+            args[0] is "compile" or "ast-compile" or "compilev1" or "legacy-compile" or "run" or "ast-run" or "runv1" or "legacy-run" or "validate")
+        {
+            WriteHelp("xpscript compile", "xpscript run");
+            return 0;
+        }
+
         if (args[0].Equals("run", StringComparison.OrdinalIgnoreCase))
             return await AstRunAsync(args[1..]).ConfigureAwait(false);
 
