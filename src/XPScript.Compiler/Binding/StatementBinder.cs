@@ -358,9 +358,10 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
                 }
             }
             var scope = _symbols.CreateChildScope();
+            var hasExistingVariable = _symbols.TryLookup(syntax.IdentifierToken.Text, out _);
             var alias = new VariableSymbol(syntax.IdentifierToken.Text, csvElement.RuntimeType, csvElement)
             {
-                IsForAllAlias = true
+                IsForAllAlias = !hasExistingVariable
             };
             scope.Declare(alias);
             var binder = new StatementBinder(scope, _returnType, _allowsReturnValue, _allowDynamicMembers,

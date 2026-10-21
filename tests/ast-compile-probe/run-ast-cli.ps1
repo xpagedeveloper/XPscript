@@ -365,6 +365,12 @@ $archiveSecurityOutput = Join-Path $output 'archive-security-fixtures'
 dotnet $compiler ast-compile (Join-Path $root 'demo/archive/archive-security-fixtures.xps') -o $archiveSecurityOutput
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $archiveSecurityOutput 'Generated.dll'))) { throw 'AST archive security fixture compilation failed.' }
 Write-Host 'AST_ARCHIVE_SECURITY_FIXTURE_OK'
+$csvParseOutput = Join-Path $output 'csv-parse-demo'
+dotnet $compiler ast-compile (Join-Path $root 'demo/csv/csv-parse.xps') -o $csvParseOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST CSV parse demo compilation failed.' }
+$csvParseResult = dotnet (Join-Path $csvParseOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($csvParseResult -join "`n") -notmatch 'Rows=3' -or ($csvParseResult -join "`n") -notmatch '3 Item1 Linköping') { throw 'AST CSV parse demo regression failed.' }
+Write-Host 'AST_CSV_PARSE_DEMO_OK'
 $aiNativeOutput = Join-Path $output 'ai-native-metadata-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-native-metadata-next.xps') -o $aiNativeOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST native AI metadata compilation failed.' }
