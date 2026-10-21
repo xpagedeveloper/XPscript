@@ -1,0 +1,18 @@
+Option Declare
+
+Sub Main()
+    Dim tool As New XPAITool("demo")
+    tool.Description = "description"
+    tool.Timeout = 10
+    Dim functionInfo As XPAIToolFunction
+    Set functionInfo = tool.AddFunction("run", "run demo", "HandleTool", 0)
+    functionInfo.AddParameter("value", "string", "input", True)
+    If Not tool.HasFunction("run") Then Error 1201, "AI tool function missing"
+    If tool.FunctionCount() <> 1 Then Error 1202, "AI tool function count mismatch"
+    If functionInfo.ParameterCount() <> 1 Then Error 1203, "AI tool parameter count mismatch"
+    If Not functionInfo.HasParameter("value") Then Error 1204, "AI tool parameter missing"
+    Print "AI_TOOL_AST_SAFE_OK"
+End Sub
+
+Sub HandleTool(ByVal toolCall As XPAIToolCall)
+End Sub

@@ -405,6 +405,11 @@ if (Should-Run 'platform') {
   $astMsSqlAliasExecutable = if ($IsWindows) { Join-Path $astMsSqlAliasOutput 'Generated.exe' } else { Join-Path $astMsSqlAliasOutput 'Generated' }
   $astMsSqlAliasRun = Invoke-Bounded (if (Test-Path $astMsSqlAliasExecutable) { $astMsSqlAliasExecutable } else { 'dotnet' }) (if (Test-Path $astMsSqlAliasExecutable) { @() } else { @((Join-Path $astMsSqlAliasOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST MSSQL alias safe runtime'
   if ($astMsSqlAliasRun.ExitCode -ne 0 -or $astMsSqlAliasRun.Output -notmatch 'MSSQL_ALIAS_AST_SAFE_OK') { throw 'AST MSSQL alias safe regression did not complete.' }
+  $astAiToolOutput = './out/fulltest/ai-tool-ast-safe'
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/ai-tool-native-safe.xps','-o',$astAiToolOutput) $compileTimeoutMilliseconds 'AST AI tool safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  $astAiToolExecutable = if ($IsWindows) { Join-Path $astAiToolOutput 'Generated.exe' } else { Join-Path $astAiToolOutput 'Generated' }
+  $astAiToolRun = Invoke-Bounded (if (Test-Path $astAiToolExecutable) { $astAiToolExecutable } else { 'dotnet' }) (if (Test-Path $astAiToolExecutable) { @() } else { @((Join-Path $astAiToolOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST AI tool safe runtime'
+  if ($astAiToolRun.ExitCode -ne 0 -or $astAiToolRun.Output -notmatch 'AI_TOOL_AST_SAFE_OK') { throw 'AST AI tool safe regression did not complete.' }
   Run-Xps ./samples/systeminventory-local-smoke.xps systeminventory-local-smoke | Out-Null
   Write-Host 'PLATFORM_FULLTEST: passed'
 }
