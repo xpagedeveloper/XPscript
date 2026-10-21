@@ -38,6 +38,13 @@ foreach ($securityMode in @('off', 'warn', 'strict')) {
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $securityOutput 'Generated.dll'))) { throw "AST --security=$securityMode regression failed." }
 }
 Write-Host 'AST_SECURITY_MODES_OK'
+$restrictedIncludeOutput = Join-Path $output 'cli-restricted-include'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-use-next.xps') -o $restrictedIncludeOutput --restricted
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $restrictedIncludeOutput 'Generated.dll'))) { throw 'AST --restricted Include regression failed.' }
+$sourceRootIncludeOutput = Join-Path $output 'cli-source-root-include'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-use-next.xps') -o $sourceRootIncludeOutput --source-root (Resolve-Path $PSScriptRoot).Path
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $sourceRootIncludeOutput 'Generated.dll'))) { throw 'AST --source-root Include regression failed.' }
+Write-Host 'AST_INCLUDE_SECURITY_OPTIONS_OK'
 $includeUseOutput = Join-Path $output 'include-use-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-use-next.xps') -o $includeUseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Include/Use compilation failed.' }
