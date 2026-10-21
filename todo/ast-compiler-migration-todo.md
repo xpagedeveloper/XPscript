@@ -685,3 +685,26 @@ Nested-call verification completed: focused legacy/AST execution, production MCP
 
 - [ ] Import the OpenAPI REST server and REST client import/export work from every branch whose name starts with `test-openapi`. Reconcile multi-definition handling, generated server/client contracts, regeneration/update behavior and AST/compiler integration before marking the OpenAPI migration complete.
   - [x] Verify endpoint-scoped server/client generation and transitive model pruning in the current AST branch; `OpenApiGeneratorSmoke` passes the server/client scope, regeneration, reserved-name, request-body, multipart and import-limit regressions.
+
+## Current AST migration checkpoint — 2026-10-21
+
+The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The latest completed native-interop increments are:
+
+- [x] Support AST `Declare Sub` and `Declare Function` declarations, including default aliases and RID-specific library/alias selection.
+- [x] Reject native `ByRef` parameters with the shared `XPS2013` diagnostic, matching the legacy compiler's intentional ABI guard.
+- [x] Emit native scalar parameter/return mappings for `String`, `Integer`, `Long`, `Double`, `Single`, `Boolean`, `Byte`, `Currency`, `Date`, `Variant` and `Object`.
+- [x] Preserve native `Unicode`/`Ansi` marshalling settings in generated P/Invoke declarations.
+- [x] Validate and stage application-local native dependencies in AST output, including relative-path, target-extension, missing-file and duplicate-output checks.
+- [x] Add permanent AST CLI coverage for native declaration forms, scalar types, Unicode declarations and missing native dependencies.
+- [x] Re-run the AST CLI regression suite from an isolated working directory; the migrated native, file, database, AI, include/use and platform probes pass. The remaining suite interruption is a generated test file lock/working-directory fixture issue, not an AST compilation failure.
+
+Next implementation order:
+
+- [ ] Make the AST CLI regression fixtures independent of the caller's working directory and clean up generated test files reliably, then require a complete green run in the permanent FullTest workflow.
+- [ ] Complete the legacy-vs-AST compatibility corpus: compile success/failure, diagnostics, observable output and target behavior for every supported sample; record intentional legacy defects separately.
+- [ ] Audit every legacy command-line parameter and add parity tests for aliases, defaults, validation, diagnostics and execution semantics.
+- [ ] Verify web/REST execution under Kestrel, IIS, CGI and FastCGI; IIS execution still requires an IIS-enabled environment.
+- [ ] Migrate the Android branch `origin/android-runtime-uiform-mobile` into AST and complete local APK/device verification when the Android SDK is available.
+- [ ] Finish class/property and remaining special-construct migration, remove unjustified legacy fallback and obsolete regex lowering.
+- [ ] Import and reconcile REST server/client OpenAPI work from all `test-openapi*` branches, including regeneration and multi-definition behavior.
+- [ ] Complete the Definition of Done audit before changing the package version to `0.9.4 Beta`.
