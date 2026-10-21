@@ -1,8 +1,22 @@
+param(
+    [string]$CompilerPath,
+    [string]$OutputRoot
+)
+
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "../..")
-$compiler = Join-Path $root "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll"
-$outRoot = Join-Path $root "out/ast-compat"
+$compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
+    Join-Path $root "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll"
+} else {
+    [System.IO.Path]::GetFullPath($CompilerPath)
+}
+if (-not (Test-Path -LiteralPath $compiler)) { throw "Compiler DLL not found: $compiler" }
+$outRoot = if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
+    Join-Path $root "out/ast-compat"
+} else {
+    [System.IO.Path]::GetFullPath($OutputRoot)
+}
 
 $tests = @(
     @{ Name = "print"; File = "01-print.xps"; Expected = @("AST_PRINT_OK") },
@@ -30,7 +44,7 @@ foreach ($test in $tests) {
     if ($IsWindows) { $output += ".exe" }
     $legacyOutput = Join-Path $outRoot ($test.Name + '-legacy')
     if ($IsWindows) { $legacyOutput += ".exe" }
-    dotnet run --project (Join-Path $root 'src/XPScript.Compiler/XPScript.Compiler.csproj') -c Release --no-build -- legacy-compile $source -o $legacyOutput --runtime=false --security=off
+    dotnet $compiler legacy-compile $source -o $legacyOutput --runtime=false --security=off
     $legacyCompileCode = $LASTEXITCODE
     if ($legacyCompileCode -ne 0) { throw "Legacy compilation failed: $($test.Name) (exit code $legacyCompileCode)" }
     if (-not (Test-Path $legacyOutput)) { throw "Legacy compiler produced no executable: $($test.Name)" }
