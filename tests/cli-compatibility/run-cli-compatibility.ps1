@@ -56,6 +56,11 @@ if ($LASTEXITCODE -ne 0 -or $astRunText -notlike '*APPLICATION_NEWLINE_BEGIN*' -
     throw "AST run regression: $astRunText"
 }
 
+$astRunCompatibilityText = dotnet $compiler ast-run $astSource --no-daemon --info --result-format text --Args 'ast-run-compatibility-check' | Out-String
+if ($LASTEXITCODE -ne 0 -or $astRunCompatibilityText -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $astRunCompatibilityText -notlike '*APPLICATION_NEWLINE_END*') {
+    throw "AST run legacy-option compatibility regression: $astRunCompatibilityText"
+}
+
 $defaultRunText = dotnet $compiler run $astSource --platform win-x64 --Args 'default-run-check' | Out-String
 if ($LASTEXITCODE -ne 0 -or $defaultRunText -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $defaultRunText -notlike '*APPLICATION_NEWLINE_END*') {
     throw "Default AST run regression: $defaultRunText"

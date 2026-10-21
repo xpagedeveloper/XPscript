@@ -572,6 +572,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Compare desktop/Avalonia behavior.
 - [ ] Compare Android/mobile behavior as support matures.
 - [ ] Audit every legacy compiler command-line parameter and confirm that it is implemented and behaviorally compatible in the AST compiler, including aliases, defaults, validation, diagnostics and execution semantics; add parity coverage for the complete parameter set.
+  - [x] AST `run` accepts the legacy `--no-daemon`, `--info` and `--result-format` options with validation and executable compatibility coverage; `--no-daemon` is intentionally ignored because AST-run has no daemon path.
 - [x] Make `compile` and `run` use the AST compiler by default, while preserving the legacy implementation behind `compilev1`/`legacy-compile` and `runv1`/`legacy-run`; add executable coverage for AST and legacy compile/run paths.
   - [ ] Current audit baseline: `ast-compile` parses `-o/--output`, `--debug`, `--rid/--platform`, `--result-format` (text/JSON/XML), `--runtime`, `--single-file`/`--singlefile`, `--security`, `--restricted`, `--embed-assets`, `--source-root`, `--preprocessor`, and the migrated `--target webiis` package path; permanent CLI coverage verifies these. Legacy `--target` semantics and complete behavior/diagnostic parity remain open.
 - [ ] Verify that the web target and REST server are fully implemented in the AST path, including all required `[]` rules, with executable coverage for each rule and compatibility behavior.

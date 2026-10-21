@@ -461,6 +461,8 @@ public static class XPScriptCompilerCommandLine
         string? sourceArgument = null;
         var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
         var debug = false;
+        var info = false;
+        var resultFormat = "text";
         var restricted = false;
         var scriptArgs = new List<string>();
         var sourceRoots = new List<string>();
@@ -478,6 +480,15 @@ public static class XPScriptCompilerCommandLine
                     scriptArgs.AddRange(SplitRunArguments(args[i]));
                 }
                 else if (value.Equals("--debug", StringComparison.OrdinalIgnoreCase)) debug = true;
+                else if (value.Equals("--info", StringComparison.OrdinalIgnoreCase)) info = true;
+                else if (value.Equals("--no-daemon", StringComparison.OrdinalIgnoreCase)) { }
+                else if (value.Equals("--result-format", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--result-format requires text, json, or xml.");
+                    resultFormat = args[i].ToLowerInvariant();
+                    if (resultFormat is not ("text" or "json" or "xml"))
+                        throw new ArgumentException("--result-format must be text, json, or xml.");
+                }
                 else if (value.Equals("--restricted", StringComparison.OrdinalIgnoreCase)) restricted = true;
                 else if (value.Equals("--rid", StringComparison.OrdinalIgnoreCase) || value.Equals("--platform", StringComparison.OrdinalIgnoreCase))
                 {
@@ -512,7 +523,7 @@ public static class XPScriptCompilerCommandLine
             var sourcePath = Path.GetFullPath(sourceArgument);
             if (!File.Exists(sourcePath))
             {
-                WriteResult(CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found." }]).WithOperation("ast-run"), "text");
+                WriteResult(CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found." }]).WithOperation("ast-run"), resultFormat);
                 return 2;
             }
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
@@ -530,8 +541,10 @@ public static class XPScriptCompilerCommandLine
             {
                 using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
                 using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
+                if (info) WriteProgress($"Started to compile {Path.GetFileName(sourcePath)}");
                 var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier,
                     securityMode ?? ApplicationSecurityMode.Off, restricted, sourceRoots, sourcePreprocessors).ConfigureAwait(false);
+                if (info) WriteProgressLine($"Compiled {Path.GetFileName(sourcePath)}");
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = Path.GetExtension(assemblyPath).Equals(".dll", StringComparison.OrdinalIgnoreCase) ? CompilerToolResolver.ResolveDotnetHost() : assemblyPath,
@@ -551,7 +564,12 @@ public static class XPScriptCompilerCommandLine
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(debug ? ex : ex.Message);
+            if (resultFormat is "json" or "xml")
+            {
+                WriteResult(CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]).WithOperation("ast-run"), resultFormat);
+            }
+            else
+                Console.Error.WriteLine(debug ? ex : ex.Message);
             return 1;
         }
     }
