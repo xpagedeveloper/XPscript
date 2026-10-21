@@ -41,7 +41,7 @@ internal static class AstObjectSupportRegistry
         "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
         "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
         ,"NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo", "NetworkHostResult", "NetworkSubnetInfo", "NetworkTlsVersionResult", "NetworkCertificateResult", "NetworkHttpHeadersResult", "NetworkHttpSecurityHeadersResult", "NetworkRedirectResult", "NetworkBannerResult", "NetworkPortExposureInfo"
-        ,"XPDBSQLite", "XPDbMySql", "XPDbMsSql", "XPDBMsSQL", "XPDbSupabase", "XPSupabaseDB", "XPHttpDbSupabase", "XPHttpDbDominoRest"
+        ,"XPDBSQLite", "XPDbMySql", "XPDbMsSql", "XPDBMsSQL", "XPDbSupabase", "XPSupabaseDB", "XPHttpDbSupabase", "XPHttpDbDominoRest", "XPShellResult"
     };
 
     private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -65,7 +65,7 @@ internal static class AstObjectSupportRegistry
         ,"XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
         "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection"
         ,"XPHttpDbSupabase", "XPHttpDbDominoRest", "XPAITool", "XPAiResponse"
-        ,"XPHttpPart", "XPHttpFile", "XPPathValue", "XPFileInfoValue", "XPShellResult"
+        ,"XPHttpPart", "XPHttpFile", "XPPathValue", "XPFileInfoValue"
     };
 
     public static readonly IReadOnlyList<ObjectDefinition> Objects = BuildObjectDefinitions();

@@ -402,6 +402,7 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Rnd", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("ShellId", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("ShellId", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("ShellExecute", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.User("XPShellResult"), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrConv", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CType", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrCompare", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -974,6 +975,24 @@ internal static class Program
         if (XPScriptRuntime.CStr(program).Trim().Length == 0)
             throw new XPScriptRuntimeException(5, "Shell requires a program or script name.");
         return 33L;
+    }
+    public sealed class XpShellResult { public int ExitCode { get; init; } public string Output { get; init; } = string.Empty; public string Error { get; init; } = string.Empty; public bool TimedOut { get; init; } }
+    public static XpShellResult ShellExecute(object? executable, object? arguments, object? timeoutMilliseconds = null)
+    {
+        var file = CStr(executable).Trim();
+        if (file.Length == 0) throw new XPScriptRuntimeException(5, "ShellExecute requires a program name.");
+        var timeout = timeoutMilliseconds is null ? 0 : Convert.ToInt32(timeoutMilliseconds);
+        if (timeout < 0) throw new XPScriptRuntimeException(5, "ShellExecute timeoutMilliseconds must be zero or greater.");
+        using var process = new System.Diagnostics.Process { StartInfo = new System.Diagnostics.ProcessStartInfo { FileName = file, Arguments = CStr(arguments), UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true } };
+        try
+        {
+            if (!process.Start()) throw new XPScriptRuntimeException(5, "ShellExecute could not start the program.");
+            var output = process.StandardOutput.ReadToEndAsync(); var error = process.StandardError.ReadToEndAsync();
+            var completed = timeout == 0 ? process.WaitForExitAsync().Wait(TimeSpan.FromMinutes(10)) : process.WaitForExit(timeout);
+            if (!completed) { try { process.Kill(true); } catch { } return new XpShellResult { ExitCode = -1, Output = output.Result, Error = error.Result, TimedOut = true }; }
+            return new XpShellResult { ExitCode = process.ExitCode, Output = output.Result, Error = error.Result, TimedOut = false };
+        }
+        catch (System.ComponentModel.Win32Exception ex) { throw new XPScriptRuntimeException(53, ex.Message); }
     }
     public static string[] Split(object? value, object? delimiter = null, object? count = null, object? compare = null)
     {

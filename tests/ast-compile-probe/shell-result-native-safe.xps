@@ -1,0 +1,10 @@
+Option Declare
+
+Sub Main()
+    Dim result As XPShellResult
+    Set result = ShellExecute("dotnet", "--version", 5000)
+    If result.ExitCode <> 0 Then Error 1201, "ShellExecute failed"
+    If result.Output = "" Then Error 1202, "ShellExecute output missing"
+    If result.TimedOut Then Error 1203, "ShellExecute unexpectedly timed out"
+    Print "SHELL_RESULT_AST_SAFE_OK"
+End Sub

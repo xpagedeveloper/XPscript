@@ -415,6 +415,11 @@ if (Should-Run 'platform') {
   $astValidationExecutable = if ($IsWindows) { Join-Path $astValidationOutput 'Generated.exe' } else { Join-Path $astValidationOutput 'Generated' }
   $astValidationRun = Invoke-Bounded (if (Test-Path $astValidationExecutable) { $astValidationExecutable } else { 'dotnet' }) (if (Test-Path $astValidationExecutable) { @() } else { @((Join-Path $astValidationOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST JSON validation result safe runtime'
   if ($astValidationRun.ExitCode -ne 0 -or $astValidationRun.Output -notmatch 'JSON_VALIDATION_RESULT_AST_SAFE_OK') { throw 'AST JSON validation result safe regression did not complete.' }
+  $astShellOutput = './out/fulltest/shell-result-ast-safe'
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/shell-result-native-safe.xps','-o',$astShellOutput) $compileTimeoutMilliseconds 'AST shell result safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  $astShellExecutable = if ($IsWindows) { Join-Path $astShellOutput 'Generated.exe' } else { Join-Path $astShellOutput 'Generated' }
+  $astShellRun = Invoke-Bounded (if (Test-Path $astShellExecutable) { $astShellExecutable } else { 'dotnet' }) (if (Test-Path $astShellExecutable) { @() } else { @((Join-Path $astShellOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST shell result safe runtime'
+  if ($astShellRun.ExitCode -ne 0 -or $astShellRun.Output -notmatch 'SHELL_RESULT_AST_SAFE_OK') { throw 'AST shell result safe regression did not complete.' }
   Run-Xps ./samples/systeminventory-local-smoke.xps systeminventory-local-smoke | Out-Null
   Write-Host 'PLATFORM_FULLTEST: passed'
 }
