@@ -672,6 +672,7 @@ Nested-call verification completed: focused legacy/AST execution, production MCP
 
 - [x] Reverify and fix the SQLite native-surface fixture through both compiler commands. The legacy transpiler now includes the typed attachment runtime and its HTTP-database dependencies whenever SQLite/MSSQL database runtime code is emitted; both AST and legacy compile/runtime probes pass.
 - [x] Reverify the database attachment object through both compiler paths. AST compiles and executes `database-attachments-next.xps`; legacy still rejects the documented `XPAttachmentCollection` type with XPS1012 before code generation. Keep this as an AST capability until legacy's unsupported type system is intentionally migrated; do not weaken the AST implementation to preserve the legacy defect.
+- [x] Reverify `NotesHTTPRequest` as a class-method parameter through both compiler paths. AST compiles and executes `class-method-notes-http-next.xps`; legacy rejects the type with XPS1012 before code generation. Keep the native AST signature as an intentional AST capability until the legacy type system is migrated.
 
 ## Final migration item
 
