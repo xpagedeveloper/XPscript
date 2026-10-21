@@ -57,6 +57,14 @@ Write-Host 'AST_RESULT_FORMATS_OK'
 $debugOutput = Join-Path $output 'cli-debug'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $debugOutput --debug --runtime false --single-file false
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $debugOutput 'Generated.pdb'))) { throw 'AST --debug artifact regression failed.' }
+$infoOutput = Join-Path $output 'cli-info'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $infoOutput --info --runtime false --single-file false
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $infoOutput 'Generated.dll'))) { throw 'AST --info option regression failed.' }
+Write-Host 'AST_INFO_OPTION_OK'
+$embedOutput = Join-Path $output 'cli-embed-assets'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $embedOutput --embed-assets --runtime false --single-file false
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $embedOutput 'Generated.dll'))) { throw 'AST --embed-assets option regression failed.' }
+Write-Host 'AST_EMBED_ASSETS_OPTION_OK'
 $webIisRoot = Join-Path $output 'cli-webiis-source'
 New-Item -ItemType Directory -Force -Path $webIisRoot | Out-Null
 $webIisSource = @'
