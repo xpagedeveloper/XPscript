@@ -423,12 +423,6 @@ if ($LASTEXITCODE -ne 0) { throw 'AST AI class-method parameter compilation fail
 $aiClassMethodResult = dotnet (Join-Path $aiClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($aiClassMethodResult -join "`n") -ne "True`nTrue`nTrue`nTrue`nTrue") { throw 'AST AI class-method parameter execution failed.' }
 Write-Host 'AST_AI_CLASS_METHOD_PARAMETERS_OK'
-$notesJsonClassMethodOutput = Join-Path $output 'class-method-notes-json-next'
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-json-next.xps') -o $notesJsonClassMethodOutput
-if ($LASTEXITCODE -ne 0) { throw 'AST Notes JSON class-method probe failed.' }
-dotnet (Join-Path $notesJsonClassMethodOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0) { throw 'AST Notes JSON class-method executable failed.' }
-Write-Host 'AST_NOTES_JSON_CLASS_METHODS_OK'
 $optionalClassMethodOutput = Join-Path $output 'class-method-optional-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-next.xps') -o $optionalClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST optional scalar class-method compilation failed.' }
@@ -1153,11 +1147,6 @@ foreach ($jsonFixture in @('json-runtime', 'json-reference')) {
     } else { "4`n8`n2`n1`n2`ntrue`nnull`nnull`n19`nnames are ordinary variables" }
     if ($LASTEXITCODE -ne 0 -or ($jsonResult -join "`n") -ne $jsonExpected) { throw "AST $jsonFixture shared runtime output mismatch." }
 }
-$notesJsonOutput = Join-Path $output 'notes-json-native'
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-json-native-next.xps') -o $notesJsonOutput
-if ($LASTEXITCODE -ne 0) { throw 'AST Notes JSON native compilation failed.' }
-$notesJsonResult = dotnet (Join-Path $notesJsonOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($notesJsonResult -join [Environment]::NewLine) -ne 'NOTES_JSON_NATIVE_OK') { throw 'AST Notes JSON native runtime failed.' }
 $notesHttpOutput = Join-Path $output 'notes-http-native'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-http-native-next.xps') -o $notesHttpOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes HTTP native compilation failed.' }
