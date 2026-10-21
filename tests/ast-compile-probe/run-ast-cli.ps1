@@ -32,6 +32,12 @@ $ridAliasOutput = Join-Path $output 'cli-rid-alias'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $ridAliasOutput --rid win-x64 --single-file false --runtime false
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $ridAliasOutput 'Generated.dll'))) { throw 'AST --rid/--single-file regression failed.' }
 Write-Host 'AST_PLATFORM_ALIASES_OK'
+foreach ($securityMode in @('off', 'warn', 'strict')) {
+    $securityOutput = Join-Path $output "cli-security-$securityMode"
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $securityOutput --security $securityMode --runtime false --single-file false
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $securityOutput 'Generated.dll'))) { throw "AST --security=$securityMode regression failed." }
+}
+Write-Host 'AST_SECURITY_MODES_OK'
 $includeUseOutput = Join-Path $output 'include-use-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-use-next.xps') -o $includeUseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Include/Use compilation failed.' }
