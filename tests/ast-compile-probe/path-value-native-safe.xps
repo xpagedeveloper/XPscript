@@ -6,5 +6,11 @@ Sub Main()
     If path.Extension() <> ".cs" Then Error 1202, "Path extension mismatch"
     If Not path.Exists() Then Error 1203, "Path should exist"
     If path.Combine("missing.txt") = "" Then Error 1204, "Path combine failed"
+    If path.FileNameWithoutExtension() <> "AstExperimentalCompiler" Then Error 1205, "Path stem mismatch"
+    If path.Absolute() = "" Or path.Normalize() = "" Then Error 1206, "Path normalization failed"
+    If path.Directory() = "" Or path.Root() = "" Then Error 1207, "Path directory/root missing"
+    If path.IsAbsolute() Then Error 1208, "Relative path was marked absolute"
+    If path.ChangeExtension(".txt") = "" Then Error 1209, "Path extension change failed"
+    If path.Relative("src/XPScript.Compiler/AstExperimentalCompiler.cs") = "" Then Error 1210, "Path relative calculation failed"
     Print "PATH_VALUE_AST_SAFE_OK"
 End Sub
