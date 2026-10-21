@@ -74,8 +74,11 @@ End Sub
 '@
 Set-Content -LiteralPath (Join-Path $webIisRoot 'main.xps') -Value $webIisSource
 $webIisOutput = Join-Path $output 'cli-webiis'
+if (Test-Path -LiteralPath $webIisOutput) { Remove-Item -LiteralPath $webIisOutput -Recurse -Force }
+$webIisArchive = Join-Path $output 'cli-webiis.zip'
+if (Test-Path -LiteralPath $webIisArchive) { Remove-Item -LiteralPath $webIisArchive -Force }
 dotnet $compiler ast-compile (Join-Path $webIisRoot 'main.xps') -o $webIisOutput --target webiis --runtime false
-if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $output 'cli-webiis.zip'))) { throw 'AST --target webiis regression failed.' }
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $webIisArchive)) { throw 'AST --target webiis regression failed.' }
 Write-Host 'AST_DEBUG_AND_WEBIIS_TARGET_OK'
 $platformAliasOutput = Join-Path $output 'cli-platform-alias'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $platformAliasOutput --platform win-x64 --singlefile false --runtime false

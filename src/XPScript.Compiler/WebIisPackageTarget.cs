@@ -57,6 +57,7 @@ internal static class WebIisPackageTarget
             "publish", project, "-c", "Release", "-o", destination,
             "--self-contained", selfContained ? "true" : "false",
             "-p:SkipUnifiedPublish=true",
+            "-p:BuildInParallel=false",
             "-p:BaseOutputPath=" + Path.Combine(isolatedBuildRoot, "bin") + Path.DirectorySeparatorChar,
             "-p:IntermediateOutputPath=" + Path.Combine(isolatedBuildRoot, "obj") + Path.DirectorySeparatorChar,
             "--no-restore",
