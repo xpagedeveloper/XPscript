@@ -106,6 +106,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         var typeName = syntax.TypeName.Text;
         if (AstApplicationSupport.OwnsSymbol(typeName))
             return Error(syntax.TypeName, CompilerDiagnosticCodes.InvalidNativeConstructor, "Application is runtime state and cannot be created with New.");
+        if (typeName.Equals("NetworkTools", StringComparison.OrdinalIgnoreCase))
+        {
+            if (syntax.Arguments.Count != 0)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "No matching constructor for 'NetworkTools'.");
+            return new BoundNewExpression(typeof(object), [], XpTypeSymbol.User("NetworkTools"));
+        }
         if (AstSpreadsheetSupport.IsSpreadsheet(typeName))
         {
             if (!typeName.Equals("XPSpreadsheet", StringComparison.OrdinalIgnoreCase))

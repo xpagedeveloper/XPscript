@@ -96,6 +96,8 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateRequest()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPSpreadsheet", StringComparison.OrdinalIgnoreCase) =>
             $"XPScriptSpreadsheetFactory.Create({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("NetworkTools", StringComparison.OrdinalIgnoreCase) =>
+            "XPScriptNetworkToolsFactory.Create()",
         BoundNewExpression @new when AstImageSupport.IsImage(@new.SemanticType.Name) =>
             $"new XPImage({string.Join(", ", @new.Arguments.Select((arg, i) => AstImageSupport.ConvertArgument(Emit(arg), i < 2 ? "int" : "string")))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("Path", StringComparison.OrdinalIgnoreCase) => $"new XpPath({string.Join(", ", @new.Arguments.Select(Emit))})",

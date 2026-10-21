@@ -390,6 +390,11 @@ if (Should-Run 'platform') {
   foreach ($sample in @('archive-extended-memory','archive-extended-memory-write','archive-gzip','archive-rebuild','archive-targzip','archive-compressed-tar','archive-format-detection')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
   Run-Xps ./samples/application-runtime.xps application-runtime @('fulltest') | Out-Null
   foreach ($sample in @('networktools-native-local-smoke','networktools-phase2-local-smoke')) { Run-Xps "./samples/$sample.xps" $sample | Out-Null }
+  $astNetworkOutput = './out/fulltest/networktools-ast-safe'
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/networktools-local-safe.xps','-o',$astNetworkOutput) $compileTimeoutMilliseconds 'AST NetworkTools safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  $astNetworkExecutable = if ($IsWindows) { Join-Path $astNetworkOutput 'Generated.exe' } else { Join-Path $astNetworkOutput 'Generated' }
+  $astNetworkRun = Invoke-Bounded (if (Test-Path $astNetworkExecutable) { $astNetworkExecutable } else { 'dotnet' }) (if (Test-Path $astNetworkExecutable) { @() } else { @((Join-Path $astNetworkOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST NetworkTools safe runtime'
+  if ($astNetworkRun.ExitCode -ne 0 -or $astNetworkRun.Output -notmatch 'NETWORKTOOLS_AST_SAFE_OK') { throw 'AST NetworkTools safe regression did not complete.' }
   Run-Xps ./samples/systeminventory-local-smoke.xps systeminventory-local-smoke | Out-Null
   Write-Host 'PLATFORM_FULLTEST: passed'
 }

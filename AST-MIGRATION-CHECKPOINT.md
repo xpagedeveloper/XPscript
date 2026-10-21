@@ -81,6 +81,9 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Extended Archive memory coverage is also green through AST: `archive-extended-memory.xps` reaches `ARCHIVE_EXTENDED_MEMORY_OK`, proving the existing extended reader/writer/factory runtime injection works for `New Archive(..., True)` without an external tool.
 - Added the extended Archive memory execution to the permanent Archive FullTest. The suite remains environment-blocked before these AST cases when `bzip2` is unavailable.
 
+- Began NetworkTools AST migration using the existing object preprocessor, native runtime, and Phase-2 postprocessor. NetworkTools/result types are now AST-routed; `New NetworkTools` has native constructor binding/emission and generated code includes the required certificate namespaces.
+- Added `tests/ast-compile-probe/networktools-local-safe.xps` to Platform FullTest. Focused verification is green with `NETWORKTOOLS_AST_SAFE_OK`; the broader port-enumeration sample remains sensitive to OS access restrictions and is not claimed green here.
+
 - Added focused class-property regression for a native SystemInventorySnapshot accessor; AST compile and execution passed with CLASS_PROPERTIES_NATIVE_OK.
 - Full AST CLI probe had already passed before this focused fixture extension.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.

@@ -1,0 +1,13 @@
+Option Declare
+
+Sub Main()
+    Dim net As New NetworkTools
+    Dim host As NetworkHostResult
+    Set host = net.ResolveHost("localhost")
+    If host.Error <> "" Then Error 1201, "ResolveHost localhost failed: " & host.Error
+    If Not net.IsPrivateAddress("10.1.2.3") Then Error 1202, "Private address check failed"
+    If net.IsPrivateAddress("8.8.8.8") Then Error 1203, "Public address classified as private"
+    If Not net.IsLoopbackAddress("127.0.0.1") Then Error 1204, "Loopback check failed"
+    If Not net.IsInSubnet("10.20.30.40", "10.20.0.0/16") Then Error 1205, "Subnet check failed"
+    Print "NETWORKTOOLS_AST_SAFE_OK"
+End Sub

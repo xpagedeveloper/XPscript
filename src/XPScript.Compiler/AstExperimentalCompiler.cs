@@ -52,6 +52,10 @@ public static class AstExperimentalCompiler
         var usesArchive = PreprocessorFeatureGate.ContainsTypeReference(source, "Archive", "ArchiveEntry");
         if (usesArchive)
             source = new ArchiveObjectPreprocessor().Transform(source, sourcePath);
+        var usesNetworkTools = Regex.IsMatch(source,
+            @"(?i)\bNetwork(?:Tools|PingResult|TraceHop|DnsResult|PortResult|UdpResult|HttpResult|TlsResult|InterfaceInfo|EndpointInfo|HostResult|SubnetInfo|TlsVersionResult|CertificateResult|HttpHeadersResult|HttpSecurityHeadersResult|RedirectResult|BannerResult|PortExposureInfo)\b");
+        if (usesNetworkTools)
+            source = new NetworkToolsObjectPreprocessor().Transform(source);
         var fullSource = source;
         ValidateAstAiCallbacks(fullSource);
         var runtimeFeatures = RuntimeFeatures.Detect(fullSource);
@@ -663,6 +667,8 @@ using System.Collections;
 using System.Dynamic;
 using System.Text;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.IO;
 using System.Linq;
@@ -673,6 +679,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
 {{(usesArchive ? ArchiveRuntimeSource.Code + ArchiveMemoryRuntimeSource.Code + ArchiveIteratorRuntimeSource.Code : "")}}
 {{(usesArchive && source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ? ArchiveExtendedReaderRuntimeSource.Code + ArchiveExtendedWriterRuntimeSource.Code + ArchiveExtendedWriterFactoryRuntimeSource.Code : "")}}
+{{(usesNetworkTools ? NetworkToolsRuntimeSource.Code : "")}}
 {{((usesAi || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema")) ? JsonSchemaRuntimeSource.Code : "")}}
 {{AstRuntimeSource.Code}}
 {{AstImageSupport.RuntimeCode(fullSource)}}
@@ -1142,6 +1149,8 @@ internal static class Program
 }
 """;
         generated = EnsureAttachmentRuntime(generated);
+        if (usesNetworkTools)
+            generated = NetworkToolsPhase2RuntimePostProcessor.Transform(generated);
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode;
         using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
