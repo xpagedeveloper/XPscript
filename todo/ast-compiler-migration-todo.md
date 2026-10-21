@@ -641,7 +641,7 @@ The first AST proof of concept is complete when:
 - [x] `RunCommand(...) = False` is represented as a comparison expression.
 - [x] Both forms can be bound to boolean semantics without relying on C# parsing to determine XPscript meaning.
 - [x] The proof of concept can emit valid C# for those expressions.
-- [x] Existing production compilation remains unchanged unless the experimental path is explicitly selected. Normal `compile` continues through the legacy driver; `ast-compile` is opt-in.
+- [x] The supported CLI now routes normal `compile`/`run` through the AST compiler, while the published legacy implementation remains available through explicit `legacy-compile`/`compilev1` and `legacy-run`/`runv1` compatibility commands. The AST path is still not considered fully migrated until the remaining compatibility and target gates below are complete.
 - [x] The proof of concept demonstrates that both CLI compilation and MCP/AI machine compilation can call the same AST front-end without duplicating parsing or semantic logic. Both surfaces call `AstExperimentalCompiler`.
 
 ## Definition of done for full migration
