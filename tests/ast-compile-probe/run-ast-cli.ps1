@@ -172,6 +172,16 @@ $nativeNullOutput = Join-Path $output 'native-null-abi'
 dotnet $compiler ast-compile (Join-Path $root 'samples/native-null-abi.xps') -o $nativeNullOutput
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeNullOutput 'Generated.dll'))) { throw 'AST scalar native declaration regression failed.' }
 Write-Host 'AST_NATIVE_DECLARE_COMPILE_OK'
+$nativeSubOutput = Join-Path $output 'native-sub-declaration'
+dotnet $compiler ast-compile (Join-Path $root 'samples/native-sub-declaration.xps') -o $nativeSubOutput
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeSubOutput 'Generated.dll'))) { throw 'AST native Sub declaration regression failed.' }
+$nativeSubResult = dotnet (Join-Path $nativeSubOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($nativeSubResult -join "`n") -notmatch 'NATIVE-SUB-COMPILE-OK') { throw 'AST native Sub declaration regression failed.' }
+Write-Host 'AST_NATIVE_SUB_OK'
+$nativeByRefOutput = Join-Path $output 'native-byref-error-ast'
+dotnet $compiler ast-compile (Join-Path $root 'samples/native-byref-error-ast.xps') -o $nativeByRefOutput 2>&1 | Out-String | Tee-Object -Variable nativeByRefDiagnostics | Out-Null
+if ($LASTEXITCODE -eq 0 -or $nativeByRefDiagnostics -notmatch 'XPS2013') { throw 'AST native ByRef diagnostic regression failed.' }
+Write-Host 'AST_NATIVE_BYREF_DIAGNOSTIC_OK'
 $nativeRidSource = Join-Path $root 'samples/native-architecture-assets.xps'
 foreach ($nativeRid in @('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')) {
     $nativeRidOutput = Join-Path $output "native-rid-$nativeRid"

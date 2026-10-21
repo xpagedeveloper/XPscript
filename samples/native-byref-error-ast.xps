@@ -1,0 +1,4 @@
+Declare Function UnsafeNative Lib "unsafe-native" (ByRef value As Integer) As Integer
+
+Sub Main()
+End Sub

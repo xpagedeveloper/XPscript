@@ -59,12 +59,17 @@ public static class AstExperimentalCompiler
         source = includeResult.Source;
         var jsonNameMetadata = new JsonNameMetadataPreprocessor();
         source = jsonNameMetadata.Transform(source);
-        var nativeDeclarations = new List<(string Name, string Library, string Alias, string ReturnType, string[] Parameters)>();
+        var nativeDeclarations = new List<(string Kind, string Name, string Library, string Alias, string ReturnType, string[] Parameters)>();
         source = Regex.Replace(source,
-            @"(?ims)^\s*Declare\s+Function\s+(?<name>[A-Za-z_]\w*)\s+Lib\s+""(?<library>[^""]+)""(?:\s+Alias\s+""(?<alias>[^""]+)"")?(?<options>.*?)\((?<parameters>[^)]*)\)\s+As\s+(?<returnType>[A-Za-z_]\w*)\s*(?:_|\r?$)",
+            @"(?ims)^\s*Declare\s+(?<kind>Function|Sub)\s+(?<name>[A-Za-z_]\w*)\s+Lib\s+""(?<library>[^""]+)""(?:\s+Alias\s+""(?<alias>[^""]+)"")?(?<options>.*?)\((?<parameters>[^)]*)\)\s*(?:As\s+(?<returnType>[A-Za-z_]\w*))?\s*(?:_|\r?$)",
             match =>
             {
                 var parameters = match.Groups["parameters"].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                foreach (var parameter in parameters)
+                    if (Regex.IsMatch(parameter, @"(?i)\bByRef\b"))
+                        throw MappedDiagnostic(new TextSpan(0, 0), sourcePath, source,
+                            "Native Declare parameters must be passed ByVal because native ByRef/out marshalling is not supported.",
+                            CompilerDiagnosticCodes.NativeByRefUnsupported, "interop");
                 var rid = runtimeIdentifier?.Trim().ToLowerInvariant();
                 var platformPrefix = rid switch
                 {
@@ -79,9 +84,9 @@ public static class AstExperimentalCompiler
                 var options = match.Groups["options"].Value;
                 var selectedLibrary = Regex.Match(options, $@"(?i)\b{platformPrefix}Lib\s+""(?<value>[^""]+)""").Groups["value"].Value;
                 var selectedAlias = Regex.Match(options, $@"(?i)\b{platformPrefix}Alias\s+""(?<value>[^""]+)""").Groups["value"].Value;
-                nativeDeclarations.Add((match.Groups["name"].Value, string.IsNullOrWhiteSpace(selectedLibrary) ? match.Groups["library"].Value : selectedLibrary,
+                nativeDeclarations.Add((match.Groups["kind"].Value, match.Groups["name"].Value, string.IsNullOrWhiteSpace(selectedLibrary) ? match.Groups["library"].Value : selectedLibrary,
                     string.IsNullOrWhiteSpace(selectedAlias) ? (string.IsNullOrWhiteSpace(match.Groups["alias"].Value) ? match.Groups["name"].Value : match.Groups["alias"].Value) : selectedAlias,
-                    match.Groups["returnType"].Value, parameters));
+                    match.Groups["kind"].Value.Equals("Sub", StringComparison.OrdinalIgnoreCase) ? "Void" : (string.IsNullOrWhiteSpace(match.Groups["returnType"].Value) ? "Variant" : match.Groups["returnType"].Value), parameters));
                 return new string(match.Value.Select(c => c is '\r' or '\n' ? c : ' ').ToArray());
             });
         var usesArchive = PreprocessorFeatureGate.ContainsTypeReference(source, "Archive", "ArchiveEntry");
@@ -206,8 +211,9 @@ public static class AstExperimentalCompiler
         foreach (var native in nativeDeclarations)
         {
             var parameterTypes = native.Parameters.Select(_ => typeof(object)).ToArray();
-            symbols.Declare(new FunctionSymbol(native.Name, typeof(long), parameterTypes,
-                XpTypeSymbol.FromClr(typeof(long)), parameterTypes.Select(_ => XpTypeSymbol.Variant).ToArray())
+            var nativeIsSub = native.Kind.Equals("Sub", StringComparison.OrdinalIgnoreCase);
+            symbols.Declare(new FunctionSymbol(native.Name, nativeIsSub ? typeof(void) : typeof(long), parameterTypes,
+                nativeIsSub ? null : XpTypeSymbol.FromClr(typeof(long)), parameterTypes.Select(_ => XpTypeSymbol.Variant).ToArray())
             { NativeTargetName = $"XPNativeDeclarations.{native.Name}" });
         }
         symbols.Declare(new TypeSymbol("Object", typeof(object), XpTypeSymbol.Object));
@@ -732,7 +738,7 @@ public static class AstExperimentalCompiler
             }));
         var nativeCode = string.Join(Environment.NewLine, nativeDeclarations.Select(native =>
         {
-            var nativeReturn = native.ReturnType.Equals("Integer", StringComparison.OrdinalIgnoreCase) ? "int" : native.ReturnType.Equals("Long", StringComparison.OrdinalIgnoreCase) ? "long" : "int";
+            var nativeReturn = native.ReturnType.Equals("Void", StringComparison.OrdinalIgnoreCase) ? "void" : native.ReturnType.Equals("Integer", StringComparison.OrdinalIgnoreCase) ? "int" : native.ReturnType.Equals("Long", StringComparison.OrdinalIgnoreCase) ? "long" : "int";
             var rawParameters = string.Join(", ", native.Parameters.Select((parameter, index) =>
             {
                 var match = Regex.Match(parameter, @"(?i)(?:ByVal|ByRef)?\s*(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)");
@@ -747,7 +753,9 @@ public static class AstExperimentalCompiler
             }));
             var library = native.Library.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
             var alias = native.Alias.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
-            return $"internal static class XPNativeDeclarations {{ [System.Runtime.InteropServices.DllImport(\"{library}\", EntryPoint = \"{alias}\")] private static extern {nativeReturn} __{native.Name}({rawParameters}); public static long {native.Name}({wrapperParameters}) => __{native.Name}({rawArguments}); }}";
+            var wrapperReturn = nativeReturn == "void" ? "void" : "long";
+            var invocation = $"__{native.Name}({rawArguments})";
+            return $"internal static class XPNativeDeclarations {{ [System.Runtime.InteropServices.DllImport(\"{library}\", EntryPoint = \"{alias}\")] private static extern {nativeReturn} __{native.Name}({rawParameters}); public static {wrapperReturn} {native.Name}({wrapperParameters}) {{ {(wrapperReturn == "void" ? invocation + ";" : "return " + invocation + ";")} }} }}";
         }));
         var generated = $$"""
 using System;
