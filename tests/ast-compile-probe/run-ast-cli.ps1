@@ -673,6 +673,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST HTTP client class-method compilation faile
 $httpClientClassMethodResult = dotnet (Join-Path $httpClientClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($httpClientClassMethodResult -join "`n") -ne '30') { throw 'AST HTTP client class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_HTTP_CLIENT_OK'
+$notesHttpClassMethodOutput = Join-Path $output 'class-method-notes-http-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-http-next.xps') -o $notesHttpClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Notes HTTP class-method compilation failed.' }
+$notesHttpClassMethodResult = dotnet (Join-Path $notesHttpClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($notesHttpClassMethodResult -join "`n") -ne 'AST_NOTES_HTTP_CLASS_METHOD_OK') { throw 'AST Notes HTTP class-method execution failed.' }
+Write-Host 'AST_NOTES_HTTP_CLASS_METHOD_OK'
 $httpRequestClassMethodOutput = Join-Path $output 'class-method-http-request-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-request-next.xps') -o $httpRequestClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST HTTP request class-method compilation failed.' }
