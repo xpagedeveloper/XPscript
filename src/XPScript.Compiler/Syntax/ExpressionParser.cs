@@ -211,6 +211,7 @@ public sealed class ExpressionParser
         SyntaxKind.RemoveKeyword or
         SyntaxKind.OpenKeyword or
         SyntaxKind.CloseKeyword or
+        SyntaxKind.CallKeyword or
         SyntaxKind.InputKeyword or
         SyntaxKind.OutputKeyword or
         SyntaxKind.AppendKeyword or

@@ -355,6 +355,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST default-private module array compilation f
 $moduleArrayDefaultResult = dotnet (Join-Path $moduleArrayDefaultOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($moduleArrayDefaultResult -join "`n") -ne 'MODULE_DEFAULT_PRIVATE_ARRAY_OK') { throw 'AST default-private module array regression failed.' }
 Write-Host 'AST_MODULE_DEFAULT_PRIVATE_ARRAY_OK'
+$aiReservedParameterOutput = Join-Path $output 'ai-tool-reserved-parameter'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-tool-reserved-parameter.xps') -o $aiReservedParameterOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST AI tool reserved parameter compilation failed.' }
+$aiReservedParameterResult = dotnet (Join-Path $aiReservedParameterOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($aiReservedParameterResult -join "`n") -ne 'AI_CALL_PARAMETER_OK') { throw 'AST AI tool reserved parameter regression failed.' }
+Write-Host 'AST_AI_RESERVED_PARAMETER_OK'
 $aiNativeOutput = Join-Path $output 'ai-native-metadata-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-native-metadata-next.xps') -o $aiNativeOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST native AI metadata compilation failed.' }

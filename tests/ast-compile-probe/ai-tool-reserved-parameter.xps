@@ -1,0 +1,9 @@
+Option Declare
+
+Function ReadToolCall(ByVal call As String) As String
+    ReadToolCall = call
+End Function
+
+Sub Main()
+    Print ReadToolCall("AI_CALL_PARAMETER_OK")
+End Sub

@@ -352,7 +352,7 @@ public sealed class DeclarationParser
             if (Peek(tokens, position).Kind is SyntaxKind.ByRefKeyword or SyntaxKind.ByValKeyword)
                 modifier = tokens[position++];
 
-            var identifier = Take(tokens, ref position, SyntaxKind.IdentifierToken);
+            var identifier = TakeMemberIdentifier(tokens, ref position);
             SyntaxToken? arrayOpen = null;
             SyntaxToken? arrayClose = null;
             var arrayCommas = new List<SyntaxToken>();
@@ -494,7 +494,10 @@ public sealed class DeclarationParser
         return Take(tokens, ref position, SyntaxKind.IdentifierToken);
     }
 
-    private static bool ExpressionParserContextual(SyntaxKind kind) => kind is SyntaxKind.AppendKeyword or SyntaxKind.SetKeyword or SyntaxKind.GetKeyword or SyntaxKind.OpenKeyword or SyntaxKind.CloseKeyword;
+    private static bool ExpressionParserContextual(SyntaxKind kind) => kind is
+        SyntaxKind.AppendKeyword or SyntaxKind.SetKeyword or SyntaxKind.GetKeyword or
+        SyntaxKind.OpenKeyword or SyntaxKind.CloseKeyword or SyntaxKind.CallKeyword or
+        SyntaxKind.OutputKeyword;
 
     private SyntaxToken Take(SyntaxToken[] tokens, ref int position, SyntaxKind expected)
     {
