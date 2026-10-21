@@ -173,7 +173,7 @@ dotnet $compiler ast-compile (Join-Path $root 'samples/native-null-abi.xps') -o 
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeNullOutput 'Generated.dll'))) { throw 'AST scalar native declaration regression failed.' }
 Write-Host 'AST_NATIVE_DECLARE_COMPILE_OK'
 $nativeRidSource = Join-Path $root 'samples/native-architecture-assets.xps'
-foreach ($nativeRid in @('win-x64', 'linux-x64')) {
+foreach ($nativeRid in @('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')) {
     $nativeRidOutput = Join-Path $output "native-rid-$nativeRid"
     dotnet $compiler ast-compile $nativeRidSource -o $nativeRidOutput --rid $nativeRid
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeRidOutput 'Generated.dll'))) { throw "AST native RID declaration regression failed for $nativeRid." }
