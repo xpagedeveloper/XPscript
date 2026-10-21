@@ -75,7 +75,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression BindName(NameExpressionSyntax syntax)
     {
         var name = syntax.IdentifierToken.Text;
-        if (_symbols.TryLookup(name, out var nativeType) && nativeType is TypeSymbol && (AstSpreadsheetSupport.IsSpreadsheet(name) || AstHttpSupport.IsHttp(name) || AstImageSupport.IsImage(name) || AstCsvSupport.IsCsv(name) || AstXmlSupport.IsXml(name)))
+        if (_symbols.TryLookup(name, out var nativeType) && nativeType is TypeSymbol && (AstSpreadsheetSupport.IsSpreadsheet(name) || AstHttpSupport.IsHttp(name) || AstImageSupport.IsImage(name) || AstCsvSupport.IsCsv(name) || AstXmlSupport.IsXml(name) || name.Equals("XPScriptArchiveFactory", StringComparison.OrdinalIgnoreCase) || name.Equals("XPScriptExtendedArchiveWriterFactory", StringComparison.OrdinalIgnoreCase) || name.Equals("XPScriptArchiveIteratorRuntime", StringComparison.OrdinalIgnoreCase)))
             return new BoundNameExpression(nativeType);
         // A bare function name denotes its result slot; a call still resolves
         // the procedure signature, so recursion is unaffected.
@@ -747,6 +747,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         if (syntax.OperatorToken.Kind is SyntaxKind.PlusToken or SyntaxKind.MinusToken &&
             (operand.Type == typeof(long) || operand.Type == typeof(double)))
             return new BoundUnaryExpression(syntax.OperatorToken.Kind, operand, operand.Type);
+        if (syntax.OperatorToken.Kind == SyntaxKind.NotKeyword &&
+            (operand.Type == typeof(object) || operand.SemanticType.IsNothing || operand.SemanticType.IsNull || operand.SemanticType.IsEmpty))
+            return new BoundUnaryExpression(syntax.OperatorToken.Kind, operand, typeof(object));
         if (_allowDynamicMembers && operand.SemanticType.IsVariant)
             return new BoundUnaryExpression(syntax.OperatorToken.Kind, operand, typeof(object));
         return Error(syntax, CompilerDiagnosticCodes.TypeMismatch, $"Unary operator {syntax.OperatorToken.Text} is not defined for {operand.SemanticType.Name}.");

@@ -388,6 +388,8 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [x] Add module-level `Static Function` parsing and remove the generated `ProcedureCounter` fallback; `static-module-function-next.xps` verifies the real user function and persistent local state.
   - [x] Replace the AST `AstOpen`/`AstClose`/`Loc` scaffold with the shared `LSFileRuntime`; `file-runtime-next.xps` verifies missing input-path errors and the initial output position.
   - [x] Add AST `Get` lowering through `LSFileRuntime.GetValue`; `file-get-next.xps` verifies typed binary `Put`/`Get` string round-trip and file length.
+  - [x] Move the Archive ZIP/memory/edge-case construction and file-system runtime path into AST. The AST binder declares the generated native-static archive factories/iterators, includes the required file-system runtime, and preserves legacy ZIP parity; `archive-zip`, `archive-memory` and `archive-edge-cases` execute successfully through AST.
+  - [ ] Complete Archive iterator/ForAll parity in AST. `archive-iterator.xps` currently reaches runtime but reports an iterator-count mismatch; keep the legacy route available until collection iteration semantics are corrected.
   - [x] Bind AST `Print #` and `Line Input #` to `LSFileRuntime`; `file-text-next.xps` verifies text round-trip.
   - [x] Add the shared `LSFileRuntime.InputChars` byte-count API and bind AST `Input$`; `file-input-chars-next.xps` verifies binary byte reads and Latin-1 decoding.
   - [x] Bind AST `Seek` to `LSFileRuntime.SeekSet` so binary `Input$` can reposition an open handle.

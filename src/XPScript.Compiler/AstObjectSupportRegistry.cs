@@ -20,6 +20,7 @@ internal static class AstObjectSupportRegistry
 
     private static readonly IReadOnlySet<string> AstObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
+        "Archive", "ArchiveEntry",
         "Application",
         "XPImage",
         "XPSpreadsheet", "XPWorksheet", "XPCell", "XPRange",
@@ -46,7 +47,6 @@ internal static class AstObjectSupportRegistry
 
     private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        "Archive", "ArchiveEntry",
         "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult",
         "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo",
         "NetworkHostResult", "NetworkSubnetInfo", "NetworkTlsVersionResult", "NetworkCertificateResult",

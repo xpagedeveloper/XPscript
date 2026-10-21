@@ -268,6 +268,18 @@ public static class AstExperimentalCompiler
         }
         foreach (var compatibilityName in AstObjectSupportRegistry.CompatibilityNames)
             symbols.Declare(new VariableSymbol(compatibilityName, typeof(object), XpTypeSymbol.Variant));
+        if (usesArchive)
+        {
+            symbols.Declare(new TypeSymbol("XPScriptArchiveFactory", typeof(object), XpTypeSymbol.User("XPScriptArchiveFactory")));
+            DeclareNativeStatic(symbols, "XPScriptArchiveFactory.Create", [], "XPScriptArchiveFactory.Create");
+            DeclareNativeStatic(symbols, "XPScriptArchiveFactory.Create", [typeof(object)], "XPScriptArchiveFactory.Create");
+            DeclareNativeStatic(symbols, "XPScriptArchiveFactory.Create", [typeof(object), typeof(bool)], "XPScriptArchiveFactory.Create");
+            symbols.Declare(new TypeSymbol("XPScriptExtendedArchiveWriterFactory", typeof(object), XpTypeSymbol.User("XPScriptExtendedArchiveWriterFactory")));
+            DeclareNativeStatic(symbols, "XPScriptExtendedArchiveWriterFactory.Create", [typeof(object)], "XPScriptExtendedArchiveWriterFactory.Create");
+            symbols.Declare(new TypeSymbol("XPScriptArchiveIteratorRuntime", typeof(object), XpTypeSymbol.User("XPScriptArchiveIteratorRuntime")));
+            DeclareNativeStatic(symbols, "XPScriptArchiveIteratorRuntime.GetFirstEntry", [typeof(object)], "XPScriptArchiveIteratorRuntime.GetFirstEntry");
+            DeclareNativeStatic(symbols, "XPScriptArchiveIteratorRuntime.GetNextEntry", [typeof(object), typeof(object)], "XPScriptArchiveIteratorRuntime.GetNextEntry");
+        }
         var moduleFieldStorage = AstModuleFieldSupport.Find(moduleSource, symbols);
         foreach (var field in moduleFieldStorage)
             symbols.Declare(field.Symbol);
@@ -699,7 +711,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{((usesDatabaseDynamicRuntime || usesDatabaseAttachments) ? HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + AstTlsRuntimeCode() + DatabaseAttachmentRuntimeV2Source.Build(AstSqliteSupport.Uses(fullSource) || source.Contains("XPDBSQLite", StringComparison.OrdinalIgnoreCase), AstMsSqlSupport.Uses(fullSource) || source.Contains("XPDbMsSql", StringComparison.OrdinalIgnoreCase)) + DatabaseAttachmentRuntimeV3Source.Code : "")}}
 {{AstHttpSupport.RuntimeCode(fullSource)}}
 {{(AstNotesJsonSupport.Uses(fullSource) || Regex.IsMatch(fullSource, @"(?i)\bNotesHTTPRequest\b") ? JsonHttpCompatibilityRuntimeSource.Code + (AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) || runtimeFeatures.Http ? "" : AstTlsRuntimeCode()) : "")}}
-{{((AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
+{{((usesArchive || AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}
 {{AstFileRuntimeCode()}}
@@ -1360,6 +1372,17 @@ internal static class Program
     private static StatementSyntax? InnermostContaining(IEnumerable<StatementSyntax> scopes, TextSpan span)
         => scopes.Where(scope => scope.Span.Start <= span.Start && scope.Span.End >= span.End)
             .OrderBy(scope => scope.Span.Length).FirstOrDefault();
+
+    private static void DeclareNativeStatic(SymbolTable symbols, string name, IReadOnlyList<Type> parameterTypes, string targetName)
+    {
+        var function = new FunctionSymbol(name, typeof(object), parameterTypes, XpTypeSymbol.Variant,
+            parameterTypes.Select(_ => XpTypeSymbol.Variant).ToArray())
+        {
+            IsNativeStatic = true,
+            NativeTargetName = targetName
+        };
+        symbols.Declare(function);
+    }
 
     private static void DeclareOptionalSignatures(SymbolTable symbols, string name, Type returnType, IReadOnlyList<ParameterSyntax> parameters)
     {
