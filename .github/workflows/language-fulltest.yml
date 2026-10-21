@@ -28,3 +28,6 @@ jobs:
       - name: Run Language FullTest, typed reference cells and element/module constructor aliases, Parent.New and XPImage cleanup
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1 -Suite language
+      - name: Verify CLI command-line compatibility
+        shell: pwsh
+        run: ./tests/cli-compatibility/run-cli-compatibility.ps1
