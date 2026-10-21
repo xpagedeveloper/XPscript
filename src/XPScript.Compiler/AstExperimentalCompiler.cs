@@ -1123,12 +1123,48 @@ internal static class Program
         }
         return null;
     }
-    public static object ArrayUnique(object? value) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Distinct().ToArray() : System.Array.Empty<object?>();
-    public static object ArraySlice(object? value, object? start) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Skip(Convert.ToInt32(start)).ToArray() : System.Array.Empty<object?>();
-    public static object ArraySlice(object? value, object? start, object? count) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Skip(Convert.ToInt32(start)).Take(Convert.ToInt32(count)).ToArray() : System.Array.Empty<object?>();
-    public static object ArraySplice(object? value, object? start, object? count) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Where((_, index) => index < Convert.ToInt32(start) || index >= Convert.ToInt32(start) + Convert.ToInt32(count)).ToArray() : System.Array.Empty<object?>();
-    public static object ArraySplice(object? value, object? start, object? count, object? replacement) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Where((_, index) => index < Convert.ToInt32(start) || index >= Convert.ToInt32(start) + Convert.ToInt32(count)).Append(replacement).ToArray() : new[] { replacement };
-    public static object ArraySplice(object? value, object? start, object? count, object? first, object? second) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Where((_, index) => index < Convert.ToInt32(start) || index >= Convert.ToInt32(start) + Convert.ToInt32(count)).Concat(new[] { first, second }).ToArray() : new[] { first, second };
+    public static object ArrayUnique(object? value)
+    {
+        if (value is not System.Collections.IEnumerable values) return System.Array.Empty<object?>();
+        var result = new List<object?>();
+        foreach (var candidate in values)
+            if (!result.Any(existing => existing is string left && candidate is string right
+                ? string.Equals(left, right, OptionCompareNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+                : Equals(existing, candidate))) result.Add(candidate);
+        return result.ToArray();
+    }
+    public static object ArraySlice(object? value, object? start) => ArraySlice(value, start, int.MaxValue);
+    public static object ArraySlice(object? value, object? start, object? end)
+    {
+        var values = ValuesForArray(value);
+        var from = NormalizeArrayStart(Convert.ToInt32(start), values.Count);
+        var rawEnd = Convert.ToInt32(end);
+        var to = rawEnd == int.MaxValue ? values.Count : NormalizeArrayStart(rawEnd, values.Count);
+        if (to < from) to = from;
+        return values.Skip(from).Take(to - from).ToArray();
+    }
+    public static object ArraySplice(object? value, object? start, object? count) => ArraySpliceCore(value, start, count, []);
+    public static object ArraySplice(object? value, object? start, object? count, object? replacement) => ArraySpliceCore(value, start, count, [replacement]);
+    public static object ArraySplice(object? value, object? start, object? count, object? first, object? second) => ArraySpliceCore(value, start, count, [first, second]);
+    private static object ArraySpliceCore(object? value, object? start, object? count, object?[] replacements)
+    {
+        var values = ValuesForArray(value);
+        var position = NormalizeArrayStart(Convert.ToInt32(start), values.Count);
+        var remove = Math.Clamp(Convert.ToInt32(count), 0, values.Count - position);
+        var removed = values.GetRange(position, remove);
+        values.RemoveRange(position, remove);
+        values.InsertRange(position, replacements);
+        ReplaceArrayContents(value, values);
+        return removed.ToArray();
+    }
+    private static List<object?> ValuesForArray(object? value) => value is System.Collections.IEnumerable values ? values.Cast<object?>().ToList() : [];
+    private static int NormalizeArrayStart(int index, int length) => index < 0 ? Math.Max(length + index, 0) : Math.Min(index, length);
+    private static void ReplaceArrayContents(object? value, IReadOnlyList<object?> values)
+    {
+        if (value is not System.Array array || array.Rank != 1 || array.Length < values.Count) return;
+        var lower = array.GetLowerBound(0);
+        for (var i = 0; i < values.Count; i++) array.SetValue(values[i], lower + i);
+    }
     public static Array ArrayResize(object? value, object? upper, object? preserve, object? lower = null)
     {
         var lowerBound = lower is null ? 0 : Convert.ToInt32(lower);
@@ -1141,7 +1177,7 @@ internal static class Program
         => LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), Convert.ToInt32(upper1), Convert.ToInt32(lower1), Convert.ToInt32(upper2), Convert.ToInt32(lower2), Convert.ToInt32(upper3), Convert.ToInt32(lower3));
     public static Array ArrayResize(object? value, object? upper1, object? preserve, object? lower1, object? upper2, object? lower2, object? upper3, object? lower3, object? upper4, object? lower4)
         => LSArrayRuntime.ReDimManaged(value, Convert.ToBoolean(preserve), Convert.ToInt32(upper1), Convert.ToInt32(lower1), Convert.ToInt32(upper2), Convert.ToInt32(lower2), Convert.ToInt32(upper3), Convert.ToInt32(lower3), Convert.ToInt32(upper4), Convert.ToInt32(lower4));
-    public static object Explode(object? value, object? separator) => (value?.ToString() ?? string.Empty).Split(separator?.ToString() ?? ",");
+    public static object Explode(object? separator, object? value) => (value?.ToString() ?? string.Empty).Split(separator?.ToString() ?? ",");
     public static string FullTrim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
     public static object JsonEncode(object? value) => XPScriptNativeJson.Stringify(value);
     public static object JsonDecode(object? value) => XPScriptNativeJson.Parse(value);
