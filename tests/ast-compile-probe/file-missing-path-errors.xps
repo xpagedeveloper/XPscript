@@ -34,6 +34,12 @@ Sub Main()
     code = Err
     On Error GoTo 0
     If code = 0 Then Error 9853, "FileInfo accepted a missing path"
+    Dim fileInfoValue As XPFileInfoValue
+    On Error Resume Next
+    Set fileInfoValue = New XPFileInfoValue(missing & "/missing.bin")
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9857, "XPFileInfoValue accepted a missing path"
     On Error Resume Next
     values = Files(missing)
     code = Err
