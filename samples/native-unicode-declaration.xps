@@ -1,0 +1,5 @@
+Declare Function NativeUnicode Lib "native-null-abi" Unicode Alias "native_unicode" (ByVal value As String) As String
+
+Sub Main()
+    Print "NATIVE-UNICODE-COMPILE-OK"
+End Sub

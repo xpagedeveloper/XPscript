@@ -59,7 +59,7 @@ public static class AstExperimentalCompiler
         source = includeResult.Source;
         var jsonNameMetadata = new JsonNameMetadataPreprocessor();
         source = jsonNameMetadata.Transform(source);
-        var nativeDeclarations = new List<(string Kind, string Name, string Library, string Alias, string ReturnType, string[] Parameters)>();
+        var nativeDeclarations = new List<(string Kind, string Name, string Library, string Alias, string ReturnType, string[] Parameters, bool Unicode)>();
         source = Regex.Replace(source,
             @"(?ims)^\s*Declare\s+(?<kind>Function|Sub)\s+(?<name>[A-Za-z_]\w*)\s+Lib\s+""(?<library>[^""]+)""(?:\s+Alias\s+""(?<alias>[^""]+)"")?(?<options>.*?)\((?<parameters>[^)]*)\)\s*(?:As\s+(?<returnType>[A-Za-z_]\w*))?\s*(?:_|\r?$)",
             match =>
@@ -82,11 +82,12 @@ public static class AstExperimentalCompiler
                     _ => OperatingSystem.IsWindows() ? "Windows" : OperatingSystem.IsLinux() ? "Linux" : OperatingSystem.IsMacOS() ? "MacOS" : string.Empty
                 };
                 var options = match.Groups["options"].Value;
+                var unicode = Regex.IsMatch(options, @"(?i)\bUnicode\b");
                 var selectedLibrary = Regex.Match(options, $@"(?i)\b{platformPrefix}Lib\s+""(?<value>[^""]+)""").Groups["value"].Value;
                 var selectedAlias = Regex.Match(options, $@"(?i)\b{platformPrefix}Alias\s+""(?<value>[^""]+)""").Groups["value"].Value;
                 nativeDeclarations.Add((match.Groups["kind"].Value, match.Groups["name"].Value, string.IsNullOrWhiteSpace(selectedLibrary) ? match.Groups["library"].Value : selectedLibrary,
                     string.IsNullOrWhiteSpace(selectedAlias) ? (string.IsNullOrWhiteSpace(match.Groups["alias"].Value) ? match.Groups["name"].Value : match.Groups["alias"].Value) : selectedAlias,
-                    match.Groups["kind"].Value.Equals("Sub", StringComparison.OrdinalIgnoreCase) ? "Void" : (string.IsNullOrWhiteSpace(match.Groups["returnType"].Value) ? "Variant" : match.Groups["returnType"].Value), parameters));
+                    match.Groups["kind"].Value.Equals("Sub", StringComparison.OrdinalIgnoreCase) ? "Void" : (string.IsNullOrWhiteSpace(match.Groups["returnType"].Value) ? "Variant" : match.Groups["returnType"].Value), parameters, unicode));
                 return new string(match.Value.Select(c => c is '\r' or '\n' ? c : ' ').ToArray());
             });
         var usesArchive = PreprocessorFeatureGate.ContainsTypeReference(source, "Archive", "ArchiveEntry");
@@ -756,7 +757,8 @@ public static class AstExperimentalCompiler
             var alias = native.Alias.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
             var wrapperReturn = nativeReturn;
             var invocation = $"__{native.Name}({rawArguments})";
-            return $"[System.Runtime.InteropServices.DllImport(\"{library}\", EntryPoint = \"{alias}\")] private static extern {nativeReturn} __{native.Name}({rawParameters}); public static {wrapperReturn} {native.Name}({wrapperParameters}) {{ {(wrapperReturn == "void" ? invocation + ";" : "return " + invocation + ";")} }}";
+            var charset = native.Unicode ? "Unicode" : "Ansi";
+            return $"[System.Runtime.InteropServices.DllImport(\"{library}\", EntryPoint = \"{alias}\", CharSet = System.Runtime.InteropServices.CharSet.{charset})] private static extern {nativeReturn} __{native.Name}({rawParameters}); public static {wrapperReturn} {native.Name}({wrapperParameters}) {{ {(wrapperReturn == "void" ? invocation + ";" : "return " + invocation + ";")} }}";
         })) + Environment.NewLine + "}";
         var generated = $$"""
 using System;

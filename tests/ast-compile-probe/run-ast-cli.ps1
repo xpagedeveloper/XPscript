@@ -188,6 +188,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST native scalar type regression failed.' }
 $nativeScalarResult = dotnet (Join-Path $nativeScalarOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($nativeScalarResult -join "`n") -notmatch 'NATIVE-SCALAR-TYPES-COMPILE-OK') { throw 'AST native scalar type regression failed.' }
 Write-Host 'AST_NATIVE_SCALAR_TYPES_OK'
+$nativeUnicodeOutput = Join-Path $output 'native-unicode-declaration'
+dotnet $compiler ast-compile (Join-Path $root 'samples/native-unicode-declaration.xps') -o $nativeUnicodeOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST native Unicode declaration regression failed.' }
+$nativeUnicodeResult = dotnet (Join-Path $nativeUnicodeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($nativeUnicodeResult -join "`n") -notmatch 'NATIVE-UNICODE-COMPILE-OK') { throw 'AST native Unicode declaration regression failed.' }
+Write-Host 'AST_NATIVE_UNICODE_OK'
 $nativeRidSource = Join-Path $root 'samples/native-architecture-assets.xps'
 foreach ($nativeRid in @('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')) {
     $nativeRidOutput = Join-Path $output "native-rid-$nativeRid"
