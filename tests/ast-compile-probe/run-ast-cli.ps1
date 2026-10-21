@@ -194,6 +194,10 @@ if ($LASTEXITCODE -ne 0) { throw 'AST native Unicode declaration regression fail
 $nativeUnicodeResult = dotnet (Join-Path $nativeUnicodeOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($nativeUnicodeResult -join "`n") -notmatch 'NATIVE-UNICODE-COMPILE-OK') { throw 'AST native Unicode declaration regression failed.' }
 Write-Host 'AST_NATIVE_UNICODE_OK'
+$nativeMissingOutput = Join-Path $output 'native-missing-dependency'
+$nativeMissingDiagnostics = dotnet $compiler ast-compile (Join-Path $root 'samples/native-target-mismatch-error.xps') -o $nativeMissingOutput 2>&1 | Out-String
+if ($LASTEXITCODE -eq 0 -or $nativeMissingDiagnostics -notmatch 'native-probe.dll|dependency') { throw 'AST native missing dependency diagnostic regression failed.' }
+Write-Host 'AST_NATIVE_MISSING_DEPENDENCY_OK'
 $nativeRidSource = Join-Path $root 'samples/native-architecture-assets.xps'
 foreach ($nativeRid in @('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')) {
     $nativeRidOutput = Join-Path $output "native-rid-$nativeRid"

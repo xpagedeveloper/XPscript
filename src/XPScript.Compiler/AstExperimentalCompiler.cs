@@ -57,9 +57,11 @@ public static class AstExperimentalCompiler
         // AST compiler has the same multi-file source contract as the legacy path.
         var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
         source = includeResult.Source;
+        var nativeSource = source;
         var jsonNameMetadata = new JsonNameMetadataPreprocessor();
         source = jsonNameMetadata.Transform(source);
         var nativeDeclarations = new List<(string Kind, string Name, string Library, string Alias, string ReturnType, string[] Parameters, bool Unicode)>();
+        var nativeDependencies = new NativeDependencyPackager(runtimeIdentifier ?? CompilerDriver.CurrentRuntimeIdentifier()).Collect(nativeSource, sourceName: sourcePath);
         source = Regex.Replace(source,
             @"(?ims)^\s*Declare\s+(?<kind>Function|Sub)\s+(?<name>[A-Za-z_]\w*)\s+Lib\s+""(?<library>[^""]+)""(?:\s+Alias\s+""(?<alias>[^""]+)"")?(?<options>.*?)\((?<parameters>[^)]*)\)\s*(?:As\s+(?<returnType>[A-Za-z_]\w*))?\s*(?:_|\r?$)",
             match =>
@@ -1401,11 +1403,15 @@ internal static class Program
             generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated);
         }
         var applicationMarkers = AstApplicationSupport.BuildMarkers(fullSource, sourcePath);
+        string outputResult;
         if (applicationMarkers.Length != 0)
-            return await RunCompiler.CompileGeneratedWithDependenciesAsync(generated + Environment.NewLine + applicationMarkers, outputDirectory, false, cancellationToken, runtimeIdentifier).ConfigureAwait(false);
-        if (runtimeIdentifier is not null)
-            return await RunCompiler.CompileGeneratedWithDependenciesAsync(generated, outputDirectory, false, cancellationToken, runtimeIdentifier).ConfigureAwait(false);
-        return await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
+            outputResult = await RunCompiler.CompileGeneratedWithDependenciesAsync(generated + Environment.NewLine + applicationMarkers, outputDirectory, false, cancellationToken, runtimeIdentifier).ConfigureAwait(false);
+        else if (runtimeIdentifier is not null)
+            outputResult = await RunCompiler.CompileGeneratedWithDependenciesAsync(generated, outputDirectory, false, cancellationToken, runtimeIdentifier).ConfigureAwait(false);
+        else
+            outputResult = await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
+        new NativeDependencyPackager(runtimeIdentifier ?? CompilerDriver.CurrentRuntimeIdentifier()).Stage(sourcePath, outputDirectory, nativeDependencies);
+        return outputResult;
     }
 
     private static async Task<string> CompileWithLegacyFallbackAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken)
