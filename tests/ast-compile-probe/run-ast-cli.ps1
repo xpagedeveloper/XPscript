@@ -1,10 +1,19 @@
 # Expected negative compiler cases intentionally write diagnostics to stderr.
+param(
+    [string]$CompilerPath
+)
+
 # Keep PowerShell from converting native stderr into terminating errors; every
 # compiler/runtime invocation below asserts its exit code and output explicitly.
 $ErrorActionPreference = 'Continue'
 $PSNativeCommandUseErrorActionPreference = $false
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
-$compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
+$compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
+    Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
+} else {
+    [System.IO.Path]::GetFullPath($CompilerPath)
+}
+if (-not (Test-Path -LiteralPath $compiler)) { throw "Compiler DLL not found: $compiler" }
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
 $output = Join-Path $outputRoot 'ast-cli'
