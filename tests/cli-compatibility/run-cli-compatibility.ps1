@@ -1,6 +1,15 @@
+param(
+    [string]$CompilerPath
+)
+
 $ErrorActionPreference = 'Stop'
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
-$compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
+$compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
+    Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
+} else {
+    [System.IO.Path]::GetFullPath($CompilerPath)
+}
+if (-not (Test-Path -LiteralPath $compiler)) { throw "Compiler DLL not found: $compiler" }
 $help = (dotnet $compiler --help | Out-String)
 $required = @(
     'compile <source.xps>', 'ast-run <source.xps>', '--target webiis', '--platform RID', '--single-file', '--runtime',
@@ -81,6 +90,19 @@ $defaultCompileOutput = Join-Path $resultRoot 'default-ast-compile'
 $defaultCompileText = dotnet $compiler compile $astSource -o $defaultCompileOutput --runtime=false --single-file=false | Out-String
 if ($LASTEXITCODE -ne 0 -or $defaultCompileText -notlike '*AST compilation succeeded*') {
     throw "Default compile AST regression: $defaultCompileText"
+}
+
+foreach ($target in @('desktop', 'console')) {
+    $targetOutputPath = Join-Path $resultRoot "target-$target"
+    $targetText = dotnet $compiler ast-compile $astSource -o $targetOutputPath --target $target --runtime=false | Out-String
+    if ($LASTEXITCODE -ne 0 -or $targetText -notlike '*AST compilation succeeded*' -or -not (Test-Path (Join-Path $targetOutputPath 'Generated.dll'))) {
+        throw "AST --target $target compatibility regression: $targetText"
+    }
+}
+
+$invalidTargetText = dotnet $compiler ast-compile $astSource --target unsupported-target 2>&1 | Out-String
+if ($LASTEXITCODE -eq 0) {
+    throw "AST invalid --target validation regression: $invalidTargetText"
 }
 
 $webSource = Join-Path $root 'demo/webiis/main.xps'
