@@ -35,6 +35,18 @@ if ($LASTEXITCODE -ne 0) { throw 'AST SQLite native-surface compilation failed.'
 $sqliteResult = dotnet (Join-Path $sqliteOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($sqliteResult -join "`n") -ne 'SQLITE_AST_OK') { throw 'AST SQLite native-surface regression failed.' }
 Write-Host 'AST_SQLITE_OK'
+$legacySqliteOutput = Join-Path $output $(if ($IsWindows) { 'sqlite-native-legacy.exe' } else { 'sqlite-native-legacy' })
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'sqlite-native-next.xps') -o $legacySqliteOutput --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Legacy SQLite native-surface compilation failed.' }
+$legacySqliteStdout = [System.IO.Path]::GetTempFileName()
+try {
+    $legacySqliteProcess = Start-Process -FilePath $legacySqliteOutput -RedirectStandardOutput $legacySqliteStdout -NoNewWindow -Wait -PassThru
+    $legacySqliteResult = if (Test-Path $legacySqliteStdout) { Get-Content -LiteralPath $legacySqliteStdout } else { @() }
+    if ($legacySqliteProcess.ExitCode -ne 0 -or ($legacySqliteResult -join "`n") -notmatch 'SQLITE_AST_OK') { throw 'Legacy SQLite native-surface regression failed.' }
+} finally {
+    Remove-Item -LiteralPath $legacySqliteStdout -Force -ErrorAction SilentlyContinue
+}
+Write-Host 'LEGACY_SQLITE_OK'
 $mysqlOutput = Join-Path $output 'mysql-native-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'mysql-native-next.xps') -o $mysqlOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST MySQL native-surface compilation failed.' }

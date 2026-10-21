@@ -217,7 +217,22 @@ public sealed partial class XPScriptTranspiler
         if (usesAi) generated += "\n\n" + AiRuntimeSource.Code + "\n";
         if (runtimeFeatures.RequiresHttpDatabaseTypes) generated += "\n\n" + HttpDbRuntimeSource.Code + "\n";
         if (runtimeFeatures.Database) generated += "\n\n" + DatabaseUiDataSourceRuntimeSource.Build(usesSqlite, usesMsSql, runtimeFeatures.RequiresHttpDatabaseTypes) + "\n";
-        if (runtimeFeatures.Attachments) { generated += "\n\n" + DatabaseAttachmentRuntimeV2Source.Build(usesSqlite, usesMsSql) + "\n"; generated += "\n\n" + DatabaseAttachmentRuntimeV3Source.Code + "\n"; }
+        // The database runtime exposes the typed Attachments() factory even when a
+        // source file does not call it. Keep its V2/V3 return types available so
+        // generated legacy C# remains self-contained for ordinary database code.
+        if (runtimeFeatures.Attachments || usesSqlite || usesMsSql)
+        {
+            if (!runtimeFeatures.RequiresHttp)
+            {
+                generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n";
+                generated += "\n\n" + HttpCoreRuntimeSource.Code + "\n";
+                generated += "\n\n" + HttpJsonRuntimeSource.Code + "\n";
+                generated += "\n\n" + HttpDbRuntimeSource.Code + "\n";
+                generated += "\n\n" + DatabaseUiDataSourceRuntimeSource.BuildHttpDatabaseExtensions() + "\n";
+            }
+            generated += "\n\n" + DatabaseAttachmentRuntimeV2Source.Build(usesSqlite, usesMsSql) + "\n";
+            generated += "\n\n" + DatabaseAttachmentRuntimeV3Source.Code + "\n";
+        }
         generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + ModuleObjectRuntimeSource.Code + "\n";
