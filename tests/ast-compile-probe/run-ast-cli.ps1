@@ -7,7 +7,11 @@ param(
 # compiler/runtime invocation below asserts its exit code and output explicitly.
 $ErrorActionPreference = 'Continue'
 $PSNativeCommandUseErrorActionPreference = $false
-$root = Resolve-Path (Join-Path $PSScriptRoot '../..')
+$root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+# Generated programs intentionally exercise repository-relative source paths.
+# Normalize the process working directory so the suite behaves the same when
+# invoked from CI, an IDE, or an arbitrary caller directory.
+Set-Location -LiteralPath $root
 $compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
     Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 } else {
