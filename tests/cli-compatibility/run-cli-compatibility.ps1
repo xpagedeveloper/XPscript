@@ -25,6 +25,21 @@ if ($LASTEXITCODE -ne 1 -or $astHelp -notlike '*ast-compile requires an .xps sou
     throw 'AST command argument handling regression.'
 }
 
+$invalidRuntimeOutput = dotnet $compiler ast-compile (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --platform invalid-runtime --runtime=false --debug 2>&1 | Out-String
+if ($LASTEXITCODE -eq 0 -or $invalidRuntimeOutput -notlike '*Unsupported runtime identifier*') {
+    throw "AST invalid runtime validation regression: $invalidRuntimeOutput"
+}
+
+$invalidBooleanOutput = dotnet $compiler ast-compile (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --runtime=maybe --debug 2>&1 | Out-String
+if ($LASTEXITCODE -eq 0 -or $invalidBooleanOutput -notlike '*--runtime must be true or false*') {
+    throw "AST boolean option validation regression: $invalidBooleanOutput"
+}
+
+$missingArgsOutput = dotnet $compiler ast-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --Args 2>&1 | Out-String
+if ($LASTEXITCODE -eq 0 -or $missingArgsOutput -notlike '*--Args requires one quoted argument string*') {
+    throw "AST run argument validation regression: $missingArgsOutput"
+}
+
 $astSource = Join-Path $root 'tests/ast-compile-probe/application-newline.xps'
 $resultRoot = Join-Path $root 'tests/cli-compatibility/.tmp-result-format'
 if (Test-Path -LiteralPath $resultRoot) {
