@@ -3,7 +3,7 @@ $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $help = (dotnet $compiler --help | Out-String)
 $required = @(
-    'compile <source.xps>', '--target webiis', '--platform RID', '--single-file', '--runtime',
+    'compile <source.xps>', 'ast-run <source.xps>', '--target webiis', '--platform RID', '--single-file', '--runtime',
     '--result-format', '--security', '--restricted', '--source-root', '--preprocessor',
     'run <source.xps>', '--Args'
 )
@@ -45,10 +45,37 @@ if ($LASTEXITCODE -ne 0 -or $runtimeOutputText -notlike '*AST compilation succee
     throw "AST self-contained runtime option regression: $runtimeOutputText"
 }
 
+$platformAliasOutput = Join-Path $resultRoot 'platform-alias'
+$platformAliasText = dotnet $compiler ast-compile $astSource -o $platformAliasOutput --platform win-x64 --runtime=false | Out-String
+if ($LASTEXITCODE -ne 0 -or $platformAliasText -notlike '*AST compilation succeeded*' -or -not (Test-Path (Join-Path $platformAliasOutput 'Generated.dll'))) {
+    throw "AST --platform alias regression: $platformAliasText"
+}
+
+$astRunText = dotnet $compiler ast-run $astSource --platform win-x64 --Args 'ast-run-check' | Out-String
+if ($LASTEXITCODE -ne 0 -or $astRunText -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $astRunText -notlike '*APPLICATION_NEWLINE_END*') {
+    throw "AST run regression: $astRunText"
+}
+
+$defaultRunText = dotnet $compiler run $astSource --platform win-x64 --Args 'default-run-check' | Out-String
+if ($LASTEXITCODE -ne 0 -or $defaultRunText -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $defaultRunText -notlike '*APPLICATION_NEWLINE_END*') {
+    throw "Default AST run regression: $defaultRunText"
+}
+
+$legacyRunText = dotnet $compiler legacy-run $astSource --platform win-x64 --no-daemon --Args 'legacy-run-check' | Out-String
+if ($LASTEXITCODE -ne 0 -or $legacyRunText -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $legacyRunText -notlike '*APPLICATION_NEWLINE_END*') {
+    throw "Legacy run alias regression: $legacyRunText"
+}
+
 $legacyOutput = Join-Path $resultRoot 'legacy-compile'
-$legacyOutputText = dotnet $compiler compile $astSource -o $legacyOutput --runtime=false --single-file=false --debug | Out-String
+$legacyOutputText = dotnet $compiler legacy-compile $astSource -o $legacyOutput --runtime=false --single-file=false --debug | Out-String
 if ($LASTEXITCODE -ne 0 -or $legacyOutputText -notlike '*result: ok*' -or -not (Test-Path $legacyOutput)) {
     throw "Legacy compile option compatibility regression: $legacyOutputText"
+}
+
+$defaultCompileOutput = Join-Path $resultRoot 'default-ast-compile'
+$defaultCompileText = dotnet $compiler compile $astSource -o $defaultCompileOutput --runtime=false --single-file=false | Out-String
+if ($LASTEXITCODE -ne 0 -or $defaultCompileText -notlike '*AST compilation succeeded*') {
+    throw "Default compile AST regression: $defaultCompileText"
 }
 
 $webSource = Join-Path $root 'demo/webiis/main.xps'

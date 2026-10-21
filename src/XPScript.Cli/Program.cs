@@ -19,12 +19,14 @@ if (args.Length == 0 || args[0] is "--help" or "-h")
 try
 {
     if (args[0].EndsWith(".xps", StringComparison.OrdinalIgnoreCase))
-        return await XPScriptCompilerCommandLine.CompileAsync(args);
+        return await XPScriptCompilerCommandLine.RunAsync(["compile", .. args]);
 
     return args[0].ToLowerInvariant() switch
     {
-        "compile" => await XPScriptCompilerCommandLine.CompileAsync(args[1..]),
-        "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),
+        "compile" => await XPScriptCompilerCommandLine.RunAsync(args),
+        "run" => await XPScriptCompilerCommandLine.RunAsync(args),
+        "compilev1" or "legacy-compile" => await XPScriptCompilerCommandLine.RunAsync(args),
+        "runv1" or "legacy-run" => await XPScriptCompilerCommandLine.RunAsync(args),
         "daemon" => await CompilerDaemonServer.RunAsync(args[1..]),
         "dependencies" => await XPScript.Cli.ApplicationDependencyCommand.RunDependenciesAsync(args[1..]),
         "security" => await XPScript.Cli.ApplicationDependencyCommand.RunSecurityAsync(args[1..]),

@@ -17,13 +17,21 @@ public static class XPScriptCompilerCommandLine
         }
 
         if (args[0].Equals("run", StringComparison.OrdinalIgnoreCase))
-            return await RunScriptAsync(args).ConfigureAwait(false);
+            return await AstRunAsync(args[1..]).ConfigureAwait(false);
 
         if (args[0].Equals("compile", StringComparison.OrdinalIgnoreCase))
+            return await AstCompileAsync(args[1..]).ConfigureAwait(false);
+
+        if (args[0] is "compilev1" or "legacy-compile")
             return await CompileAsync(args[1..]).ConfigureAwait(false);
+
+        if (args[0] is "runv1" or "legacy-run")
+            return await RunScriptAsync(["run", .. args[1..]]).ConfigureAwait(false);
 
         if (args[0].Equals("ast-compile", StringComparison.OrdinalIgnoreCase))
             return await AstCompileAsync(args[1..]).ConfigureAwait(false);
+        if (args[0].Equals("ast-run", StringComparison.OrdinalIgnoreCase))
+            return await AstRunAsync(args[1..]).ConfigureAwait(false);
 
         if (args[0].Equals("validate", StringComparison.OrdinalIgnoreCase))
             return await ValidateAsync(args[1..]).ConfigureAwait(false);
@@ -438,6 +446,112 @@ public static class XPScriptCompilerCommandLine
             Console.Error.WriteLine(debug
                 ? ex.ToString()
                 : "Kompileringen misslyckades. Kör med --debug för teknisk diagnostik.");
+            return 1;
+        }
+    }
+
+    private static async Task<int> AstRunAsync(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            Console.Error.WriteLine("ast-run requires an .xps source file.");
+            return 1;
+        }
+
+        string? sourceArgument = null;
+        var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
+        var debug = false;
+        var restricted = false;
+        var scriptArgs = new List<string>();
+        var sourceRoots = new List<string>();
+        var sourcePreprocessors = new List<string>();
+        ApplicationSecurityMode? securityMode = null;
+
+        try
+        {
+            for (var i = 0; i < args.Length; i++)
+            {
+                var value = args[i];
+                if (value.Equals("--args", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--Args requires one quoted argument string.");
+                    scriptArgs.AddRange(SplitRunArguments(args[i]));
+                }
+                else if (value.Equals("--debug", StringComparison.OrdinalIgnoreCase)) debug = true;
+                else if (value.Equals("--restricted", StringComparison.OrdinalIgnoreCase)) restricted = true;
+                else if (value.Equals("--rid", StringComparison.OrdinalIgnoreCase) || value.Equals("--platform", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException(value + " requires a runtime identifier.");
+                    runtimeIdentifier = args[i].ToLowerInvariant();
+                }
+                else if (value.StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
+                    securityMode = ApplicationSecurityModeContext.Parse(value["--security=".Length..]);
+                else if (value.Equals("--security", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--security requires off, warn, or strict.");
+                    securityMode = ApplicationSecurityModeContext.Parse(args[i]);
+                }
+                else if (value.Equals("--source-root", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--source-root requires a directory path.");
+                    restricted = true;
+                    sourceRoots.Add(Path.GetFullPath(args[i]));
+                }
+                else if (value.Equals("--preprocessor", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--preprocessor requires a specification.");
+                    sourcePreprocessors.Add(args[i]);
+                }
+                else if (!value.StartsWith("--", StringComparison.Ordinal) && sourceArgument is null)
+                    sourceArgument = value;
+                else
+                    throw new ArgumentException("Unexpected ast-run argument: " + value);
+            }
+
+            if (sourceArgument is null) throw new ArgumentException("ast-run requires an .xps source file.");
+            var sourcePath = Path.GetFullPath(sourceArgument);
+            if (!File.Exists(sourcePath))
+            {
+                WriteResult(CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found." }]).WithOperation("ast-run"), "text");
+                return 2;
+            }
+            if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("XPScript source files must use the .xps extension.");
+
+            var sourceDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
+            if (restricted && sourceRoots.Count == 0) sourceRoots.Add(sourceDirectory);
+            using var securityScope = ApplicationSecurityModeContext.Push(securityMode ?? (debug ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off));
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+            if (!runtimeIdentifier.Equals(CompilerDriver.CurrentRuntimeIdentifier(), StringComparison.OrdinalIgnoreCase))
+                throw new PlatformNotSupportedException("Direct AST execution can run only the current runtime target '" + CompilerDriver.CurrentRuntimeIdentifier() + "'.");
+
+            var outputDirectory = CompilerPathSecurity.CreateOwnedTemporaryDirectory("ast-run-");
+            try
+            {
+                using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
+                using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
+                var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier,
+                    securityMode ?? ApplicationSecurityMode.Off, restricted, sourceRoots, sourcePreprocessors).ConfigureAwait(false);
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = Path.GetExtension(assemblyPath).Equals(".dll", StringComparison.OrdinalIgnoreCase) ? CompilerToolResolver.ResolveDotnetHost() : assemblyPath,
+                    UseShellExecute = false,
+                    WorkingDirectory = sourceDirectory
+                };
+                if (Path.GetExtension(assemblyPath).Equals(".dll", StringComparison.OrdinalIgnoreCase)) startInfo.ArgumentList.Add(assemblyPath);
+                foreach (var argument in scriptArgs) startInfo.ArgumentList.Add(argument);
+                using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start the AST-compiled XPScript program.");
+                await process.WaitForExitAsync().ConfigureAwait(false);
+                return process.ExitCode;
+            }
+            finally
+            {
+                try { Directory.Delete(outputDirectory, true); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(debug ? ex : ex.Message);
             return 1;
         }
     }
@@ -992,16 +1106,21 @@ XPScript Compiler and Runtime
 
 Usage:
   {compileCommand} <source.xps> [-o output] [--target webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--embed-assets] [--result-format text|json|xml] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  xpscript legacy-compile|compilev1 <source.xps> [legacy compiler options]
   xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml]
+  xpscript ast-run <source.xps> [--platform RID] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
   xpscript mcp
   xpscript mcp install codex|claude [--scope user|project] [--force]
   {runCommand} <source.xps> [--info] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
+  xpscript legacy-run|runv1 <source.xps> [legacy run options]
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
 
 Compiler targets:
   webiis    Create an IIS deployable ASP.NET Core application folder and ZIP package.
+
+The default compile and run commands use the AST compiler. Use legacy-compile/compilev1 and legacy-run/runv1 for the legacy compiler during migration.
 
 If --platform/--rid is omitted, XPScript targets the current operating system and process architecture.
 Desktop compile defaults to --single-file=true and --runtime=false: application libraries are bundled into the executable, while .NET 10 must be installed on the target computer.
