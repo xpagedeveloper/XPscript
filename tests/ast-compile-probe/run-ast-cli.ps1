@@ -1,4 +1,8 @@
-$ErrorActionPreference = 'Stop'
+# Expected negative compiler cases intentionally write diagnostics to stderr.
+# Keep PowerShell from converting native stderr into terminating errors; every
+# compiler/runtime invocation below asserts its exit code and output explicitly.
+$ErrorActionPreference = 'Continue'
+$PSNativeCommandUseErrorActionPreference = $false
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
