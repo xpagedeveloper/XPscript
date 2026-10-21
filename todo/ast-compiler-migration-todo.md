@@ -702,6 +702,7 @@ Next implementation order:
 
 - [x] Make the AST CLI regression fixtures independent of the caller's working directory. `run-ast-cli.ps1` now normalizes to the repository root; the repository-relative `FileDateTime` fixture passes when launched from `out/`. Generated-file cleanup and the remaining full-suite lock investigation stay open before requiring a complete green FullTest run.
 - [x] Extend the CLI compatibility regression with AST validation coverage for unsupported runtime identifiers, invalid boolean compile options and missing `--Args` values. The complete `run-cli-compatibility.ps1` suite passes with `CLI_COMMAND_LINE_COMPATIBILITY_OK`.
+- [x] Re-run the deterministic legacy-vs-AST compatibility baseline: all 15 fixtures in `tests/ast-compat` compile and execute successfully through both compiler paths with identical observable output.
 - [ ] Complete the legacy-vs-AST compatibility corpus: compile success/failure, diagnostics, observable output and target behavior for every supported sample; record intentional legacy defects separately.
 - [ ] Audit every legacy command-line parameter and add parity tests for aliases, defaults, validation, diagnostics and execution semantics.
 - [ ] Verify web/REST execution under Kestrel, IIS, CGI and FastCGI; IIS execution still requires an IIS-enabled environment.
