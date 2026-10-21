@@ -328,6 +328,7 @@ public static class XPScriptCompilerCommandLine
         var outputDirectory = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourcePath)!, "ast-output"));
         string? target = null;
         var debug = false;
+        var info = false;
         var resultFormat = "text";
         string? runtimeIdentifier = null;
         var selfContained = false;
@@ -343,6 +344,8 @@ public static class XPScriptCompilerCommandLine
                 outputDirectory = Path.GetFullPath(args[++i]);
             else if (args[i] == "--debug")
                 debug = true;
+            else if (args[i] == "--info")
+                info = true;
             else if (args[i] == "--target" && i + 1 < args.Length)
                 target = args[++i].ToLowerInvariant();
             else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
@@ -396,6 +399,8 @@ public static class XPScriptCompilerCommandLine
             }
             if (runtimeIdentifier is not null && !CompilerDriver.SupportedRuntimes.Contains(runtimeIdentifier, StringComparer.OrdinalIgnoreCase))
                 throw new ArgumentException("Unsupported runtime identifier '" + runtimeIdentifier + "'.");
+            using var securityScope = ApplicationSecurityModeContext.Push(
+                securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off));
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             if (string.Equals(target, "webiis", StringComparison.OrdinalIgnoreCase))
             {
@@ -1145,7 +1150,7 @@ XPScript Compiler and Runtime
 (c) xpagedeveloper.com 2026
 
 Usage:
-  {compileCommand} <source.xps> [-o output] [--target webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--embed-assets] [--result-format text|json|xml] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  {compileCommand} <source.xps> [-o output] [--target webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--info] [--debug] [--embed-assets] [--result-format text|json|xml] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
   xpscript legacy-compile|compilev1 <source.xps> [legacy compiler options]
   xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml]
   xpscript ast-run <source.xps> [--platform RID] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
