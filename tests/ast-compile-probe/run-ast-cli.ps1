@@ -165,6 +165,13 @@ if ($LASTEXITCODE -ne 0) { throw 'AST JSON schema boolean regression compilation
 $jsonSchemaResult = dotnet (Join-Path $jsonSchemaOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($jsonSchemaResult -join "`n") -notmatch 'XPJSONSCHEMA-BOOLEAN-RUNTIME=OK') { throw 'AST JSON schema boolean regression failed.' }
 Write-Host 'AST_JSON_SCHEMA_BOOLEAN_OK'
+$nativeApplicationOutput = Join-Path $output 'native-application-local'
+dotnet $compiler ast-compile (Join-Path $root 'samples/native-application-local.xps') -o $nativeApplicationOutput
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeApplicationOutput 'Generated.dll'))) { throw 'AST generic native declaration regression failed.' }
+$nativeNullOutput = Join-Path $output 'native-null-abi'
+dotnet $compiler ast-compile (Join-Path $root 'samples/native-null-abi.xps') -o $nativeNullOutput
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeNullOutput 'Generated.dll'))) { throw 'AST scalar native declaration regression failed.' }
+Write-Host 'AST_NATIVE_DECLARE_COMPILE_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'

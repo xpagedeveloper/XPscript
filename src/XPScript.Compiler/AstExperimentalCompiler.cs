@@ -59,6 +59,17 @@ public static class AstExperimentalCompiler
         source = includeResult.Source;
         var jsonNameMetadata = new JsonNameMetadataPreprocessor();
         source = jsonNameMetadata.Transform(source);
+        var nativeDeclarations = new List<(string Name, string Library, string Alias, string ReturnType, string[] Parameters)>();
+        source = Regex.Replace(source,
+            @"(?ims)^\s*Declare\s+Function\s+(?<name>[A-Za-z_]\w*)\s+Lib\s+""(?<library>[^""]+)""(?:\s+Alias\s+""(?<alias>[^""]+)"")?(?<options>.*?)\((?<parameters>[^)]*)\)\s+As\s+(?<returnType>[A-Za-z_]\w*)\s*(?:_|\r?$)",
+            match =>
+            {
+                var parameters = match.Groups["parameters"].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                nativeDeclarations.Add((match.Groups["name"].Value, match.Groups["library"].Value,
+                    string.IsNullOrWhiteSpace(match.Groups["alias"].Value) ? match.Groups["name"].Value : match.Groups["alias"].Value,
+                    match.Groups["returnType"].Value, parameters));
+                return new string(match.Value.Select(c => c is '\r' or '\n' ? c : ' ').ToArray());
+            });
         var usesArchive = PreprocessorFeatureGate.ContainsTypeReference(source, "Archive", "ArchiveEntry");
         if (usesArchive)
             source = new ArchiveObjectPreprocessor().Transform(source, sourcePath);
@@ -178,6 +189,13 @@ public static class AstExperimentalCompiler
                 "AST experimental compilation currently requires a Sub declaration.", "XPS3001", "ast");
 
         var symbols = SymbolTable.CreateWithCompilerCatalog();
+        foreach (var native in nativeDeclarations)
+        {
+            var parameterTypes = native.Parameters.Select(_ => typeof(object)).ToArray();
+            symbols.Declare(new FunctionSymbol(native.Name, typeof(long), parameterTypes,
+                XpTypeSymbol.FromClr(typeof(long)), parameterTypes.Select(_ => XpTypeSymbol.Variant).ToArray())
+            { NativeTargetName = $"XPNativeDeclarations.{native.Name}" });
+        }
         symbols.Declare(new TypeSymbol("Object", typeof(object), XpTypeSymbol.Object));
         symbols.Declare(new VariableSymbol("Object", typeof(object), XpTypeSymbol.Object));
         foreach (var classDeclaration in unit.Declarations.OfType<ClassDeclarationSyntax>())
@@ -698,6 +716,25 @@ public static class AstExperimentalCompiler
                     .Select(value => $"public Xp{match.Groups["name"].Value} {value.Name} => new({value.Value});");
                 return $"public sealed class Xp{match.Groups["name"].Value} {{ public long Value {{ get; }} public Xp{match.Groups["name"].Value}() {{ }} private Xp{match.Groups["name"].Value}(long value) => Value = value; public static implicit operator Xp{match.Groups["name"].Value}(int value) => new(value); public static implicit operator Xp{match.Groups["name"].Value}(long value) => new(value); {string.Join(" ", values)} public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture); }}";
             }));
+        var nativeCode = string.Join(Environment.NewLine, nativeDeclarations.Select(native =>
+        {
+            var nativeReturn = native.ReturnType.Equals("Integer", StringComparison.OrdinalIgnoreCase) ? "int" : native.ReturnType.Equals("Long", StringComparison.OrdinalIgnoreCase) ? "long" : "int";
+            var rawParameters = string.Join(", ", native.Parameters.Select((parameter, index) =>
+            {
+                var match = Regex.Match(parameter, @"(?i)(?:ByVal|ByRef)?\s*(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)");
+                var type = match.Groups["type"].Value.Equals("Long", StringComparison.OrdinalIgnoreCase) ? "long" : "int";
+                return $"{type} p{index}";
+            }));
+            var wrapperParameters = string.Join(", ", native.Parameters.Select((parameter, index) => $"object? p{index}"));
+            var rawArguments = string.Join(", ", native.Parameters.Select((parameter, index) =>
+            {
+                var match = Regex.Match(parameter, @"(?i)(?:ByVal|ByRef)?\s*(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)");
+                return match.Groups["type"].Value.Equals("Long", StringComparison.OrdinalIgnoreCase) ? $"Convert.ToInt64(p{index})" : $"Convert.ToInt32(p{index})";
+            }));
+            var library = native.Library.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+            var alias = native.Alias.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+            return $"internal static class XPNativeDeclarations {{ [System.Runtime.InteropServices.DllImport(\"{library}\", EntryPoint = \"{alias}\")] private static extern {nativeReturn} __{native.Name}({rawParameters}); public static long {native.Name}({wrapperParameters}) => __{native.Name}({rawArguments}); }}";
+        }));
         var generated = $$"""
 using System;
 using __xps_user_classes;
@@ -742,6 +779,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstCallbackRuntimeCode()}}
 {{((runtimeFeatures.Http || usesAi) && !AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) ? AstTlsRuntimeCode() : "")}}
 {{AstErrorRuntimeCode()}}
+{{nativeCode}}
 internal static class LSCoreCompare
 {
     public static bool Equal(object? left, object? right) => string.Equals(left?.ToString(), right?.ToString(), StringComparison.Ordinal);
