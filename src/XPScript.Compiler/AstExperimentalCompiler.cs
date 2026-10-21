@@ -435,6 +435,8 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Shell", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Shell", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Shell", typeof(long), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("ShellArgs", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("ShellArgs", typeof(long), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrTemplate", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrConv", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CType", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -1038,6 +1040,19 @@ internal static class Program
         using var process = System.Diagnostics.Process.Start(startInfo) ?? throw new XPScriptRuntimeException(5, "Shell could not start the command.");
         process.WaitForExit();
         return process.ExitCode;
+    }
+    public static long ShellArgs(object? executable, object? arguments, object? windowStyle = null)
+    {
+        var file = CStr(executable).Trim();
+        if (file.Length == 0) throw new XPScriptRuntimeException(5, "ShellArgs requires a program name.");
+        var startInfo = new System.Diagnostics.ProcessStartInfo(file) { UseShellExecute = false };
+        if (arguments is Array array)
+            foreach (var item in array) startInfo.ArgumentList.Add(CStr(item));
+        else if (arguments is IEnumerable enumerable)
+            foreach (var item in enumerable) startInfo.ArgumentList.Add(CStr(item));
+        else throw new XPScriptRuntimeException(5, "ShellArgs arguments must be an array or list.");
+        using var process = System.Diagnostics.Process.Start(startInfo) ?? throw new XPScriptRuntimeException(5, "ShellArgs could not start the command.");
+        return process.Id;
     }
     public sealed class XpShellResult { public int ExitCode { get; init; } public string Output { get; init; } = string.Empty; public string Error { get; init; } = string.Empty; public bool TimedOut { get; init; } }
     public static XpShellResult ShellExecute(object? executable, object? arguments, object? timeoutMilliseconds = null)

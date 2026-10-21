@@ -155,6 +155,10 @@ if ($LASTEXITCODE -ne 0) { throw 'AST platform shell regression compilation fail
 $platformShellResult = dotnet (Join-Path $platformShellOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($platformShellResult -join "`n") -notmatch 'PLATFORM=' -or ($platformShellResult -join "`n") -notmatch 'XPScript-Windows|XPScript-Linux|XPScript-MacOS') { throw 'AST Shell regression failed.' }
 Write-Host 'AST_PLATFORM_SHELL_OK'
+$shellArgsOutput = Join-Path $output 'shell-structured-arguments'
+dotnet $compiler ast-compile (Join-Path $root 'samples/shell-structured-arguments.xps') -o $shellArgsOutput
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $shellArgsOutput 'Generated.dll'))) { throw 'AST ShellArgs regression failed.' }
+Write-Host 'AST_SHELL_ARGS_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'
