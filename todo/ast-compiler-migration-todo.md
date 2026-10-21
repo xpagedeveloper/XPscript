@@ -684,3 +684,4 @@ Nested-call verification completed: focused legacy/AST execution, production MCP
 ## Final migration item
 
 - [ ] Import the OpenAPI REST server and REST client import/export work from every branch whose name starts with `test-openapi`. Reconcile multi-definition handling, generated server/client contracts, regeneration/update behavior and AST/compiler integration before marking the OpenAPI migration complete.
+  - [x] Verify endpoint-scoped server/client generation and transitive model pruning in the current AST branch; `OpenApiGeneratorSmoke` passes the server/client scope, regeneration, reserved-name, request-body, multipart and import-limit regressions.
