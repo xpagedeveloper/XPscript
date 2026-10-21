@@ -49,7 +49,11 @@ internal static class WebIisPackageTarget
         if (project is null)
             throw new CompilerException("Unable to locate src/XPScript.Cli/XPScript.Cli.csproj required to create a webiis package.");
 
-        var isolatedBuildRoot = Path.Combine(Path.GetTempPath(), "XPScript", "webiis-host-build-" + Guid.NewGuid().ToString("N"));
+        var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var tempRoot = string.IsNullOrWhiteSpace(configuredTempRoot)
+            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            : Path.Combine(Path.GetFullPath(configuredTempRoot), "XPScript");
+        var isolatedBuildRoot = Path.Combine(tempRoot, "webiis-host-build-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(isolatedBuildRoot);
 
         var args = new List<string>

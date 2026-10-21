@@ -43,7 +43,10 @@ internal static class CompilerPathSecurity
         if (string.IsNullOrWhiteSpace(prefix))
             throw new ArgumentException("Temporary directory prefix must not be empty.", nameof(prefix));
 
-        var logicalRoot = Path.Combine(Path.GetTempPath(), "XPScript");
+        var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var logicalRoot = string.IsNullOrWhiteSpace(configuredRoot)
+            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            : Path.Combine(Path.GetFullPath(configuredRoot), "XPScript");
         Directory.CreateDirectory(logicalRoot);
         var physicalRoot = CanonicalizeExistingDirectory(logicalRoot);
         var directory = Path.Combine(physicalRoot, prefix + Guid.NewGuid().ToString("N"));

@@ -70,7 +70,8 @@ internal static class CompilerBuildEnvironment
         startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
         startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         startInfo.Environment["DOTNET_NOLOGO"] = "1";
-        if (usePersistentRunCache) startInfo.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "1";
+        if (usePersistentRunCache && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT")))
+            startInfo.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "1";
         startInfo.Environment.Remove("MSBuildProjectExtensionsPath");
         startInfo.Environment.Remove("MSBUILDPROJECTEXTENSIONSPATH");
         startInfo.Environment.Remove("MSBuildSDKsPath");
@@ -88,13 +89,18 @@ internal static class CompilerBuildEnvironment
 
     private static string PersistentRunCacheRoot()
     {
-        var baseDirectory = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var baseDirectory = string.IsNullOrWhiteSpace(configuredRoot)
+            ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+            : Path.GetFullPath(configuredRoot);
         if (string.IsNullOrWhiteSpace(baseDirectory)) baseDirectory = Path.Combine(Path.GetTempPath(), "XPScript-user-cache");
         var compilerIdentity = typeof(CompilerBuildEnvironment).Assembly.ManifestModule.ModuleVersionId.ToString("N");
         var root = Path.Combine(baseDirectory, "XPScript", "run-build-cache", compilerIdentity);
         try
         {
             Directory.CreateDirectory(root);
+            CompilerPathSecurity.HardenTemporaryDirectory(root);
+            return root;
         }
         catch (UnauthorizedAccessException)
         {

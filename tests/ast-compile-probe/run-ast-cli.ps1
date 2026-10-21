@@ -12,6 +12,10 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 # Normalize the process working directory so the suite behaves the same when
 # invoked from CI, an IDE, or an arbitrary caller directory.
 Set-Location -LiteralPath $root
+# Keep generated compiler workspaces inside the repository during the probe so
+# constrained Windows sandboxes cannot redirect them to an inaccessible profile.
+$env:XPSCRIPT_TEMP_ROOT = Join-Path $root 'out/ast-test-temp'
+$null = New-Item -ItemType Directory -Force -Path $env:XPSCRIPT_TEMP_ROOT
 $compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
     Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 } else {

@@ -201,7 +201,11 @@ public sealed class CompilerDriver
         using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
             generatedSource = transpiler.Transpile(source, sourcePath, rid);
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
+        var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var tempBase = string.IsNullOrWhiteSpace(configuredTempRoot)
+            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            : Path.Combine(Path.GetFullPath(configuredTempRoot), "XPScript");
+        var tempRoot = Path.Combine(tempBase, Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
 
