@@ -32,14 +32,20 @@ $tests = @(
     @{ Name = "if-function-call"; File = "11-if-function-call.xps"; Expected = @("CALL_IF_OK") },
     @{ Name = "comments-and-rem"; File = "12-comments-and-rem.xps"; Expected = @("COMMENTS_OK") },
     @{ Name = "line-continuation"; File = "13-line-continuation.xps"; Expected = @("3") },
-    @{ Name = "application-newline"; File = "14-application-newline.xps"; Expected = @("NEWLINE_BEGIN", "A", "B", "NEWLINE_END") }
+    @{ Name = "application-newline"; File = "14-application-newline.xps"; Expected = @("NEWLINE_BEGIN", "A", "B", "NEWLINE_END") },
+    @{ Name = "if-layouts"; File = "..\\..\\samples\\if-layouts.xps"; Expected = @(
+        "SINGLE_VALUE=KALLE", "SINGLE_IF_ELSE=1", "SINGLE_IF_ELSE_FALSE=2", "SINGLE=OK",
+        "SINGLE_ELSE=OK", "STRING_ELSE=OK", "INLINE_ERROR=OK", "COMMENTED_BLOCK_THEN=OK",
+        "BLOCK=OK", "MULTILINE_ELSEIF=OK", "SPLIT_THEN=OK", "SPLIT_ELSEIF=OK",
+        "INLINE_ELSEIF=OK", "DATE_SINGLE=OK"
+    ) }
 )
 
 New-Item -ItemType Directory -Force -Path $outRoot | Out-Null
 
 foreach ($test in $tests) {
     Write-Host "=== AST compatibility baseline: $($test.Name) ==="
-    $source = Join-Path $PSScriptRoot $test.File
+    $source = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot $test.File))
     $output = Join-Path $outRoot $test.Name
     if ($IsWindows) { $output += ".exe" }
     $legacyOutput = Join-Path $outRoot ($test.Name + '-legacy')
