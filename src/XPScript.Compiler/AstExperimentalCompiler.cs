@@ -429,6 +429,7 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("ShellId", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("ShellId", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("ShellExecute", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.User("XPShellResult"), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("StrTemplate", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrConv", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CType", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrCompare", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -760,6 +761,23 @@ internal static class Program
     public static dynamic Platform => System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows) ? "Windows" : System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX) ? "MacOS" : System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux) ? "Linux" : "Unknown";
     public static dynamic CurDir => XPScriptRuntime.CurDir();
     public static string CStr(object? value) => XPScriptRuntime.CStr(value);
+    public static string StrTemplate(object? template, object? values)
+    {
+        var items = values switch
+        {
+            Array array => array.Cast<object?>().ToArray(),
+            IEnumerable enumerable => enumerable.Cast<object?>().ToArray(),
+            _ => throw new XPScriptRuntimeException(13, "StrTemplate values must be an array or list.")
+        };
+        var text = CStr(template);
+        text = Regex.Replace(text, @"(?<!\\)\{(\d+)\}", match =>
+        {
+            var index = int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture);
+            if ((uint)index >= (uint)items.Length) throw new XPScriptRuntimeException(9, "StrTemplate placeholder index is outside the supplied values array.");
+            return CStr(items[index]);
+        });
+        return text.Replace("\\{", "{", StringComparison.Ordinal).Replace("\\}", "}", StringComparison.Ordinal);
+    }
     // The shared List runtime requires the date coercion entry point too.
     // Preserve existing XPscript date wrappers and numeric OLE date values.
     public static DateTime CDat(object? value)

@@ -137,6 +137,12 @@ $jsonRegressionResult = dotnet (Join-Path $jsonRegressionOutput 'Generated.dll')
 $jsonRegressionText = $jsonRegressionResult -join "`n"
 if ($LASTEXITCODE -ne 0 -or $jsonRegressionText -notmatch 'ALIASJSON=\{"api-key":"secret","end":"done"\}' -or $jsonRegressionText -notmatch 'ALIASREAD=incoming\|finished' -or $jsonRegressionText -notmatch 'ALIASROUNDTRIP=\{"api-key":"incoming","end":"finished"\}') { throw 'AST JsonName metadata regression failed.' }
 Write-Host 'AST_JSON_NAME_OK'
+$crossPlatformOutput = Join-Path $output 'file-exists-string-template'
+dotnet $compiler ast-compile (Join-Path $root 'samples/file-exists-string-template.xps') -o $crossPlatformOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST cross-platform string-template regression compilation failed.' }
+$crossPlatformResult = dotnet (Join-Path $crossPlatformOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($crossPlatformResult -join "`n") -notmatch 'Hello fredrik, you are 52 years old\. Escaped: \{0\} and \}\.') { throw 'AST StrTemplate regression failed.' }
+Write-Host 'AST_STRTEMPLATE_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'
