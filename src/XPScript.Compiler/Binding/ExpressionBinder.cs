@@ -772,7 +772,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             return new BoundBinaryExpression(left, op, right, typeof(long));
         if (op == SyntaxKind.CaretToken && left.Type == right.Type && (left.Type == typeof(long) || left.Type == typeof(double)))
             return new BoundBinaryExpression(left, op, right, typeof(double));
-        if (op == SyntaxKind.AmpersandToken && left.Type == typeof(string) && right.Type == typeof(string))
+        if (op == SyntaxKind.AmpersandToken && (left.Type == typeof(string) || right.Type == typeof(string)))
             return new BoundBinaryExpression(left, op, right, typeof(string));
         if (op == SyntaxKind.LikeKeyword && left.Type == typeof(string) && right.Type == typeof(string))
             return new BoundBinaryExpression(left, op, right, typeof(bool));

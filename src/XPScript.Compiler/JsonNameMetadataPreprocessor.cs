@@ -44,14 +44,19 @@ internal sealed class JsonNameMetadataPreprocessor
         foreach (var mapping in Mappings)
         {
             var escaped = mapping.JsonName.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
-            var classPattern = $@"\bclass\s+{Regex.Escape(mapping.ClassName)}\b[^{{]*\{{";
+            // AST user classes are emitted with the Xp prefix, while the
+            // legacy transpiler keeps the source class name.
+            var classPattern = $@"\bclass\s+(?:{Regex.Escape(mapping.ClassName)}|Xp{Regex.Escape(mapping.ClassName)})\b[^{{]*\{{";
             var classMatch = Regex.Match(generated, classPattern, RegexOptions.CultureInvariant);
             if (!classMatch.Success) throw new CompilerException($"[JsonName] generated class '{mapping.ClassName}' was not found.");
             var openBrace = generated.IndexOf('{', classMatch.Index);
             var closeBrace = FindMatchingBrace(generated, openBrace);
             if (closeBrace < 0) throw new CompilerException($"[JsonName] generated class '{mapping.ClassName}' is malformed.");
             var body = generated.Substring(openBrace + 1, closeBrace - openBrace - 1);
-            var fieldPattern = $@"(?m)(?<indent>^[ \t]*)(?<decl>(?:public|private|protected|internal)\s+[^\r\n;=]+\s+{Regex.Escape(mapping.MemberName)}\s*(?:=[^;]*)?;)";
+            body = Regex.Replace(body, @";[ \t]+(?=(?:public|private|protected|internal)\b)", ";" + Environment.NewLine, RegexOptions.CultureInvariant);
+            var existingAttributePattern = $@"(?m)^[ \t]*\[[^\r\n]*JsonPropertyName(?:Attribute)?[^\r\n]*\]\r?\n(?=[ \t]*(?:public|private|protected|internal)[^\r\n]*\b{Regex.Escape(mapping.MemberName)}\b)";
+            body = Regex.Replace(body, existingAttributePattern, string.Empty, RegexOptions.CultureInvariant);
+            var fieldPattern = $@"(?m)(?<indent>^[ \t]*)(?<decl>(?:public|private|protected|internal)[^\r\n]*\b{Regex.Escape(mapping.MemberName)}\b[^\r\n]*)";
             var fieldRegex = new Regex(fieldPattern, RegexOptions.CultureInvariant);
             var fieldMatch = fieldRegex.Match(body);
             if (!fieldMatch.Success) throw new CompilerException($"[JsonName] generated field '{mapping.ClassName}.{mapping.MemberName}' was not found.");

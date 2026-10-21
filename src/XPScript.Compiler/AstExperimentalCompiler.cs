@@ -57,6 +57,8 @@ public static class AstExperimentalCompiler
         // AST compiler has the same multi-file source contract as the legacy path.
         var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
         source = includeResult.Source;
+        var jsonNameMetadata = new JsonNameMetadataPreprocessor();
+        source = jsonNameMetadata.Transform(source);
         var usesArchive = PreprocessorFeatureGate.ContainsTypeReference(source, "Archive", "ArchiveEntry");
         if (usesArchive)
             source = new ArchiveObjectPreprocessor().Transform(source, sourcePath);
@@ -1266,6 +1268,7 @@ internal static class Program
         if (usesNetworkTools)
             generated = NetworkToolsPhase2RuntimePostProcessor.Transform(generated);
         generated = generated.Replace("Error$", "Error()", StringComparison.Ordinal);
+        generated = jsonNameMetadata.ApplyToGeneratedCode(generated);
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode;
         using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
         generated = UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);

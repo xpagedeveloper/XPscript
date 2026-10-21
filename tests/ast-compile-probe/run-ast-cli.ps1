@@ -130,6 +130,13 @@ $stringOverloadOutput = Join-Path $output 'native-http-resource-limits'
 dotnet $compiler ast-compile (Join-Path $root 'samples/native-http-resource-limits.xps') -o $stringOverloadOutput
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $stringOverloadOutput 'Generated.dll'))) { throw 'AST String(count, value) overload regression failed.' }
 Write-Host 'AST_STRING_OVERLOAD_OK'
+$jsonRegressionOutput = Join-Path $output 'native-json-regression'
+dotnet $compiler ast-compile (Join-Path $root 'samples/native-json-regression.xps') -o $jsonRegressionOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST native JSON regression compilation failed.' }
+$jsonRegressionResult = dotnet (Join-Path $jsonRegressionOutput 'Generated.dll')
+$jsonRegressionText = $jsonRegressionResult -join "`n"
+if ($LASTEXITCODE -ne 0 -or $jsonRegressionText -notmatch 'ALIASJSON=\{"api-key":"secret","end":"done"\}' -or $jsonRegressionText -notmatch 'ALIASREAD=incoming\|finished' -or $jsonRegressionText -notmatch 'ALIASROUNDTRIP=\{"api-key":"incoming","end":"finished"\}') { throw 'AST JsonName metadata regression failed.' }
+Write-Host 'AST_JSON_NAME_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'
