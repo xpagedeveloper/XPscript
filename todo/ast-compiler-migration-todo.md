@@ -614,7 +614,7 @@ Target outcome: unchanged files should be able to reuse their AST and bound sema
 - [x] Migrate expressions first. The AST migration began with lexer, precedence parsing, binding and expression emission before statement/control-flow expansion.
 - [x] Migrate simple statements. Declarations, assignments, `Set`, calls, `Print`, `Return` and `Error` are represented in the AST path with focused fixtures.
 - [ ] Migrate control-flow statements.
-  - [ ] Add inline `If ... Then ... Else ...` parsing/emission. `samples/if-layouts.xps` compiles and runs through legacy but AST currently reports `XPS1012: Unexpected token ElseKeyword` at the inline `Else`; block `If` and inline no-`Else` cases remain covered.
+  - [x] Add inline and split-line `If ... Then ... Else ...` / `ElseIf ... Then` parsing/emission. `samples/if-layouts.xps` now compiles and runs through both AST and legacy with matching output.
 - [x] Migrate procedures. `Sub` and `Function` declarations, parameters, returns, Optional/ByRef handling and procedure-scoped labels are covered by AST fixtures.
 - [ ] Migrate classes/properties.
 - [ ] Migrate remaining special compiler constructs.

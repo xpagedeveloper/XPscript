@@ -193,7 +193,21 @@ public sealed class StatementParser
                 : Current.Kind == SyntaxKind.ErrorKeyword
                 ? ParseErrorStatement()
                 : ParseExpressionStatement();
-            return new IfStatementSyntax(ifKeyword, condition, thenKeyword, inlineStatement);
+            var inlineElseStatements = new List<StatementSyntax>();
+            if (Current.Kind == SyntaxKind.ElseKeyword)
+            {
+                NextToken();
+                if (Current.Kind != SyntaxKind.NewLineToken && Current.Kind != SyntaxKind.EndOfFileToken)
+                {
+                    var inlineElseStatement = IsRuntimeFileCommand(Current)
+                        ? ParseRuntimeFileStatement()
+                        : Current.Kind == SyntaxKind.ErrorKeyword
+                        ? ParseErrorStatement()
+                        : ParseExpressionStatement();
+                    inlineElseStatements.Add(inlineElseStatement);
+                }
+            }
+            return new IfStatementSyntax(ifKeyword, condition, thenKeyword, [inlineStatement], [], inlineElseStatements, null, null);
         }
 
         NextToken();
@@ -262,6 +276,17 @@ public sealed class StatementParser
         var condition = ParseExpressionRange(_position, thenIndex, _tokens[thenIndex].Span.Start);
         _position = thenIndex;
         var thenKeyword = NextToken();
+        if (Current.Kind != SyntaxKind.NewLineToken && Current.Kind != SyntaxKind.EndOfFileToken)
+        {
+            var inlineStatement = IsRuntimeFileCommand(Current)
+                ? ParseRuntimeFileStatement()
+                : Current.Kind == SyntaxKind.ErrorKeyword
+                ? ParseErrorStatement()
+                : ParseExpressionStatement();
+            if (Current.Kind == SyntaxKind.NewLineToken)
+                NextToken();
+            return new ElseIfClauseSyntax(elseIfKeyword, condition, thenKeyword, [inlineStatement]);
+        }
         ConsumeRequiredNewLine("ElseIf");
         var statements = ParseBranchStatements();
 
@@ -1231,10 +1256,12 @@ public sealed class StatementParser
     {
         var command = NextToken();
         var arguments = new List<ExpressionSyntax>();
-        while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
+        while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken and not SyntaxKind.ElseKeyword)
         {
             var commaIndex = FindTopLevelTokenOnCurrentLine(SyntaxKind.CommaToken);
-            var end = commaIndex >= 0 ? commaIndex : FindLineEndIndex(_position);
+            var elseIndex = FindTopLevelTokenOnCurrentLine(SyntaxKind.ElseKeyword);
+            var lineEnd = FindLineEndIndex(_position);
+            var end = new[] { commaIndex, elseIndex, lineEnd }.Where(index => index >= 0).Min();
             arguments.Add(ParseExpressionRange(_position, end, _tokens[end].Span.Start));
             _position = end;
             if (Current.Kind == SyntaxKind.CommaToken)
@@ -1354,7 +1381,13 @@ public sealed class StatementParser
     {
         for (var i = _position; i < _tokens.Length; i++)
         {
-            if (_tokens[i].Kind is SyntaxKind.NewLineToken or SyntaxKind.EndOfFileToken)
+            if (_tokens[i].Kind == SyntaxKind.NewLineToken)
+            {
+                while (i + 1 < _tokens.Length && _tokens[i + 1].Kind == SyntaxKind.NewLineToken)
+                    i++;
+                return i + 1 < _tokens.Length && _tokens[i + 1].Kind == SyntaxKind.ThenKeyword ? i + 1 : -1;
+            }
+            if (_tokens[i].Kind == SyntaxKind.EndOfFileToken)
                 return -1;
             if (_tokens[i].Kind == SyntaxKind.ThenKeyword)
                 return i;
