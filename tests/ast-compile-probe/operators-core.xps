@@ -1,0 +1,12 @@
+Sub Main()
+    Print "POW=" & CStr(2 ^ 3)
+    Print "INTDIV=" & CStr(16.9 \ 5.6)
+    Print "MOD=" & CStr(17 Mod 5)
+    Print "XORBOOL=" & CStr(True Xor False)
+    Print "EQVBOOL=" & CStr(True Eqv True)
+    Print "IMPBOOL=" & CStr(True Imp False)
+    Print "ANDBITS=" & CStr(10 And 5)
+    Print "ORBITS=" & CStr(10 Or 5)
+    Print "XORBITS=" & CStr(15 Xor 240)
+    Print "NOTBITS=" & CStr(Not 3)
+End Sub

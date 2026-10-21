@@ -266,7 +266,9 @@ public sealed class ExpressionParser
 
     private static int GetBinaryPrecedence(SyntaxKind kind) => kind switch
     {
-        SyntaxKind.StarToken or SyntaxKind.SlashToken => 5,
+        SyntaxKind.StarToken or SyntaxKind.SlashToken or SyntaxKind.BackslashToken or SyntaxKind.ModKeyword => 5,
+        SyntaxKind.CaretToken => 6,
+        SyntaxKind.XorKeyword or SyntaxKind.EqvKeyword or SyntaxKind.ImpKeyword => 2,
         SyntaxKind.PlusToken or SyntaxKind.MinusToken or SyntaxKind.AmpersandToken => 4,
         SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken or SyntaxKind.IsKeyword or SyntaxKind.LessToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterToken or SyntaxKind.GreaterOrEqualsToken => 3,
         SyntaxKind.AndKeyword => 2,

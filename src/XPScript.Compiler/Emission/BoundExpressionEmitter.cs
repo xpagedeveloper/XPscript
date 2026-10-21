@@ -330,7 +330,19 @@ public sealed class BoundExpressionEmitter
         return $"{(call.Function.NativeTargetName ?? (call.Target is null ? functionName : Emit(call.Target)))}({string.Join(", ", arguments)})";
     }
 
-    private string EmitBinary(BoundBinaryExpression binary) => binary.OperatorKind == SyntaxKind.IsKeyword
+    private string EmitBinary(BoundBinaryExpression binary) => binary.OperatorKind == SyntaxKind.CaretToken
+        ? $"System.Math.Pow({Emit(binary.Left)}, {Emit(binary.Right)})"
+        : binary.OperatorKind == SyntaxKind.BackslashToken
+            ? $"(long)(System.Convert.ToInt64({Emit(binary.Left)}) / System.Convert.ToInt64({Emit(binary.Right)}))"
+            : binary.OperatorKind == SyntaxKind.EqvKeyword
+                ? binary.Type == typeof(bool)
+                    ? $"({Emit(binary.Left)} == {Emit(binary.Right)})"
+                    : $"~({Emit(binary.Left)} ^ {Emit(binary.Right)})"
+                : binary.OperatorKind == SyntaxKind.ImpKeyword
+                    ? binary.Type == typeof(bool)
+                        ? $"(!{Emit(binary.Left)} || {Emit(binary.Right)})"
+                        : $"(~{Emit(binary.Left)} | {Emit(binary.Right)})"
+        : binary.OperatorKind == SyntaxKind.IsKeyword
         ? binary.Right is BoundUnaryExpression { OperatorKind: SyntaxKind.NotKeyword } notExpression
             && (notExpression.Operand.SemanticType.IsNothing || notExpression.Operand.SemanticType.IsNull || notExpression.Operand.SemanticType.IsEmpty)
             ? $"!object.ReferenceEquals({Emit(binary.Left)}, {Emit(notExpression.Operand)})"
@@ -413,6 +425,8 @@ public sealed class BoundExpressionEmitter
         SyntaxKind.MinusToken => "-",
         SyntaxKind.StarToken => "*",
         SyntaxKind.SlashToken => "/",
+        SyntaxKind.BackslashToken => "/",
+        SyntaxKind.CaretToken => "^",
         SyntaxKind.AmpersandToken => "+",
         SyntaxKind.LessToken => "<",
         SyntaxKind.LessOrEqualsToken => "<=",
@@ -420,6 +434,10 @@ public sealed class BoundExpressionEmitter
         SyntaxKind.GreaterOrEqualsToken => ">=",
         SyntaxKind.AndKeyword => resultType == typeof(bool) ? "&&" : "&",
         SyntaxKind.OrKeyword => resultType == typeof(bool) ? "||" : "|",
+        SyntaxKind.XorKeyword => resultType == typeof(bool) ? "^" : "^",
+        SyntaxKind.EqvKeyword => resultType == typeof(bool) ? "==" : "^",
+        SyntaxKind.ImpKeyword => resultType == typeof(bool) ? "(!" : "|",
+        SyntaxKind.ModKeyword => "%",
         SyntaxKind.EqualsToken => "==",
         SyntaxKind.LessGreaterToken => "!=",
         _ => throw new NotSupportedException($"Binary operator {kind} is not supported.")

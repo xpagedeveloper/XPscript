@@ -761,13 +761,17 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         var right = Bind(syntax.Right);
         var op = syntax.OperatorToken.Kind;
 
-        if (op is SyntaxKind.AndKeyword or SyntaxKind.OrKeyword && left.Type == typeof(bool) && right.Type == typeof(bool))
+        if (op is SyntaxKind.AndKeyword or SyntaxKind.OrKeyword or SyntaxKind.XorKeyword or SyntaxKind.EqvKeyword or SyntaxKind.ImpKeyword && left.Type == typeof(bool) && right.Type == typeof(bool))
             return new BoundBinaryExpression(left, op, right, typeof(bool));
-        if (op is SyntaxKind.AndKeyword or SyntaxKind.OrKeyword && left.Type == typeof(long) && right.Type == typeof(long))
+        if (op is SyntaxKind.AndKeyword or SyntaxKind.OrKeyword or SyntaxKind.XorKeyword or SyntaxKind.EqvKeyword or SyntaxKind.ImpKeyword && left.Type == typeof(long) && right.Type == typeof(long))
             return new BoundBinaryExpression(left, op, right, typeof(long));
-        if (op is SyntaxKind.PlusToken or SyntaxKind.MinusToken or SyntaxKind.StarToken or SyntaxKind.SlashToken &&
+        if (op is SyntaxKind.PlusToken or SyntaxKind.MinusToken or SyntaxKind.StarToken or SyntaxKind.SlashToken or SyntaxKind.ModKeyword &&
             left.Type == right.Type && (left.Type == typeof(long) || left.Type == typeof(double)))
             return new BoundBinaryExpression(left, op, right, left.Type);
+        if (op == SyntaxKind.BackslashToken && left.Type == right.Type && (left.Type == typeof(long) || left.Type == typeof(double)))
+            return new BoundBinaryExpression(left, op, right, typeof(long));
+        if (op == SyntaxKind.CaretToken && left.Type == right.Type && (left.Type == typeof(long) || left.Type == typeof(double)))
+            return new BoundBinaryExpression(left, op, right, typeof(double));
         if (op == SyntaxKind.AmpersandToken && left.Type == typeof(string) && right.Type == typeof(string))
             return new BoundBinaryExpression(left, op, right, typeof(string));
         if (op == SyntaxKind.LikeKeyword && left.Type == typeof(string) && right.Type == typeof(string))

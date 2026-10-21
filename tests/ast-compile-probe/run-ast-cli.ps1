@@ -113,6 +113,13 @@ if ($LASTEXITCODE -ne 0) { throw 'AST inline If Exit compilation failed.' }
 $inlineExitResult = dotnet (Join-Path $inlineExitOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($inlineExitResult -join "`n") -ne '') { throw 'AST inline If Exit regression failed.' }
 Write-Host 'AST_INLINE_IF_EXIT_OK'
+$operatorOutput = Join-Path $output 'operators-core'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'operators-core.xps') -o $operatorOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST core operator compilation failed.' }
+$operatorResult = dotnet (Join-Path $operatorOutput 'Generated.dll')
+$expectedOperators = @('POW=8', 'INTDIV=2', 'MOD=2', 'XORBOOL=True', 'EQVBOOL=True', 'IMPBOOL=False', 'ANDBITS=0', 'ORBITS=15', 'XORBITS=255', 'NOTBITS=-4')
+if ($LASTEXITCODE -ne 0 -or (($operatorResult -join "`n") -cne ($expectedOperators -join "`n"))) { throw "AST core operator regression failed: $($operatorResult -join ', ')" }
+Write-Host 'AST_CORE_OPERATORS_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'
