@@ -14,6 +14,17 @@ if ($LASTEXITCODE -ne 0 -or ($compileHelp -join "`n") -notmatch 'Usage:') { thro
 $astCompileHelp = dotnet $compiler ast-compile -h 2>&1
 if ($LASTEXITCODE -ne 0 -or ($astCompileHelp -join "`n") -notmatch 'Usage:') { throw 'AST compile alias help regression failed.' }
 Write-Host 'AST_COMMAND_HELP_OK'
+$jsonFormatOutput = Join-Path $output 'cli-result-format-json'
+$jsonFormatText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $jsonFormatOutput --result-format json 2>&1
+if ($LASTEXITCODE -ne 0) { throw 'AST JSON result-format compilation failed.' }
+try { $jsonFormatResult = ($jsonFormatText -join "`n") | ConvertFrom-Json } catch { throw 'AST JSON result-format output is invalid JSON.' }
+if ($jsonFormatResult.errors.Count -ne 0 -or $jsonFormatResult.output -notmatch 'Generated.dll$') { throw 'AST JSON result-format payload is incomplete.' }
+$xmlFormatOutput = Join-Path $output 'cli-result-format-xml'
+$xmlFormatText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $xmlFormatOutput --result-format xml 2>&1
+if ($LASTEXITCODE -ne 0) { throw 'AST XML result-format compilation failed.' }
+try { $xmlFormatResult = [xml]($xmlFormatText -join "`n") } catch { throw 'AST XML result-format output is invalid XML.' }
+if ($xmlFormatResult.compileResult.errors -ne $null -and $xmlFormatResult.compileResult.errors.ChildNodes.Count -ne 0) { throw 'AST XML result-format reported unexpected errors.' }
+Write-Host 'AST_RESULT_FORMATS_OK'
 $includeUseOutput = Join-Path $output 'include-use-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-use-next.xps') -o $includeUseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Include/Use compilation failed.' }
