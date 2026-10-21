@@ -1086,14 +1086,39 @@ internal static class Program
     public static bool IsNumeric(object? value) => XPScriptRuntime.IsNumeric(value);
     public static bool IsNull(object? value) => value is null;
     public static object RegexMatch(object? value, object? pattern) => System.Text.RegularExpressions.Regex.Matches(value?.ToString() ?? "", pattern?.ToString() ?? "").Select(match => match.Value).ToArray();
-    public static object ArrayAppend(object? value, object? item) => value is System.Collections.IEnumerable values ? values.Cast<object?>().Append(item).ToArray() : new object?[] { item };
+    public static object ArrayAppend(object? value, object? item)
+    {
+        if (value is System.Array source && source.Rank == 1)
+        {
+            var lower = source.GetLowerBound(0);
+            var result = System.Array.CreateInstance(typeof(object), [source.Length + 1], [lower]);
+            for (var i = 0; i < source.Length; i++) result.SetValue(source.GetValue(lower + i), lower + i);
+            result.SetValue(item, lower + source.Length);
+            return result;
+        }
+        return value is System.Collections.IEnumerable values ? values.Cast<object?>().Append(item).ToArray() : new object?[] { item };
+    }
     public static object? ArrayGetIndex(object? value, object? item)
     {
+        if (value is System.Array source && source.Rank == 1)
+        {
+            var lower = source.GetLowerBound(0);
+            for (var i = lower; i <= source.GetUpperBound(0); i++)
+            {
+                var candidate = source.GetValue(i);
+                if (candidate is string left && item is string right
+                    ? string.Equals(left, right, OptionCompareNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+                    : Equals(candidate, item)) return (long)i;
+            }
+            return null;
+        }
         if (value is not System.Collections.IEnumerable values) return null;
         var index = 0L;
         foreach (var candidate in values)
         {
-            if (Equals(candidate, item)) return index;
+            if (candidate is string left && item is string right
+                ? string.Equals(left, right, OptionCompareNoCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)
+                : Equals(candidate, item)) return index;
             index++;
         }
         return null;

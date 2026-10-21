@@ -124,7 +124,7 @@ $arrayIndexOutput = Join-Path $output 'operators-arrays'
 dotnet $compiler ast-compile (Join-Path $root 'samples/operators-arrays.xps') -o $arrayIndexOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST ArrayGetIndex regression compilation failed.' }
 $arrayIndexResult = dotnet (Join-Path $arrayIndexOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($arrayIndexResult -join "`n") -notmatch 'GETINDEX-MISS-NULL=OK') { throw 'AST ArrayGetIndex missing-value contract failed.' }
+if ($LASTEXITCODE -ne 0 -or ($arrayIndexResult -join "`n") -notmatch 'APPEND=1:6:One\|Two\|Three\|Four\|Five\|Six' -or ($arrayIndexResult -join "`n") -notmatch 'GETINDEX=5' -or ($arrayIndexResult -join "`n") -notmatch 'GETINDEX-MISS-NULL=OK') { throw 'AST ArrayAppend/ArrayGetIndex lower-bound or missing-value contract failed.' }
 Write-Host 'AST_ARRAY_GET_INDEX_NULL_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
