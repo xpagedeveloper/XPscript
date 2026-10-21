@@ -188,11 +188,12 @@ public sealed class StatementParser
 
         if (Current.Kind != SyntaxKind.NewLineToken)
         {
+            var inlineElseIndex = FindTopLevelTokenOnCurrentLine(SyntaxKind.ElseKeyword);
             var inlineStatement = IsRuntimeFileCommand(Current)
                 ? ParseRuntimeFileStatement()
                 : Current.Kind == SyntaxKind.ErrorKeyword
                 ? ParseErrorStatement()
-                : ParseExpressionStatement();
+                : ParseInlineStatement(inlineElseIndex >= 0 ? inlineElseIndex : FindLineEndIndex(_position));
             var inlineElseStatements = new List<StatementSyntax>();
             if (Current.Kind == SyntaxKind.ElseKeyword)
             {
@@ -203,7 +204,7 @@ public sealed class StatementParser
                         ? ParseRuntimeFileStatement()
                         : Current.Kind == SyntaxKind.ErrorKeyword
                         ? ParseErrorStatement()
-                        : ParseExpressionStatement();
+                        : ParseInlineStatement(FindLineEndIndex(_position));
                     inlineElseStatements.Add(inlineElseStatement);
                 }
             }
@@ -282,7 +283,7 @@ public sealed class StatementParser
                 ? ParseRuntimeFileStatement()
                 : Current.Kind == SyntaxKind.ErrorKeyword
                 ? ParseErrorStatement()
-                : ParseExpressionStatement();
+                : ParseInlineStatement(FindLineEndIndex(_position));
             if (Current.Kind == SyntaxKind.NewLineToken)
                 NextToken();
             return new ElseIfClauseSyntax(elseIfKeyword, condition, thenKeyword, [inlineStatement]);
@@ -1298,6 +1299,24 @@ public sealed class StatementParser
     private StatementSyntax ParseExpressionStatement() =>
         new ExpressionStatementSyntax(ParseExpressionUntilLineEnd());
 
+    private StatementSyntax ParseInlineStatement(int end)
+    {
+        var equalsIndex = FindTopLevelEqualsIndex(_position, end);
+        if (equalsIndex >= 0)
+        {
+            var target = ParseExpressionRange(_position, equalsIndex, _tokens[equalsIndex].Span.Start);
+            _position = equalsIndex;
+            var equalsToken = NextToken();
+            var expression = ParseExpressionRange(_position, end, _tokens[end].Span.Start);
+            _position = end;
+            return new AssignmentStatementSyntax(target, equalsToken, expression);
+        }
+
+        var result = new ExpressionStatementSyntax(ParseExpressionRange(_position, end, _tokens[end].Span.Start));
+        _position = end;
+        return result;
+    }
+
     private ExpressionSyntax ParseExpressionUntilLineEnd()
     {
         var end = _position;
@@ -1365,6 +1384,22 @@ public sealed class StatementParser
             else if (token.Kind == SyntaxKind.OpenBracketToken) bracketDepth++;
             else if (token.Kind == SyntaxKind.CloseBracketToken) bracketDepth--;
             else if (token.Kind == kind && parenDepth == 0 && bracketDepth == 0) return i;
+        }
+        return -1;
+    }
+
+    private int FindTopLevelEqualsIndex(int start, int end)
+    {
+        var parenDepth = 0;
+        var bracketDepth = 0;
+        for (var i = start; i < end; i++)
+        {
+            var token = _tokens[i];
+            if (token.Kind == SyntaxKind.OpenParenToken) parenDepth++;
+            else if (token.Kind == SyntaxKind.CloseParenToken) parenDepth--;
+            else if (token.Kind == SyntaxKind.OpenBracketToken) bracketDepth++;
+            else if (token.Kind == SyntaxKind.CloseBracketToken) bracketDepth--;
+            else if (token.Kind == SyntaxKind.EqualsToken && parenDepth == 0 && bracketDepth == 0) return i;
         }
         return -1;
     }

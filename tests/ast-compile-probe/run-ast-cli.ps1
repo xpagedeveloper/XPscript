@@ -86,6 +86,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Include/Use compilation failed.' }
 $includeUseResult = dotnet (Join-Path $includeUseOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($includeUseResult -join "`n") -ne 'AST_INCLUDE_USE_OK') { throw 'AST Include/Use deduplication or relative resolution failed.' }
 Write-Host 'AST_INCLUDE_USE_OK'
+$inlineAssignmentOutput = Join-Path $output 'if-inline-assignment'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'if-inline-assignment.xps') -o $inlineAssignmentOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST inline If assignment compilation failed.' }
+$inlineAssignmentResult = dotnet (Join-Path $inlineAssignmentOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($inlineAssignmentResult -join "`n") -ne '1') { throw 'AST inline If assignment regression failed.' }
+Write-Host 'AST_INLINE_IF_ASSIGNMENT_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'

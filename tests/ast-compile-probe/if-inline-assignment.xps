@@ -1,0 +1,5 @@
+Sub Main()
+    Dim value As Integer
+    If True Then value = 1 Else value = 2
+    Print value
+End Sub
