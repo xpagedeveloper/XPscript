@@ -71,6 +71,9 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Focused verification is green: `dotnet run --project tests/AstSpreadsheetRuntimeProbe -c Release --no-restore -- .` reached `AST_SPREADSHEET_RUNTIME_OK`.
 - Graphify update attempted after the probe change; still fails with `uv trampoline failed to canonicalize script path`.
 
+- Migrated AST `--target webiis` from an explicit rejection to the deployable WebIIS package path, preserving `--runtime`, `--output`, and result-format behavior. The CLI compatibility fixture now compiles `demo/webiis/main.xps` in AST mode and requires a successful `.zip` package.
+- Focused verification is green: Release compiler build (only the existing NU1900 vulnerability-service warning) and `tests/cli-compatibility/run-cli-compatibility.ps1` reached `CLI_COMMAND_LINE_COMPATIBILITY_OK`.
+
 - Added focused class-property regression for a native SystemInventorySnapshot accessor; AST compile and execution passed with CLASS_PROPERTIES_NATIVE_OK.
 - Full AST CLI probe had already passed before this focused fixture extension.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.

@@ -365,20 +365,28 @@ public static class XPScriptCompilerCommandLine
             // AST output is always a framework-dependent Generated.dll; retain the
             // compile-command switches for CLI compatibility and validate them even
             // though they do not alter this artifact layout.
-            _ = selfContained;
             _ = singleFile;
             if (resultFormat is not ("text" or "json" or "xml"))
                 throw new ArgumentException("--result-format must be text, json, or xml.");
             if (target is not null && !target.Equals("desktop", StringComparison.OrdinalIgnoreCase) &&
-                !target.Equals("console", StringComparison.OrdinalIgnoreCase))
+                !target.Equals("console", StringComparison.OrdinalIgnoreCase) &&
+                !target.Equals("webiis", StringComparison.OrdinalIgnoreCase))
             {
-                if (target.Equals("webiis", StringComparison.OrdinalIgnoreCase))
-                    throw new ArgumentException("--target webiis is not yet migrated to the AST compiler. Use the legacy compile command until the AST web target is implemented.");
-                throw new ArgumentException($"Unsupported AST target '{target}'. Supported AST targets are desktop and console.");
+                throw new ArgumentException($"Unsupported AST target '{target}'. Supported AST targets are desktop, console, and webiis.");
             }
             if (runtimeIdentifier is not null && !CompilerDriver.SupportedRuntimes.Contains(runtimeIdentifier, StringComparer.OrdinalIgnoreCase))
                 throw new ArgumentException("Unsupported runtime identifier '" + runtimeIdentifier + "'.");
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+            if (string.Equals(target, "webiis", StringComparison.OrdinalIgnoreCase))
+            {
+                var package = await WebIisPackageTarget.BuildAsync(sourcePath, outputDirectory, selfContained, resultFormat).ConfigureAwait(false);
+                var webResult = package.WithOperation("ast-compile").WithContext(sourcePath, runtimeIdentifier);
+                if (resultFormat == "text")
+                    Console.WriteLine($"AST webiis package succeeded: {package.Output}");
+                else
+                    WriteResult(webResult, resultFormat);
+                return package.Success ? 0 : 2;
+            }
             var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier,
                 securityMode ?? ApplicationSecurityMode.Off, restricted, sourceRoots, sourcePreprocessors, embedAssets).ConfigureAwait(false);
             var result = CompileResult.Ok(assemblyPath)
