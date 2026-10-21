@@ -41,6 +41,21 @@ if ($LASTEXITCODE -ne 0) { throw 'AST XML result-format compilation failed.' }
 try { $xmlFormatResult = [xml]($xmlFormatText -join "`n") } catch { throw 'AST XML result-format output is invalid XML.' }
 if ($xmlFormatResult.compileResult.errors -ne $null -and $xmlFormatResult.compileResult.errors.ChildNodes.Count -ne 0) { throw 'AST XML result-format reported unexpected errors.' }
 Write-Host 'AST_RESULT_FORMATS_OK'
+$debugOutput = Join-Path $output 'cli-debug'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $debugOutput --debug --runtime false --single-file false
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $debugOutput 'Generated.pdb'))) { throw 'AST --debug artifact regression failed.' }
+$webIisRoot = Join-Path $output 'cli-webiis-source'
+New-Item -ItemType Directory -Force -Path $webIisRoot | Out-Null
+$webIisSource = @'
+Sub Main()
+    Print "AST_WEBIIS_TARGET_OK"
+End Sub
+'@
+Set-Content -LiteralPath (Join-Path $webIisRoot 'main.xps') -Value $webIisSource
+$webIisOutput = Join-Path $output 'cli-webiis'
+dotnet $compiler ast-compile (Join-Path $webIisRoot 'main.xps') -o $webIisOutput --target webiis --runtime false
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $output 'cli-webiis.zip'))) { throw 'AST --target webiis regression failed.' }
+Write-Host 'AST_DEBUG_AND_WEBIIS_TARGET_OK'
 $platformAliasOutput = Join-Path $output 'cli-platform-alias'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $platformAliasOutput --platform win-x64 --singlefile false --runtime false
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $platformAliasOutput 'Generated.dll'))) { throw 'AST --platform/--singlefile alias regression failed.' }
