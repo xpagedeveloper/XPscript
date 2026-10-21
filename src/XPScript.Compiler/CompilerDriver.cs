@@ -184,6 +184,7 @@ public sealed class CompilerDriver
     public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
     {
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
+        TargetPrerequisiteValidator.Validate(rid);
         var originalSource = await File.ReadAllTextAsync(sourcePath);
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
         var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
@@ -302,6 +303,7 @@ public sealed class CompilerDriver
     private async Task<string> CompileForRunAsync(string sourcePath, string outputDirectory, string runtimeIdentifier)
     {
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
+        TargetPrerequisiteValidator.Validate(rid);
         var originalSource = await File.ReadAllTextAsync(sourcePath);
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
         var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);

@@ -66,6 +66,7 @@ internal static class RunCompiler
         var rid = runtimeIdentifier.Trim().ToLowerInvariant();
         if (!CompilerDriver.SupportedRuntimes.Contains(rid, StringComparer.OrdinalIgnoreCase))
             throw new CompilerException("Unsupported runtime identifier '" + runtimeIdentifier + "'.", CompilerDiagnosticCodes.RuntimeIdentifierUnsupported, "configuration");
+        TargetPrerequisiteValidator.Validate(rid);
 
         var originalSource = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);

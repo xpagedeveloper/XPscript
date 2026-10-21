@@ -39,6 +39,8 @@ public static class AstExperimentalCompiler
         bool embedAssets = false,
         CancellationToken cancellationToken = default)
     {
+        if (runtimeIdentifier is not null)
+            TargetPrerequisiteValidator.Validate(runtimeIdentifier.Trim().ToLowerInvariant());
         using var securityScope = ApplicationSecurityModeContext.Push(securityMode);
         using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors ?? []);
         using var includeScope = restricted
