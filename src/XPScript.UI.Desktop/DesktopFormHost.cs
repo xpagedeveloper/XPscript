@@ -58,6 +58,8 @@ public static class DesktopFormHost
         var optionOverrides = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         var customButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
+        if (!string.IsNullOrWhiteSpace(request.BootImage)) panel.Children.Add(DesktopImageHost.Create(request.BootImage, string.Empty));
+        if (!string.IsNullOrWhiteSpace(request.BootText)) panel.Children.Add(new TextBlock { Text = request.BootText, FontSize = 20, HorizontalAlignment = HorizontalAlignment.Center });
         var fieldsGrid = CreateFieldsGrid(request.GridColumns);
         panel.Children.Add(fieldsGrid);
         var validationText = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Red };
@@ -276,6 +278,11 @@ public static class DesktopFormHost
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
         var ok = new Button { Content = "OK", MinWidth = 80 };
         var cancel = new Button { Content = "Cancel", MinWidth = 80 };
+        if (request.DefaultButtonCornerRadius is double defaultButtonRadius)
+        {
+            ok.CornerRadius = new CornerRadius(defaultButtonRadius);
+            cancel.CornerRadius = new CornerRadius(defaultButtonRadius);
+        }
         buttons.Children.Add(ok);
         buttons.Children.Add(cancel);
         panel.Children.Add(buttons);
@@ -617,6 +624,23 @@ public static class DesktopFormHost
     }
 
     public static string? WebViewCommand(string instanceId, string fieldName, string command, string? argument) => DesktopWebViewHost.TryCommand(instanceId, fieldName, command, argument);
+
+    public static string? MediaCommand(string instanceId, string fieldName, string command, string? argument) => DesktopWebViewHost.TryCommand(instanceId, fieldName, "script", command switch
+    {
+        "source" => "document.querySelector('audio,video').src=" + System.Text.Json.JsonSerializer.Serialize(argument ?? string.Empty) + ";document.querySelector('audio,video').load();",
+        "position" => "String(Math.round(document.querySelector('audio,video').currentTime*1000))",
+        "duration" => "String(Math.round((document.querySelector('audio,video').duration||0)*1000))",
+        "playing" => "String(!document.querySelector('audio,video').paused)",
+        "play" => "document.querySelector('audio,video').play();",
+        "pause" => "document.querySelector('audio,video').pause();",
+        "stop" => "document.querySelector('audio,video').pause();document.querySelector('audio,video').currentTime=0;",
+        "volume" => "document.querySelector('audio,video').volume=" + (argument ?? "1") + ";",
+        "muted" => "document.querySelector('audio,video').muted=" + (argument ?? "false") + ";",
+        "loop" => "document.querySelector('audio,video').loop=" + (argument ?? "false") + ";",
+        "autoplay" => "document.querySelector('audio,video').autoplay=" + (argument ?? "false") + ";",
+        "rate" => "document.querySelector('audio,video').playbackRate=" + (argument ?? "1") + ";",
+        _ => throw new InvalidOperationException("Unknown UIForm desktop media command: " + command)
+    });
 
     private static DesktopFormResult EmptyResult(string result) => new(result, new ReadOnlyDictionary<string, JsonElement>(new Dictionary<string, JsonElement>()));
     private static string LabelOrName(this DesktopFormField field) => string.IsNullOrWhiteSpace(field.Label) ? field.Name : field.Label;

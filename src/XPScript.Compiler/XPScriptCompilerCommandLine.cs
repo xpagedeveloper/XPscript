@@ -188,6 +188,7 @@ public static class XPScriptCompilerCommandLine
         string? target = null;
         var restricted = false;
         var debug = false;
+        var info = false;
         ApplicationSecurityMode? securityMode = null;
         var embedAssets = false;
         var sourceRoots = new List<string>();
@@ -221,6 +222,8 @@ public static class XPScriptCompilerCommandLine
                     restricted = true;
                 else if (args[i] == "--debug")
                     debug = true;
+                else if (args[i] == "--info")
+                    info = true;
                 else if (args[i].StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
                     securityMode = ApplicationSecurityModeContext.Parse(args[i]["--security=".Length..]);
                 else if (args[i] == "--security" && i + 1 < args.Length)
@@ -245,7 +248,7 @@ public static class XPScriptCompilerCommandLine
             if (target == "webiis" && embedAssets)
                 throw new ArgumentException("--embed-assets is supported for desktop executable compilation. Web and browser-WASM assets are packaged as application assets.");
 
-            var effectiveSecurityMode = securityMode ?? (debug ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
+            var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
             using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
             using var publishLayoutScope = CompilePublishLayoutContext.Push(singleFile, selfContained);
@@ -292,6 +295,8 @@ public static class XPScriptCompilerCommandLine
             CompleteProgress(result.Success
                 ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
                 : $"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
+            if (result.Success && (info || debug))
+                WriteArtifactSize(result.Output ?? outputPath);
             WriteResult(result, resultFormat);
             return result.Success ? 0 : 2;
         }
@@ -919,6 +924,8 @@ public static class XPScriptCompilerCommandLine
 
             if (info)
                 WriteProgressLine("Starting program");
+            if (info || debug)
+                WriteArtifactSize(executablePath);
 
             // Framework-dependent run builds may return the managed assembly directly.
             // Launch DLL output through the resolved dotnet host; native apphost output remains
@@ -1114,6 +1121,14 @@ public static class XPScriptCompilerCommandLine
             CompleteProgress(message);
         else
             Console.Error.WriteLine(message);
+    }
+
+    private static void WriteArtifactSize(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+        var bytes = new FileInfo(path).Length;
+        var mib = bytes / (1024d * 1024d);
+        WriteProgressLine($"Output: {path} ({mib:F2} MiB, {bytes:N0} bytes)");
     }
 
     public static void WriteHelp(string compileCommand = "xpscript compile", string runCommand = "xpscript run")

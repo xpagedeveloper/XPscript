@@ -184,6 +184,8 @@ public sealed class CompilerDriver
     public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
     {
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
+        if (IsAndroidRuntime(rid) && !outputPath.EndsWith(".apk", StringComparison.OrdinalIgnoreCase))
+            outputPath += ".apk";
         TargetPrerequisiteValidator.Validate(rid);
         var originalSource = await File.ReadAllTextAsync(sourcePath);
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
@@ -263,7 +265,7 @@ public sealed class CompilerDriver
                 throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
             }
 
-            var generatedExecutable = FindPublishedExecutable(publishDir, rid, OutputAssemblyName(outputPath));
+            var generatedExecutable = FindPublishedExecutable(tempRoot, publishDir, rid, OutputAssemblyName(outputPath));
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
 
@@ -387,7 +389,7 @@ public sealed class CompilerDriver
             if (File.Exists(managedAssembly))
                 return managedAssembly;
 
-            var generatedExecutable = FindPublishedExecutable(runOutputDirectory, rid, "Generated");
+            var generatedExecutable = FindPublishedExecutable(runOutputDirectory, runOutputDirectory, rid, "Generated");
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no runnable executable was produced for runtime " + rid + ".");
 
@@ -708,17 +710,11 @@ public sealed class CompilerDriver
             : string.Empty;
         var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
         var startupObject = isAndroid ? string.Empty : "    <StartupObject>Program</StartupObject>\n";
-        var androidAbi = runtimeIdentifier.Equals("android-arm64", StringComparison.OrdinalIgnoreCase)
-            ? "arm64-v8a"
-            : runtimeIdentifier.Equals("android-x64", StringComparison.OrdinalIgnoreCase)
-                ? "x86_64"
-                : string.Empty;
         var androidProperties = isAndroid
             ? $"""
     <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
     <AndroidApplication>true</AndroidApplication>
     <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>
-    <AndroidSupportedAbis>{androidAbi}</AndroidSupportedAbis>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <ApplicationId>eu.xpscript.app</ApplicationId>
 """
@@ -740,12 +736,46 @@ public sealed class CompilerDriver
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;$(WarningsNotAsErrors)</WarningsNotAsErrors>
+    <NoWarn>CA1416;NU1608;$(NoWarn)</NoWarn>
     <RuntimeIdentifier>{runtimeIdentifier}</RuntimeIdentifier>
     <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
     <UseAppHost>true</UseAppHost>
 {androidProperties}{publishProperties}  </PropertyGroup>
 {itemGroup}</Project>
 """;
+    }
+
+    private static string AddAndroidUIFormDependencies(string project)
+    {
+        project = project.Replace("<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>",
+            "<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>", StringComparison.Ordinal);
+        project = project.Replace("    <SelfContained>false</SelfContained>\r\n", string.Empty, StringComparison.Ordinal)
+            .Replace("    <SelfContained>false</SelfContained>\n", string.Empty, StringComparison.Ordinal);
+        project = project.Replace("    <UseAppHost>true</UseAppHost>\r\n",
+            "    <AndroidLinkMode>None</AndroidLinkMode>\r\n", StringComparison.Ordinal)
+            .Replace("    <UseAppHost>true</UseAppHost>\n",
+                "    <AndroidLinkMode>None</AndroidLinkMode>\n", StringComparison.Ordinal)
+            .Replace("    <UseAppHost>true</UseAppHost>\r\n", string.Empty, StringComparison.Ordinal)
+            .Replace("    <UseAppHost>true</UseAppHost>\n", string.Empty, StringComparison.Ordinal);
+
+        const string packages = """
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Android" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.3" />
+    <PackageReference Include="Avalonia.Controls.WebView" Version="12.0.1" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.11.1" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.Ui" Version="1.11.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.Core" Version="1.4.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.Camera2" Version="1.4.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.View" Version="1.4.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.10.0.2" />
+    <PackageReference Include="Xamarin.AndroidX.Tracing.Tracing" Version="1.3.0.4" />
+    <PackageReference Include="Xamarin.AndroidX.Tracing.Tracing.Ktx" Version="1.2.0.10" ExcludeAssets="all" />
+    <PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.0.21.3" />
+  </ItemGroup>
+""";
+        return project.Replace("</Project>", packages + "</Project>", StringComparison.Ordinal);
     }
 
     private static string OutputAssemblyName(string outputPath)
@@ -761,8 +791,24 @@ public sealed class CompilerDriver
         .Replace("\"", "&quot;", StringComparison.Ordinal)
         .Replace("'", "&apos;", StringComparison.Ordinal);
 
-    private static string? FindPublishedExecutable(string publishDirectory, string rid, string assemblyName)
+    private static string? FindPublishedExecutable(string buildDirectory, string publishDirectory, string rid, string assemblyName)
     {
+        if (IsAndroidRuntime(rid))
+        {
+            var apkCandidates = Directory.EnumerateFiles(buildDirectory, "*.apk", SearchOption.AllDirectories).ToArray();
+            var publishApks = Directory.Exists(publishDirectory)
+                ? Directory.EnumerateFiles(publishDirectory, "*.apk", SearchOption.TopDirectoryOnly).ToArray()
+                : Array.Empty<string>();
+            var publishSignedApks = publishApks.Where(path => Path.GetFileName(path).EndsWith("-Signed.apk", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (publishSignedApks.Length == 1) return publishSignedApks[0];
+            var signedApks = apkCandidates.Where(path => Path.GetFileName(path).EndsWith("-Signed.apk", StringComparison.OrdinalIgnoreCase)).ToArray();
+            var signedApk = signedApks.SingleOrDefault(path => Path.GetFileName(path).Equals(assemblyName + "-Signed.apk", StringComparison.OrdinalIgnoreCase));
+            if (signedApk is not null) return signedApk;
+            if (signedApks.Length == 1) return signedApks[0];
+            var namedApks = apkCandidates.Where(path => Path.GetFileName(path).StartsWith(assemblyName, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (namedApks.Length == 1) return namedApks[0];
+            return apkCandidates.Length == 1 ? apkCandidates[0] : null;
+        }
         var expectedName = rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase)
             ? assemblyName + ".exe"
             : assemblyName;
@@ -800,6 +846,52 @@ public sealed class CompilerDriver
         if (value.Length <= MaximumBuildDiagnosticChars) return value;
         return value[..MaximumBuildDiagnosticChars] + Environment.NewLine +
                "[compiler output truncated after " + MaximumBuildDiagnosticChars + " characters]";
+    }
+
+    private sealed class PublishProgressState
+    {
+        private int _percent = 40;
+        private string _lastPhase = string.Empty;
+        private int _phaseActivity;
+
+        public void Report(string phase)
+        {
+            lock (this)
+            {
+                var mapped = phase switch
+                {
+                    "Restoring dependencies" => 42,
+                    "Dependencies restored" => 45,
+                    "Resolving Android libraries" => 48,
+                    "Resolving Android assemblies" => 51,
+                    "Generating Android Java stubs" => 54,
+                    "Generating Android package metadata" => 56,
+                    "Compiling generated project" => 61,
+                    "Linking application" => 68,
+                    "Compiling native code" => 72,
+                    "Compiling Android native assemblies" => 75,
+                    "Compiling Android bytecode" => 79,
+                    "Packaging Android APK" => 82,
+                    "Signing Android APK" => 84,
+                    _ => -1
+                };
+                if (mapped < 0) return;
+                if (phase.Equals(_lastPhase, StringComparison.Ordinal))
+                {
+                    _phaseActivity++;
+                    var nextMilestone = new[] { 42, 45, 48, 51, 54, 56, 61, 68, 72, 75, 79, 82, 84, 85 }.Where(value => value > mapped).DefaultIfEmpty(85).Min();
+                    _percent = Math.Min(nextMilestone - 1, Math.Max(_percent, mapped) + 1);
+                }
+                else
+                {
+                    _percent = Math.Max(_percent, mapped);
+                    _lastPhase = phase;
+                    _phaseActivity = 1;
+                }
+                var visiblePhase = _phaseActivity > 1 ? phase + " (step " + _phaseActivity + ")" : phase;
+                CompilerProgressContext.Report(_percent, visiblePhase);
+            }
+        }
     }
 
     private static string SanitizeBuildDiagnostics(string text, string tempRoot, string sourcePath)

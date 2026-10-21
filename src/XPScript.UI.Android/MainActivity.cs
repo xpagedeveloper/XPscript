@@ -1,5 +1,6 @@
 using Android.App;
 using Android.Content.PM;
+using Android.Util;
 using Avalonia.Android;
 
 namespace XPScript.UI.Android;
@@ -28,24 +29,24 @@ public sealed class MainActivity : AvaloniaMainActivity
     protected override void OnStart()
     {
         base.OnStart();
-        global::Android.Util.Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=start");
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=start");
     }
 
     protected override void OnResume()
     {
         base.OnResume();
-        global::Android.Util.Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=resume");
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=resume");
     }
 
     protected override void OnPause()
     {
-        global::Android.Util.Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=pause");
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=pause");
         base.OnPause();
     }
 
     protected override void OnStop()
     {
-        global::Android.Util.Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=stop");
+        Log.Info("XPScript", "XPSCRIPT-LIFECYCLE=stop");
         base.OnStop();
     }
 

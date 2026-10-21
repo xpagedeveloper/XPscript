@@ -1,0 +1,10 @@
+Sub Main()
+    Dim form As New UIForm("Android Slider API")
+    Dim slider = form.AddSlider("volume", "Volume")
+    slider.Value = 0.75
+    form.SetSliderStep("volume", 0.25)
+    Call Application.Debug.Info("ANDROID-SLIDER-VALUE=" & slider.Value)
+    Call Application.Debug.Info("ANDROID-SLIDER-STEP=0.25")
+    Call Application.Debug.Info("ANDROID-SLIDER-STATE=ready")
+    Print "ANDROID-SLIDER-API=ready"
+End Sub

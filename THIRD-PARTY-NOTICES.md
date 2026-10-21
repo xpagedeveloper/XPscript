@@ -89,6 +89,10 @@ XPscript is built on the [.NET platform](https://github.com/dotnet/runtime) and 
 
 The .NET runtime is supplied by the .NET distribution and is not source code copied into this repository. This notice does not grant rights to redistribute HCL Notes/Domino binaries, which remain subject to HCL's commercial product terms.
 
+## AndroidX ViewPager2
+
+Android UIForm Carousel support uses the `Xamarin.AndroidX.ViewPager2` binding and its AndroidX dependencies. The underlying AndroidX ViewPager2 library is distributed by the Android Open Source Project under the Apache License 2.0. Release packages must preserve the NuGet-generated license and notice files for this dependency graph.
+
 ## Trademarks and third-party brands
 
 HCL, HCL Notes, HCL Domino, Notes, Domino, Domino Designer, LotusScript, and related product names and marks are trademarks or registered trademarks of their respective owners. References to these products and technologies are used to identify compatibility, interoperability, implementation references, or required external runtimes. XPscript is an independent project and is not affiliated with, sponsored by, certified by, or endorsed by HCL unless HCL explicitly states otherwise.

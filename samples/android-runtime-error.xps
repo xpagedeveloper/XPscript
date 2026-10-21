@@ -1,0 +1,5 @@
+Sub Main()
+    Print "ANDROID-ERROR-BEFORE"
+    Error 7001, "Intentional Android runtime failure"
+    Print "ANDROID-ERROR-AFTER"
+End Sub

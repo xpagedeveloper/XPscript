@@ -16,12 +16,14 @@ internal static class CompilerBuildEnvironment
         var usePersistentRunCache = IsTransientRunBuild(startInfo);
         var cacheRoot = usePersistentRunCache ? PersistentRunCacheRoot() : root;
         var environmentRoot = usePersistentRunCache ? CreatePrivateDirectory(cacheRoot, "environment") : root;
-        var processTemp = CreatePrivateDirectory(root, "process-temp");
-        var cliHome = CreatePrivateDirectory(environmentRoot, "dotnet-home");
-        var profile = CreatePrivateDirectory(environmentRoot, "profile");
-        var appData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Roaming"));
-        var localAppData = CreatePrivateDirectory(profile, Path.Combine("AppData", "Local"));
-        _ = CreatePrivateDirectory(appData, "NuGet");
+        var processTemp = CreatePrivateDirectory(root, "process-temp", harden: false);
+        var cliHome = CreatePrivateDirectory(environmentRoot, "dotnet-home", harden: false);
+        var profile = Path.Combine(environmentRoot, "profile");
+        var appData = Path.Combine(profile, "AppData", "Roaming");
+        var localAppData = Path.Combine(profile, "AppData", "Local");
+        Directory.CreateDirectory(appData);
+        Directory.CreateDirectory(localAppData);
+        var isolateNuGetPackages = !IsAndroidPublish(startInfo);
         ConfigureGeneratedDependencies(startInfo, root);
         var patchSource = ApplicationPackagePatchStore.ActivePackageSource;
         if (patchSource is not null && startInfo.ArgumentList.Count > 0 &&
@@ -31,11 +33,36 @@ internal static class CompilerBuildEnvironment
             startInfo.ArgumentList.Add("-p:RestoreAdditionalProjectSources=" + patchSource);
         if (usePersistentRunCache) ConfigurePersistentRunBuild(startInfo, root, cacheRoot);
         startInfo.FileName = CompilerToolResolver.ResolveDotnetHost();
+        var dotnetRoot = Path.GetDirectoryName(Path.GetFullPath(startInfo.FileName));
+        if (!string.IsNullOrWhiteSpace(dotnetRoot))
+        {
+            startInfo.Environment["DOTNET_ROOT"] = dotnetRoot;
+            startInfo.Environment["DOTNET_ROOT_X64"] = dotnetRoot;
+            startInfo.Environment["DOTNET_HOST_PATH"] = Path.GetFullPath(startInfo.FileName);
+            var msbuildPath = Directory.Exists(Path.Combine(dotnetRoot, "sdk"))
+                ? Directory.EnumerateDirectories(Path.Combine(dotnetRoot, "sdk"))
+                    .Select(path => Path.Combine(path, OperatingSystem.IsWindows() ? "MSBuild.exe" : "MSBuild"))
+                    .Where(File.Exists).OrderByDescending(path => path, StringComparer.Ordinal).FirstOrDefault()
+                : null;
+            if (!string.IsNullOrWhiteSpace(msbuildPath)) startInfo.Environment["MSBUILD_EXE_PATH"] = msbuildPath;
+        }
         startInfo.Environment["TEMP"] = processTemp;
         startInfo.Environment["TMP"] = processTemp;
         startInfo.Environment["TMPDIR"] = processTemp;
         startInfo.Environment["DOTNET_CLI_HOME"] = cliHome;
-        startInfo.Environment["NUGET_PACKAGES"] = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
+        if (isolateNuGetPackages)
+            startInfo.Environment["NUGET_PACKAGES"] = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
+        else
+        {
+            var callerPackages = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
+            if (string.IsNullOrWhiteSpace(callerPackages))
+            {
+                var callerHome = Environment.GetEnvironmentVariable("DOTNET_CLI_HOME");
+                if (string.IsNullOrWhiteSpace(callerHome)) callerHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                callerPackages = Path.Combine(callerHome, ".nuget", "packages");
+            }
+            startInfo.Environment["NUGET_PACKAGES"] = Path.GetFullPath(callerPackages);
+        }
         startInfo.Environment["USERPROFILE"] = profile;
         startInfo.Environment["HOME"] = profile;
         startInfo.Environment["APPDATA"] = appData;
@@ -53,6 +80,11 @@ internal static class CompilerBuildEnvironment
 
     private static bool IsTransientRunBuild(ProcessStartInfo startInfo) =>
         startInfo.ArgumentList.Count > 0 && string.Equals(startInfo.ArgumentList[0], "build", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAndroidPublish(ProcessStartInfo startInfo) =>
+        startInfo.ArgumentList.Count > 0 &&
+        (string.Equals(startInfo.ArgumentList[0], "publish", StringComparison.OrdinalIgnoreCase) || string.Equals(startInfo.ArgumentList[0], "build", StringComparison.OrdinalIgnoreCase)) &&
+        ReadRuntimeIdentifier(startInfo).StartsWith("android-", StringComparison.OrdinalIgnoreCase);
 
     private static string PersistentRunCacheRoot()
     {
@@ -161,11 +193,12 @@ internal static class CompilerBuildEnvironment
         var usesUiForm = source.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal);
         var usesUiListView = source.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal);
         var usesDesktopDialog = source.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
+        var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
+        var usesAndroidUi = runtimeIdentifier.StartsWith("android-", StringComparison.OrdinalIgnoreCase) && usesUiForm;
         var packages = ApplicationDependencyCatalog.Detect(source);
         var usesMySql = source.Contains("XPScriptDbMySql", StringComparison.Ordinal);
         var usesMsSql = source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
         var usesSupabaseDb = source.Contains("XPScriptDbSupabase", StringComparison.Ordinal);
-        var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
         var stagedIconName = StageApplicationIcon(source, root, runtimeIdentifier);
         var product = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildProductMarker);
         var company = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCompanyMarker);
@@ -177,7 +210,7 @@ internal static class CompilerBuildEnvironment
         if (usesMsSql && !source.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal)) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + MsSqlDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         if (usesSupabaseDb && !source.Contains("internal sealed class XPScriptDbSupabase", StringComparison.Ordinal)) { File.AppendAllText(generatedSource, Environment.NewLine + Environment.NewLine + SupabaseDbRuntimeSource.Code + Environment.NewLine); CompilerPathSecurity.HardenTemporaryFile(generatedSource); }
         string? escapedAssembly = null;
-        if (usesUiForm || usesUiListView || usesDesktopDialog)
+        if ((usesUiForm || usesUiListView || usesDesktopDialog) && !usesAndroidUi)
         {
             var desktopAssembly = typeof(XPScript.UI.Desktop.DesktopFormHost).Assembly.Location;
             if (string.IsNullOrWhiteSpace(desktopAssembly) || !File.Exists(desktopAssembly)) throw new CompilerException("Desktop UI runtime assembly is unavailable for UI compilation.");
@@ -196,6 +229,7 @@ internal static class CompilerBuildEnvironment
         var itemEntries = "    <AssemblyMetadata Include=\"XPScriptCompiler\" Value=\"XPScript\" />\n    <AssemblyMetadata Include=\"XPScriptWebsite\" Value=\"https://xpagedeveloper.com\" />\n";
         if (escapedAssembly is not null) itemEntries += $"    <Reference Include=\"XPScript.UI.Desktop\">\n      <HintPath>{escapedAssembly}</HintPath>\n      <Private>true</Private>\n    </Reference>\n";
         var itemGroup = $"  <ItemGroup>\n{itemEntries}  </ItemGroup>\n";
+        var writeDirectoryProps = !usesAndroidUi;
 
         var projectPath = Path.Combine(root, "Generated.csproj");
         if (File.Exists(projectPath))
@@ -225,9 +259,12 @@ internal static class CompilerBuildEnvironment
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
         }
 
-        var propsPath = Path.Combine(root, "Directory.Build.props");
-        File.WriteAllText(propsPath, $"<Project>\n{propertyGroup}{itemGroup}</Project>\n");
-        CompilerPathSecurity.HardenTemporaryFile(propsPath);
+        if (writeDirectoryProps)
+        {
+            var propsPath = Path.Combine(root, "Directory.Build.props");
+            File.WriteAllText(propsPath, $"<Project>\n{propertyGroup}{itemGroup}</Project>\n");
+            CompilerPathSecurity.HardenTemporaryFile(propsPath);
+        }
     }
 
     private static string? ReadBuildMarker(string generatedSource, string marker)
@@ -264,11 +301,11 @@ internal static class CompilerBuildEnvironment
         return string.Empty;
     }
 
-    private static string CreatePrivateDirectory(string root, string relative)
+    private static string CreatePrivateDirectory(string root, string relative, bool harden = true)
     {
         var path = Path.Combine(root, relative);
         Directory.CreateDirectory(path);
-        CompilerPathSecurity.HardenTemporaryDirectory(path);
+        if (harden) CompilerPathSecurity.HardenTemporaryDirectory(path);
         return path;
     }
 }
