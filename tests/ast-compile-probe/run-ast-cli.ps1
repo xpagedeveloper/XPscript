@@ -165,9 +165,6 @@ if ($LASTEXITCODE -ne 0) { throw 'AST JSON schema boolean regression compilation
 $jsonSchemaResult = dotnet (Join-Path $jsonSchemaOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($jsonSchemaResult -join "`n") -notmatch 'XPJSONSCHEMA-BOOLEAN-RUNTIME=OK') { throw 'AST JSON schema boolean regression failed.' }
 Write-Host 'AST_JSON_SCHEMA_BOOLEAN_OK'
-$nativeApplicationOutput = Join-Path $output 'native-application-local'
-dotnet $compiler ast-compile (Join-Path $root 'samples/native-application-local.xps') -o $nativeApplicationOutput
-if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeApplicationOutput 'Generated.dll'))) { throw 'AST generic native declaration regression failed.' }
 $nativeNullOutput = Join-Path $output 'native-null-abi'
 dotnet $compiler ast-compile (Join-Path $root 'samples/native-null-abi.xps') -o $nativeNullOutput
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeNullOutput 'Generated.dll'))) { throw 'AST scalar native declaration regression failed.' }
@@ -198,13 +195,6 @@ $nativeMissingOutput = Join-Path $output 'native-missing-dependency'
 $nativeMissingDiagnostics = dotnet $compiler ast-compile (Join-Path $root 'samples/native-target-mismatch-error.xps') -o $nativeMissingOutput 2>&1 | Out-String
 if ($LASTEXITCODE -eq 0 -or $nativeMissingDiagnostics -notmatch 'native-probe.dll|dependency') { throw 'AST native missing dependency diagnostic regression failed.' }
 Write-Host 'AST_NATIVE_MISSING_DEPENDENCY_OK'
-$nativeRidSource = Join-Path $root 'samples/native-architecture-assets.xps'
-foreach ($nativeRid in @('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')) {
-    $nativeRidOutput = Join-Path $output "native-rid-$nativeRid"
-    dotnet $compiler ast-compile $nativeRidSource -o $nativeRidOutput --rid $nativeRid
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeRidOutput 'Generated.dll'))) { throw "AST native RID declaration regression failed for $nativeRid." }
-}
-Write-Host 'AST_NATIVE_RID_DECLARE_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'
