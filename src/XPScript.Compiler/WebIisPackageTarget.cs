@@ -49,11 +49,16 @@ internal static class WebIisPackageTarget
         if (project is null)
             throw new CompilerException("Unable to locate src/XPScript.Cli/XPScript.Cli.csproj required to create a webiis package.");
 
+        var isolatedBuildRoot = Path.Combine(Path.GetTempPath(), "XPScript", "webiis-host-build-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(isolatedBuildRoot);
+
         var args = new List<string>
         {
             "publish", project, "-c", "Release", "-o", destination,
             "--self-contained", selfContained ? "true" : "false",
             "-p:SkipUnifiedPublish=true",
+            "-p:BaseOutputPath=" + Path.Combine(isolatedBuildRoot, "bin") + Path.DirectorySeparatorChar,
+            "-p:IntermediateOutputPath=" + Path.Combine(isolatedBuildRoot, "obj") + Path.DirectorySeparatorChar,
             "--no-restore",
             "--nologo"
         };
@@ -70,13 +75,21 @@ internal static class WebIisPackageTarget
             UseShellExecute = false
         };
         foreach (var arg in args) start.ArgumentList.Add(arg);
-        using var process = System.Diagnostics.Process.Start(start)
-            ?? throw new CompilerException("Unable to start dotnet publish for webiis target.");
-        var stdout = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-        var stderr = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
-        await process.WaitForExitAsync().ConfigureAwait(false);
-        if (process.ExitCode != 0)
-            throw new CompilerException("Unable to publish IIS host: " + (stderr.Length > 0 ? stderr : stdout));
+        try
+        {
+            using var process = System.Diagnostics.Process.Start(start)
+                ?? throw new CompilerException("Unable to start dotnet publish for webiis target.");
+            var stdout = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+            var stderr = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+            await process.WaitForExitAsync().ConfigureAwait(false);
+            if (process.ExitCode != 0)
+                throw new CompilerException("Unable to publish IIS host: " + (stderr.Length > 0 ? stderr : stdout));
+        }
+        finally
+        {
+            try { if (Directory.Exists(isolatedBuildRoot)) Directory.Delete(isolatedBuildRoot, recursive: true); }
+            catch { /* The package itself remains valid if cleanup races a released build handle. */ }
+        }
 
         if (selfContained)
         {

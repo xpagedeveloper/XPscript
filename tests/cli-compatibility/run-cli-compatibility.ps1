@@ -39,6 +39,18 @@ if ($LASTEXITCODE -ne 0 -or $aliasOutputText -notlike '*AST compilation succeede
     throw "AST compile-option/security regression: $aliasOutputText"
 }
 
+$runtimeOutput = Join-Path $resultRoot 'runtime-true'
+$runtimeOutputText = dotnet $compiler ast-compile $astSource -o $runtimeOutput --runtime=true --single-file=false --debug | Out-String
+if ($LASTEXITCODE -ne 0 -or $runtimeOutputText -notlike '*AST compilation succeeded*' -or -not (Test-Path (Join-Path $runtimeOutput 'Generated.dll'))) {
+    throw "AST self-contained runtime option regression: $runtimeOutputText"
+}
+
+$legacyOutput = Join-Path $resultRoot 'legacy-compile'
+$legacyOutputText = dotnet $compiler compile $astSource -o $legacyOutput --runtime=false --single-file=false --debug | Out-String
+if ($LASTEXITCODE -ne 0 -or $legacyOutputText -notlike '*result: ok*' -or -not (Test-Path $legacyOutput)) {
+    throw "Legacy compile option compatibility regression: $legacyOutputText"
+}
+
 $webSource = Join-Path $root 'demo/webiis/main.xps'
 $webOutput = Join-Path $resultRoot 'webiis'
 $targetOutput = dotnet $compiler ast-compile $webSource --target webiis --runtime=false --output $webOutput --result-format json | Out-String
