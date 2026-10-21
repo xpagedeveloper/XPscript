@@ -27,7 +27,11 @@ internal static class XPCrossPlatformRuntime
         return File.Exists(value) && !Directory.Exists(value);
     }
 
-    public static bool IsDir(object? path) => Directory.Exists(XPScriptFileSystemRuntime.ResolvePath(path));
+    public static bool IsDir(object? path)
+    {
+        var value = NormalizeDirectoryProbe(XPScriptFileSystemRuntime.ResolvePath(path));
+        return Directory.Exists(value);
+    }
 
     private static string NormalizeDirectoryProbe(string path) =>
         OperatingSystem.IsWindows() && path.Length == 2 && char.IsLetter(path[0]) && path[1] == ':'
