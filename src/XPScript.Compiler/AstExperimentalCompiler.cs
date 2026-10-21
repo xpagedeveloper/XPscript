@@ -432,6 +432,9 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("ShellId", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("ShellId", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("ShellExecute", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.User("XPShellResult"), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Shell", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Shell", typeof(long), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Shell", typeof(long), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrTemplate", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("StrConv", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CType", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -1023,6 +1026,18 @@ internal static class Program
         if (XPScriptRuntime.CStr(program).Trim().Length == 0)
             throw new XPScriptRuntimeException(5, "Shell requires a program or script name.");
         return 33L;
+    }
+    public static long Shell(object? command, object? windowStyle = null, object? unused = null)
+    {
+        var text = CStr(command).Trim();
+        if (text.Length == 0) throw new XPScriptRuntimeException(5, "Shell requires a program or script name.");
+        var startInfo = OperatingSystem.IsWindows()
+            ? new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c " + text)
+            : new System.Diagnostics.ProcessStartInfo("/bin/sh", "-c \"" + text.Replace("\\\"", "\\\\\"", StringComparison.Ordinal) + "\"");
+        startInfo.UseShellExecute = false;
+        using var process = System.Diagnostics.Process.Start(startInfo) ?? throw new XPScriptRuntimeException(5, "Shell could not start the command.");
+        process.WaitForExit();
+        return process.ExitCode;
     }
     public sealed class XpShellResult { public int ExitCode { get; init; } public string Output { get; init; } = string.Empty; public string Error { get; init; } = string.Empty; public bool TimedOut { get; init; } }
     public static XpShellResult ShellExecute(object? executable, object? arguments, object? timeoutMilliseconds = null)

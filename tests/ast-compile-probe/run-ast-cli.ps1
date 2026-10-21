@@ -149,6 +149,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST file position/reset regression compilation
 $filePositionResult = dotnet (Join-Path $filePositionOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($filePositionResult -join "`n") -notmatch 'FILE-POSITION-RESET=OK') { throw 'AST file position/reset regression failed.' }
 Write-Host 'AST_FILE_POSITION_RESET_OK'
+$platformShellOutput = Join-Path $output 'platform-shell'
+dotnet $compiler ast-compile (Join-Path $root 'samples/platform-shell.xps') -o $platformShellOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST platform shell regression compilation failed.' }
+$platformShellResult = dotnet (Join-Path $platformShellOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($platformShellResult -join "`n") -notmatch 'PLATFORM=' -or ($platformShellResult -join "`n") -notmatch 'XPScript-Windows|XPScript-Linux|XPScript-MacOS') { throw 'AST Shell regression failed.' }
+Write-Host 'AST_PLATFORM_SHELL_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'
