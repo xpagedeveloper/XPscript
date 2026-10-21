@@ -182,6 +182,12 @@ $nativeByRefOutput = Join-Path $output 'native-byref-error-ast'
 dotnet $compiler ast-compile (Join-Path $root 'samples/native-byref-error-ast.xps') -o $nativeByRefOutput 2>&1 | Out-String | Tee-Object -Variable nativeByRefDiagnostics | Out-Null
 if ($LASTEXITCODE -eq 0 -or $nativeByRefDiagnostics -notmatch 'XPS2013') { throw 'AST native ByRef diagnostic regression failed.' }
 Write-Host 'AST_NATIVE_BYREF_DIAGNOSTIC_OK'
+$nativeScalarOutput = Join-Path $output 'native-scalar-types'
+dotnet $compiler ast-compile (Join-Path $root 'samples/native-scalar-types.xps') -o $nativeScalarOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST native scalar type regression failed.' }
+$nativeScalarResult = dotnet (Join-Path $nativeScalarOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($nativeScalarResult -join "`n") -notmatch 'NATIVE-SCALAR-TYPES-COMPILE-OK') { throw 'AST native scalar type regression failed.' }
+Write-Host 'AST_NATIVE_SCALAR_TYPES_OK'
 $nativeRidSource = Join-Path $root 'samples/native-architecture-assets.xps'
 foreach ($nativeRid in @('win-x64', 'win-arm64', 'linux-x64', 'linux-arm64', 'osx-x64', 'osx-arm64')) {
     $nativeRidOutput = Join-Path $output "native-rid-$nativeRid"

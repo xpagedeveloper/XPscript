@@ -212,8 +212,9 @@ public static class AstExperimentalCompiler
         {
             var parameterTypes = native.Parameters.Select(_ => typeof(object)).ToArray();
             var nativeIsSub = native.Kind.Equals("Sub", StringComparison.OrdinalIgnoreCase);
-            symbols.Declare(new FunctionSymbol(native.Name, nativeIsSub ? typeof(void) : typeof(long), parameterTypes,
-                nativeIsSub ? null : XpTypeSymbol.FromClr(typeof(long)), parameterTypes.Select(_ => XpTypeSymbol.Variant).ToArray())
+            var nativeRuntimeReturn = nativeIsSub ? typeof(void) : NativeClrType(native.ReturnType);
+            symbols.Declare(new FunctionSymbol(native.Name, nativeRuntimeReturn, parameterTypes,
+                nativeIsSub ? null : XpTypeSymbol.FromClr(nativeRuntimeReturn), parameterTypes.Select(_ => XpTypeSymbol.Variant).ToArray())
             { NativeTargetName = $"XPNativeDeclarations.{native.Name}" });
         }
         symbols.Declare(new TypeSymbol("Object", typeof(object), XpTypeSymbol.Object));
@@ -736,27 +737,27 @@ public static class AstExperimentalCompiler
                     .Select(value => $"public Xp{match.Groups["name"].Value} {value.Name} => new({value.Value});");
                 return $"public sealed class Xp{match.Groups["name"].Value} {{ public long Value {{ get; }} public Xp{match.Groups["name"].Value}() {{ }} private Xp{match.Groups["name"].Value}(long value) => Value = value; public static implicit operator Xp{match.Groups["name"].Value}(int value) => new(value); public static implicit operator Xp{match.Groups["name"].Value}(long value) => new(value); {string.Join(" ", values)} public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture); }}";
             }));
-        var nativeCode = string.Join(Environment.NewLine, nativeDeclarations.Select(native =>
+        var nativeCode = nativeDeclarations.Count == 0 ? string.Empty : "internal static class XPNativeDeclarations {" + Environment.NewLine + string.Join(Environment.NewLine, nativeDeclarations.Select(native =>
         {
-            var nativeReturn = native.ReturnType.Equals("Void", StringComparison.OrdinalIgnoreCase) ? "void" : native.ReturnType.Equals("Integer", StringComparison.OrdinalIgnoreCase) ? "int" : native.ReturnType.Equals("Long", StringComparison.OrdinalIgnoreCase) ? "long" : "int";
+            var nativeReturn = NativeCSharpType(native.ReturnType);
             var rawParameters = string.Join(", ", native.Parameters.Select((parameter, index) =>
             {
                 var match = Regex.Match(parameter, @"(?i)(?:ByVal|ByRef)?\s*(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)");
-                var type = match.Groups["type"].Value.Equals("Long", StringComparison.OrdinalIgnoreCase) ? "long" : "int";
+                var type = NativeCSharpType(match.Groups["type"].Value);
                 return $"{type} p{index}";
             }));
             var wrapperParameters = string.Join(", ", native.Parameters.Select((parameter, index) => $"object? p{index}"));
             var rawArguments = string.Join(", ", native.Parameters.Select((parameter, index) =>
             {
                 var match = Regex.Match(parameter, @"(?i)(?:ByVal|ByRef)?\s*(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)");
-                return match.Groups["type"].Value.Equals("Long", StringComparison.OrdinalIgnoreCase) ? $"Convert.ToInt64(p{index})" : $"Convert.ToInt32(p{index})";
+                return NativeConversion(match.Groups["type"].Value, $"p{index}");
             }));
             var library = native.Library.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
             var alias = native.Alias.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
-            var wrapperReturn = nativeReturn == "void" ? "void" : "long";
+            var wrapperReturn = nativeReturn;
             var invocation = $"__{native.Name}({rawArguments})";
-            return $"internal static class XPNativeDeclarations {{ [System.Runtime.InteropServices.DllImport(\"{library}\", EntryPoint = \"{alias}\")] private static extern {nativeReturn} __{native.Name}({rawParameters}); public static {wrapperReturn} {native.Name}({wrapperParameters}) {{ {(wrapperReturn == "void" ? invocation + ";" : "return " + invocation + ";")} }} }}";
-        }));
+            return $"[System.Runtime.InteropServices.DllImport(\"{library}\", EntryPoint = \"{alias}\")] private static extern {nativeReturn} __{native.Name}({rawParameters}); public static {wrapperReturn} {native.Name}({wrapperParameters}) {{ {(wrapperReturn == "void" ? invocation + ";" : "return " + invocation + ";")} }}";
+        })) + Environment.NewLine + "}";
         var generated = $$"""
 using System;
 using __xps_user_classes;
@@ -1785,7 +1786,28 @@ internal static class Program
         "BOOLEAN" => typeof(bool), "BYTE" => typeof(byte), "STRING" => typeof(string), "INTEGER" or "LONG" => typeof(long),
         "SINGLE" or "DOUBLE" or "CURRENCY" => typeof(double), _ => typeof(object)
     };
-    private static string CSharpType(Type type) => type == typeof(void) ? "void" : type == typeof(byte) ? "byte" : type == typeof(long) ? "long" : type == typeof(double) ? "double" : type == typeof(bool) ? "bool" : type == typeof(string) ? "string" : "object";
+    private static string CSharpType(Type type) => type == typeof(void) ? "void" : type == typeof(byte) ? "byte" : type == typeof(int) ? "int" : type == typeof(long) ? "long" : type == typeof(double) ? "double" : type == typeof(float) ? "float" : type == typeof(decimal) ? "decimal" : type == typeof(bool) ? "bool" : type == typeof(string) ? "string" : type == typeof(DateTime) ? "System.DateTime" : "object";
+
+    private static Type NativeClrType(string type) => type.Trim().ToUpperInvariant() switch
+    {
+        "VOID" => typeof(void), "STRING" => typeof(string), "INTEGER" => typeof(int), "LONG" => typeof(long),
+        "DOUBLE" => typeof(double), "SINGLE" => typeof(float), "BOOLEAN" => typeof(bool), "BYTE" => typeof(byte),
+        "CURRENCY" => typeof(decimal), "DATE" => typeof(DateTime), _ => typeof(object)
+    };
+
+    private static string NativeCSharpType(string type) => CSharpType(NativeClrType(type)) switch
+    {
+        "object" when !type.Equals("Variant", StringComparison.OrdinalIgnoreCase) => "object",
+        var value => value
+    };
+
+    private static string NativeConversion(string type, string value) => type.Trim().ToUpperInvariant() switch
+    {
+        "STRING" => $"Convert.ToString({value})!", "INTEGER" => $"Convert.ToInt32({value})", "LONG" => $"Convert.ToInt64({value})",
+        "DOUBLE" => $"Convert.ToDouble({value})", "SINGLE" => $"Convert.ToSingle({value})", "BOOLEAN" => $"Convert.ToBoolean({value})",
+        "BYTE" => $"Convert.ToByte({value})", "CURRENCY" => $"Convert.ToDecimal({value})", "DATE" => $"Convert.ToDateTime({value})",
+        _ => value
+    };
     private static string ToCSharpLiteral(string value)
     {
         if (value.Equals("True", StringComparison.OrdinalIgnoreCase)) return "true";
