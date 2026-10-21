@@ -25,6 +25,13 @@ if ($LASTEXITCODE -ne 0) { throw 'AST XML result-format compilation failed.' }
 try { $xmlFormatResult = [xml]($xmlFormatText -join "`n") } catch { throw 'AST XML result-format output is invalid XML.' }
 if ($xmlFormatResult.compileResult.errors -ne $null -and $xmlFormatResult.compileResult.errors.ChildNodes.Count -ne 0) { throw 'AST XML result-format reported unexpected errors.' }
 Write-Host 'AST_RESULT_FORMATS_OK'
+$platformAliasOutput = Join-Path $output 'cli-platform-alias'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $platformAliasOutput --platform win-x64 --singlefile false --runtime false
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $platformAliasOutput 'Generated.dll'))) { throw 'AST --platform/--singlefile alias regression failed.' }
+$ridAliasOutput = Join-Path $output 'cli-rid-alias'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $ridAliasOutput --rid win-x64 --single-file false --runtime false
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $ridAliasOutput 'Generated.dll'))) { throw 'AST --rid/--single-file regression failed.' }
+Write-Host 'AST_PLATFORM_ALIASES_OK'
 $includeUseOutput = Join-Path $output 'include-use-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-use-next.xps') -o $includeUseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Include/Use compilation failed.' }
