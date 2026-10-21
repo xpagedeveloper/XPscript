@@ -65,8 +65,22 @@ public static class AstExperimentalCompiler
             match =>
             {
                 var parameters = match.Groups["parameters"].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                nativeDeclarations.Add((match.Groups["name"].Value, match.Groups["library"].Value,
-                    string.IsNullOrWhiteSpace(match.Groups["alias"].Value) ? match.Groups["name"].Value : match.Groups["alias"].Value,
+                var rid = runtimeIdentifier?.Trim().ToLowerInvariant();
+                var platformPrefix = rid switch
+                {
+                    "win-x64" => "WindowsX64",
+                    "win-arm64" => "WindowsArm64",
+                    "linux-x64" => "LinuxX64",
+                    "linux-arm64" => "LinuxArm64",
+                    "osx-x64" => "MacOSX64",
+                    "osx-arm64" => "MacOSArm64",
+                    _ => OperatingSystem.IsWindows() ? "Windows" : OperatingSystem.IsLinux() ? "Linux" : OperatingSystem.IsMacOS() ? "MacOS" : string.Empty
+                };
+                var options = match.Groups["options"].Value;
+                var selectedLibrary = Regex.Match(options, $@"(?i)\b{platformPrefix}Lib\s+""(?<value>[^""]+)""").Groups["value"].Value;
+                var selectedAlias = Regex.Match(options, $@"(?i)\b{platformPrefix}Alias\s+""(?<value>[^""]+)""").Groups["value"].Value;
+                nativeDeclarations.Add((match.Groups["name"].Value, string.IsNullOrWhiteSpace(selectedLibrary) ? match.Groups["library"].Value : selectedLibrary,
+                    string.IsNullOrWhiteSpace(selectedAlias) ? (string.IsNullOrWhiteSpace(match.Groups["alias"].Value) ? match.Groups["name"].Value : match.Groups["alias"].Value) : selectedAlias,
                     match.Groups["returnType"].Value, parameters));
                 return new string(match.Value.Select(c => c is '\r' or '\n' ? c : ' ').ToArray());
             });

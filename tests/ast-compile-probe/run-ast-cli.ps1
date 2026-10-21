@@ -172,6 +172,13 @@ $nativeNullOutput = Join-Path $output 'native-null-abi'
 dotnet $compiler ast-compile (Join-Path $root 'samples/native-null-abi.xps') -o $nativeNullOutput
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeNullOutput 'Generated.dll'))) { throw 'AST scalar native declaration regression failed.' }
 Write-Host 'AST_NATIVE_DECLARE_COMPILE_OK'
+$nativeRidSource = Join-Path $root 'samples/native-architecture-assets.xps'
+foreach ($nativeRid in @('win-x64', 'linux-x64')) {
+    $nativeRidOutput = Join-Path $output "native-rid-$nativeRid"
+    dotnet $compiler ast-compile $nativeRidSource -o $nativeRidOutput --rid $nativeRid
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeRidOutput 'Generated.dll'))) { throw "AST native RID declaration regression failed for $nativeRid." }
+}
+Write-Host 'AST_NATIVE_RID_DECLARE_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'
