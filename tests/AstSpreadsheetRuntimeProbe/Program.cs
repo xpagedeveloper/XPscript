@@ -36,7 +36,7 @@ foreach (var name in new[] { "spreadsheet-runtime", "spreadsheet-reference", "sp
         var normalSource = Copy(name, Path.Combine(repo, "tests/ast-compile-probe", name + ".xps"), "normal");
         var normalDirectory = Path.GetDirectoryName(normalSource)!;
         var normalProgram = Path.Combine(normalDirectory, OperatingSystem.IsWindows() ? "program.exe" : "program");
-        await Run("dotnet", [compiler, "compile", normalSource, "-o", normalProgram, "--single-file=false", "--runtime=false"], output);
+        await Run("dotnet", [compiler, "legacy-compile", normalSource, "-o", normalProgram, "--single-file=false", "--runtime=false"], output);
         if ((await Run(normalProgram, [], normalDirectory)).Trim() != expected)
             throw new Exception("Static FromWorksheet normal/AST parity failed.");
     }

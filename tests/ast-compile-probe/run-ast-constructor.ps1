@@ -73,12 +73,12 @@ foreach ($fixture in @('class-constructor-list', 'constructor-reference-list', '
     if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST constructor execution failed: $fixture" }
 }
 $normalList = Join-Path $output $(if ($IsWindows) { 'normal-list.exe' } else { 'normal-list' })
-dotnet $compiler compile (Join-Path $PSScriptRoot 'constructor-reference-list.xps') -o $normalList --single-file=false --runtime=false
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'constructor-reference-list.xps') -o $normalList --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal List constructor compilation failed.' }
 $result = & $normalList
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne 'CONSTRUCTOR_LIST_OK') { throw 'Normal/AST ByVal List constructor parity failed.' }
 $normalVariant = Join-Path $output $(if ($IsWindows) { 'normal-variant.exe' } else { 'normal-variant' })
-dotnet $compiler compile (Join-Path $PSScriptRoot 'constructor-reference-variant.xps') -o $normalVariant --single-file=false --runtime=false
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'constructor-reference-variant.xps') -o $normalVariant --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal Variant constructor compilation failed.' }
 $result = & $normalVariant
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne 'CONSTRUCTOR_VARIANT_OK') { throw 'Normal/AST ByVal Variant constructor parity failed.' }
@@ -88,24 +88,24 @@ if ($LASTEXITCODE -ne 0) { throw 'AST overload parity compilation failed.' }
 $result = dotnet (Join-Path $overloadTarget 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "number`ntext") { throw 'AST overload parity execution failed.' }
 $normalOverload = Join-Path $output $(if ($IsWindows) { 'normal-overload.exe' } else { 'normal-overload' })
-dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-overload-parity.xps') -o $normalOverload --single-file=false --runtime=false
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'class-constructor-overload-parity.xps') -o $normalOverload --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal overload parity compilation failed.' }
 $result = & $normalOverload
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "number`ntext") { throw 'Normal/AST overload parity failed.' }
 $normal = Join-Path $output $(if ($IsWindows) { 'normal.exe' } else { 'normal' })
-dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-parity.xps') -o $normal --single-file=false --runtime=false
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'class-constructor-parity.xps') -o $normal --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal constructor parity compilation failed.' }
 $result = & $normal
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`nfirst`n9`nsecond`nCONSTRUCTOR_PARITY_OK") { throw 'Normal/AST constructor parity failed.' }
 $normalDerived = Join-Path $output $(if ($IsWindows) { 'normal-derived.exe' } else { 'normal-derived' })
-dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-derived-parity.xps') -o $normalDerived --single-file=false --runtime=false
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'class-constructor-derived-parity.xps') -o $normalDerived --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal derived constructor parity compilation failed.' }
 $result = & $normalDerived
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "root`nchild`n5`n6`nDERIVED_CONSTRUCTOR_PARITY_OK") { throw 'Normal/AST derived constructor parity failed.' }
 $normalOptional = Join-Path $output $(if ($IsWindows) { 'normal-optional.exe' } else { 'normal-optional' })
 # Normal compilation currently requires full constructor arity despite Optional.
 # Omission semantics are exercised separately by class-constructor-optional.xps.
-dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-optional-parity.xps') -o $normalOptional --single-file=false --runtime=false
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'class-constructor-optional-parity.xps') -o $normalOptional --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal Optional constructor parity compilation failed.' }
 $result = & $normalOptional
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`ndefault`n9`nsupplied`nOPTIONAL_CONSTRUCTOR_PARITY_OK") { throw 'Normal/AST Optional constructor parity failed.' }
@@ -114,7 +114,7 @@ if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`ndefault`n9`nsupplied`nO
 $normalReference = Join-Path $output $(if ($IsWindows) { 'normal-reference.exe' } else { 'normal-reference' })
 # Concrete-class parameter mutation/snapshot parity; broader Object/default/error cases are AST capability tests.
 # Reference ByRef's simple fixture remains AST capability: normal compilation runs but prints 0 instead of 7.
-dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-reference-parity.xps') -o $normalReference --single-file=false --runtime=false
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'class-constructor-reference-parity.xps') -o $normalReference --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal reference constructor parity compilation failed.' }
 $result = & $normalReference
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`n5`nREFERENCE_CONSTRUCTOR_PARITY_OK") { throw 'Normal/AST concrete-reference constructor parity failed.' }

@@ -22,7 +22,7 @@ if ($LASTEXITCODE -ne 0) { throw 'AST derived method destructor fixture compilat
 Write-Host 'AST_DERIVED_METHOD_DESTRUCTOR_OK'
 foreach ($fixture in @('class-destructor-derived-parity', 'class-destructor-parity')) {
     $normal = Join-Path $output ($fixture + $(if ($IsWindows) { '-normal.exe' } else { '-normal' }))
-    dotnet $compiler compile (Join-Path $PSScriptRoot "$fixture.xps") -o $normal --single-file=false --runtime=false
+    dotnet $compiler legacy-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $normal --single-file=false --runtime=false
     if ($LASTEXITCODE -ne 0) { throw "Normal destructor parity compilation failed: $fixture" }
     $result = & $normal
     $expected = if ($fixture -eq 'class-destructor-parity') { "DESTRUCTOR_CALLED`nDESTRUCTOR_PARITY_OK" } else { "LEAF`nMIDDLE`nROOT`nDERIVED_DESTRUCTOR_PARITY_OK" }

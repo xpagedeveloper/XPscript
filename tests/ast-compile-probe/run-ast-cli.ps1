@@ -975,7 +975,7 @@ if ($LASTEXITCODE -ne 0) { throw 'AST shared List storage compilation failed.' }
 $listStorageResult = dotnet (Join-Path $output 'list-stable-storage/Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($listStorageResult -join "`n") -ne 'LIST_STABLE_STORAGE_OK') { throw 'AST shared List storage failed.' }
 $listStorageNormal = Join-Path $output $(if ($IsWindows) { 'list-stable-normal.exe' } else { 'list-stable-normal' })
-dotnet $compiler compile (Join-Path $PSScriptRoot 'list-stable-storage.xps') -o $listStorageNormal --single-file=false --runtime=false
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'list-stable-storage.xps') -o $listStorageNormal --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal shared List storage compilation failed.' }
 $listStorageNormalResult = & $listStorageNormal
 if ($LASTEXITCODE -ne 0 -or ($listStorageNormalResult -join "`n") -ne 'LIST_STABLE_STORAGE_OK') { throw 'Normal/AST shared List storage parity failed.' }
@@ -1009,7 +1009,7 @@ foreach ($indexedFixture in @('indexed-byref-module-simple', 'indexed-byref-fiel
     if ($LASTEXITCODE -ne 0 -or ($indexedResult -join "`n") -ne $indexedExpected) { throw "AST indexed property execution failed: $indexedFixture" }
 }
 $indexedNormal = Join-Path $output $(if ($IsWindows) { 'indexed-get-normal.exe' } else { 'indexed-get-normal' })
-dotnet $compiler compile (Join-Path $PSScriptRoot 'indexed-get-parity.xps') -o $indexedNormal --single-file=false --runtime=false
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'indexed-get-parity.xps') -o $indexedNormal --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal indexed getter compilation failed.' }
 $indexedNormalResult = & $indexedNormal
 if ($LASTEXITCODE -ne 0 -or ($indexedNormalResult -join "`n") -ne '6') { throw 'Normal/AST indexed getter parity failed.' }
@@ -1041,7 +1041,7 @@ if ($LASTEXITCODE -ne 0) { throw 'AST instance class method compilation failed.'
 $classMethodsResult = dotnet (Join-Path $output 'class-methods-native/Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($classMethodsResult -join "`n") -ne 'CLASS_METHODS_NATIVE_OK') { throw 'AST instance class method execution failed.' }
 $classNormalPath = Join-Path $output $(if ($IsWindows) { 'class-methods-normal.exe' } else { 'class-methods-normal' })
-dotnet $compiler compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o $classNormalPath --single-file=false --runtime=false
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o $classNormalPath --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal instance class method compilation failed.' }
 $classNormalResult = & $classNormalPath
 if ($LASTEXITCODE -ne 0 -or ($classNormalResult -join "`n") -ne ($classMethodsResult -join "`n")) { throw 'Normal/AST class method parity failed.' }
