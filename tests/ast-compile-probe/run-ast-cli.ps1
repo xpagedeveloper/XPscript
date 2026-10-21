@@ -45,6 +45,10 @@ $sourceRootIncludeOutput = Join-Path $output 'cli-source-root-include'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-use-next.xps') -o $sourceRootIncludeOutput --source-root (Resolve-Path $PSScriptRoot).Path
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $sourceRootIncludeOutput 'Generated.dll'))) { throw 'AST --source-root Include regression failed.' }
 Write-Host 'AST_INCLUDE_SECURITY_OPTIONS_OK'
+$preprocessorOutput = Join-Path $output 'cli-preprocessors'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $preprocessorOutput --preprocessor identity --preprocessor 'replace:Print=Print'
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $preprocessorOutput 'Generated.dll'))) { throw 'AST repeated --preprocessor regression failed.' }
+Write-Host 'AST_PREPROCESSOR_OPTIONS_OK'
 $includeUseOutput = Join-Path $output 'include-use-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-use-next.xps') -o $includeUseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Include/Use compilation failed.' }
