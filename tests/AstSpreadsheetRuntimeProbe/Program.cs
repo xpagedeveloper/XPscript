@@ -130,8 +130,16 @@ async Task<(int Exit, string Text)> Execute(string file, string[] commandArgumen
     foreach (var argument in commandArguments) start.ArgumentList.Add(argument);
     using var process = Process.Start(start)!;
     var stdout = process.StandardOutput.ReadToEndAsync(); var stderr = process.StandardError.ReadToEndAsync();
-    try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(120)); } catch { process.Kill(true); throw; }
-    return (process.ExitCode, await stdout + await stderr);
+    try
+    {
+        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(120));
+        return (process.ExitCode, await ReadOutput(stdout, stderr));
+    }
+    catch
+    {
+        TryKill(process);
+        throw;
+    }
 }
 
 async Task<(int Exit, string Text)> ExecuteExpectedFailure(string file, string[] commandArguments, string directory)
@@ -144,11 +152,34 @@ async Task<(int Exit, string Text)> ExecuteExpectedFailure(string file, string[]
     try
     {
         await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(10));
-        return (process.ExitCode, await stdout + await stderr);
+        return (process.ExitCode, await ReadOutput(stdout, stderr));
     }
     catch (TimeoutException)
     {
-        process.Kill(entireProcessTree: true);
+        TryKill(process);
         return (-1, "Expected unsafe XLSX rejection timed out after the child reported its failure.");
     }
+}
+
+async Task<string> ReadOutput(Task<string> stdout, Task<string> stderr)
+{
+    try
+    {
+        await Task.WhenAll(stdout, stderr).WaitAsync(TimeSpan.FromSeconds(5));
+        return await stdout + await stderr;
+    }
+    catch (TimeoutException)
+    {
+        return "Process output timed out after the child exited.";
+    }
+}
+
+static void TryKill(Process process)
+{
+    try
+    {
+        if (!process.HasExited) process.Kill(entireProcessTree: true);
+    }
+    catch (InvalidOperationException) { }
+    catch (System.ComponentModel.Win32Exception) { }
 }
