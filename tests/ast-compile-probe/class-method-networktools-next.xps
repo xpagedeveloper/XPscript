@@ -1,0 +1,19 @@
+Class NetworkHolder
+    Public Function Echo(ByVal value As NetworkPingResult) As NetworkPingResult
+        Set Echo = value
+    End Function
+End Class
+
+Sub Main()
+    Dim tools As New NetworkTools
+    Dim original As NetworkPingResult
+    Set original = tools.Ping("localhost", 1000, 1)
+    Dim holder As New NetworkHolder
+    Dim returned As NetworkPingResult
+    Set returned = holder.Echo(original)
+    If returned Is original Then
+        Print "CLASS_METHOD_NETWORKTOOLS_OK"
+    Else
+        Error 6, "NetworkTools class-method reference identity"
+    End If
+End Sub

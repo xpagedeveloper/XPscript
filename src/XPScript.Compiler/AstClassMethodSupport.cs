@@ -26,6 +26,11 @@ internal static class AstClassMethodSupport
             "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
             "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo" }
             .Contains(name, StringComparer.OrdinalIgnoreCase) ||
+        new[] { "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult",
+            "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo",
+            "NetworkHostResult", "NetworkSubnetInfo", "NetworkTlsVersionResult", "NetworkCertificateResult",
+            "NetworkHttpHeadersResult", "NetworkHttpSecurityHeadersResult", "NetworkRedirectResult", "NetworkBannerResult",
+            "NetworkPortExposureInfo" }.Contains(name, StringComparer.OrdinalIgnoreCase) ||
         string.Equals(name, "XPAttachmentCollection", StringComparison.OrdinalIgnoreCase) ||
         string.Equals(name, "XPJsonSchema", StringComparison.OrdinalIgnoreCase) ||
         new[] { "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall" }
