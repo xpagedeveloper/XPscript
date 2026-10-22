@@ -102,13 +102,19 @@ internal static class RunCompiler
             cancellationToken).ConfigureAwait(false);
     }
 
-    internal static Task<string> CompileGeneratedWithDependenciesAsync(string generatedSource, string outputDirectory, bool debug, CancellationToken cancellationToken, string? runtimeIdentifier = null)
+    internal static Task<string> CompileGeneratedWithDependenciesAsync(
+        string generatedSource,
+        string outputDirectory,
+        bool debug,
+        CancellationToken cancellationToken,
+        string? runtimeIdentifier = null,
+        IReadOnlyList<ManagedAssemblyReferencePreprocessor.ManagedReference>? managedReferences = null)
     {
         var outputRoot = Path.GetFullPath(outputDirectory);
         Directory.CreateDirectory(outputRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(outputRoot);
         return CompileWithMsBuildAsync(Path.Combine(outputRoot, "Program.cs"), outputRoot, generatedSource,
-            new ManagedAssemblyReferencePreprocessor.Result(generatedSource, [], []), [], debug, cancellationToken, runtimeIdentifier);
+            new ManagedAssemblyReferencePreprocessor.Result(generatedSource, managedReferences ?? [], []), [], debug, cancellationToken, runtimeIdentifier);
     }
 
     private static async Task<string> CompileWithMsBuildAsync(
