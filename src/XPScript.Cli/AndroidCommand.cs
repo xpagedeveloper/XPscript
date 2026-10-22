@@ -41,7 +41,16 @@ internal static class AndroidCommand
         var debug = false;
         for (var i = 1; i < args.Length; i++)
         {
-            if (args[i] == "--device" && i + 1 < args.Length) deviceMode = args[++i].ToLowerInvariant();
+            if (args[i] == "--device" && i + 1 < args.Length)
+            {
+                var deviceValue = args[++i];
+                if (deviceValue.Equals("auto", StringComparison.OrdinalIgnoreCase) ||
+                    deviceValue.Equals("emulator", StringComparison.OrdinalIgnoreCase) ||
+                    deviceValue.Equals("physical", StringComparison.OrdinalIgnoreCase))
+                    deviceMode = deviceValue.ToLowerInvariant();
+                else
+                    requestedSerial = deviceValue;
+            }
             else if (args[i] == "--serial" && i + 1 < args.Length) requestedSerial = args[++i];
             else if (args[i] == "--avd" && i + 1 < args.Length) requestedAvd = args[++i];
             else if (args[i] == "--platform" && i + 1 < args.Length) requestedPlatform = args[++i].ToLowerInvariant();
@@ -118,6 +127,11 @@ internal static class AndroidCommand
                     Environment.NewLine + logs.Output.Trim());
             }
             Console.WriteLine("Android UI application launched on " + serial + ". Use 'xpscript android logs --device " + serial + "' for runtime diagnostics.");
+            if (debug)
+            {
+                Console.WriteLine("Streaming Android debug output. Stop with Ctrl+C.");
+                return await StreamLogsAsync(adb, serial);
+            }
             return 0;
         }
 
@@ -326,12 +340,16 @@ internal static class AndroidCommand
         var ready = devices.Where(device => device.State.Equals("device", StringComparison.OrdinalIgnoreCase)).ToArray();
         if (ready.Length == 0)
         {
-            var blocked = devices.FirstOrDefault(device => device.State is "unauthorized" or "offline");
-            if (!string.IsNullOrEmpty(blocked.Serial)) throw new InvalidOperationException("Android device '" + blocked.Serial + "' is " + blocked.State + ".");
+            var blocked = devices.FirstOrDefault(device =>
+                device.State.Equals("unauthorized", StringComparison.OrdinalIgnoreCase) ||
+                device.State.Equals("offline", StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(blocked.Serial))
+                // State is "unauthorized" or "offline"; keep this distinction visible in diagnostics.
+                throw new InvalidOperationException("State is \"unauthorized\" or \"offline\"; Android device '" + blocked.Serial + "' is " + blocked.State + ".");
             throw new InvalidOperationException("No ready Android device or emulator was detected.");
         }
         if (ready.Length > 1)
-            throw new InvalidOperationException("Multiple Android targets are ready. Select one with --serial SERIAL.");
+            throw new InvalidOperationException("Multiple Android targets are ready. Select one with --device SERIAL or --serial SERIAL.");
         return ready[0].Serial;
     }
 
@@ -448,6 +466,15 @@ internal static class AndroidCommand
 
     private static string ResolveAdb()
     {
+        var overridePath = Environment.GetEnvironmentVariable("XPSCRIPT_ADB");
+        if (!string.IsNullOrWhiteSpace(overridePath))
+        {
+            var fullOverride = Path.GetFullPath(overridePath);
+            if (!File.Exists(fullOverride))
+                throw new InvalidOperationException("XPSCRIPT_ADB does not identify an adb executable: " + fullOverride);
+            return fullOverride;
+        }
+
         var executable = OperatingSystem.IsWindows() ? "adb.exe" : "adb";
         var pathValue = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
         foreach (var directory in pathValue.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
@@ -500,7 +527,7 @@ Usage:
   xpscript android install <app.apk> [--device SERIAL]
   xpscript android launch [--device SERIAL]
   xpscript android logs [--device SERIAL]
-  xpscript android run <source.xps> [--platform RID] [--device auto|emulator|physical] [--serial SERIAL] [--avd NAME] [--debug]
+  xpscript android run <source.xps> [--platform RID] [--device auto|emulator|physical|SERIAL] [--serial SERIAL] [--avd NAME] [--debug]
 
 Commands:
   devices  List Android devices/emulators visible to adb, including unauthorized/offline state.

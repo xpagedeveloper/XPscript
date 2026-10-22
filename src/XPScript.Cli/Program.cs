@@ -520,7 +520,7 @@ Usage:
   xpscript security <source.xps> [--platform RID|--rid RID] [--json]
   xpscript [--info] run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
   xpscript <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [compiler options...]
-  xpscript new <rest|web|desktop|cli> <directory>
+  xpscript new <rest|web|desktop|cli|android> <directory>
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
   xpscript service install <compiled-service> --name NAME --display-name "DISPLAY NAME" [--start auto|manual|disabled]
   xpscript android devices
