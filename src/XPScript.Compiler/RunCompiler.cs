@@ -108,13 +108,15 @@ internal static class RunCompiler
         bool debug,
         CancellationToken cancellationToken,
         string? runtimeIdentifier = null,
-        IReadOnlyList<ManagedAssemblyReferencePreprocessor.ManagedReference>? managedReferences = null)
+        IReadOnlyList<ManagedAssemblyReferencePreprocessor.ManagedReference>? managedReferences = null,
+        string? referenceSourcePath = null,
+        string? startupObject = null)
     {
         var outputRoot = Path.GetFullPath(outputDirectory);
         Directory.CreateDirectory(outputRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(outputRoot);
-        return CompileWithMsBuildAsync(Path.Combine(outputRoot, "Program.cs"), outputRoot, generatedSource,
-            new ManagedAssemblyReferencePreprocessor.Result(generatedSource, managedReferences ?? [], []), [], debug, cancellationToken, runtimeIdentifier);
+        return CompileWithMsBuildAsync(referenceSourcePath ?? Path.Combine(outputRoot, "Program.cs"), outputRoot, generatedSource,
+            new ManagedAssemblyReferencePreprocessor.Result(generatedSource, managedReferences ?? [], []), [], debug, cancellationToken, runtimeIdentifier, startupObject);
     }
 
     private static async Task<string> CompileWithMsBuildAsync(
@@ -125,7 +127,8 @@ internal static class RunCompiler
         IReadOnlyList<NativeDependencyPackager.Dependency> nativeDependencies,
         bool debug,
         CancellationToken cancellationToken,
-        string? runtimeIdentifier = null)
+        string? runtimeIdentifier = null,
+        string? startupObject = null)
     {
         var tempRoot = CompilerPathSecurity.CreateOwnedTemporaryDirectory("run-build-");
         try
@@ -135,7 +138,7 @@ internal static class RunCompiler
             var references = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
             var usesMimeKit = generatedSource.Contains("MimeKit.", StringComparison.Ordinal);
             var isAndroid = IsAndroidRuntime(runtimeIdentifier);
-            await File.WriteAllTextAsync(projectPath, BuildProject(references, usesMimeKit, runtimeIdentifier), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(projectPath, BuildProject(references, usesMimeKit, runtimeIdentifier, startupObject), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(programPath,
                 isAndroid ? generatedSource + Environment.NewLine + AndroidHostSource.Code : generatedSource,
                 cancellationToken).ConfigureAwait(false);
@@ -288,7 +291,8 @@ internal static class RunCompiler
     private static string BuildProject(
         IReadOnlyList<(string Name, string Path)> references,
         bool usesMimeKit,
-        string? runtimeIdentifier)
+        string? runtimeIdentifier,
+        string? startupObject = null)
     {
         var items = new StringBuilder();
         if (references.Count > 0)
@@ -310,7 +314,7 @@ internal static class RunCompiler
             : string.Empty;
         var isAndroid = IsAndroidRuntime(runtimeIdentifier);
         var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
-        var startupObject = isAndroid ? string.Empty : "    <StartupObject>Program</StartupObject>\n";
+        var startup = isAndroid || string.IsNullOrWhiteSpace(startupObject) ? string.Empty : $"    <StartupObject>{EscapeXml(startupObject)}</StartupObject>\n";
         var androidAbi = runtimeIdentifier is "android-arm64" ? "arm64-v8a" : "x86_64";
         var androidProperties = isAndroid
             ? $"    <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>\n" +
@@ -325,7 +329,7 @@ internal static class RunCompiler
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-{startupObject}
+{startup}
     <TargetFramework>{targetFramework}</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

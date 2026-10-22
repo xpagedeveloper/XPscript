@@ -115,6 +115,11 @@ public sealed class XpsWebCompiler
         if (compilerSource.Contains(".Attachments", StringComparison.OrdinalIgnoreCase))
             compilerSource += "\n' XPScript compiler runtime feature: XPDBSQLite Attachments\n";
         compilerSource = EnsureCompilerEntryPoint(compilerSource);
+        if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_AST"), "1", StringComparison.Ordinal))
+        {
+            compilerSource += Environment.NewLine + "Reference \"XPScript.Web.Runtime.dll\"" + Environment.NewLine;
+            return await CompileAstWebAsync(fullSourcePath, fullSourceRoot, compilerSource, parsed, cancellationToken).ConfigureAwait(false);
+        }
         string generated;
         try
         {
@@ -528,6 +533,53 @@ internal static class Script
         var match = ScriptClassMarker.Match(generated);
         if (!match.Success) throw new XpsWebCompilationException("Generated web assembly does not contain the expected Script class marker.");
         return generated[..match.Index] + members + generated[(match.Index + match.Length)..];
+    }
+
+    private static async Task<XpsCompiledWebUnit> CompileAstWebAsync(
+        string sourcePath,
+        string sourceRoot,
+        string compilerSource,
+        XpsWebRouteParseResult parsed,
+        CancellationToken cancellationToken)
+    {
+        var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var root = string.IsNullOrWhiteSpace(configuredTempRoot)
+            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            : Path.Combine(Path.GetFullPath(configuredTempRoot), "XPScript");
+        var workspace = Path.Combine(root, "web-ast", Guid.NewGuid().ToString("N"));
+        var output = Path.Combine(workspace, "publish");
+        Directory.CreateDirectory(workspace);
+        var stagedSourcePath = Path.Combine(workspace, Path.GetFileName(sourcePath));
+        File.Copy(typeof(XpsWebContext).Assembly.Location, Path.Combine(workspace, "XPScript.Web.Runtime.dll"), overwrite: true);
+        await File.WriteAllTextAsync(stagedSourcePath, compilerSource, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var assemblyPath = await AstExperimentalCompiler.CompileWithGeneratedSourceTransformAsync(
+                stagedSourcePath,
+                output,
+                CompilerDriver.CurrentRuntimeIdentifier(),
+                generated => InjectWebObjects(TransformAstWebGeneratedSource(generated)),
+                cancellationToken).ConfigureAwait(false);
+            var webAssemblyPath = Path.Combine(Path.GetDirectoryName(assemblyPath)!, "XPScript.WebUnit.dll");
+            File.Copy(assemblyPath, webAssemblyPath, overwrite: true);
+            var generatedPdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
+            if (File.Exists(generatedPdbPath))
+                File.Copy(generatedPdbPath, Path.ChangeExtension(webAssemblyPath, ".pdb"), overwrite: true);
+            var assemblyBytes = await File.ReadAllBytesAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
+            var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
+            var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
+            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, Path.GetDirectoryName(assemblyPath)!, sourceRoot);
+        }
+        catch (Exception ex) when (ex is CompilerException or XpsWebCompilationException or IOException or UnauthorizedAccessException)
+        {
+            throw new XpsWebCompilationException("AST web compilation failed: " + ex.Message, ex);
+        }
+    }
+
+    private static string TransformAstWebGeneratedSource(string generated)
+    {
+        var transformed = Regex.Replace(generated, @"\bProgram\b", "Script", RegexOptions.CultureInvariant);
+        return Regex.Replace(transformed, @"(?im)^\s*public static dynamic RequestScope = new ExpandoObject\(\);\s*\r?\n", string.Empty, RegexOptions.CultureInvariant);
     }
 
     private static string NormalizeVariantSetAssignments(string source)
