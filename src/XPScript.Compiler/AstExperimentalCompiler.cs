@@ -624,9 +624,12 @@ public static class AstExperimentalCompiler
         symbols.Declare(new VariableSymbol("RequestScope", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Err", typeof(object), XpTypeSymbol.Variant));
         // Bind class bodies before module entry points so body diagnostics are
-        // not masked by a later overload error in Main.
-        foreach (var classDeclaration in classes.Values)
-            _ = AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource, classes);
+        // not masked by a later overload error in Main. Cache the emitted
+        // members so constructors and accessors are not emitted twice.
+        var emittedClassMembers = classes.Values.ToDictionary(
+            classDeclaration => classDeclaration.Identifier.Text,
+            classDeclaration => AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource, classes),
+            StringComparer.OrdinalIgnoreCase);
         // Bind every procedure in its own scope; declarations are registered
         // before bodies so forward calls and recursion see real signatures.
         var methods = new List<BoundMethodDefinition>();
@@ -750,7 +753,7 @@ public static class AstExperimentalCompiler
             var delete = classDeclaration.BaseType is null
                 ? $"public virtual void Delete() {{ {explicitCleanup} }}"
                 : $"public override void Delete() {{ {explicitCleanup} base.Delete(); }}";
-            var memberBodies = AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource, classes);
+            var memberBodies = emittedClassMembers[classDeclaration.Identifier.Text];
             if (classDeclaration.Members.OfType<DestructorDeclarationSyntax>().Any())
             {
                 var cleanup = classDeclaration.BaseType is null ? explicitCleanup
