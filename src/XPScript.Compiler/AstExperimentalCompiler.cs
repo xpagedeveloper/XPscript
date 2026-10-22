@@ -452,11 +452,17 @@ public static class AstExperimentalCompiler
         symbols.Declare(new VariableSymbol("Command", typeof(string), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Platform", typeof(string), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("CurDir", typeof(string), XpTypeSymbol.Variant));
-        symbols.Declare(new FunctionSymbol("Sleep", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
+        // A native Declare Sub/Function may intentionally use the built-in
+        // name (for example Win32 Sleep). In that case the native declaration
+        // is the authoritative overload; registering the Variant helper too
+        // makes a strongly typed native call ambiguous.
+        if (!nativeDeclarations.Any(native => native.Name.Equals("Sleep", StringComparison.OrdinalIgnoreCase)))
+            symbols.Declare(new FunctionSymbol("Sleep", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Error", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Error", typeof(string), [], XpTypeSymbol.FromClr(typeof(string)), []));
         symbols.Declare(new FunctionSymbol("ErrorValue", typeof(string), [], XpTypeSymbol.FromClr(typeof(string)), []));
-        symbols.Declare(new FunctionSymbol("GetTickCount", typeof(long), [], XpTypeSymbol.FromClr(typeof(long)), []));
+        if (!nativeDeclarations.Any(native => native.Name.Equals("GetTickCount", StringComparison.OrdinalIgnoreCase)))
+            symbols.Declare(new FunctionSymbol("GetTickCount", typeof(long), [], XpTypeSymbol.FromClr(typeof(long)), []));
         symbols.Declare(new FunctionSymbol("MsgBox", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("MsgBox", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("MsgBox", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));

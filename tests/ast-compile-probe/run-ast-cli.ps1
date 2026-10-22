@@ -194,6 +194,10 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeSubOutput 'Generat
 $nativeSubResult = dotnet (Join-Path $nativeSubOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($nativeSubResult -join "`n") -notmatch 'NATIVE-SUB-COMPILE-OK') { throw 'AST native Sub declaration regression failed.' }
 Write-Host 'AST_NATIVE_SUB_OK'
+$nativeBuiltinCollisionOutput = Join-Path $output 'native-builtin-collision'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'native-builtin-collision-next.xps') -o $nativeBuiltinCollisionOutput
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $nativeBuiltinCollisionOutput 'Generated.dll'))) { throw 'AST native declaration/built-in overload collision regression failed.' }
+Write-Host 'AST_NATIVE_BUILTIN_COLLISION_OK'
 $nativeByRefOutput = Join-Path $output 'native-byref-error-ast'
 dotnet $compiler ast-compile (Join-Path $root 'samples/native-byref-error-ast.xps') -o $nativeByRefOutput 2>&1 | Out-String | Tee-Object -Variable nativeByRefDiagnostics | Out-Null
 if ($LASTEXITCODE -eq 0 -or $nativeByRefDiagnostics -notmatch 'XPS2013') { throw 'AST native ByRef diagnostic regression failed.' }
