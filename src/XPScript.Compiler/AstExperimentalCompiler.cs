@@ -45,7 +45,7 @@ public static class AstExperimentalCompiler
     /// surface (for example web request/response objects) while keeping parsing,
     /// binding and emission in the AST compiler.
     /// </summary>
-    internal static Task<string> CompileWithGeneratedSourceTransformAsync(
+    public static Task<string> CompileWithGeneratedSourceTransformAsync(
         string sourcePath,
         string outputDirectory,
         string? runtimeIdentifier,
@@ -379,6 +379,12 @@ public static class AstExperimentalCompiler
         foreach (var typeName in AstObjectSupportRegistry.VariantTypeNames)
             symbols.Declare(new VariableSymbol(typeName, typeof(object), BoundExpressionEmitter.RuntimeObjectType(typeName) is null ? XpTypeSymbol.Variant : XpTypeSymbol.User(typeName)));
         symbols.Declare(new VariableSymbol("Console", typeof(object), XpTypeSymbol.Variant));
+        // Host compilers may inject these globals into the generated module
+        // after AST binding (the web compiler is one such host). Declaring them
+        // here keeps binding in the AST path instead of requiring a legacy
+        // transpiler pass merely to recognize the host surface.
+        foreach (var hostGlobal in new[] { "Request", "Response", "Body", "Server", "RequestScope", "Session", "Application" })
+            symbols.Declare(new VariableSymbol(hostGlobal, typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("SEARCH_DEPTH", typeof(long), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("SEARCH_BREADTH", typeof(long), XpTypeSymbol.Variant));
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
