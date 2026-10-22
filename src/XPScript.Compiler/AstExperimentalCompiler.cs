@@ -623,6 +623,10 @@ public static class AstExperimentalCompiler
                 mainSymbol.NativeTargetName = "__xps_application_main";
         symbols.Declare(new VariableSymbol("RequestScope", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Err", typeof(object), XpTypeSymbol.Variant));
+        // Bind class bodies before module entry points so body diagnostics are
+        // not masked by a later overload error in Main.
+        foreach (var classDeclaration in classes.Values)
+            _ = AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource, classes);
         // Bind every procedure in its own scope; declarations are registered
         // before bodies so forward calls and recursion see real signatures.
         var methods = new List<BoundMethodDefinition>();
@@ -1558,7 +1562,7 @@ internal static class Program
 
     internal static IReadOnlyList<BoundStatement> BindProcedure(IReadOnlyList<StatementSyntax> procedureStatements, SymbolTable scope,
         IReadOnlyList<ParameterSymbol> parameters, XpTypeSymbol? returnType, string? functionName, LocalSymbol? result,
-        string identity, string sourcePath, string transformedSource, string fullSource)
+        string identity, string sourcePath, string transformedSource, string fullSource, bool allowDynamicConversions = true)
     {
             var allProcedureStatements = FlattenStatements(procedureStatements).ToArray();
             var labels = allProcedureStatements.OfType<LabelStatementSyntax>()
@@ -1584,7 +1588,8 @@ internal static class Program
                     throw MappedDiagnosticFromTransformed(control.Span, sourcePath, transformedSource, fullSource, $"Unknown label '{target.Text}'.");
             }
             ValidateLoopEntryTransfers(procedureStatements, labels, sourcePath, transformedSource, fullSource);
-            var binder = new StatementBinder(scope, returnType, returnType is not null, true, functionName, result, identity);
+            var binder = new StatementBinder(scope, returnType, returnType is not null, true, functionName, result, identity,
+                allowDynamicConversions: allowDynamicConversions);
             var bound = procedureStatements.Select(binder.Bind).OfType<BoundStatement>().ToList();
             if (binder.Diagnostics.Count > 0)
                 throw SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, transformedSource, fullSource);
@@ -1602,7 +1607,7 @@ internal static class Program
     internal static IReadOnlyList<BoundStatement> BindProcedure(IReadOnlyList<StatementSyntax> procedureStatements, SymbolTable scope,
         IReadOnlyList<ParameterSymbol> parameters, XpTypeSymbol? returnType, string? functionName, LocalSymbol? result,
         string identity, string sourcePath, string fullSource) =>
-        BindProcedure(procedureStatements, scope, parameters, returnType, functionName, result, identity, sourcePath, fullSource, fullSource);
+        BindProcedure(procedureStatements, scope, parameters, returnType, functionName, result, identity, sourcePath, fullSource, fullSource, true);
 
     internal static IEnumerable<StatementSyntax> FlattenStatements(IEnumerable<StatementSyntax> statements)
     {

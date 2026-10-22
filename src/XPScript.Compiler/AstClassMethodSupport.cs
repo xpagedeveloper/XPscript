@@ -298,7 +298,7 @@ internal static class AstClassMethodSupport
             var result = hasResult ? new LocalSymbol("__xps_class_result", returnType, semanticResult) : null;
             var bound = AstExperimentalCompiler.BindProcedure(statements, scope, parameters,
                 hasResult ? semanticResult : null, hasResult ? name : null, result,
-                declaration.Identifier.Text + "." + name, sourcePath, source);
+                declaration.Identifier.Text + "." + name, sourcePath, source, source, allowDynamicConversions: false);
             var emittedName = constructor is not null ? "__xps_constructor_body" + AstClassConstructorSupport.Suffix(declaration, constructor) : isDestructor ? "__xps_destructor_body" : property is null ? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
             string body;
             try { body = new BoundMethodEmitter().Emit(emittedName, returnType, parameters, bound, false, source, sourcePath, semanticResult); }

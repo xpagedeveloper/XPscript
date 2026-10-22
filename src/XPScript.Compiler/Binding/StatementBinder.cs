@@ -4,12 +4,13 @@ namespace XPScript.Compiler.Binding;
 
 public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? returnType = null, bool allowsReturnValue = false,
     bool allowDynamicMembers = false, string? functionName = null, LocalSymbol? functionResult = null,
-    string? procedureIdentity = null, int forAllDepth = 0)
+    string? procedureIdentity = null, int forAllDepth = 0, bool allowDynamicConversions = true)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly XpTypeSymbol? _returnType = returnType;
     private readonly bool _allowsReturnValue = allowsReturnValue;
     private readonly bool _allowDynamicMembers = allowDynamicMembers;
+    private readonly bool _allowDynamicConversions = allowDynamicConversions;
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
     private readonly int _forAllDepth = forAllDepth;
     private BoundExpression? _withReceiver;
@@ -365,7 +366,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             };
             scope.Declare(alias);
             var binder = new StatementBinder(scope, _returnType, _allowsReturnValue, _allowDynamicMembers,
-                functionName, functionResult, procedureIdentity, _forAllDepth + 1);
+                functionName, functionResult, procedureIdentity, _forAllDepth + 1, _allowDynamicConversions);
             var body = syntax.Statements.Select(binder.Bind).OfType<BoundStatement>().ToArray();
             _diagnostics.AddRange(binder.Diagnostics);
             return new BoundForAllStatement(new BoundNameExpression(alias), collection, body);
@@ -378,7 +379,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
             var alias = new LocalSymbol(syntax.IdentifierToken.Text, element.RuntimeType, element) { IsListAlias = true };
             scope.Declare(alias);
             var binder = new StatementBinder(scope, _returnType, _allowsReturnValue, _allowDynamicMembers,
-                functionName, functionResult, procedureIdentity, _forAllDepth + 1);
+                functionName, functionResult, procedureIdentity, _forAllDepth + 1, _allowDynamicConversions);
             var body = syntax.Statements.Select(binder.Bind).OfType<BoundStatement>().ToArray();
             _diagnostics.AddRange(binder.Diagnostics);
             return new BoundForAllStatement(new BoundNameExpression(alias), collection, body);
@@ -423,7 +424,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         }
 
         var bodyBinder = new StatementBinder(bodyScope, _returnType, _allowsReturnValue, _allowDynamicMembers,
-            functionName, functionResult, procedureIdentity, _forAllDepth + 1);
+            functionName, functionResult, procedureIdentity, _forAllDepth + 1, _allowDynamicConversions);
         var statements = syntax.Statements.Select(bodyBinder.Bind).OfType<BoundStatement>().ToArray();
         _diagnostics.AddRange(bodyBinder.Diagnostics);
         return new BoundForAllStatement(variable, collection, statements);
@@ -689,7 +690,8 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         }
         if (sameListElementType)
             conversion = new Conversion(ConversionKind.Identity);
-        else if (!conversion.IsImplicit && _allowDynamicMembers && propertyMode != PropertyAssignmentKind.Set)
+        else if (!conversion.IsImplicit && _allowDynamicMembers && propertyMode != PropertyAssignmentKind.Set &&
+                 (_allowDynamicConversions || value.SemanticType.IsVariant || target.SemanticType.IsVariant))
             value = new BoundConversionExpression(value, target.SemanticType, new Conversion(ConversionKind.FromVariant)) { Span = value.Span };
         else if (!conversion.IsImplicit)
             _diagnostics.Add(new SyntaxDiagnostic(
