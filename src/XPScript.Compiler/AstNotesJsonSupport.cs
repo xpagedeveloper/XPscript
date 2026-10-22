@@ -13,9 +13,11 @@ internal static class AstNotesJsonSupport
     // XPJSONElement collide with the native XPJsonObject/XPJsonArray/
     // XPJsonElement symbols. Keep the native JSON surface authoritative for
     // those overlapping names; NotesHTTPRequest and XPJSONNavigator remain
-    // compatibility-only surfaces.
+    // compatibility-only surfaces. Do not import XPJSONElement either: its
+    // case-insensitive symbol key is the same as the native XPJsonElement,
+    // and the XPJson surface is authoritative in AST compilation.
     internal static readonly AstNativeObjectSurface.Member[] Members = AstNativeObjectSurface
-        .ReadMembers(Classes, Names.Where(name => name is "NotesHTTPRequest" or "XPJSONNavigator" or "XPJSONElement").ToArray(), LanguageType)
+        .ReadMembers(Classes, Names.Where(name => name is "NotesHTTPRequest" or "XPJSONNavigator").ToArray(), LanguageType)
         .ToArray();
     internal static void Import(SymbolTable symbols) => AstNativeObjectSurface.Import(symbols, Members, LanguageType);
     internal static string? RuntimeType(string name) => name is "XPJSONObject" or "XPJSONArray" or "XPJSONElement" ||
