@@ -1181,7 +1181,11 @@ try {
 finally {
     Remove-Item -LiteralPath $normalStdout -Force -ErrorAction SilentlyContinue
 }
-dotnet run --project (Join-Path $root 'tests/AstApplicationRuntimeProbe') -c Release
+$applicationProbeProject = Join-Path $root 'tests/AstApplicationRuntimeProbe/AstApplicationRuntimeProbe.csproj'
+dotnet build $applicationProbeProject -c Release --no-restore -p:UseAppHost=false -p:BuildInParallel=false
+if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime probe build failed.' }
+$applicationProbeDll = Join-Path $root 'tests/AstApplicationRuntimeProbe/bin/Release/net10.0/AstApplicationRuntimeProbe.dll'
+dotnet $applicationProbeDll
 if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime regression failed.' }
 & (Join-Path $PSScriptRoot 'run-ast-constructor.ps1')
 & (Join-Path $PSScriptRoot 'run-ast-destructor.ps1')
