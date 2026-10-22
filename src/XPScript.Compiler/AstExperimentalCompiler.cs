@@ -1515,18 +1515,15 @@ internal static class Program
 
     private static string RemoveDuplicateTlsRuntime(string generated)
     {
-        const string startMarker = "internal sealed class XPScriptTlsValidationState";
-        const string endMarker = "internal sealed class XPScriptRuntimeException";
-        var first = generated.IndexOf(startMarker, StringComparison.Ordinal);
+        var tlsCode = AstTlsRuntimeCode();
+        var first = generated.IndexOf(tlsCode, StringComparison.Ordinal);
         if (first < 0) return generated;
-        var search = first + startMarker.Length;
+        var search = first + tlsCode.Length;
         while (true)
         {
-            var duplicate = generated.IndexOf(startMarker, search, StringComparison.Ordinal);
+            var duplicate = generated.IndexOf(tlsCode, search, StringComparison.Ordinal);
             if (duplicate < 0) return generated;
-            var end = generated.IndexOf(endMarker, duplicate, StringComparison.Ordinal);
-            if (end < 0) return generated;
-            generated = generated.Remove(duplicate, end - duplicate);
+            generated = generated.Remove(duplicate, tlsCode.Length);
             search = duplicate;
         }
     }
