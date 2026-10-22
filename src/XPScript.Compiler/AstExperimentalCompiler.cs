@@ -80,6 +80,18 @@ public static class AstExperimentalCompiler
         // AST compiler has the same multi-file source contract as the legacy path.
         var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
         source = includeResult.Source;
+        try
+        {
+            // Keep declaration-level overload diagnostics identical to the
+            // legacy path before AST binding emits generated C#.
+            new ClassOverloadValidator().Validate(source, sourcePath);
+        }
+        catch (CompilerException ex)
+        {
+            var remapped = SourceMapDiagnostics.Remap(ex.Message, sourcePath, includeResult.Map);
+            if (string.Equals(remapped, ex.Message, StringComparison.Ordinal)) throw;
+            throw new CompilerException(remapped, ex.DiagnosticCode, ex.Category, ex.GeneratedDiagnostics);
+        }
         var managedReferences = new ManagedAssemblyReferencePreprocessor(runtimeIdentifier ?? CompilerDriver.CurrentRuntimeIdentifier())
             .Transform(source, includeResult.Map, sourcePath);
         source = managedReferences.Source;
