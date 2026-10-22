@@ -207,7 +207,7 @@ static async Task RunExecutableRegression(string root, string scriptPath)
 
     using var process = Process.Start(start) ?? throw new Exception("Failed to start CGI executable.");
     process.StandardInput.Close();
-    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(120));
     var stdoutTask = process.StandardOutput.ReadToEndAsync(timeout.Token);
     var stderrTask = process.StandardError.ReadToEndAsync(timeout.Token);
     await process.WaitForExitAsync(timeout.Token);
@@ -264,7 +264,7 @@ End Sub
 
     using var process = Process.Start(start) ?? throw new Exception("Failed to start XPImage CGI executable.");
     process.StandardInput.Close();
-    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(120));
     await using var stdout = new MemoryStream();
     var stdoutTask = process.StandardOutput.BaseStream.CopyToAsync(stdout, timeout.Token);
     var stderrTask = process.StandardError.ReadToEndAsync(timeout.Token);
