@@ -100,6 +100,15 @@ public static class CompilerSymbolCatalog
             Define("XPJsonElement.Type", "method", "XPJsonElement.Type As String", [], "String", "api.XPJsonElement.Type"),
             Define("XPJsonElement.Value", "method", "XPJsonElement.Value As Variant", [], "Variant", "api.XPJsonElement.Value"),
             Define("XPImage", "class", "XPImage", [], null, "api.XPImage"),
+            // Web-host globals are injected by XpsWebCompiler after AST binding.
+            // Keep their documented members in the shared catalog so route
+            // sources bind against the AST path instead of falling back to the
+            // legacy web transpiler.
+            Define("Request.Method", "property", "Request.Method As String", [], "String", "api.web.Request.Method"),
+            Define("Response.ContentType", "property", "Response.ContentType As String", [], "String", "api.web.Response.ContentType"),
+            Define("Response.SetHeader", "method", "Response.SetHeader(name As String, value As String)", [new("name", "String"), new("value", "String")], null, "api.web.Response.SetHeader"),
+            Define("Response.Write", "method", "Response.Write(value As Variant)", [new("value", "Variant")], null, "api.web.Response.Write"),
+            Define("Server.HostingMode", "property", "Server.HostingMode As String", [], "String", "api.web.Server.HostingMode"),
             Define("XPDBSQLite", "class", "XPDBSQLite", [], null, "api.XPDBSQLite"),
             Define("XPDBSQLite.Open", "method", "XPDBSQLite.Open()", [], null, "api.XPDBSQLite.Open"),
             Define("XPDBSQLite.Close", "method", "XPDBSQLite.Close()", [], null, "api.XPDBSQLite.Close"),
