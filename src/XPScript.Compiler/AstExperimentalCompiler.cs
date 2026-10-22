@@ -626,16 +626,17 @@ public static class AstExperimentalCompiler
             var scope = symbols.CreateChildScope();
             var parameters = procedureParameters.Select(parameter =>
             {
-                var semanticType = ResolveParameterType(parameter);
+                var semanticType = ResolveParameterType(parameter, symbols);
                 var runtimeType = parameter.IsArray ? typeof(Array) : semanticType.RuntimeType;
                 return new ParameterSymbol(parameter.Identifier.Text, runtimeType, parameter.IsByRef, semanticType);
             }).ToArray();
             foreach (var parameter in parameters) scope.Declare(parameter);
-            var returnType = procedureFunction is null ? typeof(void) : ResolveRuntimeType(procedureFunction.ReturnType?.Identifier.Text);
-            var result = procedureFunction is null ? null : new LocalSymbol(resultName, returnType, ResolveValueType(procedureFunction.ReturnType));
+            var semanticReturnType = procedureFunction is null ? null : AstClassMethodSupport.DeclaredType(procedureFunction.ReturnType, symbols);
+            var returnType = semanticReturnType?.RuntimeType ?? typeof(void);
+            var result = procedureFunction is null ? null : new LocalSymbol(resultName, returnType, semanticReturnType);
             var procedureStatements = procedureSub?.Statements ?? procedureFunction!.Statements;
             var bound = BindProcedure(procedureStatements, scope, parameters,
-                procedureFunction is null ? null : ResolveValueType(procedureFunction.ReturnType), procedureFunction?.Identifier.Text, result,
+                semanticReturnType, procedureFunction?.Identifier.Text, result,
                 (procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text).ToUpperInvariant() +
                 "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName + ":" + parameter.SemanticType?.Name)) + ")",
                 sourcePath, source, fullSource);
@@ -645,7 +646,7 @@ public static class AstExperimentalCompiler
                 name = "Main";
             if (usesApplication && name.Equals("Main", StringComparison.OrdinalIgnoreCase))
                 name = "__xps_application_main";
-            methods.Add(new BoundMethodDefinition(name, returnType, parameters, bound));
+            methods.Add(new BoundMethodDefinition(name, returnType, parameters, bound, false, semanticReturnType));
             var defaults = new BoundExpression?[parameters.Length];
             // Defaults are expressions in the procedure's declaration scope:
             // an earlier parameter may be referenced, while locals and later

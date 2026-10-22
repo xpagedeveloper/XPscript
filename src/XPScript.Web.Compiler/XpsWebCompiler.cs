@@ -659,8 +659,9 @@ internal static class Script
             RegexOptions.CultureInvariant);
         foreach (var method in new[] { "Json", "OK", "Ok", "Created", "NoContent", "BadRequest", "NotFound", "Unauthorized", "Forbidden", "Conflict", "Problem", "problem" })
         {
-            transformed = transformed.Replace($"Response.{method}(", $"XpsWebResponseRestExtensions.{method}(Response, ", StringComparison.Ordinal);
-            transformed = transformed.Replace($"((dynamic)(Response)).{method}(", $"XpsWebResponseRestExtensions.{method}(Response, ", StringComparison.Ordinal);
+            var receiver = method.Equals("NoContent", StringComparison.OrdinalIgnoreCase) ? "Response" : "Response, ";
+            transformed = transformed.Replace($"Response.{method}(", $"XpsWebResponseRestExtensions.{method}({receiver}", StringComparison.Ordinal);
+            transformed = transformed.Replace($"((dynamic)(Response)).{method}(", $"XpsWebResponseRestExtensions.{method}({receiver}", StringComparison.Ordinal);
         }
         transformed = Regex.Replace(transformed, @"XpsWebResponseRestExtensions\.(?:Problem|problem)\(Response, (-?\d+)L,", "XpsWebResponseRestExtensions.Problem(Response, $1,", RegexOptions.CultureInvariant);
         return Regex.Replace(transformed, @"(?im)^\s*public static dynamic RequestScope = new ExpandoObject\(\);\s*\r?\n", string.Empty, RegexOptions.CultureInvariant);

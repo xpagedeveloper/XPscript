@@ -11,6 +11,9 @@ public static class XpsWebResponseRestExtensions
         WriteJson(response, status, data, "application/json; charset=utf-8");
     }
 
+    public static void Json(this XPScript.Web.Runtime.XpsWebResponse response, long status, object? data)
+        => Json(response, checked((int)status), data);
+
     public static void OK(this XPScript.Web.Runtime.XpsWebResponse response, object? data)
         => WriteJson(response, 200, data, "application/json; charset=utf-8");
 

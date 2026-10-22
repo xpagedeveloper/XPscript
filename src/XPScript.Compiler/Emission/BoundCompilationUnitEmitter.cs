@@ -6,7 +6,7 @@ namespace XPScript.Compiler.Emission;
 /// <summary>A procedure whose signature and body have already been bound.</summary>
 public sealed record BoundMethodDefinition(string Name, Type ReturnType,
     IReadOnlyList<ParameterSymbol> Parameters, IReadOnlyList<BoundStatement> Statements,
-    bool IsOptionalForwarding = false);
+    bool IsOptionalForwarding = false, XpTypeSymbol? SemanticReturnType = null);
 
 /// <summary>Emits a console compilation unit without parsing XPscript source.</summary>
 public sealed class BoundCompilationUnitEmitter
@@ -52,7 +52,7 @@ public sealed class BoundCompilationUnitEmitter
         }
         var emitter = new BoundMethodEmitter();
         foreach (var method in methods)
-            output.Append(emitter.Emit(method.Name, method.ReturnType, method.Parameters, method.Statements, true, source, sourcePath));
+            output.Append(emitter.Emit(method.Name, method.ReturnType, method.Parameters, method.Statements, true, source, sourcePath, method.SemanticReturnType));
         return output.ToString();
     }
 
