@@ -683,7 +683,7 @@ Nested-call verification completed: focused legacy/AST execution, production MCP
 
 ## Final migration item
 
-- [ ] Import the OpenAPI REST server and REST client import/export work from every branch whose name starts with `test-openapi`. Reconcile multi-definition handling, generated server/client contracts, regeneration/update behavior and AST/compiler integration before marking the OpenAPI migration complete.
+- [x] Import the OpenAPI REST server and REST client import/export work from every branch whose name starts with `test-openapi`. Reconcile multi-definition handling, generated server/client contracts, regeneration/update behavior and AST/compiler integration; the complete `OpenApiGeneratorSmoke` matrix passes, including AST server/client compilation and the 300 endpoint/class limit.
   - [x] Verify endpoint-scoped server/client generation and transitive model pruning in the current AST branch; `OpenApiGeneratorSmoke` passes the server/client scope, regeneration, reserved-name, request-body, multipart and import-limit regressions.
 
 ## Current AST migration checkpoint — 2026-10-21
@@ -740,5 +740,5 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
 - [x] Apply the same configurable temporary-root handling to legacy compilation so AST/legacy platform-alias and SQLite parity probes can run in constrained Windows profiles; `--platform win-x64` and legacy SQLite both compile and execute successfully.
 - [x] Apply `XPSCRIPT_TEMP_ROOT` to `XpsWebCompiler` workspaces and persistent web-cache storage so web/REST compilation and execution work in constrained profiles. `WebRestApiSmoke` passes, including malformed-JSON 400 classification and JSON-schema validation.
 - [ ] Finish class/property and remaining special-construct migration, remove unjustified legacy fallback and obsolete regex lowering.
-- [ ] Import and reconcile REST server/client OpenAPI work from all `test-openapi*` branches, including regeneration and multi-definition behavior.
+- [x] Import and reconcile REST server/client OpenAPI work from all `test-openapi*` branches, including regeneration and multi-definition behavior. Full `OpenApiGeneratorSmoke` coverage is green on the AST default path.
 - [ ] Complete the Definition of Done audit before changing the package version to `0.9.4 Beta`.
