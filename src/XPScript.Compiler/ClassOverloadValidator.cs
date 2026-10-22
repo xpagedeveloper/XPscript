@@ -197,6 +197,12 @@ internal sealed class ClassOverloadValidator
             foreach (Match access in Regex.Matches(line, @"\bParent\.(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase))
             {
                 var name = access.Groups["name"].Value;
+                // Parent.New has structural constructor-placement rules. Leave it
+                // to AstClassConstructorSupport.Body so late, duplicate, nested and
+                // root Parent.New uses retain the dedicated XPS1012 diagnostic
+                // instead of being classified as an unknown base member here.
+                if (name.Equals("New", StringComparison.OrdinalIgnoreCase))
+                    continue;
                 if (!baseClass.Members.TryGetValue(name, out var members) || members.Count == 0)
                 {
                     var description = $"Parent base type '{baseClass.Name}' has no member '{name}'.";
