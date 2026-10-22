@@ -1434,6 +1434,7 @@ internal static class Program
             generated = new AiSessionRuntimePostProcessor().Transform(generated);
             generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated);
         }
+        generated = RemoveDuplicateTlsRuntime(generated);
         if (generatedSourceTransform is not null)
             generated = generatedSourceTransform(generated);
         var applicationMarkers = AstApplicationSupport.BuildMarkers(fullSource, sourcePath);
@@ -1510,6 +1511,24 @@ internal static class Program
         if (start < 0 || end < 0)
             throw new InvalidOperationException("AST TLS runtime source markers are missing.");
         return source[start..end];
+    }
+
+    private static string RemoveDuplicateTlsRuntime(string generated)
+    {
+        const string startMarker = "internal sealed class XPScriptTlsValidationState";
+        const string endMarker = "internal sealed class XPScriptRuntimeException";
+        var first = generated.IndexOf(startMarker, StringComparison.Ordinal);
+        if (first < 0) return generated;
+        var search = first + startMarker.Length;
+        while (true)
+        {
+            var duplicate = generated.IndexOf(startMarker, search, StringComparison.Ordinal);
+            if (duplicate < 0) return generated;
+            var end = generated.IndexOf(endMarker, duplicate, StringComparison.Ordinal);
+            if (end < 0) return generated;
+            generated = generated.Remove(duplicate, end - duplicate);
+            search = duplicate;
+        }
     }
 
     private static string AstErrorRuntimeCode()
