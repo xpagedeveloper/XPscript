@@ -188,6 +188,8 @@ public sealed class XpsWebResponse
         SetHeader("Location", url);
     }
 
+    public void Redirect(string url, long statusCode) => Redirect(url, checked((int)statusCode));
+
     public void Complete()
     {
         if (Completed) return;
