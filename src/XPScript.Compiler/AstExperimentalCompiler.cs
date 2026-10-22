@@ -583,7 +583,11 @@ public static class AstExperimentalCompiler
             symbols.Declare(new FunctionSymbol("ArrayResize", typeof(object), Enumerable.Repeat(typeof(object), argumentCount).ToArray(), XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, argumentCount).ToArray()));
         symbols.Declare(new FunctionSymbol("Explode", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FullTrim", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
-        symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)]));
+        // DateNumber returns the boxed XpDate runtime carrier. Keep the source
+        // expression Variant so assignments/ByRef arguments to the language
+        // Date type insert the normal runtime carrier conversion.
+        symbols.Declare(new FunctionSymbol("DateNumber", typeof(object), [typeof(long), typeof(long), typeof(long)],
+            XpTypeSymbol.Variant, [XpTypeSymbol.FromClr(typeof(long)), XpTypeSymbol.FromClr(typeof(long)), XpTypeSymbol.FromClr(typeof(long))]));
         symbols.Declare(new VariableSymbol("Debugger", typeof(object), XpTypeSymbol.User("Debugger")));
         symbols.Declare(new FunctionSymbol("Debugger.Print", typeof(void), [typeof(object)], null, [XpTypeSymbol.Variant])
         { NativeTargetName = "XPScriptDebugRuntime.Print" });
