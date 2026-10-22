@@ -385,11 +385,13 @@ public static class AstExperimentalCompiler
         // Host compilers may inject these globals into the generated module
         // after AST binding (the web compiler is one such host). Declaring them
         // here keeps binding in the AST path instead of requiring a legacy
-        // transpiler pass merely to recognize the host surface.
+        // transpiler pass merely to recognize the host surface. Application,
+        // Session, and Request also need their typed catalog identities so
+        // members such as Request.State bind through the AST catalog.
         foreach (var hostGlobal in new[] { "Request", "Response", "Body", "Server", "RequestScope", "Session", "Application" })
             symbols.Declare(new VariableSymbol(hostGlobal, typeof(object),
-                hostGlobal.Equals("Application", StringComparison.OrdinalIgnoreCase)
-                    ? XpTypeSymbol.User("Application")
+                hostGlobal is "Application" or "Session" or "Request"
+                    ? XpTypeSymbol.User(hostGlobal)
                     : XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("SEARCH_DEPTH", typeof(long), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("SEARCH_BREADTH", typeof(long), XpTypeSymbol.Variant));
