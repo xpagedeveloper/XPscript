@@ -45,6 +45,7 @@ internal static class AstApplicationSupport
             ("Crypto", "Application.Crypto"), ("Log", "Application.Log"), ("Audit", "Application.Audit"), ("Debug", "Application.Debug"), ("SystemLog", "Application.SystemLog") })
             yield return new("Application", name, type, [], [], true, true, false, "XPScriptApplicationRuntime.Namespace");
         yield return new("Application", "Args", "object?", [], [], true, true, false, "XPScriptApplicationRuntime.Args()");
+        yield return new("Application", "NewLine", "string", [], [], true, true, false, "XPScriptApplicationRuntime.NewLine");
         yield return new("Application", "IsDebugging", "bool", [], [], true, true, false, "XPScriptDebugRuntime.IsEnabled");
         foreach (var name in new[] { "Process", "Session", "Request" })
             yield return new(name, "State", "XPScriptStateProxy", [], [], true, true, false, "XPScript" + name + "Runtime.State");

@@ -23,7 +23,9 @@ internal static class AstNativeObjectSurface
     internal static IEnumerable<Member> ReadMembers(ClassDeclarationSyntax[] classes, string[] names,
         Func<string, string> languageType)
     {
-        foreach (var owner in classes.Where(c => names.Contains(languageType(c.Identifier.ValueText), StringComparer.OrdinalIgnoreCase)))
+        foreach (var owner in classes.Where(c =>
+            names.Contains(c.Identifier.ValueText, StringComparer.OrdinalIgnoreCase) ||
+            names.Contains(languageType(c.Identifier.ValueText), StringComparer.OrdinalIgnoreCase)))
         {
             var seen = new HashSet<string>(StringComparer.Ordinal);
             for (ClassDeclarationSyntax? current = owner; current is not null; current = classes.FirstOrDefault(c =>

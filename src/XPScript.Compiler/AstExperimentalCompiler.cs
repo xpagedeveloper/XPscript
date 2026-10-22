@@ -387,7 +387,10 @@ public static class AstExperimentalCompiler
         // here keeps binding in the AST path instead of requiring a legacy
         // transpiler pass merely to recognize the host surface.
         foreach (var hostGlobal in new[] { "Request", "Response", "Body", "Server", "RequestScope", "Session", "Application" })
-            symbols.Declare(new VariableSymbol(hostGlobal, typeof(object), XpTypeSymbol.Variant));
+            symbols.Declare(new VariableSymbol(hostGlobal, typeof(object),
+                hostGlobal.Equals("Application", StringComparison.OrdinalIgnoreCase)
+                    ? XpTypeSymbol.User("Application")
+                    : XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("SEARCH_DEPTH", typeof(long), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("SEARCH_BREADTH", typeof(long), XpTypeSymbol.Variant));
         symbols.Declare(new FunctionSymbol("AstPrint", typeof(void), []));
