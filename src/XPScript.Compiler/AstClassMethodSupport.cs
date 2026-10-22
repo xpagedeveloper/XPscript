@@ -35,6 +35,7 @@ internal static class AstClassMethodSupport
         new[] { "XPShellResult", "XPPathValue", "XPFileInfoValue" }.Contains(name, StringComparer.OrdinalIgnoreCase) ||
         new[] { "XPHttpDbSupabase", "XPHttpDbDominoRest" }.Contains(name, StringComparer.OrdinalIgnoreCase) ||
         string.Equals(name, "XPJsonSchema", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(name, "XPJsonValidationResult", StringComparison.OrdinalIgnoreCase) ||
         new[] { "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall" }
             .Contains(name, StringComparer.OrdinalIgnoreCase) ||
         new[] { "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement" }

@@ -1,0 +1,17 @@
+Class ValidationHolder
+    Public Function Echo(ByVal value As XPJsonValidationResult) As XPJsonValidationResult
+        Set Echo = value
+    End Function
+End Class
+
+Sub Main()
+    Dim holder As New ValidationHolder
+    Dim original As XPJsonValidationResult
+    Dim returned As XPJsonValidationResult
+    Set returned = holder.Echo(original)
+    If returned Is Nothing Then
+        Print "CLASS_METHOD_JSON_VALIDATION_OK"
+    Else
+        Error 6, "XPJsonValidationResult class-method identity"
+    End If
+End Sub
