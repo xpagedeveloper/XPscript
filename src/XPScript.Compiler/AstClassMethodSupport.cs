@@ -33,6 +33,7 @@ internal static class AstClassMethodSupport
             "NetworkPortExposureInfo" }.Contains(name, StringComparer.OrdinalIgnoreCase) ||
         string.Equals(name, "XPAttachmentCollection", StringComparison.OrdinalIgnoreCase) ||
         new[] { "XPShellResult", "XPPathValue", "XPFileInfoValue" }.Contains(name, StringComparer.OrdinalIgnoreCase) ||
+        new[] { "XPHttpDbSupabase", "XPHttpDbDominoRest" }.Contains(name, StringComparer.OrdinalIgnoreCase) ||
         string.Equals(name, "XPJsonSchema", StringComparison.OrdinalIgnoreCase) ||
         new[] { "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall" }
             .Contains(name, StringComparer.OrdinalIgnoreCase) ||
