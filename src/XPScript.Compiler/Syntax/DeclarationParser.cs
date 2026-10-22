@@ -497,7 +497,7 @@ public sealed class DeclarationParser
     private static bool ExpressionParserContextual(SyntaxKind kind) => kind is
         SyntaxKind.AppendKeyword or SyntaxKind.SetKeyword or SyntaxKind.GetKeyword or
         SyntaxKind.OpenKeyword or SyntaxKind.CloseKeyword or SyntaxKind.CallKeyword or
-        SyntaxKind.OutputKeyword;
+        SyntaxKind.OutputKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.PublicKeyword;
 
     private SyntaxToken Take(SyntaxToken[] tokens, ref int position, SyntaxKind expected)
     {
