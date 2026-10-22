@@ -574,8 +574,14 @@ internal static class Script
         var workspace = Path.Combine(root, "web-ast", Guid.NewGuid().ToString("N"));
         var output = Path.Combine(workspace, "publish");
         Directory.CreateDirectory(workspace);
-        var stagedSourcePath = Path.Combine(workspace, Path.GetFileName(sourcePath));
-        File.Copy(typeof(XpsWebContext).Assembly.Location, Path.Combine(workspace, "XPScript.Web.Runtime.dll"), overwrite: true);
+        var relativeSourcePath = Path.GetRelativePath(sourceRoot, sourcePath);
+        if (relativeSourcePath == ".." || relativeSourcePath.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            throw new XpsWebCompilationException("Web source must be inside the configured web root.");
+        var stagedSourcePath = Path.Combine(workspace, relativeSourcePath);
+        StageWebSourceTree(sourceRoot, workspace, sourcePath, stagedSourcePath);
+        var runtimeAssembly = typeof(XpsWebContext).Assembly.Location;
+        File.Copy(runtimeAssembly, Path.Combine(workspace, "XPScript.Web.Runtime.dll"), overwrite: true);
+        File.Copy(runtimeAssembly, Path.Combine(Path.GetDirectoryName(stagedSourcePath)!, "XPScript.Web.Runtime.dll"), overwrite: true);
         await File.WriteAllTextAsync(stagedSourcePath, compilerSource, cancellationToken).ConfigureAwait(false);
         try
         {
@@ -611,6 +617,29 @@ internal static class Script
         catch (Exception ex) when (ex is CompilerException or XpsWebCompilationException or IOException or UnauthorizedAccessException)
         {
             throw new XpsWebCompilationException("AST web compilation failed: " + ex.Message, ex);
+        }
+    }
+
+    private static void StageWebSourceTree(string sourceRoot, string workspace, string sourcePath, string stagedSourcePath)
+    {
+        var options = new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = false,
+            AttributesToSkip = FileAttributes.ReparsePoint,
+            MatchCasing = MatchCasing.PlatformDefault
+        };
+        foreach (var file in Directory.EnumerateFiles(sourceRoot, "*.xps", options))
+        {
+            var fullFile = Path.GetFullPath(file);
+            var relative = Path.GetRelativePath(sourceRoot, fullFile);
+            if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                throw new XpsWebCompilationException("Web source tree contains a file outside the configured web root.");
+            var destination = Path.Combine(workspace, relative);
+            if (Path.GetFullPath(destination).Equals(Path.GetFullPath(stagedSourcePath), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                continue;
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            File.Copy(fullFile, destination, overwrite: true);
         }
     }
 
