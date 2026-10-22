@@ -115,7 +115,10 @@ public sealed class XpsWebCompiler
         if (compilerSource.Contains(".Attachments", StringComparison.OrdinalIgnoreCase))
             compilerSource += "\n' XPScript compiler runtime feature: XPDBSQLite Attachments\n";
         compilerSource = EnsureCompilerEntryPoint(compilerSource);
-        if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_AST"), "1", StringComparison.Ordinal))
+        // AST is the normal web compiler path. Keep an explicit legacy escape hatch
+        // for compatibility diagnostics while the remaining migration corpus is
+        // completed; production callers do not need an opt-in flag.
+        if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_LEGACY"), "1", StringComparison.Ordinal))
         {
             compilerSource += Environment.NewLine + "Reference \"XPScript.Web.Runtime.dll\"" + Environment.NewLine;
             return await CompileAstWebAsync(fullSourcePath, fullSourceRoot, compilerSource, parsed, cancellationToken).ConfigureAwait(false);

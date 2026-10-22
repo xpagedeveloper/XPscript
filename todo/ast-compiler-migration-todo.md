@@ -720,7 +720,8 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
   - [x] Carry AST `Reference` directives through generated-build compilation so host assemblies can be referenced without the legacy compiler; the AST archive regression still compiles successfully.
   - [x] Deduplicate repeated AST TLS runtime emission; the AST archive regression compiles successfully after the fix.
   - [x] Connect the AST generated-source hook to an opt-in `XpsWebCompiler` path, adapt `Program` to `Script`, add the web-runtime reference and configurable startup object; `WebCompilerSmoke` passes with `XPSCRIPT_WEB_AST=1`.
-  - [ ] Make the AST web path the default, remove the legacy web fallback, persist its artifacts correctly, and run all Kestrel/CGI/FastCGI/WebIIS adapter regressions through it.
+  - [x] Make the AST web path the default. `WebCompilerSmoke` and `WebRestApiSmoke` pass without an AST flag; the explicit `XPSCRIPT_WEB_LEGACY=1` escape hatch also passes the web compiler smoke regression.
+  - [ ] Complete the remaining AST web artifact-persistence and all Kestrel/CGI/FastCGI/WebIIS adapter regressions through the default path.
 - [ ] Complete the legacy-vs-AST compatibility corpus: compile success/failure, diagnostics, observable output and target behavior for every supported sample; record intentional legacy defects separately.
 - [ ] Audit every legacy command-line parameter and add parity tests for aliases, defaults, validation, diagnostics and execution semantics.
 - [ ] Verify web/REST execution under Kestrel, IIS, CGI and FastCGI; IIS execution still requires an IIS-enabled environment.
