@@ -13,7 +13,12 @@ internal static class CompilerBuildEnvironment
     {
         ArgumentNullException.ThrowIfNull(startInfo);
         var root = Path.GetFullPath(workspace);
-        var usePersistentRunCache = IsTransientRunBuild(startInfo);
+        // Generated desktop projects are published repeatedly during normal
+        // compilation. Reusing the compiler-version-specific profile avoids
+        // reinitializing the .NET workload resolver (and its Windows Installer
+        // registration) for every generated project, while Android keeps its
+        // caller-selected workload/package cache below.
+        var usePersistentRunCache = IsTransientRunBuild(startInfo) || IsDesktopPublish(startInfo);
         var cacheRoot = usePersistentRunCache ? PersistentRunCacheRoot() : root;
         var environmentRoot = usePersistentRunCache ? CreatePrivateDirectory(cacheRoot, "environment") : root;
         var processTemp = CreatePrivateDirectory(root, "process-temp", harden: false);
@@ -81,6 +86,11 @@ internal static class CompilerBuildEnvironment
 
     private static bool IsTransientRunBuild(ProcessStartInfo startInfo) =>
         startInfo.ArgumentList.Count > 0 && string.Equals(startInfo.ArgumentList[0], "build", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsDesktopPublish(ProcessStartInfo startInfo) =>
+        startInfo.ArgumentList.Count > 0 &&
+        string.Equals(startInfo.ArgumentList[0], "publish", StringComparison.OrdinalIgnoreCase) &&
+        !ReadRuntimeIdentifier(startInfo).StartsWith("android-", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsAndroidPublish(ProcessStartInfo startInfo) =>
         startInfo.ArgumentList.Count > 0 &&
