@@ -1,0 +1,17 @@
+Class SqlHolder
+    Public Function Echo(ByVal value As XPDBMsSQL) As XPDBMsSQL
+        Set Echo = value
+    End Function
+End Class
+
+Sub Main()
+    Dim holder As New SqlHolder
+    Dim original As XPDBMsSQL
+    Dim returned As XPDBMsSQL
+    Set returned = holder.Echo(original)
+    If returned Is Nothing Then
+        Print "CLASS_METHOD_MSSQL_ALIAS_OK"
+    Else
+        Error 6, "XPDBMsSQL alias identity"
+    End If
+End Sub
