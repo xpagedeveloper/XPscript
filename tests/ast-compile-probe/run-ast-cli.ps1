@@ -139,6 +139,12 @@ $operatorResult = dotnet (Join-Path $operatorOutput 'Generated.dll')
 $expectedOperators = @('POW=8', 'INTDIV=2', 'MOD=2', 'XORBOOL=True', 'EQVBOOL=True', 'IMPBOOL=False', 'ANDBITS=0', 'ORBITS=15', 'XORBITS=255', 'NOTBITS=-4')
 if ($LASTEXITCODE -ne 0 -or (($operatorResult -join "`n") -cne ($expectedOperators -join "`n"))) { throw "AST core operator regression failed: $($operatorResult -join ', ')" }
 Write-Host 'AST_CORE_OPERATORS_OK'
+$incrementOutput = Join-Path $output 'increment-compound-operators'
+dotnet $compiler ast-compile (Join-Path $root 'samples/increment-compound-operators.xps') -o $incrementOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST increment and compound assignment compilation failed.' }
+$incrementResult = dotnet (Join-Path $incrementOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($incrementResult -join "`n") -notmatch 'INCREMENT-COMPOUND-OPERATORS=OK') { throw 'AST increment and compound assignment runtime regression failed.' }
+Write-Host 'AST_INCREMENT_COMPOUND_OK'
 $arrayIndexOutput = Join-Path $output 'operators-arrays'
 dotnet $compiler ast-compile (Join-Path $root 'samples/operators-arrays.xps') -o $arrayIndexOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST ArrayGetIndex regression compilation failed.' }

@@ -165,6 +165,7 @@ public static class AstExperimentalCompiler
         }
         source = Regex.Replace(source, @"\[(?:FromBody|FromQuery|FromRoute|FromHeader)\]\s*", match =>
             new string(match.Value.Select(character => character is '\r' or '\n' ? character : ' ').ToArray()), RegexOptions.IgnoreCase);
+        source = new IncrementCompoundAssignmentPreprocessor().Transform(source);
         source = Regex.Replace(source, @"(?im)^(?<indent>\s*)Sleep\s+(?<value>[^\r\n]+)\r?$", "${indent}Sleep(${value})");
         // Keep the argument at its original column: replace the original
         // separator with the opening parenthesis and avoid a longer prefix.
@@ -358,6 +359,12 @@ public static class AstExperimentalCompiler
         foreach (var compatibilityName in AstObjectSupportRegistry.CompatibilityNames)
             symbols.Declare(new VariableSymbol(compatibilityName, typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new TypeSymbol("XPJsonSchema", typeof(object), XpTypeSymbol.User("XPJsonSchema")));
+        symbols.Declare(new TypeSymbol("XPScriptIncrementRuntime", typeof(object), XpTypeSymbol.User("XPScriptIncrementRuntime")));
+        symbols.Declare(new VariableSymbol("XPScriptIncrementRuntime", typeof(object), XpTypeSymbol.User("XPScriptIncrementRuntime")));
+        DeclareNativeStatic(symbols, "XPScriptIncrementRuntime.Increment", [typeof(object)], "XPScriptIncrementRuntime.Increment");
+        DeclareNativeStatic(symbols, "XPScriptIncrementRuntime.Decrement", [typeof(object)], "XPScriptIncrementRuntime.Decrement");
+        DeclareNativeStatic(symbols, "XPScriptIncrementRuntime.Increment", [typeof(byte)], "XPScriptIncrementRuntime.Increment");
+        DeclareNativeStatic(symbols, "XPScriptIncrementRuntime.Decrement", [typeof(byte)], "XPScriptIncrementRuntime.Decrement");
         DeclareNativeStatic(symbols, "XPJsonSchema.Parse", [typeof(object)], "XPScriptJsonSchema.Parse");
         DeclareNativeStatic(symbols, "XPJsonSchema.FromJson", [typeof(object)], "XPScriptJsonSchema.FromJson");
         if (usesArchive)
@@ -1674,7 +1681,7 @@ internal static class Program
     private static void DeclareNativeStatic(SymbolTable symbols, string name, IReadOnlyList<Type> parameterTypes, string targetName)
     {
         var function = new FunctionSymbol(name, typeof(object), parameterTypes, XpTypeSymbol.Variant,
-            parameterTypes.Select(_ => XpTypeSymbol.Variant).ToArray())
+            parameterTypes.Select(type => type == typeof(byte) ? XpTypeSymbol.FromClr(type) : XpTypeSymbol.Variant).ToArray())
         {
             IsNativeStatic = true,
             NativeTargetName = targetName

@@ -7,6 +7,8 @@ internal static class XPScriptIncrementRuntime
 {
     public static dynamic Increment(object? value) => Apply(value, 1);
     public static dynamic Decrement(object? value) => Apply(value, -1);
+    public static dynamic Increment(byte value) => Apply(value, 1);
+    public static dynamic Decrement(byte value) => Apply(value, -1);
 
     private static dynamic Apply(object? value, int delta)
     {
