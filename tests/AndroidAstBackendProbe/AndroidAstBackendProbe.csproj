@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- Keep project-reference evaluation deterministic with the Android workload SDK. -->
+    <BuildInParallel>false</BuildInParallel>
     <WarningsNotAsErrors>NU1900;NU1901;NU1902;NU1903;NU1904;$(WarningsNotAsErrors)</WarningsNotAsErrors>
     <NuGetAudit>false</NuGetAudit>
   </PropertyGroup>
