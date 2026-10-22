@@ -319,17 +319,17 @@ public static class AstExperimentalCompiler
         }
         foreach (var procedure in unit.Declarations.OfType<SubDeclarationSyntax>())
         {
-            var parameterTypes = procedure.Parameters.Select(ResolveParameterType).ToArray();
+            var parameterTypes = procedure.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
             var types = parameterTypes.Select(type => type.RuntimeType).ToArray();
             symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types, null, parameterTypes, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
             DeclareOptionalSignatures(symbols, procedure.Identifier.Text, typeof(void), procedure.Parameters);
         }
         foreach (var procedure in unit.Declarations.OfType<FunctionDeclarationSyntax>())
         {
-            var parameterTypes = procedure.Parameters.Select(ResolveParameterType).ToArray();
+            var parameterTypes = procedure.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
             var types = parameterTypes.Select(type => type.RuntimeType).ToArray();
             var resultType = ResolveRuntimeType(procedure.ReturnType?.Identifier.Text);
-            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types, ResolveValueType(procedure.ReturnType), parameterTypes, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types, AstClassMethodSupport.DeclaredType(procedure.ReturnType, symbols), parameterTypes, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
             DeclareOptionalSignatures(symbols, procedure.Identifier.Text, resultType, procedure.Parameters);
         }
         var enumNames = Regex.Matches(fullSource, @"(?ims)^\s*Enum\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Enum\b")
