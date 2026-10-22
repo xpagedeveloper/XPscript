@@ -259,7 +259,10 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
             return Path.GetFullPath(environmentCache, fullSiteRoot);
 
         var localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(localData)) localData = Path.GetTempPath();
+        var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        if (!string.IsNullOrWhiteSpace(configuredTempRoot))
+            localData = Path.GetFullPath(configuredTempRoot);
+        else if (string.IsNullOrWhiteSpace(localData)) localData = Path.GetTempPath();
         var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(fullSiteRoot)).Replace('\\', '/');
         var siteHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalizedRoot))).ToLowerInvariant();
         return Path.Combine(localData, "XPScript", "web-cache", siteHash);

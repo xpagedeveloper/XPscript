@@ -138,6 +138,11 @@ public sealed class XpsWebCompiler
         Directory.CreateDirectory(workspace);
         try
         {
+            // Generated diagnostics retain the original XPScript source name via
+            // #line directives. Stage that document beside the generated source
+            // so Roslyn can resolve the mapped file during web-unit builds.
+            var stagedSourcePath = Path.Combine(workspace, Path.GetFileName(fullSourcePath));
+            File.Copy(fullSourcePath, stagedSourcePath, overwrite: true);
             var projectPath = Path.Combine(workspace, "WebUnit.csproj");
             var generatedPath = Path.Combine(workspace, "Generated.cs");
             var usesSqlite = generated.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
