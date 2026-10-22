@@ -583,6 +583,16 @@ internal static class Script
     {
         var transformed = Regex.Replace(generated, @"\bProgram\b", "Script", RegexOptions.CultureInvariant);
         transformed = "using XPScript.Web.Runtime;" + Environment.NewLine + transformed;
+        transformed = Regex.Replace(
+            transformed,
+            @"\(\(dynamic\)\((Request|Response|Body|Server|RequestScope|Session|Application)\)\)\.(?=[A-Za-z_]\w*\s*\()",
+            "$1.",
+            RegexOptions.CultureInvariant);
+        transformed = Regex.Replace(
+            transformed,
+            @"\(\(dynamic\)\(Response\)\)\.ContentType\s*=\s*\(object\)\(",
+            "Response.ContentType = (string)(",
+            RegexOptions.CultureInvariant);
         foreach (var method in new[] { "Json", "OK", "Ok", "Created", "NoContent", "BadRequest", "NotFound", "Unauthorized", "Forbidden", "Conflict", "Problem", "problem" })
         {
             transformed = transformed.Replace($"Response.{method}(", $"XpsWebResponseRestExtensions.{method}(Response, ", StringComparison.Ordinal);
