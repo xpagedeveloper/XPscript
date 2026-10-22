@@ -936,6 +936,42 @@ if ($LASTEXITCODE -ne 0) { throw 'AST HTTP part/file collection class-method ret
 $httpCollectionsReturnResult = dotnet (Join-Path $httpCollectionsReturnOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($httpCollectionsReturnResult -join "`n") -ne '1') { throw 'AST HTTP part/file collection class-method return execution failed.' }
 Write-Host 'AST_CLASS_METHOD_HTTP_COLLECTIONS_RETURN_OK'
+$classMethodNetworkToolsOutput = Join-Path $output 'class-method-networktools-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-networktools-next.xps') -o $classMethodNetworkToolsOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST NetworkTools class-method compilation failed.' }
+$classMethodNetworkToolsResult = dotnet (Join-Path $classMethodNetworkToolsOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($classMethodNetworkToolsResult -join "`n") -ne 'CLASS_METHOD_NETWORKTOOLS_OK') { throw 'AST NetworkTools class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_NETWORKTOOLS_OK'
+$classMethodPathOutput = Join-Path $output 'class-method-path-values-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-path-values-next.xps') -o $classMethodPathOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST path class-method compilation failed.' }
+$classMethodPathResult = dotnet (Join-Path $classMethodPathOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($classMethodPathResult -join "`n") -ne 'CLASS_METHOD_PATH_VALUE_OK') { throw 'AST path class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_PATH_VALUE_OK'
+$classMethodHttpDatabaseOutput = Join-Path $output 'class-method-http-database-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-database-next.xps') -o $classMethodHttpDatabaseOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST HTTP database class-method compilation failed.' }
+$classMethodHttpDatabaseResult = dotnet (Join-Path $classMethodHttpDatabaseOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($classMethodHttpDatabaseResult -join "`n") -ne 'CLASS_METHOD_HTTP_DATABASE_OK') { throw 'AST HTTP database class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_HTTP_DATABASE_OK'
+$classMethodMssqlAliasOutput = Join-Path $output 'class-method-mssql-alias-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-mssql-alias-next.xps') -o $classMethodMssqlAliasOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST MSSQL alias class-method compilation failed.' }
+$classMethodMssqlAliasResult = dotnet (Join-Path $classMethodMssqlAliasOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($classMethodMssqlAliasResult -join "`n") -ne 'CLASS_METHOD_MSSQL_ALIAS_OK') { throw 'AST MSSQL alias class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_MSSQL_ALIAS_OK'
+$classMethodShellFileInfoOutput = Join-Path $output 'class-method-shell-fileinfo-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-shell-fileinfo-next.xps') -o $classMethodShellFileInfoOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST ShellResult/FileInfo class-method compilation failed.' }
+$classMethodShellFileInfoResult = dotnet (Join-Path $classMethodShellFileInfoOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($classMethodShellFileInfoResult -join "`n") -ne 'CLASS_METHOD_SHELL_FILEINFO_OK') { throw 'AST ShellResult/FileInfo class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_SHELL_FILEINFO_OK'
+$classMethodJsonValidationOutput = Join-Path $output 'class-method-json-validation-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-json-validation-next.xps') -o $classMethodJsonValidationOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST JSON validation class-method compilation failed.' }
+$classMethodJsonValidationResult = dotnet (Join-Path $classMethodJsonValidationOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($classMethodJsonValidationResult -join "`n") -ne 'CLASS_METHOD_JSON_VALIDATION_OK') { throw 'AST JSON validation class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_JSON_VALIDATION_OK'
 $derivedPropertyOutput = Join-Path $output 'class-property-derived-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-property-derived-next.xps') -o $derivedPropertyOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST derived property compilation failed.' }
