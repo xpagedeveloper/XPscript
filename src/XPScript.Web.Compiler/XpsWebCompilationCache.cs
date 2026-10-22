@@ -60,6 +60,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
     }
 
     private readonly object _gate = new();
+    private readonly CancellationTokenSource _compilationCancellation = new();
     private readonly Dictionary<string, Entry> _entries;
     private readonly XpsWebCompiler _compiler;
     private readonly XpsWebCompilationCacheOptions _options;
@@ -152,7 +153,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
                     Identity = snapshot.Identity,
                     LastAccessUtc = now,
                     Compilation = new Lazy<Task<XpsCompiledWebUnit>>(
-                        () => CompileMeasuredAsync(fullPath, fullSiteRoot, runtimeIdentifier, snapshot),
+                        () => CompileMeasuredAsync(fullPath, fullSiteRoot, runtimeIdentifier, snapshot, _compilationCancellation.Token),
                         LazyThreadSafetyMode.ExecutionAndPublication)
                 };
                 _entries.Add(key, entry);
@@ -206,14 +207,15 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         string fullPath,
         string fullSiteRoot,
         string runtimeIdentifier,
-        XPScriptCompilationSnapshot expectedSnapshot)
+        XPScriptCompilationSnapshot expectedSnapshot,
+        CancellationToken cancellationToken)
     {
         var persistentCacheDirectory = ResolvePersistentCacheDirectory(fullSiteRoot);
         DebugStep($"compile:start persistent={(persistentCacheDirectory is not null)}", fullPath);
         if (persistentCacheDirectory is not null)
         {
             var persisted = await _compiler.TryLoadPersistentAsync(
-                fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, CancellationToken.None).ConfigureAwait(false);
+                fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
             if (persisted is not null)
             {
                 DebugStep("persistent-cache:hit", fullPath);
@@ -226,7 +228,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         var started = Stopwatch.GetTimestamp();
         try
         {
-            var unit = await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot, persistentCacheDirectory).ConfigureAwait(false);
+            var unit = await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
             DebugStep("compile:done", fullPath);
             return unit;
         }
@@ -273,14 +275,15 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         string fullSiteRoot,
         string runtimeIdentifier,
         XPScriptCompilationSnapshot expectedSnapshot,
-        string? persistentCacheDirectory)
+        string? persistentCacheDirectory,
+        CancellationToken cancellationToken)
     {
         var unit = persistentCacheDirectory is null
-            ? await _compiler.CompileAsync(fullPath, fullSiteRoot, CancellationToken.None).ConfigureAwait(false)
-            : await _compiler.CompileAndPersistAsync(fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, CancellationToken.None).ConfigureAwait(false);
+            ? await _compiler.CompileAsync(fullPath, fullSiteRoot, cancellationToken).ConfigureAwait(false)
+            : await _compiler.CompileAndPersistAsync(fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
         try
         {
-            var actualSnapshot = await CreateSnapshotAsync(fullPath, fullSiteRoot, runtimeIdentifier, CancellationToken.None).ConfigureAwait(false);
+            var actualSnapshot = await CreateSnapshotAsync(fullPath, fullSiteRoot, runtimeIdentifier, cancellationToken).ConfigureAwait(false);
             if (!string.Equals(expectedSnapshot.Identity, actualSnapshot.Identity, StringComparison.Ordinal))
                 throw new XpsWebCompilationException("Web source changed while compilation was in progress. Retry the request.");
             return unit;
@@ -400,7 +403,9 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
             }
             _entries.Clear();
         }
+        _compilationCancellation.Cancel();
         await DisposeRetiredAsync(retired).ConfigureAwait(false);
+        _compilationCancellation.Dispose();
     }
 }
 
