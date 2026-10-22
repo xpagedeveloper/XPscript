@@ -32,6 +32,7 @@ internal static class AstClassMethodSupport
             "NetworkHttpHeadersResult", "NetworkHttpSecurityHeadersResult", "NetworkRedirectResult", "NetworkBannerResult",
             "NetworkPortExposureInfo" }.Contains(name, StringComparer.OrdinalIgnoreCase) ||
         string.Equals(name, "XPAttachmentCollection", StringComparison.OrdinalIgnoreCase) ||
+        new[] { "XPShellResult", "XPPathValue", "XPFileInfoValue" }.Contains(name, StringComparer.OrdinalIgnoreCase) ||
         string.Equals(name, "XPJsonSchema", StringComparison.OrdinalIgnoreCase) ||
         new[] { "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall" }
             .Contains(name, StringComparer.OrdinalIgnoreCase) ||
