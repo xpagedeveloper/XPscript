@@ -296,9 +296,13 @@ internal static class CompilerPathSecurity
     {
         try
         {
-            var directory = new DirectoryInfo(path);
-            if (directory.Exists || directory.LinkTarget is not null || (directory.Attributes & FileAttributes.ReparsePoint) != 0)
-                return directory;
+            // On Windows DirectoryInfo(path) can surface the attributes of a
+            // regular file even when the directory does not exist. Inspect the
+            // file first so a normal managed reference is not misclassified as
+            // a reparse point.
+            var file = new FileInfo(path);
+            if (file.Exists || file.LinkTarget is not null)
+                return file;
         }
         catch (FileNotFoundException) { }
         catch (DirectoryNotFoundException) { }
@@ -309,9 +313,9 @@ internal static class CompilerPathSecurity
 
         try
         {
-            var file = new FileInfo(path);
-            if (file.Exists || file.LinkTarget is not null || (file.Attributes & FileAttributes.ReparsePoint) != 0)
-                return file;
+            var directory = new DirectoryInfo(path);
+            if (directory.Exists || directory.LinkTarget is not null)
+                return directory;
         }
         catch (FileNotFoundException) { }
         catch (DirectoryNotFoundException) { }
