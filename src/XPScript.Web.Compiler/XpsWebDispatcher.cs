@@ -17,6 +17,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     private readonly object _backgroundGate = new();
     private readonly HashSet<Task> _backgroundPrecompileTasks = [];
     private readonly HashSet<string> _activatedPrecompileSources;
+    private readonly CancellationTokenSource _backgroundPrecompileCancellation = new();
     private bool _disposing;
 
     public XpsWebDispatcher(
@@ -256,16 +257,18 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             {
                 try
                 {
+                    var cancellationToken = _backgroundPrecompileCancellation.Token;
                     if (activateDeclaredTargets)
-                        await PrecompileOneHopAsync(fullSourcePath, precompileTargets, CancellationToken.None).ConfigureAwait(false);
+                        await PrecompileOneHopAsync(fullSourcePath, precompileTargets, cancellationToken).ConfigureAwait(false);
 
                     await XpsWebLinkedPrecompiler.PrecompileResponseLinksAsync(
                         response,
                         _resolver,
                         fullSourcePath,
                         PrecompileTargetOnlyAsync,
-                        CancellationToken.None).ConfigureAwait(false);
+                        cancellationToken).ConfigureAwait(false);
                 }
+                catch (OperationCanceledException) when (_backgroundPrecompileCancellation.IsCancellationRequested) { }
                 catch (Exception ex)
                 {
                     XpsWebConsoleErrorFallback.Write(ex, ToWebPath(fullSourcePath), "background-precompile");
@@ -525,6 +528,8 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             pending = _backgroundPrecompileTasks.ToArray();
         }
 
+        _backgroundPrecompileCancellation.Cancel();
+
         if (pending.Length > 0)
         {
             try { await Task.WhenAll(pending).ConfigureAwait(false); }
@@ -533,5 +538,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
 
         if (_ownsCache)
             await _cache.DisposeAsync().ConfigureAwait(false);
+
+        _backgroundPrecompileCancellation.Dispose();
     }
 }
