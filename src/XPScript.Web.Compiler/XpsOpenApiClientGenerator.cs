@@ -11,6 +11,7 @@ public sealed record XpsOpenApiClientGenerationResult(string OpenApiVersion, str
 
 public sealed class XpsOpenApiClientGenerator
 {
+    static XpsOpenApiClientGenerator() => LexicalKeywords.Add("Error");
     private static readonly string[] HttpMethods = ["get", "post", "put", "patch", "delete", "head", "options", "trace"];
     private static readonly Regex IdentifierPattern = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant);
     private static readonly HashSet<string> LexicalKeywords = new(new[] { "Alias", "And", "As", "Boolean", "ByRef", "ByVal", "Call", "Case", "Class", "Const", "Date", "Dim", "Do", "Double", "Each", "Else", "ElseIf", "End", "Enum", "Exit", "False", "For", "Function", "If", "In", "Integer", "Is", "Like", "Long", "Loop", "Mod", "New", "Next", "Not", "Nothing", "Object", "On", "Option", "Or", "Private", "Public", "Select", "Set", "Single", "Static", "Step", "String", "Sub", "Then", "To", "True", "Until", "Variant", "Wend", "While", "With", "Xor" }, StringComparer.OrdinalIgnoreCase);
