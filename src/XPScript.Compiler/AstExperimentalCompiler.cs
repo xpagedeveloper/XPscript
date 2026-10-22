@@ -39,11 +39,34 @@ public static class AstExperimentalCompiler
     public static Task<string> CompileAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken = default)
         => CompileAsync(sourcePath, outputDirectory, null, cancellationToken: cancellationToken);
 
+    /// <summary>
+    /// Compiles through the AST pipeline after applying an optional transform to
+    /// the generated C# source. This is used by hosts that need to add a host
+    /// surface (for example web request/response objects) while keeping parsing,
+    /// binding and emission in the AST compiler.
+    /// </summary>
+    internal static Task<string> CompileWithGeneratedSourceTransformAsync(
+        string sourcePath,
+        string outputDirectory,
+        string? runtimeIdentifier,
+        Func<string, string>? generatedSourceTransform,
+        CancellationToken cancellationToken = default)
+        => CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, generatedSourceTransform,
+            ApplicationSecurityMode.Off, false, null, null, false, cancellationToken);
+
     public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, string? runtimeIdentifier,
         ApplicationSecurityMode securityMode = ApplicationSecurityMode.Off, bool restricted = false,
         IReadOnlyList<string>? sourceRoots = null, IReadOnlyList<string>? sourcePreprocessors = null,
         bool embedAssets = false,
         CancellationToken cancellationToken = default)
+        => await CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, null, securityMode, restricted,
+            sourceRoots, sourcePreprocessors, embedAssets, cancellationToken).ConfigureAwait(false);
+
+    private static async Task<string> CompileAsync(string sourcePath, string outputDirectory, string? runtimeIdentifier,
+        Func<string, string>? generatedSourceTransform,
+        ApplicationSecurityMode securityMode, bool restricted,
+        IReadOnlyList<string>? sourceRoots, IReadOnlyList<string>? sourcePreprocessors,
+        bool embedAssets, CancellationToken cancellationToken)
     {
         if (runtimeIdentifier is not null)
             TargetPrerequisiteValidator.Validate(runtimeIdentifier.Trim().ToLowerInvariant());
@@ -1402,6 +1425,8 @@ internal static class Program
             generated = new AiSessionRuntimePostProcessor().Transform(generated);
             generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated);
         }
+        if (generatedSourceTransform is not null)
+            generated = generatedSourceTransform(generated);
         var applicationMarkers = AstApplicationSupport.BuildMarkers(fullSource, sourcePath);
         string outputResult;
         if (applicationMarkers.Length != 0)

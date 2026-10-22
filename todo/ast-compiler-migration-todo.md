@@ -714,6 +714,8 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
 - [x] Migrate `demo/archive/archive-extended.xps` from the intentionally removed `ArchiveEntry.IsDirectory` API to the documented `ArchiveEntry.IsFile` API. `ArchiveCapabilityProbe` remains green and the AST demo compiles successfully.
 - [x] Verify the AST WebIIS packaging target with the correct `demo/webiis/main.xps` entrypoint. The JSON compiler result is `ok` and a deployable WebIIS ZIP is produced; direct Kestrel/CGI/FastCGI host execution remains a separate adapter gate.
 - [ ] Migrate `XpsWebCompiler` itself from `XPScriptTranspiler` to the AST/binder path for route-attributed web and REST units. Current WebIIS packaging is verified, but host-side route compilation still uses the legacy transpiler and therefore does not yet satisfy the AST web/REST migration gate.
+  - [x] Add an AST generated-source transform hook so the web host can inject its runtime surface while retaining AST parsing, binding and emission.
+  - [ ] Use the hook from `XpsWebCompiler`, adapt the emitted AST host type to the required `Script` shape, and preserve all existing web adapter regressions.
 - [ ] Complete the legacy-vs-AST compatibility corpus: compile success/failure, diagnostics, observable output and target behavior for every supported sample; record intentional legacy defects separately.
 - [ ] Audit every legacy command-line parameter and add parity tests for aliases, defaults, validation, diagnostics and execution semantics.
 - [ ] Verify web/REST execution under Kestrel, IIS, CGI and FastCGI; IIS execution still requires an IIS-enabled environment.
