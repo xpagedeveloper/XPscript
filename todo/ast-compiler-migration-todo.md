@@ -700,6 +700,13 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
 
 Next implementation order:
 
+Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
+
+- Web/REST adapter gates are verified for Kestrel, CGI and FastCGI; WebIIS package generation and entrypoint validation are also verified.
+- AST CLI coverage has passed the migrated file, database, AI, include/use, platform, native-declaration and CSV/archive probes, including the legacy-vs-AST compatibility baseline.
+- The next implementation item is the compiler-side web migration: replace `XPScriptTranspiler` in `XpsWebCompiler` with the AST/binder path while preserving route metadata, generated `Script` hosting shape and the existing adapter regressions.
+- After the web migration, continue the complete legacy-vs-AST corpus and command-line parity audit, then finish remaining class/property/special-construct gaps, Android branch reconciliation, OpenAPI branch reconciliation, and the Definition of Done audit.
+
 - [x] Make the AST CLI regression fixtures independent of the caller's working directory. `run-ast-cli.ps1` now normalizes to the repository root; the repository-relative `FileDateTime` fixture passes when launched from `out/`. Generated-file cleanup and the remaining full-suite lock investigation stay open before requiring a complete green FullTest run.
 - [x] Extend the CLI compatibility regression with AST validation coverage for unsupported runtime identifiers, invalid boolean compile options and missing `--Args` values. The complete `run-cli-compatibility.ps1` suite passes with `CLI_COMMAND_LINE_COMPATIBILITY_OK`.
 - [x] Re-run the deterministic legacy-vs-AST compatibility baseline: all 15 fixtures in `tests/ast-compat` compile and execute successfully through both compiler paths with identical observable output.
