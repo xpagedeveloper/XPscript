@@ -130,7 +130,11 @@ public sealed class XpsWebCompiler
         }
 
         ValidateRoutesExist(generated, parsed.Routes);
-        var workspace = Path.Combine(Path.GetTempPath(), "XPScript", "web", Guid.NewGuid().ToString("N"));
+        var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var workspaceRoot = string.IsNullOrWhiteSpace(configuredTempRoot)
+            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            : Path.Combine(Path.GetFullPath(configuredTempRoot), "XPScript");
+        var workspace = Path.Combine(workspaceRoot, "web", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
         try
         {

@@ -717,6 +717,7 @@ Next implementation order:
 - [x] Make the AST WebIIS regression repeatable: the probe removes its own previous package before publishing, and the WebIIS host publish disables parallel project-graph evaluation to avoid the .NET SDK's empty `GetTargetFrameworks` failure. A fresh WebIIS package now publishes successfully.
 - [x] Make AST generated-build workspaces configurable through `XPSCRIPT_TEMP_ROOT`; the CLI regression now keeps temporary files in the repository, avoiding inaccessible Windows profile/sandbox paths while preserving the default system-temp behavior for normal users.
 - [x] Apply the same configurable temporary-root handling to legacy compilation so AST/legacy platform-alias and SQLite parity probes can run in constrained Windows profiles; `--platform win-x64` and legacy SQLite both compile and execute successfully.
+- [x] Apply `XPSCRIPT_TEMP_ROOT` to `XpsWebCompiler` workspaces so web/REST compilation can run in constrained profiles. `WebRestApiSmoke` builds cleanly; its runtime probe still exposes a separate malformed-JSON 500-vs-400 regression that must be fixed before web/REST execution is complete.
 - [ ] Finish class/property and remaining special-construct migration, remove unjustified legacy fallback and obsolete regex lowering.
 - [ ] Import and reconcile REST server/client OpenAPI work from all `test-openapi*` branches, including regeneration and multi-definition behavior.
 - [ ] Complete the Definition of Done audit before changing the package version to `0.9.4 Beta`.
