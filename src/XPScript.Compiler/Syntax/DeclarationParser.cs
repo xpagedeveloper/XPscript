@@ -54,7 +54,12 @@ public sealed class DeclarationParser
             while (end < lines.Count && !lines[end].Text.Trim().StartsWith(terminator, StringComparison.OrdinalIgnoreCase)) end++;
             if (end < lines.Count) end++;
             var startOffset = lines[i].Start;
-            var endOffset = end < lines.Count ? lines[end].Start : _text.Length;
+            // Include the terminator line itself when slicing a declaration.
+            // Using the next line's start can omit the final `End Class` when
+            // the declaration is followed by a blank line or ends at EOF.
+            var endOffset = end > i && end - 1 < lines.Count
+                ? lines[end - 1].Start + lines[end - 1].Text.Length
+                : _text.Length;
             if (match.Groups[1].Value.Equals("Class", StringComparison.OrdinalIgnoreCase))
             {
                 var classParser = new DeclarationParser(_text[startOffset..endOffset].TrimStart(), _baseOffset + startOffset);
@@ -140,6 +145,8 @@ public sealed class DeclarationParser
             var lexer = new Lexer(line.Text, _baseOffset + line.Start);
             var tokens = lexer.Lex().Where(t => t.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken).ToArray();
             AddLexerDiagnostics(lexer.Diagnostics);
+            if (tokens.Length == 0)
+                continue;
 
             if (tokens.Length >= 2 && tokens[0].Kind == SyntaxKind.EndKeyword && tokens[1].Kind == SyntaxKind.ClassKeyword)
             {

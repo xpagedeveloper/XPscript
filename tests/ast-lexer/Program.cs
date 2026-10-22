@@ -1448,4 +1448,44 @@ var badCallBinder = new ExpressionBinder(callSymbols);
 badCallBinder.Bind(new ExpressionParser("RunCommand(\"where.exe\")").ParseExpression());
 Equal(1, badCallBinder.Diagnostics.Count, "RunCommand arity diagnostic count");
 
+const string generatedModelClassSequence = """
+Public Class app
+    Public active_deployment As apps_deployment
+    Public created_at As Date
+    Public default_ingress As String
+    Public domains As XPJsonArray
+    Public id As String
+    Public in_progress_deployment As apps_deployment
+    Public last_deployment_created_at As Date
+    Public live_domain As String
+    Public live_url As String
+    Public live_url_base As String
+    Public owner_uuid As String
+    Public pending_deployment As Variant
+    Public project_id As String
+    Public region As apps_region
+    Public spec As app_spec
+    Public tier_slug As String
+    Public updated_at As Date
+    Public pinned_deployment As Variant
+    Public dedicated_ips As XPJsonArray
+    Public vpc As apps_vpc
+End Class
+
+Public Class apps_deployment_functions
+    Public name As String
+    Public source_commit_hash As String
+    ' OpenAPI property: namespace
+    Public ApiNamespace As String
+End Class
+
+Public Class apps_deployment_job
+    Public name As String
+    Public source_commit_hash As String
+End Class
+""" + "\n";
+var generatedModelParser = new DeclarationParser(generatedModelClassSequence);
+generatedModelParser.ParseCompilationUnit();
+Equal(0, generatedModelParser.Diagnostics.Count, "generated model class sequence diagnostics");
+
 Console.WriteLine("AST lexer, syntax-model, expression-parser, binder and emitter focused tests passed.");
