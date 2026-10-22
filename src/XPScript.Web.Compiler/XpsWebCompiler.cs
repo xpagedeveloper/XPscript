@@ -121,7 +121,7 @@ public sealed class XpsWebCompiler
         if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_LEGACY"), "1", StringComparison.Ordinal))
         {
             compilerSource += Environment.NewLine + "Reference \"XPScript.Web.Runtime.dll\"" + Environment.NewLine;
-            return await CompileAstWebAsync(fullSourcePath, fullSourceRoot, compilerSource, parsed, cancellationToken).ConfigureAwait(false);
+            return await CompileAstWebAsync(fullSourcePath, fullSourceRoot, compilerSource, parsed, snapshotIdentity, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
         }
         string generated;
         try
@@ -430,7 +430,27 @@ public sealed class XpsWebCompiler
         try
         {
             await File.WriteAllBytesAsync(temp, bytes, cancellationToken).ConfigureAwait(false);
-            File.Move(temp, path, overwrite: true);
+            if (File.Exists(path))
+                File.Replace(temp, path, destinationBackupFileName: null, ignoreMetadataErrors: true);
+            else
+            {
+                try
+                {
+                    File.Move(temp, path);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    if (Directory.Exists(path))
+                    {
+                        Directory.Delete(path, recursive: true);
+                        File.Move(temp, path);
+                    }
+                    else if (File.Exists(path))
+                        File.Replace(temp, path, destinationBackupFileName: null, ignoreMetadataErrors: true);
+                    else
+                        throw;
+                }
+            }
         }
         finally
         {
@@ -543,6 +563,8 @@ internal static class Script
         string sourceRoot,
         string compilerSource,
         XpsWebRouteParseResult parsed,
+        string? snapshotIdentity,
+        string? persistentCacheDirectory,
         CancellationToken cancellationToken)
     {
         var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
@@ -571,7 +593,20 @@ internal static class Script
             var assemblyBytes = await File.ReadAllBytesAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
             var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
             var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
-            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, Path.GetDirectoryName(assemblyPath)!, sourceRoot);
+            var dependencyDirectory = Path.GetDirectoryName(assemblyPath)!;
+            if (!string.IsNullOrWhiteSpace(snapshotIdentity) && !string.IsNullOrWhiteSpace(persistentCacheDirectory))
+            {
+                dependencyDirectory = await PersistArtifactAsync(
+                    persistentCacheDirectory,
+                    sourceRoot,
+                    sourcePath,
+                    snapshotIdentity,
+                    assemblyBytes,
+                    pdbBytes,
+                    dependencyDirectory,
+                    cancellationToken).ConfigureAwait(false);
+            }
+            return LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, dependencyDirectory, sourceRoot);
         }
         catch (Exception ex) when (ex is CompilerException or XpsWebCompilationException or IOException or UnauthorizedAccessException)
         {

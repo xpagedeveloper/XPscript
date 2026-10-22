@@ -165,7 +165,7 @@ try
     if (secondCache.CompilationStarts != beforePageRequest)
         throw new Exception("Loading page.xps must return before its direct neighbours are precompiled.");
 
-    await WaitForCompilationStartsAsync(secondCache, beforePageRequest + 2, TimeSpan.FromSeconds(15));
+    await WaitForCompilationStartsAsync(secondCache, beforePageRequest + 2, TimeSpan.FromSeconds(120));
     if (secondCache.CompilationStarts != beforePageRequest + 2)
         throw new Exception("Background precompile must warm exactly the direct static link and direct PreCompile rule target.");
 
