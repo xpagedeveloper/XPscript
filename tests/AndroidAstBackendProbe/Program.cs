@@ -19,9 +19,14 @@ try
 
     Console.WriteLine("ANDROID_AST_BACKEND_OK");
 }
-catch (CompilerException ex) when (ex.Message.Contains("Android SDK was not found", StringComparison.OrdinalIgnoreCase))
+catch (CompilerException ex) when (ex.Message.Contains("Android SDK was not found", StringComparison.OrdinalIgnoreCase)
+    || ex.Message.Contains(".NET workload is required", StringComparison.OrdinalIgnoreCase)
+    || ex.Message.Contains(".NET 10 SDK", StringComparison.OrdinalIgnoreCase)
+    || ex.Message.Contains("Required Android tool", StringComparison.OrdinalIgnoreCase)
+    || ex.Message.Contains("Android SDK Platform 36", StringComparison.OrdinalIgnoreCase)
+    || ex.Message.Contains("Android SDK Build Tools", StringComparison.OrdinalIgnoreCase))
 {
-    Console.WriteLine("ANDROID_AST_BACKEND_SKIPPED=ANDROID_SDK_NOT_AVAILABLE");
+    Console.WriteLine("ANDROID_AST_BACKEND_SKIPPED=ANDROID_PREREQUISITES_NOT_AVAILABLE");
 }
 finally
 {
