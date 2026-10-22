@@ -61,11 +61,14 @@ try
         Console.WriteLine("AST_NOTES_HTTP_REQUEST_OK");
         return;
     }
-    var streamProbeOutput = Path.Combine(output, "ai-stream");
-    await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/xpai-stream-next.xps"), "-o", streamProbeOutput]);
-    if ((await Run("dotnet", [Path.Combine(streamProbeOutput, "Generated.dll")])).Trim() != "XPAI_STREAM_OK")
-        throw new Exception("XPAi streaming regression failed.");
-    Console.WriteLine("AST_XPAI_STREAM_OK");
+    if (!args.Contains("--accessors-only"))
+    {
+        var streamProbeOutput = Path.Combine(output, "ai-stream");
+        await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/xpai-stream-next.xps"), "-o", streamProbeOutput]);
+        if ((await Run("dotnet", [Path.Combine(streamProbeOutput, "Generated.dll")])).Trim() != "XPAI_STREAM_OK")
+            throw new Exception("XPAi streaming regression failed.");
+        Console.WriteLine("AST_XPAI_STREAM_OK");
+    }
     var accessors = Path.Combine(output, "accessors");
     await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/http-reference-properties.xps"), "-o", accessors]);
     if ((await Run("dotnet", [Path.Combine(accessors, "Generated.dll"), ..arguments])).Trim() != "HTTP_REFERENCE_PROPERTIES_OK")
