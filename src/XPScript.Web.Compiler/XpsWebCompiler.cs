@@ -579,6 +579,13 @@ internal static class Script
     private static string TransformAstWebGeneratedSource(string generated)
     {
         var transformed = Regex.Replace(generated, @"\bProgram\b", "Script", RegexOptions.CultureInvariant);
+        transformed = "using XPScript.Web.Runtime;" + Environment.NewLine + transformed;
+        foreach (var method in new[] { "Json", "OK", "Ok", "Created", "NoContent", "BadRequest", "NotFound", "Unauthorized", "Forbidden", "Conflict", "Problem", "problem" })
+        {
+            transformed = transformed.Replace($"Response.{method}(", $"XpsWebResponseRestExtensions.{method}(Response, ", StringComparison.Ordinal);
+            transformed = transformed.Replace($"((dynamic)(Response)).{method}(", $"XpsWebResponseRestExtensions.{method}(Response, ", StringComparison.Ordinal);
+        }
+        transformed = Regex.Replace(transformed, @"XpsWebResponseRestExtensions\.(?:Problem|problem)\(Response, (-?\d+)L,", "XpsWebResponseRestExtensions.Problem(Response, $1,", RegexOptions.CultureInvariant);
         return Regex.Replace(transformed, @"(?im)^\s*public static dynamic RequestScope = new ExpandoObject\(\);\s*\r?\n", string.Empty, RegexOptions.CultureInvariant);
     }
 

@@ -160,6 +160,14 @@ public static class XpsRestBinder
 
             if (bodyObject is not null)
                 ValidateObject(bodyObject, descriptor.ValidationRules ?? Array.Empty<XpsValidationRule>(), validationErrors);
+
+            // AST-generated web entry points can expose an object-typed body parameter
+            // when the user model is represented by generated runtime metadata. In
+            // that case reflection cannot see the source model's members, so validate
+            // the original JSON properties as a fallback as well.
+            if (bodyObject is not null && descriptor.ValidationRules is { Count: > 0 } &&
+                !descriptor.ValidationRules.Any(x => x.TypeName.Equals((XpsRequestBody.UnwrapXpsObjectReference(bodyObject) ?? bodyObject).GetType().Name, StringComparison.OrdinalIgnoreCase)))
+                ValidateJsonObject(context, descriptor.ValidationRules, validationErrors);
         }
         catch (XpsRestBindingException ex) { AddError(validationErrors, "body", ex.Message); }
         catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException) { AddError(validationErrors, "request", ex.Message); }
@@ -287,6 +295,38 @@ public static class XpsRestBinder
                 case "RANGE":
                     if (memberValue is not null && decimal.TryParse(Convert.ToString(memberValue, CultureInfo.InvariantCulture), NumberStyles.Number, CultureInfo.InvariantCulture, out var number) && decimal.TryParse(rule.Argument1, NumberStyles.Number, CultureInfo.InvariantCulture, out var min) && decimal.TryParse(rule.Argument2, NumberStyles.Number, CultureInfo.InvariantCulture, out var maxValue) && (number < min || number > maxValue)) AddError(errors, rule.MemberName, $"{rule.MemberName} must be between {min} and {maxValue}.");
                     break;
+            }
+        }
+    }
+
+    private static void ValidateJsonObject(XpsWebContext context, IReadOnlyList<XpsValidationRule> rules, Dictionary<string, List<string>> errors)
+    {
+        JsonDocument document;
+        try { document = JsonDocument.Parse(context.Request.Body.ToArray()); }
+        catch (JsonException) { return; }
+        using (document)
+        {
+            if (document.RootElement.ValueKind != JsonValueKind.Object) return;
+            foreach (var rule in rules)
+            {
+                if (!document.RootElement.TryGetProperty(rule.MemberName, out var member))
+                {
+                    var property = document.RootElement.EnumerateObject()
+                        .FirstOrDefault(x => x.Name.Equals(rule.MemberName, StringComparison.OrdinalIgnoreCase));
+                    if (property.Equals(default(JsonProperty))) member = default;
+                    else member = property.Value;
+                }
+                var missing = member.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null ||
+                              member.ValueKind == JsonValueKind.String && string.IsNullOrWhiteSpace(member.GetString());
+                switch (rule.Rule.ToUpperInvariant())
+                {
+                    case "REQUIRED" when missing:
+                        AddError(errors, rule.MemberName, $"{rule.MemberName} is required.");
+                        break;
+                    case "EMAIL" when member.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(member.GetString()) && !IsValidEmail(member.GetString()!):
+                        AddError(errors, rule.MemberName, $"{rule.MemberName} must be a valid email address.");
+                        break;
+                }
             }
         }
     }
