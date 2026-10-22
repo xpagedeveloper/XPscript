@@ -104,6 +104,18 @@ if ($LASTEXITCODE -ne 0 -or $legacyOutputText -notlike '*result: ok*' -or -not (
     throw "Legacy compile option compatibility regression: $legacyOutputText"
 }
 
+foreach ($legacyTarget in @('desktop', 'console')) {
+    $legacyTargetText = dotnet $compiler legacy-compile $astSource --target $legacyTarget --runtime=false --single-file=false 2>&1 | Out-String
+    if ($LASTEXITCODE -eq 0 -or $legacyTargetText -notlike '*--target currently supports webiis*') {
+        throw "Legacy --target $legacyTarget validation regression: $legacyTargetText"
+    }
+}
+
+$legacyWebIisText = dotnet $compiler legacy-compile $astSource --target webiis --runtime=false --single-file=false 2>&1 | Out-String
+if ($LASTEXITCODE -eq 0 -or $legacyWebIisText -notlike '*webiis target requires main.xps*') {
+    throw "Legacy webiis entry-point validation regression: $legacyWebIisText"
+}
+
 $defaultCompileOutput = Join-Path $resultRoot 'default-ast-compile'
 $defaultCompileText = dotnet $compiler compile $astSource -o $defaultCompileOutput --runtime=false --single-file=false | Out-String
 if ($LASTEXITCODE -ne 0 -or $defaultCompileText -notlike '*AST compilation succeeded*') {
