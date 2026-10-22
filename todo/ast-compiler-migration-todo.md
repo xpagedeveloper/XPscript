@@ -44,7 +44,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 
 ## Migration rules
 
-- [ ] Prevent generated-project builds from repeatedly invoking the Windows Installer for `Microsoft.NET.Workloads.10.0.400`. `CompilerBuildEnvironment.Configure()` currently gives each `dotnet publish` a fresh `DOTNET_CLI_HOME`/user profile, and concurrent publishes can race during .NET workload initialization (Event Viewer showed repeated MSI attempts with errors 1316, 1639 and 1603). Keep temporary build directories isolated, but use a stable shared .NET profile/cache for normal desktop builds, serialize the initial restore/workload initialization, and reuse restored state for subsequent publishes.
+- [x] Prevent generated-project builds from repeatedly invoking the Windows Installer for `Microsoft.NET.Workloads.10.0.400`. `CompilerBuildEnvironment.Configure()` keeps temporary build directories isolated while desktop publishes reuse a compiler-version-specific shared profile/cache and are serialized during workload initialization. Verified with clean desktop publish builds on 2026-10-23; Android continues using its caller-selected workload/package cache.
   - [x] Desktop generated publishes now reuse the compiler-version-specific persistent .NET profile; two independent AST desktop publish smokes passed without warnings or MSI initialization failures. Android publish keeps its caller-selected workload/package cache.
 - [x] Keep the current compiler operational while the AST implementation is introduced.
 - [x] Add focused tests before migrating each syntax feature.
