@@ -245,6 +245,7 @@ public sealed class CompilerDriver
             psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(publishDir); psi.ArgumentList.Add("--nologo");
             psi.ArgumentList.Add("-r"); psi.ArgumentList.Add(rid);
             psi.ArgumentList.Add("--self-contained"); psi.ArgumentList.Add(selfContained ? "true" : "false");
+            psi.ArgumentList.Add("-p:BuildInParallel=false");
             CompilerBuildEnvironment.Configure(psi, tempRoot);
             using var publishGate = CompilerBuildEnvironment.EnterDesktopPublishGate(psi);
 
