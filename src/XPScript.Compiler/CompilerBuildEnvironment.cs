@@ -9,6 +9,16 @@ namespace XPScript.Compiler;
 
 internal static class CompilerBuildEnvironment
 {
+    private static readonly SemaphoreSlim DesktopPublishGate = new(1, 1);
+
+    internal static IDisposable EnterDesktopPublishGate(ProcessStartInfo startInfo)
+    {
+        ArgumentNullException.ThrowIfNull(startInfo);
+        if (!IsDesktopPublish(startInfo)) return NoopGate.Instance;
+        DesktopPublishGate.Wait();
+        return new GateLease(DesktopPublishGate);
+    }
+
     public static void Configure(ProcessStartInfo startInfo, string workspace)
     {
         ArgumentNullException.ThrowIfNull(startInfo);
@@ -96,6 +106,18 @@ internal static class CompilerBuildEnvironment
         startInfo.ArgumentList.Count > 0 &&
         (string.Equals(startInfo.ArgumentList[0], "publish", StringComparison.OrdinalIgnoreCase) || string.Equals(startInfo.ArgumentList[0], "build", StringComparison.OrdinalIgnoreCase)) &&
         ReadRuntimeIdentifier(startInfo).StartsWith("android-", StringComparison.OrdinalIgnoreCase);
+
+    private sealed class GateLease(SemaphoreSlim gate) : IDisposable
+    {
+        private SemaphoreSlim? _gate = gate;
+        public void Dispose() => Interlocked.Exchange(ref _gate, null)?.Release();
+    }
+
+    private sealed class NoopGate : IDisposable
+    {
+        internal static readonly NoopGate Instance = new();
+        public void Dispose() { }
+    }
 
     private static string PersistentRunCacheRoot()
     {

@@ -246,6 +246,7 @@ public sealed class CompilerDriver
             psi.ArgumentList.Add("-r"); psi.ArgumentList.Add(rid);
             psi.ArgumentList.Add("--self-contained"); psi.ArgumentList.Add(selfContained ? "true" : "false");
             CompilerBuildEnvironment.Configure(psi, tempRoot);
+            using var publishGate = CompilerBuildEnvironment.EnterDesktopPublishGate(psi);
 
             using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start dotnet publish.");
             var stdoutTask = process.StandardOutput.ReadToEndAsync();
