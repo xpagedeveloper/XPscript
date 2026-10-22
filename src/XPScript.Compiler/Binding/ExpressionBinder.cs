@@ -612,6 +612,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 _symbols.ClassifyConversion(arguments[i].SemanticType,
                     function.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(function.ParameterTypes[i])).IsIdentity)
                 continue;
+            // Variant locals are runtime-typed storage. Keep them in the
+            // overload candidate set so equally valid ByRef signatures report
+            // ambiguity instead of being misclassified as no-match.
+            if (arguments[i].SemanticType.IsVariant && arguments[i] is BoundNameExpression)
+                continue;
             if (arguments[i] is not BoundNameExpression name ||
                 name.Symbol is not (VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol))
                 return false;
@@ -640,7 +645,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             var isByRef = function.ByRefParameters is not null && function.ByRefParameters[i];
             if (targetType.IsVariant)
                 continue;
-            if (!conversion.IsImplicit || isByRef && !conversion.IsIdentity)
+            if (!conversion.IsImplicit || isByRef && !conversion.IsIdentity && !arguments[i].SemanticType.IsVariant)
                 return false;
         }
 
