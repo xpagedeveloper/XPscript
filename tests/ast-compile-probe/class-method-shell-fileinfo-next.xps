@@ -1,0 +1,23 @@
+Class RuntimeValueHolder
+    Public Function EchoInfo(ByVal value As XPFileInfoValue) As XPFileInfoValue
+        Set EchoInfo = value
+    End Function
+    Public Function EchoShell(ByVal value As XPShellResult) As XPShellResult
+        Set EchoShell = value
+    End Function
+End Class
+
+Sub Main()
+    Dim holder As New RuntimeValueHolder
+    Dim info As New XPFileInfoValue("samples")
+    Dim returnedInfo As XPFileInfoValue
+    Dim shell As XPShellResult
+    Dim returnedShell As XPShellResult
+    Set returnedInfo = holder.EchoInfo(info)
+    Set returnedShell = holder.EchoShell(shell)
+    If returnedInfo Is info And returnedShell Is Nothing Then
+        Print "CLASS_METHOD_SHELL_FILEINFO_OK"
+    Else
+        Error 6, "Shell/FileInfo class-method identity"
+    End If
+End Sub
