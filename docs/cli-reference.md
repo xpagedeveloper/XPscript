@@ -95,9 +95,14 @@ For the complete JSON `--config` file format and all supported `web` and `fastCg
 | `--session-same-site` | `--session-same-site VALUE` | `VALUE`: supported SameSite setting. | Selects SameSite behavior for the session cookie. | [index.xps](../demo/web-state/index.xps) |
 | `--session-secure` | `--session-secure` | none | Requires the session cookie to use the Secure attribute. | [index.xps](../demo/web-state/index.xps) |
 | `--operational-external` | `--operational-external` | none | Allows enabled health/metrics endpoints beyond loopback. | [index.xps](../demo/kestrel/index.xps) |
+| `--operational-allow` | `--operational-allow` | none | Compatibility alias for `--operational-external`. | [index.xps](../demo/kestrel/index.xps) |
 | `--structured-log` | `--structured-log PATH` | `PATH`: JSON-lines log file. | Writes structured request logging to the selected path. | [index.xps](../demo/kestrel/index.xps) |
+| `--log-directory` | `--log-directory PATH` | `PATH`: log directory. | Selects the directory for mandatory structured web logs. | [index.xps](../demo/kestrel/index.xps) |
 | `--static-files` | `--static-files` | none | Enables static-file serving from the web root. | [index.xps](../demo/kestrel/index.xps) |
 | `--static-max-bytes` | `--static-max-bytes N` | `N`: maximum static response size in bytes. | Limits static-file size. | [index.xps](../demo/kestrel/index.xps) |
+| `--static-allow` | `--static-allow PATH` | `PATH`: allowed static path prefix. | Adds an explicit static-file path allowlist entry. | [index.xps](../demo/kestrel/index.xps) |
+| `--environment` | `--environment Production|Development` | environment name. | Selects the web runtime environment. | [index.xps](../demo/kestrel/index.xps) |
+| `--api-docs` / `--no-api-docs` | `--api-docs` or `--no-api-docs` | none | Enables or disables generated REST/OpenAPI documentation for the web root. | [REST API documentation](rest-api-documentation.md) |
 | `--config` | `--config FILE` | `FILE`: host configuration file. | Loads Kestrel host configuration. Explicit CLI values override config values. | [index.xps](../demo/kestrel/index.xps) |
 
 ## `xpscript fastcgi` host
@@ -112,9 +117,24 @@ For the complete JSON `--config` file format and all supported `web` and `fastCg
 | FastCGI `--bind` | `--bind IP` | `IP`: listener address. | Alias for the FastCGI bind address. | [index.xps](../demo/fastcgi/index.xps) |
 | FastCGI `--port` | `--port N` | `N`: TCP port. | Selects the FastCGI listener port. | [index.xps](../demo/fastcgi/index.xps) |
 | `--unix-socket` | `--unix-socket PATH` | `PATH`: Unix-domain socket path on Linux/macOS. | Uses a Unix-domain socket instead of TCP. | [index.xps](../demo/fastcgi/index.xps) |
+| FastCGI `--log-directory` | `--log-directory PATH` | `PATH`: log directory. | Selects the directory for mandatory structured FastCGI logs. | [index.xps](../demo/fastcgi/index.xps) |
+| FastCGI `--environment` | `--environment Production|Development` | environment name. | Selects the web runtime environment. | [index.xps](../demo/fastcgi/index.xps) |
 | FastCGI `--config` | `--config FILE` | `FILE`: FastCGI configuration file. | Loads FastCGI host configuration. | [index.xps](../demo/fastcgi/index.xps) |
 
 FastCGI should normally listen on a private loopback address or Unix socket behind a reverse proxy.
+
+## `xpscript openapi`
+
+| Command/option | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `openapi generate` | `xpscript openapi generate SPEC [-o OUTPUT] [--force]` | OpenAPI specification and generated server path. | Generates REST server source; existing output requires `--force`. | [REST API](rest-api.md) |
+| `openapi import` | `xpscript openapi import SPEC [-o OUTPUT] [--operation SELECTOR] [--status-file PATH]` | specification, operation selector(s), optional status JSON path. | Imports a bounded OpenAPI contract; import does not accept `--force`. | [REST API](rest-api.md) |
+| `openapi client generate` | `xpscript openapi client generate SPEC [-o OUTPUT] [--class NAME] [--operation SELECTOR]` | specification, output path, optional class and operation selector(s). | Generates an XPScript REST client and typed models. | [REST API](rest-api.md) |
+| `-o` / `--output` | `-o PATH` or `--output PATH` | generated source path. | Selects the server or client output file. | [REST API](rest-api.md) |
+| `--force` | `--force` | none. | Allows `openapi generate` to replace an existing server output. | [REST API](rest-api.md) |
+| `--operation` | `--operation SELECTOR[,SELECTOR...]` | operationId, path, or `METHOD path`. | Limits generation/import to selected operations. | [REST API](rest-api.md) |
+| `--status-file` | `--status-file PATH` | JSON status-file path. | Writes import progress and operation/model counts. | [REST API](rest-api.md) |
+| `--class` | `--class NAME` | XPScript class name. | Selects the generated client class name. | [REST API](rest-api.md) |
 
 ## `xpscript compile --target webiis`
 
