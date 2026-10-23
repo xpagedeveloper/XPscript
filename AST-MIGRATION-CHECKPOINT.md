@@ -1,5 +1,7 @@
 # AST migration checkpoint
 
+- Platform CI verification was extended to `investigate-ast-compiler`: `Platform FullTest` now runs on AST pushes, and the Kestrel hardening workflow runs its security matrix on the same branch with explicit report/exit-code verification. Elevated local REST, Kestrel, CGI and FastCGI smoke tests passed with `PLATFORM_HOSTING_SMOKE_OK` on 2026-10-23. The non-elevated REST attempt was blocked only by the Windows sandbox denying the compiler temporary `references` directory.
+
 - Fixed compiler validation/run temporary-root handling to honor `XPSCRIPT_TEMP_ROOT` consistently. The CLI compatibility suite now completes in the restricted Windows environment with `CLI_COMMAND_LINE_COMPATIBILITY_OK`; Release build remains at 0 warnings and 0 errors.
 
 Updated 2026-10-23 on branch `investigate-ast-compiler`.
