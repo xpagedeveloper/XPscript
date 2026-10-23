@@ -893,14 +893,34 @@ internal static class LSCoreCompare
 }
 {{ForAllRuntimeSource.Code}}
 {{classSupport}}
+internal sealed class LSConsoleRuntime
+{
+    public Action<string, bool>? AndroidLog { get; set; }
+
+    public void WriteLine(object? value)
+    {
+        var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+        if (AndroidLog is not null) AndroidLog(text, false);
+        else System.Console.WriteLine(text);
+    }
+
+    public void Write(object? value)
+    {
+        var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+        if (AndroidLog is not null) AndroidLog(text, false);
+        else System.Console.Write(text);
+    }
+
+    public string ReadLine() => System.Console.ReadLine() ?? string.Empty;
+    public void Beep() => System.Console.Beep();
+}
 internal static class Program
 {
     {{(AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") || AstSpreadsheetSupport.UsesSpreadsheet(fullSource) ? "static Program() { XPScriptFileSystemRuntime.SetScriptDirectory(" + Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, true) + "); }" : "")}}
     private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
     public static bool True = true;
     public static bool False = false;
-    public static dynamic Console = CreateConsole();
-    private static dynamic CreateConsole() { dynamic console = new ExpandoObject(); console.AndroidLog = (Action<string, bool>?)null; console.WriteLine = (Action<object?>)(value => { var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty; if (console.AndroidLog is Action<string, bool> log) log(text, false); else System.Console.WriteLine(text); }); return console; }
+    public static LSConsoleRuntime Console = new();
     public static string AstPrintText(object? value) => XPScriptNullRuntime.IsNull(value) ? "Variable is null" : value is ILSObjectReference reference && reference.IsNothing ? "Variable is Nothing" : value is DateTime date ? date.ToString(CultureInfo.InvariantCulture) : Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
     public static dynamic RequestScope = new ExpandoObject();
     public static dynamic Err => XPScriptErrorRuntime.Err;
