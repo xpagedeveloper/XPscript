@@ -36,6 +36,12 @@ $methodReferenceDeferredTarget = Join-Path $output 'constructor-reference-method
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-reference-method-deferred.xps') -o $methodReferenceDeferredTarget
 if ($LASTEXITCODE -ne 0) { throw 'AST method reference constructor fixture compilation failed.' }
 Write-Host 'AST_METHOD_REFERENCE_CONSTRUCTOR_OK'
+$listMethodTarget = Join-Path $output 'constructor-list-method-deferred'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST List class-method fixture compilation failed.' }
+$listMethodResult = dotnet (Join-Path $listMethodTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listMethodResult -join "`n") -ne "8`n8") { throw 'AST List class-method execution failed.' }
+Write-Host 'AST_LIST_CLASS_METHOD_OK'
 foreach ($fixture in @('class-constructor-list', 'constructor-reference-list', 'class-constructor-variant', 'class-constructor-native', 'constructor-reference-variant', 'class-constructor-overloads', 'constructor-refref-module', 'class-constructor-reference-storage', 'class-constructor-optional-refref', 'constructor-refref-array', 'constructor-refref-list', 'constructor-refref-forall', 'constructor-refref-optional', 'class-constructor-optional-reference', 'constructor-reference-optional', 'class-constructor-reference-byref', 'constructor-reference-byref-simple', 'constructor-reference-byref', 'constructor-reference-implicit', 'class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
@@ -136,7 +142,6 @@ foreach ($case in @(
     @('constructor-list-default-name-error', 'XPS2008', 2),
     @('constructor-list-reference-type-error', 'XPS2003', 11),
     @('constructor-list-unknown-type-error', 'XPS3001', 2),
-    @('constructor-list-method-deferred', 'XPS3001', 2),
     @('constructor-native-byref-type-error', 'XPS2003', 7),
     @('constructor-native-optional-type-error', 'XPS2001', 2),
     @('constructor-variant-byref-type-error', 'XPS2003', 7),
@@ -201,7 +206,7 @@ foreach ($case in @(
     @('constructor-overloads-duplicate-error', 'XPS2006', 4)
 )) {
     $fixture = $case[0]
-    if ($fixture -in @('constructor-list-method-deferred', 'constructor-byref-module-storage-error', 'constructor-reference-native-deferred', 'constructor-reference-method-deferred')) { continue }
+    if ($fixture -in @('constructor-byref-module-storage-error', 'constructor-reference-native-deferred', 'constructor-reference-method-deferred')) { continue }
     $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Constructor diagnostic lost: $fixture`n$failure" }
 }

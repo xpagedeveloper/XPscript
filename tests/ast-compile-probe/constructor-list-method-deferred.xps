@@ -1,6 +1,13 @@
 Class Record
-    Public Sub Use(ByVal values List As Long)
-    End Sub
+    Public Function Apply(ByVal values List As Long) As Long
+        values("updated") = values("value") + 5
+        Apply = values("updated")
+    End Function
 End Class
 Sub Main()
+    Dim values List As Long
+    values("value") = 3
+    Dim record As New Record
+    Print CStr(record.Apply(values))
+    Print CStr(values("updated"))
 End Sub
