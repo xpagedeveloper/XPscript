@@ -2,6 +2,11 @@ Class Writer
     Public Sub Update(ByRef value As Long)
         value = value + 7
     End Sub
+
+    Public Sub Swap(ByRef first As Long, ByRef second As Long)
+        first = first + 10
+        second = second + 20
+    End Sub
 End Class
 
 Sub Main()
@@ -10,4 +15,8 @@ Sub Main()
     Dim writer As New Writer
     Call writer.Update(values("value"))
     Print CStr(values("value"))
+    values("other") = 2
+    Call writer.Swap(values("value"), values("other"))
+    Print CStr(values("value"))
+    Print CStr(values("other"))
 End Sub

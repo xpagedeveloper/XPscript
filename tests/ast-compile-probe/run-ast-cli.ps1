@@ -843,7 +843,7 @@ $listElementByRefSubOutput = Join-Path $output 'class-method-list-element-byref-
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-list-element-byref-sub-next.xps') -o $listElementByRefSubOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST List element ByRef Sub class-method compilation failed.' }
 $listElementByRefSubResult = dotnet (Join-Path $listElementByRefSubOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($listElementByRefSubResult -join "`n") -ne '11') { throw 'AST List element ByRef Sub class-method copy-back failed.' }
+if ($LASTEXITCODE -ne 0 -or ($listElementByRefSubResult -join "`n") -ne "11`n21`n22") { throw 'AST List element ByRef Sub class-method copy-back failed.' }
 Write-Host 'AST_LIST_ELEMENT_BYREF_SUB_CLASS_METHOD_OK'
 $optionalListClassMethodOutput = Join-Path $output 'class-method-optional-list-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-list-next.xps') -o $optionalListClassMethodOutput
