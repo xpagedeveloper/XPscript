@@ -255,6 +255,9 @@ Write-Host 'AST_SYSTEMINVENTORY_NATIVE_SURFACE_OK'
 $sqliteOutput = Join-Path $output 'sqlite-native-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'sqlite-native-next.xps') -o $sqliteOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST SQLite native-surface compilation failed.' }
+if (Test-Path -LiteralPath (Join-Path $sqliteOutput 'MySqlConnector.dll')) {
+    throw 'AST SQLite output incorrectly staged the unused MySqlConnector dependency.'
+}
 $sqliteResult = dotnet (Join-Path $sqliteOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($sqliteResult -join "`n") -ne 'SQLITE_AST_OK') { throw 'AST SQLite native-surface regression failed.' }
 Write-Host 'AST_SQLITE_OK'
