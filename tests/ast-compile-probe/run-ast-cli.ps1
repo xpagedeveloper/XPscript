@@ -43,7 +43,7 @@ function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
     return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd() }
 }
 $compileHelp = dotnet $compiler compile --help 2>&1
-if ($LASTEXITCODE -ne 0 -or ($compileHelp -join "`n") -notmatch 'Usage:') { throw 'AST compile command help regression failed.' }
+if ($LASTEXITCODE -ne 0 -or ($compileHelp -join "`n") -notmatch 'Usage:' -or ($compileHelp -join "`n") -notmatch '--target desktop\|console\|webiis' -or ($compileHelp -join "`n") -notmatch 'desktop\s+Create a desktop executable') { throw 'AST compile command help regression failed.' }
 $astCompileHelp = dotnet $compiler ast-compile -h 2>&1
 if ($LASTEXITCODE -ne 0 -or ($astCompileHelp -join "`n") -notmatch 'Usage:') { throw 'AST compile alias help regression failed.' }
 Write-Host 'AST_COMMAND_HELP_OK'

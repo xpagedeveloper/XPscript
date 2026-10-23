@@ -1151,7 +1151,7 @@ XPScript Compiler and Runtime
 (c) xpagedeveloper.com 2026
 
 Usage:
-  {compileCommand} <source.xps> [-o output] [--target webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--info] [--debug] [--embed-assets] [--result-format text|json|xml] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  {compileCommand} <source.xps> [-o output] [--target desktop|console|webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--info] [--debug] [--embed-assets] [--result-format text|json|xml] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
   xpscript legacy-compile|compilev1 <source.xps> [legacy compiler options]
   xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml]
   xpscript ast-run <source.xps> [--platform RID] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
@@ -1164,6 +1164,8 @@ Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
 
 Compiler targets:
+  desktop   Create a desktop executable (the default AST target).
+  console   Create a console executable.
   webiis    Create an IIS deployable ASP.NET Core application folder and ZIP package.
 
 The default compile and run commands use the AST compiler. Use legacy-compile/compilev1 and legacy-run/runv1 for the legacy compiler during migration.
