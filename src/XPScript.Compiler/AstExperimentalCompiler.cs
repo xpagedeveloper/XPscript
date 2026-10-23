@@ -1238,7 +1238,19 @@ internal static class Program
         if (file.Length == 0) throw new XPScriptRuntimeException(5, "ShellExecute requires a program name.");
         var timeout = timeoutMilliseconds is null ? 0 : Convert.ToInt32(timeoutMilliseconds);
         if (timeout < 0) throw new XPScriptRuntimeException(5, "ShellExecute timeoutMilliseconds must be zero or greater.");
-        using var process = new System.Diagnostics.Process { StartInfo = new System.Diagnostics.ProcessStartInfo { FileName = file, Arguments = CStr(arguments), UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true } };
+        if (arguments is string || arguments is not IEnumerable)
+            throw new XPScriptRuntimeException(5, "ShellExecute arguments must be an array or list, not a command string.");
+        var startInfo = new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = file,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        foreach (var argument in (IEnumerable)arguments)
+            startInfo.ArgumentList.Add(CStr(argument));
+        using var process = new System.Diagnostics.Process { StartInfo = startInfo };
         try
         {
             if (!process.Start()) throw new XPScriptRuntimeException(5, "ShellExecute could not start the program.");
