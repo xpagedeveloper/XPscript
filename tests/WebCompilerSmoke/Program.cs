@@ -24,6 +24,30 @@ await File.WriteAllTextAsync(sourcePath, """
 Sub WebMain()
 End Sub
 
+[Anonymous]
+[Get]
+Sub WebRequestResponseSurface()
+    If False Then
+        Dim path As String = Request.Path
+        Dim query As String = Request.Query("id")
+        Dim header As String = Request.Header("X-Test")
+        Dim cookie As String = Request.Cookie("session")
+        Dim form As String = Request.Form("name")
+        Dim bearer As String = Request.BearerToken
+        Response.AppendHeader("X-Test", "ok")
+        Call Response.RemoveHeader("X-Old")
+        Call Response.SetCookie("session", "value")
+        Call Response.DeleteCookie("old")
+        Call Response.Json("ok")
+        Call Response.OK("ok")
+        Call Response.Created("/created", "ok")
+        Call Response.BadRequest("bad")
+        Call Response.NotFound("missing")
+        Call Response.Conflict("conflict")
+        Call Response.Problem(400, "Bad Request", "bad")
+    End If
+End Sub
+
 [Authenticated]
 [Post]
 [Rule:admin]
