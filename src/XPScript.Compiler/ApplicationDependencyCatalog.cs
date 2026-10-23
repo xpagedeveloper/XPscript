@@ -12,7 +12,7 @@ public static class ApplicationDependencyCatalog
     public const string MicrosoftDataSqlClientVersion = "7.0.2";
     public const string MySqlConnectorVersion = "2.6.2";
     public const string NpgsqlVersion = "10.0.3";
-    public const string MimeKitVersion = "4.17.0";
+    public const string MimeKitVersion = "4.18.2";
     public const string MagickNetVersion = "14.17.1";
     public const string SharpCompressVersion = "0.50.4";
 
