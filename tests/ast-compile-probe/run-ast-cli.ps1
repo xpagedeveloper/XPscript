@@ -1530,7 +1530,7 @@ if ($LASTEXITCODE -ne 0 -or ($notesHttpResult -join [Environment]::NewLine) -ne 
 $xpNotesHttpAliasOutput = Join-Path $output 'xpnotes-http-request-alias-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpnotes-http-request-alias-next.xps') -o $xpNotesHttpAliasOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST XPNotesHTTPRequest alias compilation failed.' }
-$xpNotesHttpAliasResult = & (Join-Path $xpNotesHttpAliasOutput 'Generated.exe')
+$xpNotesHttpAliasResult = dotnet (Join-Path $xpNotesHttpAliasOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($xpNotesHttpAliasResult -join [Environment]::NewLine) -ne 'XP_NOTES_HTTP_REQUEST_ALIAS_OK') { throw 'AST XPNotesHTTPRequest alias regression failed.' }
 $jsonInvalid = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'json-member-error.xps') -o (Join-Path $output 'json-member-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($jsonInvalid -join "`n") -notmatch "json-member-error.xps:3:16: XPS2009: Undefined member 'UnknownMember'") { throw 'AST JSON unknown-member diagnostic lost its code or source position.' }
