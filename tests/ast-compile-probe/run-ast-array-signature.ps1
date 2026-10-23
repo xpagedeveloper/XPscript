@@ -27,6 +27,18 @@ foreach ($fixture in @('array-parameter-runtime-next', 'constructor-array-runtim
     if ($LASTEXITCODE -ne 0 -or ($run -join "`n") -notmatch '41:-2:0|42:-1:1|43:-3:-1|nothing') { throw "Array signature runtime mismatch: $run" }
 }
 foreach ($case in @(
+    @('procedure-array-deferred', '7'),
+    @('constructor-array-deferred', '7')
+)) {
+    $fixture = $case[0]
+    $output = Join-Path $root ("out/array-signature-" + $fixture)
+    if (Test-Path $output) { Remove-Item -Recurse -Force $output }
+    $result = dotnet $compiler ast-compile (Join-Path $PSScriptRoot ($fixture + '.xps')) -o $output 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "Array deferred fixture compilation failed: $result" }
+    $run = dotnet (Join-Path $output 'Generated.dll') 2>&1
+    if ($LASTEXITCODE -ne 0 -or ($run -join "`n") -ne $case[1]) { throw "Array deferred fixture runtime mismatch: $fixture / $run" }
+}
+foreach ($case in @(
     @('array-storage-bounds-error', 'XPS1012', 2),
     @('constructor-array-rank-error', 'XPS1012', 2),
     @('constructor-array-list-error', 'XPS1012', 2)

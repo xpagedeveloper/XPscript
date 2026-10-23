@@ -1,6 +1,11 @@
 Class ArrayOwner
     Sub New(ByRef values() As Long)
+        values(0) = values(0) + 4
     End Sub
 End Class
 Sub Main()
+    Dim values(2) As Long
+    values(0) = 3
+    Dim owner As New ArrayOwner(values)
+    Print CStr(values(0))
 End Sub

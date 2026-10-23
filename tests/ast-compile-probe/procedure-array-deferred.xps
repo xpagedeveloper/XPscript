@@ -1,4 +1,9 @@
 Sub Accept(ByRef values(,) As Long)
+    values(0, 0) = values(0, 0) + 4
 End Sub
 Sub Main()
+    Dim values(1, 1) As Long
+    values(0, 0) = 3
+    Call Accept(values)
+    Print CStr(values(0, 0))
 End Sub
