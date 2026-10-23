@@ -1418,7 +1418,9 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-case.xps') -
 if ($LASTEXITCODE -ne 0) { throw 'AST case-insensitive class method compilation failed.' }
 $classCaseResult = dotnet (Join-Path $output 'class-method-case/Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($classCaseResult -join "`n") -ne '3') { throw 'AST case-insensitive class member execution failed.' }
-dotnet run --project (Join-Path $root 'tests/AstSpreadsheetRuntimeProbe') -c Release
+dotnet build (Join-Path $root 'tests/AstSpreadsheetRuntimeProbe/AstSpreadsheetRuntimeProbe.csproj') -c Release --no-restore -p:UseSharedCompilation=false -p:UseAppHost=false -m:1
+if ($LASTEXITCODE -ne 0) { throw 'AST native spreadsheet runtime probe build failed.' }
+dotnet (Join-Path $root 'tests/AstSpreadsheetRuntimeProbe/bin/Release/net10.0/AstSpreadsheetRuntimeProbe.dll') $root
 if ($LASTEXITCODE -ne 0) { throw 'AST native spreadsheet runtime regression failed.' }
 foreach ($sheetInvalid in @('spreadsheet-member-error', 'spreadsheet-constructor-error', 'spreadsheet-readonly-error', 'spreadsheet-private-setter-error', 'spreadsheet-arity-error')) {
     $sheetFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$sheetInvalid.xps") -o (Join-Path $output $sheetInvalid) 2>&1

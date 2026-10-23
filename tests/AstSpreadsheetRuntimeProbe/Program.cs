@@ -58,7 +58,10 @@ foreach (var name in new[] { "xpspreadsheet-basic", "xpspreadsheet-worksheets", 
 }
 // Existing deterministic ZIP safety fixtures, exercised through real AST construction.
 var fixtures = Path.Combine(output, "security");
-await Run("dotnet", ["run", "--project", Path.Combine(repo, "tests/SpreadsheetSecurityFixtures"), "-c", "Release", "--", fixtures], repo);
+var securityProject = Path.Combine(repo, "tests/SpreadsheetSecurityFixtures/SpreadsheetSecurityFixtures.csproj");
+await Run("dotnet", ["build", securityProject, "-c", "Release", "--no-restore", "-p:UseSharedCompilation=false", "-p:UseAppHost=false", "-m:1"], repo);
+var securityAssembly = Path.Combine(repo, "tests/SpreadsheetSecurityFixtures/bin/Release/net10.0/SpreadsheetSecurityFixtures.dll");
+await Run("dotnet", [securityAssembly, fixtures], repo);
 foreach (var name in new[] { "malformed", "missing-workbook", "too-many-parts", "oversized-part" })
 {
     var source = Path.Combine(output, "reject-" + name + ".xps");
