@@ -332,7 +332,7 @@ public sealed class CompilerDriver
             throw new CompilerException("Run output directory does not exist.");
         CompilerPathSecurity.HardenTemporaryDirectory(runOutputDirectory);
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
+        var tempRoot = CreateCompilerTempRoot();
         Directory.CreateDirectory(tempRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
 
@@ -564,14 +564,24 @@ public sealed class CompilerDriver
         runtimeIdentifier.Equals("android-arm64", StringComparison.OrdinalIgnoreCase) ||
         runtimeIdentifier.Equals("android-x64", StringComparison.OrdinalIgnoreCase);
 
+    private static string CreateCompilerTempRoot()
+    {
+        var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var baseRoot = string.IsNullOrWhiteSpace(configuredRoot)
+            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            : Path.Combine(Path.GetFullPath(configuredRoot), "XPScript");
+        var tempRoot = Path.Combine(baseRoot, Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        return tempRoot;
+    }
+
     private async Task ValidateGeneratedCodeAsync(
         string sourcePath,
         string runtimeIdentifier,
         string generatedSource,
         ManagedAssemblyReferencePreprocessor.Result managedReferences)
     {
-        var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempRoot);
+        var tempRoot = CreateCompilerTempRoot();
         CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
 
         try

@@ -10,6 +10,8 @@ $compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
     [System.IO.Path]::GetFullPath($CompilerPath)
 }
 if (-not (Test-Path -LiteralPath $compiler)) { throw "Compiler DLL not found: $compiler" }
+$env:XPSCRIPT_TEMP_ROOT = Join-Path $root 'out/cli-compatibility-temp'
+$null = New-Item -ItemType Directory -Force -Path $env:XPSCRIPT_TEMP_ROOT
 $help = (dotnet $compiler --help | Out-String)
 $required = @(
     'compile <source.xps>', 'ast-run <source.xps>', '--target webiis', '--platform RID', '--single-file', '--runtime',

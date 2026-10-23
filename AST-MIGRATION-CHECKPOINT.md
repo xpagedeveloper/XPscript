@@ -1,5 +1,7 @@
 # AST migration checkpoint
 
+- Fixed compiler validation/run temporary-root handling to honor `XPSCRIPT_TEMP_ROOT` consistently. The CLI compatibility suite now completes in the restricted Windows environment with `CLI_COMMAND_LINE_COMPATIBILITY_OK`; Release build remains at 0 warnings and 0 errors.
+
 Updated 2026-10-23 on branch `investigate-ast-compiler`.
 
 ## Current state
