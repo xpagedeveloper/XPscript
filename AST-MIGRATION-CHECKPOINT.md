@@ -6,7 +6,7 @@ Updated 2026-10-23 on branch `investigate-ast-compiler`.
 
 ## Current state
 
-- Latest pushed commit: `b19133ce` (`Fix multidimensional AST array parameters`).
+- Latest pushed commit: `e6a834bc` (`Honor configured compiler temp root everywhere`). The preceding `811fbb86` commit aligned legacy `--target desktop|console` behavior and its CLI regression coverage.
 - The CLI compatibility suite was re-run successfully with `XPSCRIPT_TEMP_ROOT` directed to a writable repository output directory: `CLI_COMMAND_LINE_COMPATIBILITY_OK`. It covers AST/default/legacy compile and run aliases, target/platform/RID handling, runtime and single-file switches, result formats, security/restricted/source-root/preprocessor options, validation and executable output.
 - The target-matrix probe was rebuilt with MSBuild node parallelism disabled (`-m:1`) and executed successfully with `TARGET_MATRIX_OK`; the workload resolver was the source of the earlier silent parallel-build failure.
 - AST-generated compile/run projects now set `RestoreIgnoreFailedSources=true`, allowing cached packages to build when the NuGet service index is unavailable. The focused SQLite native-surface regression passed with `SQLITE_AST_OK` after the change.
@@ -30,7 +30,7 @@ Updated 2026-10-23 on branch `investigate-ast-compiler`.
 
 ## Required continuation
 
-1. Audit and implement legacy `--target` behavior parity; AST target coverage is green, while the legacy command still has an explicit webiis-only restriction.
+1. Continue the complete legacy command-line parameter audit; desktop/console target aliases and the configured temp-root behavior are now covered, while broader diagnostic and execution parity remains open.
 2. If the next point fails, isolate the failing probe, add or update focused regression coverage, run the focused test and relevant build, then commit and push the fix.
 3. After each accepted green item, create a descriptive commit and push it to GitHub.
 4. Run Graphify after source changes. Use `C:\Python315\Scripts\graphify.exe update .` while the `.local\\bin` trampoline still fails to canonicalize its script path.
@@ -39,7 +39,7 @@ Updated 2026-10-23 on branch `investigate-ast-compiler`.
 
 The completed run covered the AST CLI language/runtime probes, including constructors, destructors, properties, indexed properties, arrays/redim, lists, ByRef/reference storage, XML/CSV/JSON, HTTP/XPAI, XPImage, Notes HTTP, control flow, static initialization, and object/class lifecycle.
 
-The legacy command-line compatibility baseline also passed with `tests/cli-compatibility/run-cli-compatibility.ps1` (`CLI_COMMAND_LINE_COMPATIBILITY_OK`). This verifies the currently implemented AST option surface; complete legacy `--target` behavior parity remains open in `todo/ast-compiler-migration-todo.md`.
+The legacy command-line compatibility baseline passes with `tests/cli-compatibility/run-cli-compatibility.ps1` (`CLI_COMMAND_LINE_COMPATIBILITY_OK`). It now also verifies successful legacy `--target desktop` and `--target console` output; broader legacy option diagnostics and execution parity remain open in `todo/ast-compiler-migration-todo.md`.
 
 The AST target-matrix probe also passed with `TARGET_MATRIX_OK` after an external NuGet restore. The probe verifies the configured desktop/browser target metadata and target routing; physical Android device/emulator validation remains a local setup gate.
 
@@ -113,7 +113,7 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 
 - Migrating `XPFileInfoValue` onto the existing AST `XpFileInfo` runtime; added typed metadata and a safe existing-file regression.
 
-- Current continuation checkpoint: branch `investigate-ast-compiler` is clean apart from the unrelated untracked `scripts/restart-chatgpt-after-5-minutes.ps1`. The next open implementation audit is full legacy CLI `--target` behavior parity; AST currently parses the compatibility switches but still explicitly rejects `--target webiis` on the legacy command. The HTTP/XML collection-property duplicate-runtime experiment was reverted and remains uncommitted/open.
+- Current continuation checkpoint: branch `investigate-ast-compiler` is clean apart from the unrelated private helper and generated probe output directories. Legacy desktop/console target aliases are implemented and pushed; the next open work is the broader legacy CLI parameter parity audit. The HTTP/XML collection-property duplicate-runtime experiment was reverted and remains uncommitted/open.
 
 - Follow-up verification: the isolated `run-ast-array-signature.ps1` suite passes, but the full `run-ast-cli.ps1` wrapper currently terminates after entering that nested suite without exposing a PowerShell exception. No harness change was kept; this wrapper issue must be isolated before claiming the full AST suite green.
 
