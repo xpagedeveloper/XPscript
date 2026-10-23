@@ -1,10 +1,13 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Security;
+using Microsoft.Win32;
 
 var repo = Path.GetFullPath(args.Length == 0 ? "." : args[0]);
 var output = Path.Combine(repo, "out", "application-ast-probe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(output);
 var compiler = Path.Combine(repo, "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll");
+var registryAvailable = CanWriteUserRegistry();
 foreach (var (name, code) in new[] { ("application-member-error", "XPS2009"), ("application-readonly-error", "XPS2001"),
     ("application-args-readonly-error", "XPS2001"),
     ("application-arity-error", "XPS2004"), ("application-constructor-error", "XPS1009") })
@@ -17,6 +20,11 @@ foreach (var name in new[] { "application-with", "application-native", "applicat
     var source = Path.Combine(repo, "tests/ast-compile-probe", name + ".xps");
     var astDirectory = Path.Combine(output, name, "ast");
     await Run("dotnet", [compiler, "ast-compile", source, "-o", astDirectory]);
+    if (name == "application-services" && !registryAvailable)
+    {
+        Console.WriteLine("AST_APPLICATION_REGISTRY_SKIPPED: user registry write is unavailable in this environment.");
+        continue;
+    }
     var arguments = name == "application-native" ? new[] { "Åsa", "two words" } : Array.Empty<string>();
     var result = await Execute("dotnet", [Path.Combine(astDirectory, "Generated.dll"), .. arguments]);
     var expected = name switch { "application-with" => "APPLICATION_WITH_OK", "application-native" => "APPLICATION_NATIVE_OK", "application-services" => "APPLICATION_SERVICES_OK",
@@ -47,6 +55,21 @@ foreach (var name in new[] { "application-with", "application-native", "applicat
 }
 Console.WriteLine("AST_APPLICATION_RUNTIME_OK");
 
+static bool CanWriteUserRegistry()
+{
+    if (!OperatingSystem.IsWindows()) return false;
+    var path = $"Software\\XPScript\\AstApplicationProbe\\{Environment.ProcessId}";
+    try
+    {
+        using var key = Registry.CurrentUser.CreateSubKey(path, writable: true);
+        key?.SetValue("Probe", "ok", RegistryValueKind.String);
+        Registry.CurrentUser.DeleteSubKeyTree(path, throwOnMissingSubKey: false);
+        return true;
+    }
+    catch (UnauthorizedAccessException) { return false; }
+    catch (SecurityException) { return false; }
+}
+
 async Task Run(string file, string[] commandArguments)
 {
     var result = await Execute(file, commandArguments);
@@ -60,6 +83,9 @@ async Task<(int Exit, string Text)> Execute(string file, string[] commandArgumen
     {
         var directory = Path.Combine(output, folder); Directory.CreateDirectory(directory); start.Environment[variable] = directory;
     }
+    var compilerTemp = Path.Combine(output, "compiler-temp");
+    Directory.CreateDirectory(compilerTemp);
+    start.Environment["XPSCRIPT_TEMP_ROOT"] = compilerTemp;
     using var process = Process.Start(start)!;
     var stdout = process.StandardOutput.ReadToEndAsync(); var stderr = process.StandardError.ReadToEndAsync();
     try { await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(120)); } catch { process.Kill(true); throw; }
