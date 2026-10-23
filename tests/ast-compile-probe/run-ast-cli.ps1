@@ -65,6 +65,14 @@ $infoOutput = Join-Path $output 'cli-info'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $infoOutput --info --runtime false --single-file false
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $infoOutput 'Generated.dll'))) { throw 'AST --info option regression failed.' }
 Write-Host 'AST_INFO_OPTION_OK'
+$dependencyInfoOutput = Join-Path $output 'cli-dependency-info'
+$dependencyInfoText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'mysql-native-next.xps') -o $dependencyInfoOutput --info --runtime false --single-file false 2>&1
+$dependencyInfoJoined = $dependencyInfoText -join "`n"
+if ($LASTEXITCODE -ne 0 -or $dependencyInfoJoined -notmatch 'MySqlConnector\s+2\.6\.2' -or
+    $dependencyInfoJoined -notmatch 'already available locally|will be restored/downloaded') {
+    throw 'AST dependency --info reporting regression failed.'
+}
+Write-Host 'AST_DEPENDENCY_INFO_OK'
 $embedOutput = Join-Path $output 'cli-embed-assets'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $embedOutput --embed-assets --runtime false --single-file false
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $embedOutput 'Generated.dll'))) { throw 'AST --embed-assets option regression failed.' }
