@@ -174,7 +174,25 @@ internal static class CompilerBuildEnvironment
         if (File.Exists(assetsPath) && File.Exists(propsGeneratedPath) && File.Exists(targetsGeneratedPath)) startInfo.ArgumentList.Add("--no-restore");
         var intermediateBase = CreatePrivateDirectory(cacheRoot, "intermediate");
         var intermediateRoot = CreatePrivateDirectory(intermediateBase, hash[..32]);
-        if (TryClaimIntermediateCache(intermediateRoot)) startInfo.ArgumentList.Add("-p:BaseIntermediateOutputPath=" + EnsureTrailingSeparator(Path.Combine(intermediateRoot, "obj")));
+        if (IsReusableIntermediateCache(intermediateRoot, rid) && TryClaimIntermediateCache(intermediateRoot))
+            startInfo.ArgumentList.Add("-p:BaseIntermediateOutputPath=" + EnsureTrailingSeparator(Path.Combine(intermediateRoot, "obj")));
+    }
+
+    private static bool IsReusableIntermediateCache(string intermediateRoot, string runtimeIdentifier)
+    {
+        // A previous build can leave the MSBuild project metadata behind after
+        // its apphost was removed by cleanup or an interrupted build. Reusing
+        // that partial cache makes MSBuild fail while copying a non-existent
+        // apphost.exe. In that case use the generated project's private obj
+        // directory so the build recreates all artifacts from scratch.
+        var appHostPath = Path.Combine(
+            intermediateRoot,
+            "obj",
+            "Release",
+            "net10.0",
+            runtimeIdentifier,
+            "apphost.exe");
+        return !OperatingSystem.IsWindows() || File.Exists(appHostPath);
     }
 
     private static string ExtractSourceIdentity(string generatedSource)
