@@ -738,6 +738,7 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
 - [ ] Audit every legacy command-line parameter and add parity tests for aliases, defaults, validation, diagnostics and execution semantics.
   - [x] Deterministic CLI compatibility coverage now verifies help, AST/default/legacy compile/run aliases, target/platform/RID, runtime and single-file switches, security/restricted/source-root/preprocessor options, result formats, argument validation and executable output. Full legacy target semantics and diagnostic parity remain open.
   - [x] Documented the supported compiler, run, validation, MCP, security, service and web-host CLI parameters, including case-insensitive `--Args` and `--No-Daemon` behavior, in `docs/cli-reference.md`.
+  - [x] Documented compiler aliases `--output`, `--singlefile`, and validation's `--stdin`/`--filename`; verified `--output` plus `--singlefile=false` produces a runnable AST assembly.
   - [x] Verify the explicit `compilev1` and `runv1` legacy aliases alongside `legacy-compile` and `legacy-run`; the permanent CLI compatibility suite now executes both aliases.
   - [x] Normalize invalid CLI compile-option arguments into deterministic exit code `2` diagnostics instead of unhandled `ArgumentException` termination; the compatibility suite covers invalid runtime values and completes with `CLI_COMMAND_LINE_COMPATIBILITY_OK`.
 - [ ] Verify web/REST execution under Kestrel, IIS, CGI and FastCGI; IIS execution still requires an IIS-enabled environment.
