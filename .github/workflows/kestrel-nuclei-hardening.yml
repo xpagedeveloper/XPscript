@@ -701,6 +701,42 @@ jobs:
           $handlers = $config.configuration.location.'system.webServer'.handlers.add
           if ($null -eq $handlers) { throw "Generated web.config has no IIS handler mapping." }
 
+      - name: Run generated application through IIS Express
+        shell: pwsh
+        run: |
+          $iisExpress = @(
+            (Get-Command iisexpress.exe -ErrorAction SilentlyContinue).Source,
+            'C:\Program Files\IIS Express\iisexpress.exe',
+            'C:\Program Files (x86)\IIS Express\iisexpress.exe'
+          ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+          if (-not $iisExpress) { throw 'IIS Express is not installed on the GitHub Windows runner.' }
+
+          $siteRoot = (Resolve-Path './out/hardening-iis-expanded/site').Path
+          $logPath = (Resolve-Path './out').Path + '\iisexpress.log'
+          $port = 18080
+          $process = Start-Process -FilePath $iisExpress -ArgumentList "/path:$siteRoot", "/port:$port", "/systray:false" -PassThru -RedirectStandardOutput $logPath -RedirectStandardError ($logPath + '.err')
+          try {
+            $ready = $false
+            for ($attempt = 1; $attempt -le 30; $attempt++) {
+              try {
+                $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -UseBasicParsing -TimeoutSec 2
+                if ($response.StatusCode -eq 200 -and $response.Content -match 'XPSCRIPT-IIS-HARDENING') {
+                  $ready = $true
+                  break
+                }
+              } catch { }
+              Start-Sleep -Seconds 1
+            }
+            if (-not $ready) {
+              if (Test-Path $logPath) { Get-Content $logPath }
+              if (Test-Path ($logPath + '.err')) { Get-Content ($logPath + '.err') }
+              throw 'Generated WebIIS application did not answer through IIS Express.'
+            }
+            Write-Host 'WEB-IIS-EXECUTION=OK'
+          } finally {
+            if ($process -and -not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
+
       - name: Upload Windows IIS hardening artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -709,5 +745,6 @@ jobs:
           path: |
             ./out/hardening-iis.zip
             ./out/hardening-iis-expanded/site/web.config
+            ./out/iisexpress.log*
           retention-days: 3
 
