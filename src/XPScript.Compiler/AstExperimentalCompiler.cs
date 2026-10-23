@@ -1216,8 +1216,7 @@ internal static class Program
             : new System.Diagnostics.ProcessStartInfo("/bin/sh", "-c \"" + text.Replace("\\\"", "\\\\\"", StringComparison.Ordinal) + "\"");
         startInfo.UseShellExecute = false;
         using var process = System.Diagnostics.Process.Start(startInfo) ?? throw new XPScriptRuntimeException(5, "Shell could not start the command.");
-        process.WaitForExit();
-        return process.ExitCode;
+        return process.Id;
     }
     public static long ShellArgs(object? executable, object? arguments, object? windowStyle = null)
     {

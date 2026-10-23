@@ -512,7 +512,7 @@ internal static class XPCrossPlatformRuntime
             var start = BuildStartInfo(parsed.FileName, ParseArguments(parsed.Arguments), windowStyle);
             using var process = System.Diagnostics.Process.Start(start)
                 ?? throw new FileNotFoundException("Could not start the requested program or script.");
-            return 33;
+            return process.Id;
         }
         catch (Exception ex)
         {
@@ -532,7 +532,7 @@ internal static class XPCrossPlatformRuntime
             var start = BuildStartInfo(fileName, structuredArguments, windowStyle);
             using var process = System.Diagnostics.Process.Start(start)
                 ?? throw new FileNotFoundException("Could not start the requested program.");
-            return 33;
+            return process.Id;
         }
         catch (Exception ex)
         {
