@@ -252,6 +252,24 @@ internal static class CompilerBuildEnvironment
         var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
         var usesAndroidUi = runtimeIdentifier.StartsWith("android-", StringComparison.OrdinalIgnoreCase) && usesUiForm;
         var packages = ApplicationDependencyCatalog.Detect(source);
+        if (CompilerDiagnosticMode.Debug || CompilerDiagnosticMode.Info)
+        {
+            if (packages.Count == 0)
+                Console.Error.WriteLine("Dependencies: none required by this source.");
+            else
+            {
+                var packageRoot = Environment.GetEnvironmentVariable("NUGET_PACKAGES");
+                if (string.IsNullOrWhiteSpace(packageRoot))
+                    packageRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
+                Console.Error.WriteLine("Dependencies required by this source:");
+                foreach (var package in packages)
+                {
+                    var packagePath = Path.Combine(packageRoot, package.Name.ToLowerInvariant(), package.Version);
+                    var status = Directory.Exists(packagePath) ? "already available locally" : "will be restored/downloaded";
+                    Console.Error.WriteLine($"  {package.Name} {package.Version} ({package.Reason}) - {status}");
+                }
+            }
+        }
         var usesMySql = source.Contains("XPScriptDbMySql", StringComparison.Ordinal);
         var usesMsSql = source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
         var usesSupabaseDb = source.Contains("XPScriptDbSupabase", StringComparison.Ordinal);

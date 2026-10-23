@@ -257,7 +257,7 @@ public static class XPScriptCompilerCommandLine
 
             var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
             using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
-            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug, info);
             using var publishLayoutScope = CompilePublishLayoutContext.Push(singleFile, selfContained);
             var timer = Stopwatch.StartNew();
             var sourceName = Path.GetFileName(sourcePath);
@@ -401,7 +401,7 @@ public static class XPScriptCompilerCommandLine
                 throw new ArgumentException("Unsupported runtime identifier '" + runtimeIdentifier + "'.");
             using var securityScope = ApplicationSecurityModeContext.Push(
                 securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off));
-            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug, info);
             if (string.Equals(target, "webiis", StringComparison.OrdinalIgnoreCase))
             {
                 var package = await WebIisPackageTarget.BuildAsync(sourcePath, outputDirectory, selfContained, resultFormat).ConfigureAwait(false);
