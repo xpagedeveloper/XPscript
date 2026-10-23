@@ -741,6 +741,7 @@ public sealed class CompilerDriver
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Features>$(Features);experimental-data-section-string-literals=100</Features>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
     <NuGetAudit>{(ApplicationSecurityModeContext.Current != ApplicationSecurityMode.Off).ToString().ToLowerInvariant()}</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>

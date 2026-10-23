@@ -7,6 +7,7 @@ Updated 2026-10-23 on branch `investigate-ast-compiler`.
 - Latest pushed commit: `0d55a7d8` (`Improve workload detection and sync MimeKit version`).
 - The CLI compatibility suite was re-run successfully with `XPSCRIPT_TEMP_ROOT` directed to a writable repository output directory: `CLI_COMMAND_LINE_COMPATIBILITY_OK`. It covers AST/default/legacy compile and run aliases, target/platform/RID handling, runtime and single-file switches, result formats, security/restricted/source-root/preprocessor options, validation and executable output.
 - The target-matrix probe was rebuilt with MSBuild node parallelism disabled (`-m:1`) and executed successfully with `TARGET_MATRIX_OK`; the workload resolver was the source of the earlier silent parallel-build failure.
+- AST-generated compile/run projects now set `RestoreIgnoreFailedSources=true`, allowing cached packages to build when the NuGet service index is unavailable. The focused SQLite native-surface regression passed with `SQLITE_AST_OK` after the change.
 - The working tree is clean apart from the unrelated private `scripts/restart-chatgpt-after-5-minutes.ps1` helper.
 
 - The focused XPImage AST regression passed, including byte-array interop and image getters/setters/indexed properties.

@@ -335,6 +335,7 @@ internal static class RunCompiler
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
     <UseAppHost>false</UseAppHost>
     <NuGetAudit>{(ApplicationSecurityModeContext.Current != ApplicationSecurityMode.Off).ToString().ToLowerInvariant()}</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
