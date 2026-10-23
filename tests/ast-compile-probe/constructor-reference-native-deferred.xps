@@ -1,6 +1,14 @@
 Class Record
+    Private picture As XPImage
     Public Sub New(ByVal value As XPImage)
+        Set picture = value
     End Sub
+    Public Function Width() As Long
+        Width = picture.Width
+    End Function
 End Class
 Sub Main()
+    Dim source As New XPImage(5, 4)
+    Dim record As New Record(source)
+    Print CStr(record.Width())
 End Sub
