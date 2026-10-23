@@ -1,0 +1,14 @@
+Sub Main()
+    Dim fileNumber As Integer
+    Dim value As String
+    fileNumber = FreeFile()
+    Open "input-record-next.txt" For Output As #fileNumber
+    Print #fileNumber, "alpha,beta"
+    Close #fileNumber
+    Open "input-record-next.txt" For Input As #fileNumber
+    value = Input$(fileNumber)
+    Close #fileNumber
+    Kill "input-record-next.txt"
+    If value <> "alpha" Then Error 6341, "AST Input record regression failed: " & value
+    Print "FILE_INPUT_RECORD_OK"
+End Sub

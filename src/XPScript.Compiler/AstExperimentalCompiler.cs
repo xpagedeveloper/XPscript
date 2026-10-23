@@ -1378,8 +1378,8 @@ internal static class Program
     public static string FullTrim(object? value) => value?.ToString()?.Trim() ?? string.Empty;
     public static object JsonEncode(object? value) => XPScriptNativeJson.Stringify(value);
     public static object JsonDecode(object? value) => XPScriptNativeJson.Parse(value);
-    public static string Input(object? count) => string.Empty;
-    public static string Input(object? count, object? file) => string.Empty;
+    public static string Input(object? file) => LSFileRuntime.Input(checked((int)XPScriptRuntime.CLng(file)));
+    public static string Input(object? count, object? file) => LSFileRuntime.Input(checked((int)XPScriptRuntime.CLng(file)));
     public static void Sleep(object? milliseconds) => System.Threading.Thread.Sleep(Math.Max(0, Convert.ToInt32(milliseconds)));
     public static void AstPut(object? file, object? position, object? value) => LSFileRuntime.Put(checked((int)XPScriptRuntime.CLng(file)), position, value, value switch { byte => "byte", bool => "boolean", short or int => "integer", long => "long", float => "single", double => "double", decimal => "currency", DateTime => "date", _ => "string" });
     public static object? AstGet(object? file, object? position, object? current) => LSFileRuntime.GetValue(checked((int)XPScriptRuntime.CLng(file)), position, current switch { byte => "byte", bool => "boolean", short or int => "integer", long => "long", float => "single", double => "double", decimal => "currency", DateTime => "date", _ => "string" }, current);

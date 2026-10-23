@@ -539,6 +539,13 @@ $fileInputCharsResult = dotnet (Join-Path $fileInputCharsOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($fileInputCharsResult -join "`n") -ne 'FILE_INPUT_CHARS_OK') { throw 'AST Input$ regression failed.' }
 Write-Host 'AST_FILE_INPUT_CHARS_OK'
 
+$fileInputRecordOutput = Join-Path $output 'file-input-record-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-input-record-next.xps') -o $fileInputRecordOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Input record compilation failed.' }
+$fileInputRecordResult = dotnet (Join-Path $fileInputRecordOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($fileInputRecordResult -join "`n") -ne 'FILE_INPUT_RECORD_OK') { throw 'AST Input record regression failed.' }
+Write-Host 'AST_FILE_INPUT_RECORD_OK'
+
 $fileLockOutput = Join-Path $output 'file-lock-next'
 Set-Content -LiteralPath (Join-Path $root 'ast-file-lock-next.bin') -Value 'seed' -NoNewline
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-lock-next.xps') -o $fileLockOutput
