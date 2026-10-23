@@ -73,6 +73,12 @@ if ($LASTEXITCODE -ne 0 -or $dependencyInfoJoined -notmatch 'MySqlConnector\s+2\
     throw 'AST dependency --info reporting regression failed.'
 }
 Write-Host 'AST_DEPENDENCY_INFO_OK'
+$dependencyRunText = dotnet $compiler ast-run (Join-Path $PSScriptRoot 'mysql-native-next.xps') --info 2>&1
+$dependencyRunJoined = $dependencyRunText -join "`n"
+if ($LASTEXITCODE -ne 0 -or $dependencyRunJoined -notmatch 'MySqlConnector\s+2\.6\.2') {
+    throw 'AST run dependency --info reporting regression failed.'
+}
+Write-Host 'AST_RUN_DEPENDENCY_INFO_OK'
 $embedOutput = Join-Path $output 'cli-embed-assets'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $embedOutput --embed-assets --runtime false --single-file false
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $embedOutput 'Generated.dll'))) { throw 'AST --embed-assets option regression failed.' }

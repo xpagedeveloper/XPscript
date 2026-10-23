@@ -549,7 +549,7 @@ public static class XPScriptCompilerCommandLine
             var sourceDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
             if (restricted && sourceRoots.Count == 0) sourceRoots.Add(sourceDirectory);
             using var securityScope = ApplicationSecurityModeContext.Push(securityMode ?? (debug ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off));
-            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug, info);
             if (!runtimeIdentifier.Equals(CompilerDriver.CurrentRuntimeIdentifier(), StringComparison.OrdinalIgnoreCase))
                 throw new PlatformNotSupportedException("Direct AST execution can run only the current runtime target '" + CompilerDriver.CurrentRuntimeIdentifier() + "'.");
 
