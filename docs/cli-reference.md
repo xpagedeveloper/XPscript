@@ -15,16 +15,32 @@ Running `xpscript` with no arguments prints the built-in CLI usage reference. `c
 | `run` | `xpscript run source.xps [--Args "arg1 arg2 ..."]` | `source.xps`: program to compile/run; `--Args`: explicit argument string whose values are exposed through `Application.Args`. | Builds into an isolated framework-dependent temporary output and runs the program immediately. Compiler lifecycle output is quiet by default. | [application-runtime.xps](../samples/application-runtime.xps) |
 | `ast-run` | `xpscript ast-run source.xps [--Args "arg1 arg2 ..."]` | source and optional explicit program arguments. | Explicit AST compiler spelling; equivalent to `run`. | [application-runtime.xps](../samples/application-runtime.xps) |
 | `legacy-run` / `runv1` | `xpscript legacy-run source.xps [options]` | source and legacy run options. | Uses the legacy compiler/runtime path during migration. `runv1` is an equivalent compatibility alias. | [application-runtime.xps](../samples/application-runtime.xps) |
-| `--info` | `xpscript --info run source.xps` or `xpscript run source.xps --info` | none | Shows run compilation progress and automatically enables application dependency security warning mode unless `--security=off` is explicit. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `validate` | `xpscript validate source.xps [--platform RID] [--result-format text\|json\|xml]` | source and optional target/result format. | Validates the source without producing or running an application. | [compiler-errors.xps](../samples/compiler-errors.xps) |
+| `mcp` | `xpscript mcp` | none. | Starts the compiler machine/MCP server on standard input/output. | [Compiler machine interface](compiler-machine-interface.md) |
+| `mcp install` | `xpscript mcp install codex\|claude [--scope user\|project] [--force]` | client, scope and optional overwrite flag. | Installs the compiler MCP registration for the selected client and scope. | [Compiler machine interface](compiler-machine-interface.md) |
+| `--info` | `xpscript --info run source.xps` or `xpscript run source.xps --info` | none | Shows compilation/runtime progress and automatically enables application dependency security warning mode unless `--security=off` is explicit. Option names are case-insensitive. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `--debug` | `xpscript run source.xps --debug` or `xpscript compile source.xps --debug` | none | Enables `--info`, forces a fresh run compilation, shows timing and generated-C# diagnostics, and enables detailed handled-runtime exception tracing. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `--No-Daemon` | `xpscript run source.xps --No-Daemon` or `xpscript legacy-run source.xps --No-Daemon` | none | Prevents the run command from using the warm compiler daemon and forces an isolated local compilation. It is accepted by `ast-run` for CLI compatibility but has no daemon to disable there. | [application-runtime.xps](../samples/application-runtime.xps) |
 | `--security` | `--security=off|warn|strict` | security mode. | Controls NuGet application dependency auditing. `warn` reports findings; `strict` also fails when audit data is unavailable and blocks high/critical findings. | [Dependency security and package patching](dependency-security-and-patching.md) |
 | `-o` | `-o path` | `path`: output executable/application path. | Selects the compiler output path. | [hello.xps](../demo/console/hello.xps) |
 | `--platform` / `--rid` | `--platform RID` or `--rid RID` | `RID`: one of the supported runtime identifiers such as `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`. | Compiles/publishes for an explicit target operating system and architecture. | [platform-shell.xps](../samples/platform-shell.xps) |
+| `--target` | `--target desktop\|console\|webiis` | target kind. | Selects the output host: desktop (default), console, or an IIS-deployable WebIIS package. | [hello.xps](../demo/console/hello.xps) |
 | `--runtime` | `--runtime=true|false` | boolean | Includes (`true`) or excludes (`false`, default) the .NET 10 runtime from the published application. | [hello.xps](../demo/console/hello.xps) |
 | `--single-file` | `--single-file=true|false` | boolean | Bundles application-managed files into the executable when `true` (default); emits them as separate files when `false`. | [hello.xps](../demo/console/hello.xps) |
+| `--embed-assets` | `--embed-assets` | none | Embeds a UIForm application's `assets/` tree in a desktop executable; startup materializes it beside the executable. | [hello.xps](../demo/console/hello.xps) |
+| `--restricted` | `--restricted` | none | Restricts `Include` reads to the script directory, unless additional `--source-root` directories are supplied. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `--source-root` | `--source-root DIR` (repeatable) | directory path. | Adds an allowed root for restricted `Include` processing; using it automatically enables restricted Include processing. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `--preprocessor` | `--preprocessor SPEC` (repeatable) | preprocessor specification. | Runs the selected preprocessors after the complete Include graph has been expanded. | [application-runtime.xps](../samples/application-runtime.xps) |
 | `--result-format text` | `--result-format text` | none | Emits human-readable compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--result-format json` | `--result-format json` | none | Emits structured JSON compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--result-format xml` | `--result-format xml` | none | Emits structured XML compiler results and diagnostics. | [compiler-errors.xps](../samples/compiler-errors.xps) |
 | `--Args` | `--Args "first second"` | one quoted argument string. | Passes arguments only to the program started by `run`. `xpscript run main.xps --Args "first second"` is equivalent to starting the generated Windows program as `main.exe first second`. | [application-runtime.xps](../samples/application-runtime.xps) |
+
+Option names are case-insensitive, so `--Args`, `--args`, `--No-Daemon` and
+`--no-daemon` are equivalent. `--Args` is a single quoted CLI value; the
+compiler splits that value using the same argument quoting rules used for a
+native process and forwards the resulting values to `Application.Args`. It
+does not change compiler options inside the argument string.
 
 ## Dependency security and package patch commands
 
