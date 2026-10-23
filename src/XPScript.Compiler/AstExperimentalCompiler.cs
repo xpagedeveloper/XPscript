@@ -1392,8 +1392,31 @@ internal static class Program
     public static void AstClose(object? file) => LSFileRuntime.Close(checked((int)XPScriptRuntime.CLng(file)));
     public static void AstClose() => LSFileRuntime.Close();
     public static void AstPrintFile(object? file, object? value = null) => LSFileRuntime.PrintFile(checked((int)XPScriptRuntime.CLng(file)), value);
-    public static object GetObject(object? value) => new ExpandoObject();
-    public static object GetObject(object? value, object? context) => new ExpandoObject();
+    public static object? GetObject(object? value) => GetObjectCore(value, null);
+    public static object? GetObject(object? value, object? context) => GetObjectCore(value, context);
+    private static object? GetObjectCore(object? pathname, object? className)
+    {
+        if (!OperatingSystem.IsWindows())
+            throw new XPScriptRuntimeException(5, "GetObject is available only on Windows in XPScript.");
+        var path = pathname is null ? string.Empty : XPScriptRuntime.CStr(pathname).Trim();
+        var progId = className is null ? string.Empty : XPScriptRuntime.CStr(className).Trim();
+        try
+        {
+            if (path.Length > 0)
+                return System.Runtime.InteropServices.Marshal.BindToMoniker(path);
+            if (progId.Length > 0)
+            {
+                var type = Type.GetTypeFromProgID(progId, throwOnError: true)
+                    ?? throw new System.Runtime.InteropServices.COMException("COM class was not found.");
+                return Activator.CreateInstance(type);
+            }
+            throw new XPScriptRuntimeException(5, "GetObject requires a pathname or COM ProgID.");
+        }
+        catch (Exception ex) when (ex is not XPScriptRuntimeException)
+        {
+            throw new XPScriptRuntimeException(5, "COM GetObject activation failed.");
+        }
+    }
     public static string AstLineInput(object? file) => LSFileRuntime.LineInput(checked((int)XPScriptRuntime.CLng(file)));
     public static void AstKill(object? path) => File.Delete(CStr(path));
     public static void AstFileCopy(object? source, object? destination) => File.Copy(CStr(source), CStr(destination), true);
