@@ -4,16 +4,19 @@ Updated 2026-10-23 on branch `investigate-ast-compiler`.
 
 ## Current state
 
-- Latest pushed commit: `0d55a7d8` (`Improve workload detection and sync MimeKit version`).
+- Latest pushed commit: `b19133ce` (`Fix multidimensional AST array parameters`).
 - The CLI compatibility suite was re-run successfully with `XPSCRIPT_TEMP_ROOT` directed to a writable repository output directory: `CLI_COMMAND_LINE_COMPATIBILITY_OK`. It covers AST/default/legacy compile and run aliases, target/platform/RID handling, runtime and single-file switches, result formats, security/restricted/source-root/preprocessor options, validation and executable output.
 - The target-matrix probe was rebuilt with MSBuild node parallelism disabled (`-m:1`) and executed successfully with `TARGET_MATRIX_OK`; the workload resolver was the source of the earlier silent parallel-build failure.
 - AST-generated compile/run projects now set `RestoreIgnoreFailedSources=true`, allowing cached packages to build when the NuGet service index is unavailable. The focused SQLite native-surface regression passed with `SQLITE_AST_OK` after the change.
-- The working tree is clean apart from the unrelated private `scripts/restart-chatgpt-after-5-minutes.ps1` helper.
+- The working tree is clean apart from the unrelated private `scripts/restart-chatgpt-after-5-minutes.ps1` helper and generated probe output directories.
 
 - The focused XPImage AST regression passed, including byte-array interop and image getters/setters/indexed properties.
-- The full AST CLI suite was run from `tests/ast-compile-probe/run-ast-cli.ps1` in PowerShell session `48478` and completed successfully.
+- The full AST CLI suite was run from `tests/ast-compile-probe/run-ast-cli.ps1` in PowerShell session `59322` and completed successfully.
 - The latest full-suite markers reached before this checkpoint include `AST_TIME_PARTS_OK`, followed by shell-id, MsgBox, file runtime/get/text/input/lock, and `AST_ISDIR_DRIVE_OK` markers.
-- The full AST CLI suite subsequently completed successfully with exit code 0 and `AST CLI compilation probe passed.` in session `48478`.
+- The full AST CLI suite subsequently completed successfully with exit code 0 and `AST CLI compilation probe passed.` in session `59322`.
+
+- The multidimensional whole-array parameter binding gap was fixed: `ParameterSymbol` array parameters now receive the same rank-aware indexed binding as local array symbols. Positive procedure and constructor regressions print `7`, the focused array suite reaches `AST_ARRAY_SIGNATURES_OK`, and the full AST CLI suite remains green.
+- Graphify update completed successfully after source changes using `C:\Python315\Scripts\graphify.exe update .`; the `.local\\bin` trampoline is still not the working executable. Its 149 no-symbol warnings are informational and do not indicate a graph update failure.
 
 ## Recent verified fixes
 
@@ -25,10 +28,10 @@ Updated 2026-10-23 on branch `investigate-ast-compiler`.
 
 ## Required continuation
 
-1. Poll session `48478` until the full suite finishes.
-2. If it fails, isolate the next failing probe, add or update focused regression coverage, run the focused test and relevant build, then commit and push the fix.
+1. Audit and implement legacy `--target` behavior parity; AST target coverage is green, while the legacy command still has an explicit webiis-only restriction.
+2. If the next point fails, isolate the failing probe, add or update focused regression coverage, run the focused test and relevant build, then commit and push the fix.
 3. After each accepted green item, create a descriptive commit and push it to GitHub.
-4. Run `C:\Users\FredrikNorling\.local\bin\graphify.exe update .` after source changes. The last attempts were blocked by `uv trampoline failed to canonicalize script path`; do not claim graphify succeeded unless it actually does.
+4. Run Graphify after source changes. Use `C:\Python315\Scripts\graphify.exe update .` while the `.local\\bin` trampoline still fails to canonicalize its script path.
 
 ## Verified suite areas in the completed run
 
