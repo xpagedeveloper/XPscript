@@ -635,7 +635,8 @@ if (!compilerSource.Contains("phase + \" (step \" + _phaseActivity + \")\"", Str
     throw new Exception("Android publish progress must expose repeated long-running publish phases as visible substeps.");
 
 var compilerCommandLineSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "XPScriptCompilerCommandLine.cs"));
-if (!compilerCommandLineSource.Contains("else if (args[i] == \"--info\")", StringComparison.Ordinal) ||
+if ((!compilerCommandLineSource.Contains("else if (args[i] == \"--info\")", StringComparison.Ordinal) &&
+     !compilerCommandLineSource.Contains("else if (Is(args[i], \"--info\"))", StringComparison.Ordinal)) ||
     !compilerCommandLineSource.Contains("if (result.Success && (info || debug))", StringComparison.Ordinal) ||
     !compilerCommandLineSource.Contains("WriteArtifactSize(executablePath);", StringComparison.Ordinal) ||
     !compilerCommandLineSource.Contains("Output: {path} ({mib:F2} MiB, {bytes:N0} bytes)", StringComparison.Ordinal))
