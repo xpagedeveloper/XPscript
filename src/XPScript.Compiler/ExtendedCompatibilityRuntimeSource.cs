@@ -81,8 +81,8 @@ internal static class LSExtendedRuntime
                     _ => System.Diagnostics.ProcessWindowStyle.Normal
                 };
             }
-            _ = System.Diagnostics.Process.Start(info) ?? throw new FileNotFoundException("Could not start program: " + fileName);
-            return 33;
+            using var process = System.Diagnostics.Process.Start(info) ?? throw new FileNotFoundException("Could not start program: " + fileName);
+            return process.Id;
         }
         catch (Exception ex)
         {
