@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - ai-kestrel-nuclei-hardening
+      - investigate-ast-compiler
   workflow_dispatch:
   schedule:
     - cron: "17 6 1 * *"
@@ -17,7 +18,7 @@ concurrency:
 
 jobs:
   hardening:
-    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening'
+    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening' || github.ref == 'refs/heads/investigate-ast-compiler'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -595,6 +596,49 @@ jobs:
           done
           python3 ./tests/security/reverse_proxy_smuggling.py --host 127.0.0.1 --port 18082 --json ./artifacts/hardening/nginx-kestrel-smuggling.json
 
+      - name: Verify hardening matrix results
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          exit_files=(./artifacts/hardening/*.exit-code)
+          if (( ${#exit_files[@]} == 0 )); then
+            echo "No scanner exit-code reports were produced."
+            exit 1
+          fi
+
+          for report in "${exit_files[@]}"; do
+            if [[ "$(tr -d '[:space:]' < "${report}")" != "0" ]]; then
+              echo "Scanner failed according to ${report}:"
+              cat "${report}"
+              exit 1
+            fi
+          done
+
+          required_json=(
+            ./artifacts/hardening/cgi-fuzz-matrix.json
+            ./artifacts/hardening/raw-http-results.json
+            ./artifacts/hardening/nginx-kestrel-smuggling.json
+            ./artifacts/hardening/nuclei-scan-metadata.json
+          )
+          for report in "${required_json[@]}"; do
+            if [[ ! -s "${report}" ]]; then
+              echo "Required hardening report is missing or empty: ${report}"
+              exit 1
+            fi
+          done
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          for path in Path("./artifacts/hardening").glob("*.json"):
+              with path.open(encoding="utf-8") as stream:
+                  json.load(stream)
+          print("Hardening matrix reports verified.")
+          PY
+
       - name: Upload hardening artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -613,7 +657,7 @@ jobs:
 
   windows-iis:
     needs: hardening
-    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening'
+    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening' || github.ref == 'refs/heads/investigate-ast-compiler'
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
