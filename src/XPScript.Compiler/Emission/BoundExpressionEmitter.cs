@@ -232,6 +232,15 @@ public sealed class BoundExpressionEmitter
 
     private string EmitCall(BoundCallExpression call)
     {
+        if (call.Target is BoundMemberAccessExpression webResponseMember &&
+            call.Arguments.Count == 0 &&
+            call.Function.Name is "Unauthorized" or "Forbidden")
+        {
+            // These helpers have optional detail parameters in the runtime extension
+            // surface. Lower the parameterless XPscript form directly so the AST
+            // emitter does not construct an empty optional-argument forwarding call.
+            return $"global::XpsWebResponseRestExtensions.{call.Function.Name}({Emit(webResponseMember.Receiver)})";
+        }
         if (call.Target is BoundMemberAccessExpression aiMember && aiMember.Receiver.SemanticType.Name.Equals("XPAi", StringComparison.OrdinalIgnoreCase) &&
             call.Function.Name is "AddTool" or "RemoveTool" or "ClearTools" or "HasTool" or "GetTool" or "GetToolNames" or "ToolCount")
         {
