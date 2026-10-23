@@ -102,6 +102,10 @@ if ($LASTEXITCODE -ne 0 -or $frameworkSingleFileText -notlike '*AST compilation 
     -not (Test-Path (Join-Path $frameworkSingleFileOutput 'Generated.exe'))) {
     throw "AST framework-dependent single-file regression: $frameworkSingleFileText"
 }
+$singleFileRunOutput = & (Join-Path $frameworkSingleFileOutput 'Generated.exe') | Out-String
+if ($LASTEXITCODE -ne 0 -or $singleFileRunOutput -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $singleFileRunOutput -notlike '*APPLICATION_NEWLINE_END*') {
+    throw "AST framework-dependent single-file execution regression: $singleFileRunOutput"
+}
 
 $platformAliasOutput = Join-Path $resultRoot 'platform-alias'
 $platformAliasText = dotnet $compiler ast-compile $astSource -o $platformAliasOutput --platform win-x64 --runtime=false | Out-String
