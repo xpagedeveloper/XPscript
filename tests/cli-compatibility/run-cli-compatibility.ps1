@@ -224,6 +224,14 @@ if ($LASTEXITCODE -eq 0 -or $legacyWebIisText -notlike '*webiis target requires 
     throw "Legacy webiis entry-point validation regression: $legacyWebIisText"
 }
 
+$legacyWebIisOutput = Join-Path $resultRoot 'legacy-webiis'
+$legacyWebIisPackageText = dotnet $compiler legacy-compile (Join-Path $root 'demo/webiis/main.xps') --target webiis --runtime=false --single-file=false --output $legacyWebIisOutput --result-format json | Out-String
+if ($LASTEXITCODE -ne 0) { throw "Legacy webiis package regression: $legacyWebIisPackageText" }
+$legacyWebIisResult = $legacyWebIisPackageText | ConvertFrom-Json
+if ($legacyWebIisResult.result -ne 'ok' -or -not (Test-Path ($legacyWebIisOutput + '.zip'))) {
+    throw "Legacy webiis package returned an unexpected result: $legacyWebIisPackageText"
+}
+
 $defaultCompileOutput = Join-Path $resultRoot 'default-ast-compile'
 $defaultCompileText = dotnet $compiler compile $astSource -o $defaultCompileOutput --runtime=false --single-file=false | Out-String
 if ($LASTEXITCODE -ne 0 -or $defaultCompileText -notlike '*AST compilation succeeded*') {
