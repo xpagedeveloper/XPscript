@@ -164,9 +164,11 @@ internal static class RunCompiler
                     generatedDiagnostics);
             }
 
-            var assemblyPath = Path.Combine(outputRoot, "Generated.dll");
+            var assemblyPath = CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile
+                ? Path.Combine(outputRoot, OperatingSystem.IsWindows() ? "Generated.exe" : "Generated")
+                : Path.Combine(outputRoot, "Generated.dll");
             if (!File.Exists(assemblyPath))
-                throw new CompilerException("Run compilation succeeded, but Generated.dll was not produced.");
+                throw new CompilerException("Run compilation succeeded, but the requested generated artifact was not produced.");
 
             StageNativeDependencies(sourcePath, outputRoot, nativeDependencies, managedReferences.Native);
             if (ApplicationDependencyCatalog.Detect(generatedSource).Count > 0)
@@ -202,14 +204,17 @@ internal static class RunCompiler
             CreateNoWindow = true,
             WorkingDirectory = tempRoot
         };
-        psi.ArgumentList.Add("build");
+        psi.ArgumentList.Add(CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile
+            ? "publish"
+            : "build");
         psi.ArgumentList.Add(projectPath);
         psi.ArgumentList.Add("-c");
         psi.ArgumentList.Add("Release");
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add(outputRoot);
         psi.ArgumentList.Add("--nologo");
-        psi.ArgumentList.Add("--no-incremental");
+        if (!(CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile))
+            psi.ArgumentList.Add("--no-incremental");
         if (!CompilePublishLayoutContext.IncludeRuntime)
             psi.ArgumentList.Add("-p:UseAppHost=false");
         if (runtimeIdentifier is not null || ApplicationDependencyCatalog.Detect(File.ReadAllText(Path.Combine(tempRoot, "Program.cs"))).Count > 0)
