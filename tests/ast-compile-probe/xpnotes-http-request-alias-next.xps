@@ -1,0 +1,7 @@
+Option Declare
+
+Sub Main()
+    Dim request As New XPNotesHTTPRequest
+    Call request.ResetHeaders()
+    Print "XP_NOTES_HTTP_REQUEST_ALIAS_OK"
+End Sub

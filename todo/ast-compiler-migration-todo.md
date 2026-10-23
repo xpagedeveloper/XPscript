@@ -388,7 +388,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [x] Verify `NotesHTTPRequest.GetResponseHeaders` returns response metadata after a real request.
     - [x] Verify `NotesHTTPRequest.MaxRedirects` blocks redirects by default and follows an explicit one-hop redirect.
     - [x] Verify `NotesHTTPRequest.Put`, `Patch` and `DeleteResource` preserve HTTP verbs and request bodies through the AST runtime.
-    - [ ] Resolve the canonical XP-prefixed name for the Notes HTTP compatibility type: `XPHTTPRequest` collides case-insensitively with the existing native `XPHttpRequest`; do not add an alias until the API naming decision is recorded and both runtime surfaces can remain unambiguous.
+    - [x] Resolve the canonical XP-prefixed name for the Notes HTTP compatibility type as `XPNotesHTTPRequest`; the AST preprocessor normalizes it to the existing compatibility runtime without colliding with native `XPHttpRequest`, with a permanent alias regression.
   - [x] Bind AST `MsgBox` to the shared console/runtime return contract; `msgbox-next.xps` verifies the documented `1=OK` result while desktop UI postprocessing remains target-specific.
   - [x] Investigate AST `ProcedureCounter`: it is not a documented built-in, but `samples/core-language.xps` defines it as a user `Static Function`; the fallback was removed after structural module-level Static Function binding was implemented and verified by `static-module-function-next.xps`.
     - [x] Add module-level `Static Function` parsing and remove the generated `ProcedureCounter` fallback; `static-module-function-next.xps` verifies the real user function and persistent local state.

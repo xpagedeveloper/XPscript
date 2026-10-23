@@ -112,6 +112,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "No matching constructor for 'NetworkTools'.");
             return new BoundNewExpression(typeof(object), [], XpTypeSymbol.User("NetworkTools"));
         }
+        if (typeName.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) || typeName.Equals("XPNotesHTTPRequest", StringComparison.OrdinalIgnoreCase))
+        {
+            if (syntax.Arguments.Count != 0)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
+            return new BoundNewExpression(typeof(object), [], XpTypeSymbol.User("NotesHTTPRequest"));
+        }
         if (typeName.Equals("XPHttpDbSupabase", StringComparison.OrdinalIgnoreCase) || typeName.Equals("XPHttpDbDominoRest", StringComparison.OrdinalIgnoreCase))
         {
             var required = typeName.Equals("XPHttpDbSupabase", StringComparison.OrdinalIgnoreCase) ? 2 : 3;

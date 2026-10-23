@@ -200,6 +200,8 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         // before the native XPJsonElement TypeSymbol can win the lookup.
         var compatibilityType = name is "XPJSONObject" or "XPJSONArray" or "XPJSONElement"
             ? XpTypeSymbol.User(name)
+            : name?.Equals("XPNotesHTTPRequest", StringComparison.OrdinalIgnoreCase) == true
+                ? XpTypeSymbol.User("NotesHTTPRequest")
             : null;
         var result = name?.Trim().ToUpperInvariant() switch
         {

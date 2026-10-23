@@ -11,6 +11,10 @@ internal sealed class JsonHttpCompatibilityPreprocessor
 
     public string Transform(string source)
     {
+        // The canonical XP-prefixed compatibility spelling is XPNotesHTTPRequest.
+        // Normalize it to the existing runtime type so it cannot collide with the
+        // native XPHttpRequest surface while preserving the documented API name.
+        source = Regex.Replace(source, @"\bXPNotesHTTPRequest\b", "NotesHTTPRequest", RegexOptions.IgnoreCase);
         var variables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
 

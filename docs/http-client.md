@@ -10,6 +10,8 @@ User-class Get/Set properties can declare XPHttpClient, XPHttpRequest, XPHttpRes
 
 `XPHttpClient`, `XPHttpRequest`, `XPHttpResponse` and the response part/file types bind directly to the existing HTTP runtime in AST. Native metadata supplies real overloads, typed results and writable/read-only properties. ByVal shares a reference; ByRef can replace it. Dispose clients explicitly when finished. JSON/authentication helpers delegate to the shared helpers used by normal compilation, not a second implementation.
 
+The Notes HTTP compatibility request type is also available as `XPNotesHTTPRequest`. This XP-prefixed name is distinct from native `XPHttpRequest`; `NotesHTTPRequest` remains supported as the compatibility spelling. The two names use the same compatibility runtime.
+
 AST uses the same TLS validator as normal compilation: `CertificateValidation` defaults to `Strict`. `AllowSelfSigned` is an explicit opt-in and still rejects hostname mismatches and expired certificates; `Insecure` deliberately disables certificate checks and must not be used for untrusted endpoints. Private/local destinations remain blocked unless the client explicitly enables `AllowPrivateNetwork`. Header injection/framing, URL, timeout and body-size checks are unchanged. Fractional timeout values remain fractional.
 
 HTTP and TLS code is included only when HTTP objects are used; strings/comments do not activate it, and ordinary variables named `http` are not substituted with stubs. HTTP needs no external NuGet addon. Async callbacks and HTTP/UIForm helpers continue through whole-file legacy fallback until their corresponding AST language/UI support is migrated.

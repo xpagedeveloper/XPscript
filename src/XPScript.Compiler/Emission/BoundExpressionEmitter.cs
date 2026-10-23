@@ -127,7 +127,7 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) => "new XpJsonArray()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJSONNavigator", StringComparison.OrdinalIgnoreCase) => $"new XPJSONNavigator({string.Join(", ", @new.Arguments.Select(Emit))})",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"new NotesHTTPRequest({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) || @new.SemanticType.Name.Equals("XPNotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"new NotesHTTPRequest({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name is "XPJSONObject" => "LSJsonHttpRuntime.CreateJSONObject()",
         BoundNewExpression @new when @new.SemanticType.Name is "XPJSONArray" => "LSJsonHttpRuntime.CreateJSONArray()",
         BoundNewExpression @new when @new.SemanticType.Name is "XPJSONElement" => @new.Arguments.Count switch
@@ -188,7 +188,7 @@ public sealed class BoundExpressionEmitter
     private static bool IsJsonCompatibilityType(string name) =>
         name.StartsWith("XPJson", StringComparison.OrdinalIgnoreCase) ||
         name.StartsWith("XPJSON", StringComparison.OrdinalIgnoreCase) ||
-        name is "NotesHTTPRequest" or "XPJSONNavigator" or "XPJSONObject" or "XPJSONArray" or "XPJSONElement";
+        name is "NotesHTTPRequest" or "XPNotesHTTPRequest" or "XPJSONNavigator" or "XPJSONObject" or "XPJSONArray" or "XPJSONElement";
 
     private static string JsonMemberName(string name) => name.ToUpperInvariant() switch
     {
