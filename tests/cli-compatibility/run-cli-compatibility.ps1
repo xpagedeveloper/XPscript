@@ -204,7 +204,7 @@ if ($LASTEXITCODE -ne 0 -or $compileV1Text -notlike '*result: ok*' -or -not (Tes
 }
 
 $legacyJsonOutput = Join-Path $resultRoot 'legacy-option-matrix'
-$legacyJsonText = dotnet $compiler legacy-compile $astSource -o $legacyJsonOutput --platform win-x64 --runtime=false --singlefile=false --result-format json --security=off --restricted --source-root (Join-Path $root 'tests/ast-compile-probe') | Out-String
+$legacyJsonText = dotnet $compiler legacy-compile $astSource -o $legacyJsonOutput --platform win-x64 --runtime=false --singlefile=false --result-format json --security=off --restricted --source-root (Join-Path $root 'tests/ast-compile-probe') --preprocessor identity --embed-assets | Out-String
 if ($LASTEXITCODE -ne 0) { throw "Legacy option matrix regression: $legacyJsonText" }
 $legacyJsonResult = $legacyJsonText | ConvertFrom-Json
 if ($legacyJsonResult.result -ne 'ok' -or $legacyJsonResult.operation -ne 'compile' -or -not (Test-Path $legacyJsonOutput)) {
