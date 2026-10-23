@@ -36,13 +36,18 @@ if ($LASTEXITCODE -eq 0 -or $invalidBooleanOutput -notlike '*--runtime must be t
 }
 
 $conflictingDiagnosticsOutput = dotnet $compiler ast-compile (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --debug --info 2>&1 | Out-String
-if ($LASTEXITCODE -eq 0 -or $conflictingDiagnosticsOutput -notlike '*--info and --debug cannot be used together*') {
-    throw "AST diagnostic-mode conflict regression: $conflictingDiagnosticsOutput"
+if ($LASTEXITCODE -ne 0 -or $conflictingDiagnosticsOutput -notlike '*AST compilation succeeded*') {
+    throw "AST diagnostic-mode precedence regression: $conflictingDiagnosticsOutput"
 }
 
 $missingArgsOutput = dotnet $compiler ast-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --Args 2>&1 | Out-String
 if ($LASTEXITCODE -eq 0 -or $missingArgsOutput -notlike '*--Args requires one quoted argument string*') {
     throw "AST run argument validation regression: $missingArgsOutput"
+}
+
+$runConflictingDiagnosticsOutput = dotnet $compiler ast-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --debug --info --Args 'ast-run-debug-precedence' 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0 -or $runConflictingDiagnosticsOutput -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $runConflictingDiagnosticsOutput -notlike '*APPLICATION_NEWLINE_END*') {
+    throw "AST run diagnostic-mode precedence regression: $runConflictingDiagnosticsOutput"
 }
 
 $astSource = Join-Path $root 'tests/ast-compile-probe/application-newline.xps'
