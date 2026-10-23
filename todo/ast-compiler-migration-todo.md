@@ -773,5 +773,6 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
 - [x] Apply `XPSCRIPT_TEMP_ROOT` to `XpsWebCompiler` workspaces and persistent web-cache storage so web/REST compilation and execution work in constrained profiles. `WebRestApiSmoke` passes, including malformed-JSON 400 classification and JSON-schema validation.
 - [ ] Finish class/property and remaining special-construct migration, remove unjustified legacy fallback and obsolete regex lowering.
   - [x] Re-ran the comprehensive AST CLI/core probe after typed Application/Session/Request binding was corrected; core functions, class methods/properties, constructors/destructors, databases, AI, file APIs, XML/CSV/JSON, HTTP and indexed storage gates all passed (`AST CLI compilation probe passed`).
+    - [x] Re-verified the complete probe on 2026-10-23 with loopback socket access enabled; the run finished with `AST CLI compilation probe passed` and exit code 0, including HTTP/TLS, Spreadsheet, XML/CSV, lifecycle and legacy-parity sections.
 - [x] Import and reconcile REST server/client OpenAPI work from all `test-openapi*` branches, including regeneration and multi-definition behavior. Full `OpenApiGeneratorSmoke` coverage is green on the AST default path.
 - [ ] Complete the Definition of Done audit before changing the package version to `0.9.4 Beta`.
