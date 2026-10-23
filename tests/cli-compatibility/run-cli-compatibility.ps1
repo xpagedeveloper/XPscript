@@ -35,6 +35,11 @@ if ($LASTEXITCODE -eq 0 -or $invalidBooleanOutput -notlike '*--runtime must be t
     throw "AST boolean option validation regression: $invalidBooleanOutput"
 }
 
+$conflictingDiagnosticsOutput = dotnet $compiler ast-compile (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --debug --info 2>&1 | Out-String
+if ($LASTEXITCODE -eq 0 -or $conflictingDiagnosticsOutput -notlike '*--info and --debug cannot be used together*') {
+    throw "AST diagnostic-mode conflict regression: $conflictingDiagnosticsOutput"
+}
+
 $missingArgsOutput = dotnet $compiler ast-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --Args 2>&1 | Out-String
 if ($LASTEXITCODE -eq 0 -or $missingArgsOutput -notlike '*--Args requires one quoted argument string*') {
     throw "AST run argument validation regression: $missingArgsOutput"

@@ -389,6 +389,8 @@ public static class XPScriptCompilerCommandLine
             // compile-command switches for CLI compatibility and validate them even
             // though they do not alter this artifact layout.
             _ = singleFile;
+            if (debug && info)
+                throw new ArgumentException("--info and --debug cannot be used together.");
             if (resultFormat is not ("text" or "json" or "xml"))
                 throw new ArgumentException("--result-format must be text, json, or xml.");
             if (target is not null && !target.Equals("desktop", StringComparison.OrdinalIgnoreCase) &&
