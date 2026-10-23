@@ -1,0 +1,3 @@
+# XPScript source files are text-based scripts. Treat them as text documents
+# until Graphify has a dedicated XPScript extractor.
+language.xps=.txt
