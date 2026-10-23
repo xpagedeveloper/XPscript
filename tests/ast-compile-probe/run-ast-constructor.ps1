@@ -35,6 +35,8 @@ Write-Host 'AST_NATIVE_REFERENCE_CONSTRUCTOR_OK'
 $methodReferenceDeferredTarget = Join-Path $output 'constructor-reference-method-deferred'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-reference-method-deferred.xps') -o $methodReferenceDeferredTarget
 if ($LASTEXITCODE -ne 0) { throw 'AST method reference constructor fixture compilation failed.' }
+$methodReferenceResult = dotnet (Join-Path $methodReferenceDeferredTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($methodReferenceResult -join "`n") -ne '7') { throw 'AST user-reference class-method execution failed.' }
 Write-Host 'AST_METHOD_REFERENCE_CONSTRUCTOR_OK'
 $listMethodTarget = Join-Path $output 'constructor-list-method-deferred'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodTarget
@@ -193,7 +195,6 @@ foreach ($case in @(
     @('constructor-reference-scalar-error', 'XPS2004', 6),
     @('constructor-reference-class-error', 'XPS2004', 11),
     @('constructor-reference-downcast-error', 'XPS2004', 11),
-    @('constructor-reference-method-deferred', 'XPS3001', 6),
     @('constructor-parent-late-error', 'XPS1012', 6),
     @('constructor-parent-duplicate-error', 'XPS1012', 6),
     @('constructor-parent-root-error', 'XPS1012', 3),
@@ -206,7 +207,7 @@ foreach ($case in @(
     @('constructor-overloads-duplicate-error', 'XPS2006', 4)
 )) {
     $fixture = $case[0]
-    if ($fixture -in @('constructor-byref-module-storage-error', 'constructor-reference-native-deferred', 'constructor-reference-method-deferred')) { continue }
+    if ($fixture -in @('constructor-byref-module-storage-error', 'constructor-reference-native-deferred')) { continue }
     $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Constructor diagnostic lost: $fixture`n$failure" }
 }

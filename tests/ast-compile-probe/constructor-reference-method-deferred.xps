@@ -1,10 +1,17 @@
 Class Box
+    Public Value As Long
 End Class
 Class Record
     Public Sub New(ByVal value As Box)
     End Sub
-    Public Sub Unsupported(ByVal value As Box)
+    Public Sub Touch(ByVal value As Box)
+        value.Value = value.Value + 4
     End Sub
 End Class
 Sub Main()
+    Dim value As New Box
+    value.Value = 3
+    Dim record As New Record(value)
+    Call record.Touch(value)
+    Print CStr(value.Value)
 End Sub

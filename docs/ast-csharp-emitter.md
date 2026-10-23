@@ -16,7 +16,7 @@ Omitted List parameters without an initializer start as Nothing, not an empty Li
 
 Lists borrow their elements, including XPImage references. Passing/replacing a List does not clone, Dispose, Delete or recycle its elements. Typed image field stores still clone and failed construction/Delete cleans those owned snapshots only. Declared scalar XPImage and array parameter signatures remain separate work, as do compatibility module addresses and broader lifecycle migration.
 
-`class-constructor-list.xps` covers aliases, snapshots, defaults, errors, Parent.New, overloads and user/native element types. `image-constructor-list.xps` covers borrowed images and owned field cleanup. CLI/MCP pair invariant type/default/name/unknown-type errors and retain the ordinary method guard. Language/Runtime FullTest require AST_LIST_CONSTRUCTORS_OK and AST_IMAGE_LIST_CONSTRUCTORS_OK. `constructor-reference-list.xps` provides narrow normal/AST ByVal mutation parity; advanced replacement/ByRef/Optional behavior is AST capability (normal currently rejects ByVal `Set values = Nothing`).
+`class-constructor-list.xps` covers aliases, snapshots, defaults, errors, Parent.New, overloads and user/native element types. `image-constructor-list.xps` covers borrowed images and owned field cleanup. CLI/MCP pair invariant type/default/name/unknown-type errors. List class-method mutation is covered by `constructor-list-method-deferred.xps`. Language/Runtime FullTest require AST_LIST_CONSTRUCTORS_OK and AST_IMAGE_LIST_CONSTRUCTORS_OK. `constructor-reference-list.xps` provides narrow normal/AST ByVal mutation parity; advanced replacement/ByRef/Optional behavior is AST capability (normal currently rejects ByVal `Set values = Nothing`).
 
 ## Variant and shared native constructor references
 
