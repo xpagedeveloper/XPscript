@@ -2,7 +2,7 @@ namespace XPScript.Web.Compiler;
 
 internal static class BrowserWasmServerBridgeTransportInstaller
 {
-    private const string SendCoreMarker = "    private XPScriptHttpResponse SendCore(System.Net.Http.HttpMethod method, object? urlValue, object? bodyValue, IReadOnlyDictionary<string, string>? requestHeaders = null)\n    {\n        EnsureNotDisposed();\n        _tls.Reset();\n        var url = XPScriptRuntime.CStr(urlValue).Trim();";
+    private const string SendCoreMarker = "    private XPScriptHttpResponse SendCore(System.Net.Http.HttpMethod method, object? urlValue, object? bodyValue, IReadOnlyDictionary<string, string>? requestHeaders = null, IReadOnlyList<XPScriptHttpMultipartPart>? multipartParts = null)\n    {\n        EnsureNotDisposed();\n        _tls.Reset();\n        var url = XPScriptRuntime.CStr(urlValue).Trim();";
     private const string InstalledMarker = "XPScriptBrowserServerBridgeTransport.Send(method, url, bodyValue, _headers)";
 
     public static string TransformGenerated(string generated)
