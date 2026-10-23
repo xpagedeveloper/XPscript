@@ -133,3 +133,5 @@ The local Android probes also passed: `ANDROID_AST_BACKEND_OK` and `ANDROID-AST-
 - Fixed false database attachment feature activation: source declarations named Attachments no longer inject duplicate HTTP/attachment runtime; actual .Attachments(...) calls still inject and execute correctly.
 - Verified compiler Release build, CLASS_PROPERTIES_NATIVE_OK and DATABASE_ATTACHMENTS_OK.
 - Graphify update attempted; still fails with uv trampoline canonicalize error.
+
+- Performance baseline: a representative AST compilation averaged 2.8 seconds over three runs. A clean isolated `dotnet build XPScriptCompiler.slnx -c Release --no-restore -p:UseSharedCompilation=false` completed in 72.7 seconds with 0 warnings and 0 errors, including the Windows, Linux x64 and macOS x64/arm64 publish targets. This is a baseline only; the performance investigation remains open.
