@@ -263,8 +263,6 @@ public static class XPScriptCompilerCommandLine
             if (target == "webiis" && embedAssets)
                 throw new ArgumentException("--embed-assets is supported for desktop executable compilation. Web and browser-WASM assets are packaged as application assets.");
 
-            if (debug)
-                info = false;
             var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
             using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug, info);
@@ -411,8 +409,6 @@ public static class XPScriptCompilerCommandLine
             // Keep the established framework-dependent AST layout by default. When
             // either publish switch explicitly requests a non-default layout, pass
             // that choice into the generated-project backend.
-            if (debug && info)
-                info = false;
             if (resultFormat is not ("text" or "json" or "xml"))
                 throw new ArgumentException("--result-format must be text, json, or xml.");
             if (target is not null && !target.Equals("desktop", StringComparison.OrdinalIgnoreCase) &&
@@ -563,8 +559,6 @@ public static class XPScriptCompilerCommandLine
                     throw new ArgumentException("Unexpected ast-run argument: " + value);
             }
 
-            if (debug && info)
-                info = false;
             if (sourceArgument is null) throw new ArgumentException("ast-run requires an .xps source file.");
             var sourcePath = Path.GetFullPath(sourceArgument);
             if (!File.Exists(sourcePath))
@@ -579,8 +573,6 @@ public static class XPScriptCompilerCommandLine
             if (UIFormAppAssets.UsesUIForm(sourcePath))
                 UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
             if (restricted && sourceRoots.Count == 0) sourceRoots.Add(sourceDirectory);
-            if (debug)
-                info = false;
             using var securityScope = ApplicationSecurityModeContext.Push(securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off));
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug, info);
             if (!runtimeIdentifier.Equals(CompilerDriver.CurrentRuntimeIdentifier(), StringComparison.OrdinalIgnoreCase))
@@ -774,7 +766,6 @@ public static class XPScriptCompilerCommandLine
                 if (value.Equals("--debug", StringComparison.OrdinalIgnoreCase))
                 {
                     debug = true;
-                    info = false;
                     continue;
                 }
 
@@ -857,8 +848,6 @@ public static class XPScriptCompilerCommandLine
             if (useDaemon && !await CompilerDaemonClient.EnsureRunningAsync().ConfigureAwait(false))
                 throw new InvalidOperationException("Unable to start or connect to the XPScript compiler daemon.");
 
-            if (debug)
-                info = false;
             var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
             using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
