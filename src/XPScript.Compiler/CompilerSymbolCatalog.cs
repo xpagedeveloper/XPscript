@@ -105,6 +105,7 @@ public static class CompilerSymbolCatalog
             // sources bind against the AST path instead of falling back to the
             // legacy web transpiler.
             Define("Request.Method", "property", "Request.Method As String", [], "String", "api.web.Request.Method"),
+            Define("Request.QueryFirst", "method", "Request.QueryFirst(name As String) As String", [new("name", "String")], "String", "api.web.Request.QueryFirst"),
             Define("Response.ContentType", "property", "Response.ContentType As String", [], "String", "api.web.Response.ContentType"),
             Define("Response.SetHeader", "method", "Response.SetHeader(name As String, value As String)", [new("name", "String"), new("value", "String")], null, "api.web.Response.SetHeader"),
             Define("Response.Write", "method", "Response.Write(value As Variant)", [new("value", "Variant")], null, "api.web.Response.Write"),

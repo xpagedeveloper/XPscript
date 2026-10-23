@@ -741,6 +741,7 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
 - [x] Verify Web REST execution through the Kestrel adapter. `WebKestrelSmoke` passes with external localhost socket access; the restricted sandbox reports the expected Windows socket error 10013.
 - [x] Verify Web REST execution through the CGI adapter. `WebCgiSmoke` builds with zero warnings and passes as `WEB-CGI-SMOKE=OK`.
 - [x] Verify FastCGI execution and protocol boundaries. `WebFastCgiBoundarySmoke` builds cleanly and passes with external localhost socket access; `WebFastCgiUnixSmoke` correctly reports `SKIPPED-WINDOWS` on Windows.
+  - [x] Keep AST web request members synchronized with the runtime: `Request.QueryFirst` is now registered in the AST web catalog, and the CGI/runtime/FastCGI smoke suite passes through the default AST path.
 - [x] Verify the WebIIS package probe. `WebIisPackageProbe` builds without warnings, produces a deployable `deploy.zip`, and rejects a non-`main.xps` entrypoint; direct IIS process hosting remains environment-dependent.
 - [ ] Migrate the Android branch `origin/android-runtime-uiform-mobile` into AST and complete local APK/device verification when the Android SDK is available.
   - [x] Android runtime/UIForm source and AST target support from `origin/android-runtime-uiform-mobile` are present on this branch; only local SDK-backed APK/device verification remains open.
