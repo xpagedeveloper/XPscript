@@ -833,6 +833,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST ByRef List class-method compilation failed
 $byRefListClassMethodResult = dotnet (Join-Path $byRefListClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($byRefListClassMethodResult -join "`n") -ne '21') { throw 'AST ByRef List class-method execution failed.' }
 Write-Host 'AST_BYREF_LIST_CLASS_METHOD_OK'
+$listElementByRefMethodOutput = Join-Path $output 'class-method-list-element-byref-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-list-element-byref-next.xps') -o $listElementByRefMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST List element ByRef class-method compilation failed.' }
+$listElementByRefMethodResult = dotnet (Join-Path $listElementByRefMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listElementByRefMethodResult -join "`n") -ne "11`n11") { throw 'AST List element ByRef class-method copy-back failed.' }
+Write-Host 'AST_LIST_ELEMENT_BYREF_CLASS_METHOD_OK'
 $optionalListClassMethodOutput = Join-Path $output 'class-method-optional-list-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-list-next.xps') -o $optionalListClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST optional List class-method compilation failed.' }

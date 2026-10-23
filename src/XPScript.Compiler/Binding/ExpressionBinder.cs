@@ -614,7 +614,6 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             if (!function.ByRefParameters[i])
                 continue;
             if ((ReferenceEquals(syntax, listByRefStatementCall) || function.ReturnType != typeof(void)) &&
-                syntax is CallExpressionSyntax { Target: NameExpressionSyntax } &&
                 (arguments[i] is BoundIndexExpression { Expression.SemanticType.IsList: true } ||
                  arguments[i] is BoundNameExpression { Symbol: LocalSymbol { IsListAlias: true } }) &&
                 _symbols.ClassifyConversion(arguments[i].SemanticType,
@@ -630,7 +629,6 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return false;
             if (name.Symbol is LocalSymbol { IsListAlias: true } &&
                 !((ReferenceEquals(syntax, listByRefStatementCall) || function.ReturnType != typeof(void)) &&
-                  syntax is CallExpressionSyntax { Target: NameExpressionSyntax } &&
                   _symbols.ClassifyConversion(arguments[i].SemanticType,
                       function.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(function.ParameterTypes[i])).IsIdentity))
                 return false;

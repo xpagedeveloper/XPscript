@@ -9,12 +9,13 @@ internal static class BoundListCallLowering
 {
     internal static bool IsElement(BoundExpression argument) => argument is BoundIndexExpression { Expression.SemanticType.IsList: true };
     internal static bool IsAlias(BoundExpression argument) => argument is BoundNameExpression { Symbol: LocalSymbol { IsListAlias: true } };
-    internal static bool RequiresWrapper(BoundCallExpression call) => call.Target is null && call.Function.ReturnType != typeof(void) &&
+    internal static bool RequiresWrapper(BoundCallExpression call) => call.Function.ReturnType != typeof(void) &&
         call.Arguments.Where((argument, index) => call.Function.ByRefParameters?[index] == true).Any(argument => IsElement(argument) || IsAlias(argument));
 
     internal static string Name(BoundCallExpression call)
     {
-        var signature = call.Function.Name + "(" + string.Join(",", call.Arguments.Select((argument, index) =>
+        var receiver = (call.Target as BoundMemberAccessExpression)?.Receiver;
+        var signature = (receiver?.SemanticType.Name ?? "static") + "." + call.Function.Name + "(" + string.Join(",", call.Arguments.Select((argument, index) =>
             (call.Function.SemanticParameterTypes?[index].Name ?? call.Function.ParameterTypes[index].FullName) + ":" + call.Function.ByRefParameters?[index] + ":" +
             (IsElement(argument) ? "element" : IsAlias(argument) ? "alias" : "value"))) + ")";
         return "__xpsListCall_" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(signature)))[..16];
@@ -24,6 +25,16 @@ internal static class BoundListCallLowering
     {
         var parameters = new List<string>(); var arguments = new List<string>();
         var after = new List<string>();
+        var receiver = (call.Target as BoundMemberAccessExpression)?.Receiver;
+        var memberName = (call.Target as BoundMemberAccessExpression)?.Name ?? call.Function.Name;
+        if (receiver is not null)
+        {
+            // User-class receivers can be represented as object in the semantic carrier
+            // while the generated local has its concrete Xp* runtime type. Dynamic keeps
+            // the wrapper aligned with the ordinary member-call emitter without erasing
+            // the typed ByRef List element carrier.
+            parameters.Add("dynamic receiver");
+        }
         for (var i = 0; i < call.Arguments.Count; i++)
         {
             var argument = call.Arguments[i];
@@ -45,7 +56,10 @@ internal static class BoundListCallLowering
                 arguments.Add((byRef ? "ref " : "") + name);
             }
         }
-        return $"private static {BoundMethodEmitter.CSharpType(call.Function.ReturnType)} {Name(call)}({string.Join(", ", parameters)})\n{{\ntry {{ return {call.Function.Name}({string.Join(", ", arguments)}); }}\nfinally {{ {string.Join(" ", after)} }}\n}}\n";
+        var invocation = receiver is null
+            ? $"{call.Function.Name}({string.Join(", ", arguments)})"
+            : $"receiver.{memberName}({string.Join(", ", arguments)})";
+        return $"private static {BoundMethodEmitter.CSharpType(call.Function.ReturnType)} {Name(call)}({string.Join(", ", parameters)})\n{{\ntry {{ return {invocation}; }}\nfinally {{ {string.Join(" ", after)} }}\n}}\n";
     }
 
     internal static IEnumerable<BoundCallExpression> Calls(BoundNode node)

@@ -269,6 +269,8 @@ public sealed class BoundExpressionEmitter
                     wrapperArguments.Add($"new LSListByRef<{parameterType}>({location.Value[..^".Value".Length]})");
                 else wrapperArguments.Add((byRef ? "ref " : "") + Emit(argument));
             }
+            if (call.Target is BoundMemberAccessExpression member)
+                wrapperArguments.Insert(0, Emit(member.Receiver));
             return $"{BoundListCallLowering.Name(call)}({string.Join(", ", wrapperArguments)})";
         }
         var tagArgument = call.Arguments.Count >= 1 ? call.Arguments[0] : null;
