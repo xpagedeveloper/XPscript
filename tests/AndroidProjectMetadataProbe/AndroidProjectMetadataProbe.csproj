@@ -7,5 +7,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/XPScript.Cli/AndroidProjectMetadata.cs" Link="AndroidProjectMetadata.cs" />
+    <Reference Include="XPScript.Compiler.Core">
+      <HintPath>../../src/XPScript.Compiler.Core/bin/$(Configuration)/net10.0/XPScript.Compiler.Core.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
 </Project>
