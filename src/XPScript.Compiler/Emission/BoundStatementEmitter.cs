@@ -270,11 +270,9 @@ public sealed class BoundStatementEmitter
                 if (declaration.Local.ArrayLength is not null || declaration.Local.ArrayBounds.Count > 0 || declaration.Local.ArrayLowerBound != 0 || declaration.Local.ArrayRank > 1)
                     type = "System.Array";
                 if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAi";
-                else if (declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAi";
                 else if ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAITool", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAiTool";
-                else if (declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase)) type = "XPScriptAiTool";
                 var initializer = declaration.Initializer is null
-                    ? (declaration.Local.SemanticType?.IsVariant == true ? "null" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ? "new XpNotesHttp()" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAi", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.Equals("ai", StringComparison.OrdinalIgnoreCase) ? "new XpAi(\"\", \"\")" : (declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPAITool", StringComparison.OrdinalIgnoreCase) || declaration.Local.Name.EndsWith("Tool", StringComparison.OrdinalIgnoreCase) ? "new XpAiTool(\"\")" : ((declaration.Local.SemanticType?.Name ?? string.Empty).Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) ? "new XpJsonArray()" : type.Contains("Dictionary", StringComparison.Ordinal) ? "new System.Collections.Generic.Dictionary<string, object?>()" : type == "object" ? "new System.Dynamic.ExpandoObject()" : type.EndsWith("[]", StringComparison.Ordinal) ? $"new {type[..^2]}[{(declaration.EmptyArray ? 0 : (declaration.Local.ArrayBounds.Count > 0 ? declaration.Local.ArrayBounds[0].Upper : (declaration.ArrayLength ?? 0)) - declaration.Local.ArrayLowerBound + 1)}]" : type.StartsWith("Xp", StringComparison.Ordinal) ? $"new {type}()" : $"default({type})")))
+                    ? DefaultInitializer(declaration, type)
                     : _expressions.Emit(declaration.Initializer);
                 if (declaration.Local.SemanticType?.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) == true && declaration.Initializer is null)
                     initializer = "new NotesHTTPRequest()";
@@ -520,6 +518,26 @@ public sealed class BoundStatementEmitter
     private string Condition(BoundExpression expression) => expression.Type == typeof(bool)
         ? _expressions.Emit(expression)
         : $"XPScriptNullRuntime.ConditionValue({_expressions.Emit(expression)})";
+
+    private static string DefaultInitializer(BoundVariableDeclarationStatement declaration, string type)
+    {
+        var semanticName = declaration.Local.SemanticType?.Name ?? string.Empty;
+        if (declaration.Local.SemanticType?.IsVariant == true) return "null";
+        if (semanticName.Equals("XPAi", StringComparison.OrdinalIgnoreCase)) return "new XpAi(\"\", \"\")";
+        if (semanticName.Equals("XPAITool", StringComparison.OrdinalIgnoreCase)) return "new XpAiTool(\"\")";
+        if (semanticName.Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase)) return "new XpJsonArray()";
+        if (type.Contains("Dictionary", StringComparison.Ordinal)) return "new System.Collections.Generic.Dictionary<string, object?>()";
+        if (type == "object") return "new System.Dynamic.ExpandoObject()";
+        if (type.EndsWith("[]", StringComparison.Ordinal))
+        {
+            var length = declaration.EmptyArray
+                ? 0
+                : (declaration.Local.ArrayBounds.Count > 0 ? declaration.Local.ArrayBounds[0].Upper : declaration.ArrayLength ?? 0) - declaration.Local.ArrayLowerBound + 1;
+            return $"new {type[..^2]}[{length}]";
+        }
+        if (type.StartsWith("Xp", StringComparison.Ordinal)) return $"new {type}()";
+        return $"default({type})";
+    }
 
     private static string CSharpType(Type type) => type.IsArray ? $"{CSharpType(type.GetElementType()!)}[{(type.GetArrayRank() == 1 ? string.Empty : new string(',', type.GetArrayRank() - 1))}]" : type == typeof(Array) ? "System.Array" : type == typeof(Dictionary<string, object?>) ? "System.Collections.Generic.Dictionary<string, object?>" : type == typeof(byte) ? "byte" : type == typeof(long) ? "long"
         : type == typeof(double) ? "double"
