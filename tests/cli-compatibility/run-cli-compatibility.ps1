@@ -81,6 +81,10 @@ $runReversedConflictingDiagnosticsOutput = dotnet $compiler ast-run (Join-Path $
 if ($LASTEXITCODE -ne 0 -or $runReversedConflictingDiagnosticsOutput -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $runReversedConflictingDiagnosticsOutput -notlike '*APPLICATION_NEWLINE_END*') {
     throw "AST run reversed diagnostic-mode precedence regression: $runReversedConflictingDiagnosticsOutput"
 }
+$mixedCaseAstRunOutput = dotnet $compiler ast-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --InFo --No-Daemon --ArGs 'ast-run-mixed-case' 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0 -or $mixedCaseAstRunOutput -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $mixedCaseAstRunOutput -notlike '*APPLICATION_NEWLINE_END*') {
+    throw "AST run case-insensitive option regression: $mixedCaseAstRunOutput"
+}
 
 $legacyCaseOutput = dotnet $compiler legacy-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --No-Daemon --InFo --ArGs 'legacy-case-insensitive' 2>&1 | Out-String
 if ($LASTEXITCODE -ne 0 -or $legacyCaseOutput -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $legacyCaseOutput -notlike '*APPLICATION_NEWLINE_END*') {
