@@ -21,7 +21,7 @@ used:
 | Files, archives and environment helpers | `AstFileRuntimeCode`, `FileSystemPortabilityRuntimeSource` and existing file runtime APIs |
 | Errors and callbacks | `AstErrorRuntimeCode` and `AstCallbackRuntimeCode` |
 | SQLite, MySQL, MS SQL and Supabase | Their feature selectors and database runtime sources |
-| Notes JSON/HTTP compatibility | `AstNotesJsonSupport` and the shared HTTP/JSON compatibility runtime |
+| Notes HTTP compatibility | `AstNotesJsonSupport` and the shared HTTP compatibility runtime. Notes-specific JSON navigator/object/array/element types are not an AST surface; use the canonical `XPJsonDocument`, `XPJsonObject`, `XPJsonArray` and `XPJsonElement` APIs. |
 
 The generated source must not use a fabricated constant or empty property as
 a substitute for a runtime value. The guard
