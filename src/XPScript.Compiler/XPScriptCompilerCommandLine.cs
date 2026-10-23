@@ -200,24 +200,25 @@ public static class XPScriptCompilerCommandLine
         var embedAssets = false;
         var sourceRoots = new List<string>();
         var sourcePreprocessors = new List<string>();
+        static bool Is(string value, string expected) => value.Equals(expected, StringComparison.OrdinalIgnoreCase);
 
         try
         {
             for (var i = 1; i < args.Length; i++)
             {
-                if ((args[i] == "-o" || args[i] == "--output") && i + 1 < args.Length)
+                if ((Is(args[i], "-o") || Is(args[i], "--output")) && i + 1 < args.Length)
                     outputPath = Path.GetFullPath(args[++i]);
-                else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
+                else if ((Is(args[i], "--rid") || Is(args[i], "--platform")) && i + 1 < args.Length)
                     runtimeIdentifier = args[++i].ToLowerInvariant();
                 else if (args[i].StartsWith("--runtime=", StringComparison.OrdinalIgnoreCase))
                     selfContained = ParseBooleanCompileOption("--runtime", args[i]["--runtime=".Length..]);
-                else if (args[i] == "--runtime" && i + 1 < args.Length)
+                else if (Is(args[i], "--runtime") && i + 1 < args.Length)
                     selfContained = ParseBooleanCompileOption("--runtime", args[++i]);
                 else if (args[i].StartsWith("--single-file=", StringComparison.OrdinalIgnoreCase))
                 {
                     singleFile = ParseBooleanCompileOption("--single-file", args[i]["--single-file=".Length..]);
                 }
-                else if (args[i] == "--single-file" && i + 1 < args.Length)
+                else if (Is(args[i], "--single-file") && i + 1 < args.Length)
                 {
                     singleFile = ParseBooleanCompileOption("--single-file", args[++i]);
                 }
@@ -225,32 +226,32 @@ public static class XPScriptCompilerCommandLine
                 {
                     singleFile = ParseBooleanCompileOption("--singlefile", args[i]["--singlefile=".Length..]);
                 }
-                else if (args[i] == "--singlefile" && i + 1 < args.Length)
+                else if (Is(args[i], "--singlefile") && i + 1 < args.Length)
                 {
                     singleFile = ParseBooleanCompileOption("--singlefile", args[++i]);
                 }
-                else if (args[i] == "--target" && i + 1 < args.Length)
+                else if (Is(args[i], "--target") && i + 1 < args.Length)
                     target = args[++i].ToLowerInvariant();
-                else if (args[i] == "--result-format" && i + 1 < args.Length)
+                else if (Is(args[i], "--result-format") && i + 1 < args.Length)
                     resultFormat = args[++i].ToLowerInvariant();
-                else if (args[i] == "--restricted")
+                else if (Is(args[i], "--restricted"))
                     restricted = true;
-                else if (args[i] == "--debug")
+                else if (Is(args[i], "--debug"))
                     debug = true;
-                else if (args[i] == "--info")
+                else if (Is(args[i], "--info"))
                     info = true;
                 else if (args[i].StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
                     securityMode = ApplicationSecurityModeContext.Parse(args[i]["--security=".Length..]);
-                else if (args[i] == "--security" && i + 1 < args.Length)
+                else if (Is(args[i], "--security") && i + 1 < args.Length)
                     securityMode = ApplicationSecurityModeContext.Parse(args[++i]);
-                else if (args[i] == "--embed-assets")
+                else if (Is(args[i], "--embed-assets"))
                     embedAssets = true;
-                else if (args[i] == "--source-root" && i + 1 < args.Length)
+                else if (Is(args[i], "--source-root") && i + 1 < args.Length)
                 {
                     restricted = true;
                     sourceRoots.Add(Path.GetFullPath(args[++i]));
                 }
-                else if (args[i] == "--preprocessor" && i + 1 < args.Length)
+                else if (Is(args[i], "--preprocessor") && i + 1 < args.Length)
                     sourcePreprocessors.Add(args[++i]);
                 else
                     throw new ArgumentException($"Unknown argument: {args[i]}");

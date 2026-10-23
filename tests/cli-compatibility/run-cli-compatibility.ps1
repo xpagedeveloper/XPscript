@@ -47,6 +47,12 @@ $mixedCaseAstOptionOutput = dotnet $compiler ast-compile (Join-Path $root 'tests
 if ($LASTEXITCODE -ne 0 -or $mixedCaseAstOptionOutput -notlike '*AST compilation succeeded*') {
     throw "AST case-insensitive option regression: $mixedCaseAstOptionOutput"
 }
+$mixedCaseDefaultCompileOutputPath = Join-Path $root 'tests/cli-compatibility/.tmp-mixed-case-compile'
+if (Test-Path -LiteralPath $mixedCaseDefaultCompileOutputPath) { Remove-Item -LiteralPath $mixedCaseDefaultCompileOutputPath -Recurse -Force }
+$mixedCaseDefaultCompileOutput = dotnet $compiler compile (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --InFo --DeBuG --OuTpUt $mixedCaseDefaultCompileOutputPath --RuNtImE=false 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0 -or $mixedCaseDefaultCompileOutput -notlike '*AST compilation succeeded*') {
+    throw "Default compile case-insensitive option regression: $mixedCaseDefaultCompileOutput"
+}
 
 $missingArgsOutput = dotnet $compiler ast-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --Args 2>&1 | Out-String
 if ($LASTEXITCODE -eq 0 -or $missingArgsOutput -notlike '*--Args requires one quoted argument string*') {
