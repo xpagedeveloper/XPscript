@@ -96,6 +96,13 @@ if ($LASTEXITCODE -ne 0 -or $singleFileText -notlike '*AST compilation succeeded
     throw "AST single-file output regression: $singleFileText"
 }
 
+$frameworkSingleFileOutput = Join-Path $resultRoot 'framework-single-file'
+$frameworkSingleFileText = dotnet $compiler ast-compile $astSource -o $frameworkSingleFileOutput --runtime=false --single-file=true --rid win-x64 | Out-String
+if ($LASTEXITCODE -ne 0 -or $frameworkSingleFileText -notlike '*AST compilation succeeded*' -or
+    -not (Test-Path (Join-Path $frameworkSingleFileOutput 'Generated.exe'))) {
+    throw "AST framework-dependent single-file regression: $frameworkSingleFileText"
+}
+
 $platformAliasOutput = Join-Path $resultRoot 'platform-alias'
 $platformAliasText = dotnet $compiler ast-compile $astSource -o $platformAliasOutput --platform win-x64 --runtime=false | Out-String
 if ($LASTEXITCODE -ne 0 -or $platformAliasText -notlike '*AST compilation succeeded*' -or -not (Test-Path (Join-Path $platformAliasOutput 'Generated.dll'))) {

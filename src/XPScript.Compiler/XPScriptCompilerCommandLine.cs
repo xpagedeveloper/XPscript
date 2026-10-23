@@ -214,13 +214,21 @@ public static class XPScriptCompilerCommandLine
                 else if (args[i] == "--runtime" && i + 1 < args.Length)
                     selfContained = ParseBooleanCompileOption("--runtime", args[++i]);
                 else if (args[i].StartsWith("--single-file=", StringComparison.OrdinalIgnoreCase))
+                {
                     singleFile = ParseBooleanCompileOption("--single-file", args[i]["--single-file=".Length..]);
+                }
                 else if (args[i] == "--single-file" && i + 1 < args.Length)
+                {
                     singleFile = ParseBooleanCompileOption("--single-file", args[++i]);
+                }
                 else if (args[i].StartsWith("--singlefile=", StringComparison.OrdinalIgnoreCase))
+                {
                     singleFile = ParseBooleanCompileOption("--singlefile", args[i]["--singlefile=".Length..]);
+                }
                 else if (args[i] == "--singlefile" && i + 1 < args.Length)
+                {
                     singleFile = ParseBooleanCompileOption("--singlefile", args[++i]);
+                }
                 else if (args[i] == "--target" && i + 1 < args.Length)
                     target = args[++i].ToLowerInvariant();
                 else if (args[i] == "--result-format" && i + 1 < args.Length)
@@ -335,6 +343,7 @@ public static class XPScriptCompilerCommandLine
         string? runtimeIdentifier = null;
         var selfContained = false;
         var singleFile = true;
+        var singleFileSpecified = false;
         var restricted = false;
         ApplicationSecurityMode? securityMode = null;
         var sourceRoots = new List<string>();
@@ -357,13 +366,25 @@ public static class XPScriptCompilerCommandLine
             else if (args[i] == "--runtime" && i + 1 < args.Length)
                 selfContained = ParseBooleanCompileOption("--runtime", args[++i]);
             else if (args[i].StartsWith("--single-file=", StringComparison.OrdinalIgnoreCase))
+            {
+                singleFileSpecified = true;
                 singleFile = ParseBooleanCompileOption("--single-file", args[i]["--single-file=".Length..]);
+            }
             else if (args[i] == "--single-file" && i + 1 < args.Length)
+            {
+                singleFileSpecified = true;
                 singleFile = ParseBooleanCompileOption("--single-file", args[++i]);
+            }
             else if (args[i].StartsWith("--singlefile=", StringComparison.OrdinalIgnoreCase))
+            {
+                singleFileSpecified = true;
                 singleFile = ParseBooleanCompileOption("--singlefile", args[i]["--singlefile=".Length..]);
+            }
             else if (args[i] == "--singlefile" && i + 1 < args.Length)
+            {
+                singleFileSpecified = true;
                 singleFile = ParseBooleanCompileOption("--singlefile", args[++i]);
+            }
             else if (args[i] == "--restricted")
                 restricted = true;
             else if (args[i].StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
@@ -405,7 +426,7 @@ public static class XPScriptCompilerCommandLine
             using var securityScope = ApplicationSecurityModeContext.Push(
                 securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off));
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug, info);
-            using var publishLayoutScope = selfContained || !singleFile
+            using var publishLayoutScope = selfContained || !singleFile || (singleFileSpecified && singleFile)
                 ? CompilePublishLayoutContext.Push(singleFile, selfContained)
                 : null;
             if (string.Equals(target, "webiis", StringComparison.OrdinalIgnoreCase))
