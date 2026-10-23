@@ -43,6 +43,10 @@ $reversedConflictingDiagnosticsOutput = dotnet $compiler ast-compile (Join-Path 
 if ($LASTEXITCODE -ne 0 -or $reversedConflictingDiagnosticsOutput -notlike '*AST compilation succeeded*') {
     throw "AST reversed diagnostic-mode precedence regression: $reversedConflictingDiagnosticsOutput"
 }
+$mixedCaseAstOptionOutput = dotnet $compiler ast-compile (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --InFo --DeBuG 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0 -or $mixedCaseAstOptionOutput -notlike '*AST compilation succeeded*') {
+    throw "AST case-insensitive option regression: $mixedCaseAstOptionOutput"
+}
 
 $missingArgsOutput = dotnet $compiler ast-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --Args 2>&1 | Out-String
 if ($LASTEXITCODE -eq 0 -or $missingArgsOutput -notlike '*--Args requires one quoted argument string*') {
