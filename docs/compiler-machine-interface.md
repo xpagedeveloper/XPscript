@@ -2,6 +2,10 @@
 
 The compiler machine interface is the stable boundary used by CLI tooling, CI, tests and future IDE/LSP or MCP integrations. Normal XPScript compilation remains the source of truth. Validation reuses the same preprocessing, dependency validation, transpilation and generated-code validation pipeline without publishing an executable.
 
+## Conditional application dependencies
+
+AST compilation detects optional dependencies from the generated application source. A package such as `MySqlConnector` is restored only when the application uses the corresponding XPScript object, and the required assembly plus `Third-party-license.txt` are staged in the compiled output. Applications that do not use that object do not receive the package. The compiled application never restores or downloads NuGet packages at runtime; framework-dependent output requires the compatible .NET runtime, while self-contained output carries the .NET runtime as part of publishing.
+
 ## Result-format implementation
 
 `XPScriptCompilerCommandLine` parses `--result-format text|json|xml` for compile and validate operations and routes the final `CompileResult` through `WriteResult`. JSON is the primary machine-readable representation. XML uses the same result and diagnostic objects. Text is the human representation.
