@@ -39,6 +39,10 @@ $conflictingDiagnosticsOutput = dotnet $compiler ast-compile (Join-Path $root 't
 if ($LASTEXITCODE -ne 0 -or $conflictingDiagnosticsOutput -notlike '*AST compilation succeeded*') {
     throw "AST diagnostic-mode precedence regression: $conflictingDiagnosticsOutput"
 }
+$reversedConflictingDiagnosticsOutput = dotnet $compiler ast-compile (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --info --debug 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0 -or $reversedConflictingDiagnosticsOutput -notlike '*AST compilation succeeded*') {
+    throw "AST reversed diagnostic-mode precedence regression: $reversedConflictingDiagnosticsOutput"
+}
 
 $missingArgsOutput = dotnet $compiler ast-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --Args 2>&1 | Out-String
 if ($LASTEXITCODE -eq 0 -or $missingArgsOutput -notlike '*--Args requires one quoted argument string*') {
@@ -48,6 +52,10 @@ if ($LASTEXITCODE -eq 0 -or $missingArgsOutput -notlike '*--Args requires one qu
 $runConflictingDiagnosticsOutput = dotnet $compiler ast-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --debug --info --Args 'ast-run-debug-precedence' 2>&1 | Out-String
 if ($LASTEXITCODE -ne 0 -or $runConflictingDiagnosticsOutput -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $runConflictingDiagnosticsOutput -notlike '*APPLICATION_NEWLINE_END*') {
     throw "AST run diagnostic-mode precedence regression: $runConflictingDiagnosticsOutput"
+}
+$runReversedConflictingDiagnosticsOutput = dotnet $compiler ast-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --info --debug --Args 'ast-run-debug-precedence-reversed' 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0 -or $runReversedConflictingDiagnosticsOutput -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $runReversedConflictingDiagnosticsOutput -notlike '*APPLICATION_NEWLINE_END*') {
+    throw "AST run reversed diagnostic-mode precedence regression: $runReversedConflictingDiagnosticsOutput"
 }
 
 $legacyCaseOutput = dotnet $compiler legacy-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --No-Daemon --InFo --ArGs 'legacy-case-insensitive' 2>&1 | Out-String
