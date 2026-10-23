@@ -4,10 +4,15 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AvaloniaBuildTasksLocation Condition="'$(AvaloniaBuildTasksLocation)' == ''">$(NuGetPackageRoot)avalonia\12.1.4\tools\netstandard2.0\Avalonia.Build.Tasks.dll</AvaloniaBuildTasksLocation>
     <!-- The probe must run offline; NuGet vulnerability service availability must not fail it. -->
     <NuGetAudit>false</NuGetAudit>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Keep direct probe builds self-contained. The compiler core reaches Avalonia
+         through a transitive desktop reference, but Avalonia's build-task props are
+         not imported reliably for a project that only references the core assembly. -->
+    <PackageReference Include="Avalonia" Version="12.1.4" PrivateAssets="all" />
     <Reference Include="XPScript.Compiler.Core">
       <HintPath>../../src/XPScript.Compiler.Core/bin/$(Configuration)/net10.0/XPScript.Compiler.Core.dll</HintPath>
       <Private>true</Private>
