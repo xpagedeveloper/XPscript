@@ -80,7 +80,7 @@ public static class XPScriptCompilerCommandLine
             var name = args[0];
             for (var i = 1; i < args.Length; i++)
             {
-                if (args[i] == "--result-format" && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
+                if (args[i].Equals("--result-format", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
                 else throw new ArgumentException($"Unknown argument: {args[i]}");
             }
             if (resultFormat is not ("text" or "json")) throw new ArgumentException("describe --result-format must be text or json.");
@@ -108,8 +108,8 @@ public static class XPScriptCompilerCommandLine
         {
             for (var i = 0; i < args.Length; i++)
             {
-                if (args[i] == "--search" && i + 1 < args.Length) query = args[++i];
-                else if (args[i] == "--result-format" && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
+                if (args[i].Equals("--search", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length) query = args[++i];
+                else if (args[i].Equals("--result-format", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
                 else throw new ArgumentException($"Unknown argument: {args[i]}");
             }
             if (resultFormat is not ("text" or "json")) throw new ArgumentException("symbols --result-format must be text or json.");
@@ -135,7 +135,7 @@ public static class XPScriptCompilerCommandLine
             var code = args[0];
             for (var i = 1; i < args.Length; i++)
             {
-                if (args[i] == "--result-format" && i + 1 < args.Length)
+                if (args[i].Equals("--result-format", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                     resultFormat = args[++i].ToLowerInvariant();
                 else
                     throw new ArgumentException($"Unknown argument: {args[i]}");
@@ -637,15 +637,15 @@ public static class XPScriptCompilerCommandLine
 
             for (var i = 0; i < args.Length; i++)
             {
-                if (args[i] == "--stdin")
+                if (args[i].Equals("--stdin", StringComparison.OrdinalIgnoreCase))
                     continue;
-                if (args[i] == "--filename" && i + 1 < args.Length)
+                if (args[i].Equals("--filename", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                     virtualFileName = args[++i];
-                else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
+                else if ((args[i].Equals("--rid", StringComparison.OrdinalIgnoreCase) || args[i].Equals("--platform", StringComparison.OrdinalIgnoreCase)) && i + 1 < args.Length)
                     runtimeIdentifier = args[++i].ToLowerInvariant();
-                else if (args[i] == "--result-format" && i + 1 < args.Length)
+                else if (args[i].Equals("--result-format", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                     resultFormat = args[++i].ToLowerInvariant();
-                else if (args[i] == "--debug")
+                else if (args[i].Equals("--debug", StringComparison.OrdinalIgnoreCase))
                     debug = true;
                 else if (!args[i].StartsWith("--", StringComparison.Ordinal) && sourceArgument is null)
                     sourceArgument = args[i];
