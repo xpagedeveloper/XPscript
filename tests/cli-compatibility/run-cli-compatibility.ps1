@@ -20,6 +20,20 @@ foreach ($parameter in $required) {
     if ($help -notlike "*$parameter*") { throw "CLI help is missing parameter: $parameter" }
 }
 
+$describeOutput = dotnet $compiler describe XPFileInfoValue --ReSuLt-FoRmAt json | Out-String
+if ($LASTEXITCODE -ne 0 -or $describeOutput -notlike '*"name": "XPFileInfoValue"*') {
+    throw "Case-insensitive describe option regression: $describeOutput"
+}
+$symbolsOutput = dotnet $compiler symbols --SeArCh XPFile --ReSuLt-FoRmAt json | Out-String
+if ($LASTEXITCODE -ne 0 -or $symbolsOutput -notlike '*XPFileInfoValue*') {
+    throw "Case-insensitive symbols option regression: $symbolsOutput"
+}
+$validateInput = "Sub Main()`nEnd Sub"
+$validateOutput = $validateInput | dotnet $compiler validate --StDiN --FiLeNaMe mixed.xps --ReSuLt-FoRmAt json | Out-String
+if ($LASTEXITCODE -ne 0 -or $validateOutput -notlike '*"result": "ok"*') {
+    throw "Case-insensitive validate option regression: $validateOutput"
+}
+
 $astHelp = (dotnet $compiler ast-compile 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 1 -or $astHelp -notlike '*ast-compile requires an .xps source file*') {
     throw 'AST command argument handling regression.'
