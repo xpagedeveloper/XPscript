@@ -1,11 +1,14 @@
 # AST migration checkpoint
 
-Updated 2026-10-20 on branch `investigate-ast-compiler`.
+Updated 2026-10-23 on branch `investigate-ast-compiler`.
 
 ## Current state
 
-- Latest pushed commit: `af85d0ec` (`Normalize numeric arrays for XPImage byte input`).
-- Working tree was clean when this checkpoint was written.
+- Latest pushed commit: `0d55a7d8` (`Improve workload detection and sync MimeKit version`).
+- The CLI compatibility suite was re-run successfully with `XPSCRIPT_TEMP_ROOT` directed to a writable repository output directory: `CLI_COMMAND_LINE_COMPATIBILITY_OK`. It covers AST/default/legacy compile and run aliases, target/platform/RID handling, runtime and single-file switches, result formats, security/restricted/source-root/preprocessor options, validation and executable output.
+- The target-matrix probe was rebuilt with MSBuild node parallelism disabled (`-m:1`) and executed successfully with `TARGET_MATRIX_OK`; the workload resolver was the source of the earlier silent parallel-build failure.
+- The working tree is clean apart from the unrelated private `scripts/restart-chatgpt-after-5-minutes.ps1` helper.
+
 - The focused XPImage AST regression passed, including byte-array interop and image getters/setters/indexed properties.
 - The full AST CLI suite was run from `tests/ast-compile-probe/run-ast-cli.ps1` in PowerShell session `48478` and completed successfully.
 - The latest full-suite markers reached before this checkpoint include `AST_TIME_PARTS_OK`, followed by shell-id, MsgBox, file runtime/get/text/input/lock, and `AST_ISDIR_DRIVE_OK` markers.
