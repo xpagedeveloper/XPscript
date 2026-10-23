@@ -50,6 +50,11 @@ if ($LASTEXITCODE -ne 0 -or $runConflictingDiagnosticsOutput -notlike '*APPLICAT
     throw "AST run diagnostic-mode precedence regression: $runConflictingDiagnosticsOutput"
 }
 
+$navigationOutput = dotnet $compiler ast-run (Join-Path $root 'tests/ast-compile-probe/ast-run-navigation.xps') | Out-String
+if ($LASTEXITCODE -ne 0 -or $navigationOutput -notlike '*AST_RUN_NAVIGATION_BEGIN*' -or $navigationOutput -notlike '*navigation.json*' -or $navigationOutput -notlike '*AST_RUN_NAVIGATION_END*') {
+    throw "AST run navigation environment regression: $navigationOutput"
+}
+
 $astSource = Join-Path $root 'tests/ast-compile-probe/application-newline.xps'
 $resultRoot = Join-Path $root 'tests/cli-compatibility/.tmp-result-format'
 if (Test-Path -LiteralPath $resultRoot) {

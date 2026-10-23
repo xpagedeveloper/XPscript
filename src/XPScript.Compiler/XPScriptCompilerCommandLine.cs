@@ -576,6 +576,8 @@ public static class XPScriptCompilerCommandLine
                 throw new ArgumentException("XPScript source files must use the .xps extension.");
 
             var sourceDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
+            if (UIFormAppAssets.UsesUIForm(sourcePath))
+                UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
             if (restricted && sourceRoots.Count == 0) sourceRoots.Add(sourceDirectory);
             if (debug)
                 info = false;
@@ -585,6 +587,7 @@ public static class XPScriptCompilerCommandLine
                 throw new PlatformNotSupportedException("Direct AST execution can run only the current runtime target '" + CompilerDriver.CurrentRuntimeIdentifier() + "'.");
 
             var outputDirectory = CompilerPathSecurity.CreateOwnedTemporaryDirectory("ast-run-");
+            var navigationPath = Path.Combine(outputDirectory, "navigation.json");
             try
             {
                 using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
@@ -599,6 +602,7 @@ public static class XPScriptCompilerCommandLine
                     UseShellExecute = false,
                     WorkingDirectory = sourceDirectory
                 };
+                startInfo.Environment["XPSCRIPT_NAVIGATION_FILE"] = navigationPath;
                 if (Path.GetExtension(assemblyPath).Equals(".dll", StringComparison.OrdinalIgnoreCase)) startInfo.ArgumentList.Add(assemblyPath);
                 foreach (var argument in scriptArgs) startInfo.ArgumentList.Add(argument);
                 using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start the AST-compiled XPScript program.");

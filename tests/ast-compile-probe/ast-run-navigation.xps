@@ -1,0 +1,7 @@
+Option Declare
+
+Sub Main()
+    Print "AST_RUN_NAVIGATION_BEGIN"
+    Print Environ("XPSCRIPT_NAVIGATION_FILE")
+    Print "AST_RUN_NAVIGATION_END"
+End Sub
