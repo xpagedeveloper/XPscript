@@ -705,7 +705,7 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
 - [x] Preserve native `Unicode`/`Ansi` marshalling settings in generated P/Invoke declarations.
 - [x] Validate and stage application-local native dependencies in AST output, including relative-path, target-extension, missing-file and duplicate-output checks.
 - [x] Add permanent AST CLI coverage for native declaration forms, scalar types, Unicode declarations and missing native dependencies.
-- [x] Re-run the AST CLI regression suite from an isolated working directory; the migrated native, file, database, AI, include/use and platform probes pass. The remaining suite interruption is a generated test file lock/working-directory fixture issue, not an AST compilation failure.
+- [x] Re-run the complete AST CLI regression suite from an isolated working directory. The migrated native, file, database, AI, include/use, platform, class/property, constructor/destructor, image, XML/CSV/JSON, spreadsheet and error-flow probes all pass; the spreadsheet subprobe now uses built DLLs without restore/apphost locking and the full run ends with `AST CLI compilation probe passed`.
 
 Next implementation order:
 
