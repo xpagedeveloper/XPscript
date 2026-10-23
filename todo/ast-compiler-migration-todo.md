@@ -352,6 +352,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [x] Reject unmatched declared overloads with XPS2004 even when dynamic member binding is enabled; regress arity, argument type, ByRef mode and source span while retaining Variant member calls.
 - [x] Restrict unresolved member fallback to Variant receivers rather than every object-backed user type; regress both properties and calls with XPS2009 and member source spans.
 - [ ] Replace experimental runtime placeholders (including HTTP/TLS, image, UI, error and environment helpers) with existing runtime implementations before claiming sample compatibility.
+  - [x] Explicitly exclude the legacy Notes `CreateSAXParser`/`NotesSAXParser` surface from AST migration; XML processing uses the native `XPXml` API instead.
   - [x] Replace the AST `GetObject` empty `ExpandoObject` placeholder with the existing Windows COM/moniker activation contract; the AST COM activation-error fixture passes.
   - [x] Replace AST `Input$` empty-string helpers with `LSFileRuntime.Input`; `file-input-record-next.xps` is a permanent AST CLI regression.
   - [x] Replace AST `Erase` and dialog helper placeholders with the shared List/array and UI-dialog runtimes; dialog binding remains lazy so non-UI programs do not acquire desktop dependencies.

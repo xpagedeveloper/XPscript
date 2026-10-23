@@ -43,7 +43,7 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 - [ ] CreateLog
 - [ ] CreateNewsletter
 - [ ] CreateRegistration
-- [ ] CreateSAXParser
+- [x] CreateSAXParser — intentionally excluded from the AST/runtime migration; use the native `XPXml` parser for XML processing instead.
 - [ ] CreateTimer
 - [ ] CreateXSLTransformer
 - [ ] FileOpBegin
