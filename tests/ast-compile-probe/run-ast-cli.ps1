@@ -273,6 +273,25 @@ Write-Host 'LEGACY_SQLITE_OK'
 $mysqlOutput = Join-Path $output 'mysql-native-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'mysql-native-next.xps') -o $mysqlOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST MySQL native-surface compilation failed.' }
+$mysqlConnectorAssembly = Join-Path $mysqlOutput 'MySqlConnector.dll'
+$mysqlNotice = Join-Path $mysqlOutput 'Third-party-license.txt'
+if (-not (Test-Path -LiteralPath $mysqlConnectorAssembly) -or -not (Test-Path -LiteralPath $mysqlNotice)) {
+    throw 'AST MySQL published output did not stage its conditional runtime dependency and third-party notice.'
+}
+$runtimePackageCache = Join-Path $output 'mysql-runtime-empty-package-cache'
+if (Test-Path -LiteralPath $runtimePackageCache) { Remove-Item -LiteralPath $runtimePackageCache -Recurse -Force }
+New-Item -ItemType Directory -Path $runtimePackageCache -Force | Out-Null
+$previousNugetPackages = $env:NUGET_PACKAGES
+try {
+    $env:NUGET_PACKAGES = $runtimePackageCache
+    $mysqlRuntimeResult = dotnet (Join-Path $mysqlOutput 'Generated.dll')
+    if ($LASTEXITCODE -ne 0 -or ($mysqlRuntimeResult -join "`n") -ne 'MYSQL_AST_OK') {
+        throw 'AST MySQL compiled application did not run from its published output without a NuGet cache.'
+    }
+}
+finally {
+    $env:NUGET_PACKAGES = $previousNugetPackages
+}
 $mysqlResult = dotnet (Join-Path $mysqlOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($mysqlResult -join "`n") -ne 'MYSQL_AST_OK') { throw 'AST MySQL native-surface regression failed.' }
 Write-Host 'AST_MYSQL_OK'
