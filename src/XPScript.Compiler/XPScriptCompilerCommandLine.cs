@@ -759,19 +759,19 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--no-daemon")
+                if (value.Equals("--no-daemon", StringComparison.OrdinalIgnoreCase))
                 {
                     noDaemon = true;
                     continue;
                 }
 
-                if (value == "--info")
+                if (value.Equals("--info", StringComparison.OrdinalIgnoreCase))
                 {
                     info = true;
                     continue;
                 }
 
-                if (value == "--debug")
+                if (value.Equals("--debug", StringComparison.OrdinalIgnoreCase))
                 {
                     debug = true;
                     info = false;
@@ -784,7 +784,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--security")
+                if (value.Equals("--security", StringComparison.OrdinalIgnoreCase))
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--security requires off, warn, or strict.");
@@ -792,7 +792,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--rid" || value == "--platform")
+                if (value.Equals("--rid", StringComparison.OrdinalIgnoreCase) || value.Equals("--platform", StringComparison.OrdinalIgnoreCase))
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException(value + " requires a runtime identifier.");
@@ -800,7 +800,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--result-format")
+                if (value.Equals("--result-format", StringComparison.OrdinalIgnoreCase))
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--result-format requires text, json, or xml.");
@@ -810,13 +810,13 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--restricted")
+                if (value.Equals("--restricted", StringComparison.OrdinalIgnoreCase))
                 {
                     restricted = true;
                     continue;
                 }
 
-                if (value == "--source-root")
+                if (value.Equals("--source-root", StringComparison.OrdinalIgnoreCase))
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--source-root requires a directory path.");
@@ -825,7 +825,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--preprocessor")
+                if (value.Equals("--preprocessor", StringComparison.OrdinalIgnoreCase))
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--preprocessor requires a specification.");
