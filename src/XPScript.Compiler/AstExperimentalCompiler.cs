@@ -444,8 +444,6 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("CLng", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CDbl", typeof(double), [typeof(object)], XpTypeSymbol.FromClr(typeof(double)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CBool", typeof(bool), [typeof(object)], XpTypeSymbol.FromClr(typeof(bool)), [XpTypeSymbol.Variant]));
-        symbols.Declare(new FunctionSymbol("Evaluate", typeof(object), [typeof(string), typeof(object)],
-            XpTypeSymbol.Variant, [XpTypeSymbol.FromClr(typeof(string)), XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Chr", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Asc", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Replace", typeof(string), [typeof(string), typeof(string), typeof(string)]));
@@ -1093,7 +1091,6 @@ internal static class Program
     public static long CLng(object value) => XPScriptRuntime.CLng(value);
     public static double CDbl(object value) => XPScriptRuntime.CDbl(value);
     public static bool CBool(object value) => XPScriptRuntime.CBool(value);
-    public static object? Evaluate(string expression, object? value) => value;
     public static string Chr(object value) => Convert.ToChar(value).ToString();
     public static long Asc(object value) => Convert.ToChar(value);
     public static string Replace(string value, string oldValue, string newValue) => value.Replace(oldValue, newValue, StringComparison.Ordinal);

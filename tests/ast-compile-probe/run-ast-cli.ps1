@@ -1831,6 +1831,8 @@ $applicationNewLineResult = dotnet (Join-Path $applicationNewLineOutput 'Generat
 if ($LASTEXITCODE -ne 0 -or ($applicationNewLineResult -join "`n") -notmatch 'APPLICATION_NEWLINE_BEGIN' -or ($applicationNewLineResult -join "`n") -notmatch 'APPLICATION_NEWLINE_END') { throw 'AST Application.NewLine runtime regression failed.' }
 $invalidDefault = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-default-error.xps') -o (Join-Path $output 'invalid-default') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($invalidDefault -join "`n") -notmatch "Default value for Optional parameter 'value' is incompatible with its type") { throw 'AST invalid Optional default was not rejected by binding.' }
+$evaluateRemovedError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'evaluate-removed-error.xps') -o (Join-Path $output 'evaluate-removed-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($evaluateRemovedError -join "`n") -notmatch "Undefined function 'Evaluate'") { throw 'AST removed Evaluate function was not rejected.' }
 dotnet $compiler ast-compile $source -o $output
 if ($LASTEXITCODE -ne 0) { throw 'AST CLI compilation failed.' }
 $assembly = Join-Path $output 'Generated.dll'
