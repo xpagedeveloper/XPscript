@@ -82,6 +82,12 @@ if ($LASTEXITCODE -ne 0 -or $runtimeOutputText -notlike '*AST compilation succee
     throw "AST self-contained runtime option regression: $runtimeOutputText"
 }
 
+$runtimeRidOutput = Join-Path $resultRoot 'runtime-rid'
+$runtimeRidText = dotnet $compiler ast-compile $astSource -o $runtimeRidOutput --runtime=true --single-file=false --rid win-x64 | Out-String
+if ($LASTEXITCODE -ne 0 -or $runtimeRidText -notlike '*AST compilation succeeded*' -or -not (Test-Path (Join-Path $runtimeRidOutput 'Generated.dll'))) {
+    throw "AST self-contained RID option regression: $runtimeRidText"
+}
+
 $platformAliasOutput = Join-Path $resultRoot 'platform-alias'
 $platformAliasText = dotnet $compiler ast-compile $astSource -o $platformAliasOutput --platform win-x64 --runtime=false | Out-String
 if ($LASTEXITCODE -ne 0 -or $platformAliasText -notlike '*AST compilation succeeded*' -or -not (Test-Path (Join-Path $platformAliasOutput 'Generated.dll'))) {

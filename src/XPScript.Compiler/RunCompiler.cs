@@ -210,7 +210,8 @@ internal static class RunCompiler
         psi.ArgumentList.Add(outputRoot);
         psi.ArgumentList.Add("--nologo");
         psi.ArgumentList.Add("--no-incremental");
-        psi.ArgumentList.Add("-p:UseAppHost=false");
+        if (!CompilePublishLayoutContext.IncludeRuntime)
+            psi.ArgumentList.Add("-p:UseAppHost=false");
         if (runtimeIdentifier is not null || ApplicationDependencyCatalog.Detect(File.ReadAllText(Path.Combine(tempRoot, "Program.cs"))).Count > 0)
         {
             psi.ArgumentList.Add("-r");
@@ -336,7 +337,9 @@ internal static class RunCompiler
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
-    <UseAppHost>false</UseAppHost>
+    <UseAppHost>{CompilePublishLayoutContext.IncludeRuntime.ToString().ToLowerInvariant()}</UseAppHost>
+    <SelfContained>{CompilePublishLayoutContext.IncludeRuntime.ToString().ToLowerInvariant()}</SelfContained>
+    <PublishSingleFile>{CompilePublishLayoutContext.SingleFile.ToString().ToLowerInvariant()}</PublishSingleFile>
     <NuGetAudit>{(ApplicationSecurityModeContext.Current != ApplicationSecurityMode.Off).ToString().ToLowerInvariant()}</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>

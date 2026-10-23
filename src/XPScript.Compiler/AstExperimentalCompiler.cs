@@ -1483,7 +1483,7 @@ internal static class Program
         string outputResult;
         if (applicationMarkers.Length != 0)
             outputResult = await RunCompiler.CompileGeneratedWithDependenciesAsync(generated + Environment.NewLine + applicationMarkers, outputDirectory, false, cancellationToken, runtimeIdentifier, managedReferences.Managed, sourcePath, generatedSourceTransform is not null ? "Script" : null).ConfigureAwait(false);
-        else if (runtimeIdentifier is not null)
+        else if (runtimeIdentifier is not null || CompilePublishLayoutContext.IsConfigured)
             outputResult = await RunCompiler.CompileGeneratedWithDependenciesAsync(generated, outputDirectory, false, cancellationToken, runtimeIdentifier, managedReferences.Managed, sourcePath, generatedSourceTransform is not null ? "Script" : null).ConfigureAwait(false);
         else
             outputResult = await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);

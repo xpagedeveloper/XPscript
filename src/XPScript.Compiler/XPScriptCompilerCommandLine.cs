@@ -387,10 +387,9 @@ public static class XPScriptCompilerCommandLine
 
         try
         {
-            // AST output is always a framework-dependent Generated.dll; retain the
-            // compile-command switches for CLI compatibility and validate them even
-            // though they do not alter this artifact layout.
-            _ = singleFile;
+            // Keep the established framework-dependent AST layout by default. When
+            // either publish switch explicitly requests a non-default layout, pass
+            // that choice into the generated-project backend.
             if (debug && info)
                 info = false;
             if (resultFormat is not ("text" or "json" or "xml"))
@@ -406,6 +405,9 @@ public static class XPScriptCompilerCommandLine
             using var securityScope = ApplicationSecurityModeContext.Push(
                 securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off));
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug, info);
+            using var publishLayoutScope = selfContained || !singleFile
+                ? CompilePublishLayoutContext.Push(singleFile, selfContained)
+                : null;
             if (string.Equals(target, "webiis", StringComparison.OrdinalIgnoreCase))
             {
                 var package = await WebIisPackageTarget.BuildAsync(sourcePath, outputDirectory, selfContained, resultFormat).ConfigureAwait(false);
