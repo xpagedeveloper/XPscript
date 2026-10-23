@@ -965,6 +965,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Notes HTTP class-method compilation failed
 $notesHttpClassMethodResult = dotnet (Join-Path $notesHttpClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($notesHttpClassMethodResult -join "`n") -ne 'AST_NOTES_HTTP_CLASS_METHOD_OK') { throw 'AST Notes HTTP class-method execution failed.' }
 Write-Host 'AST_NOTES_HTTP_CLASS_METHOD_OK'
+$notesJsonClassMethodOutput = Join-Path $output 'class-method-notes-json-next'
+$notesJsonClassMethodDiagnostic = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-json-next.xps') -o $notesJsonClassMethodOutput --runtime=false --debug 2>&1 | Out-String
+if ($LASTEXITCODE -eq 0 -or $notesJsonClassMethodDiagnostic -notmatch '(?i)XPJSONNavigator|unsupported type|legacy') {
+    throw 'AST Notes JSON compatibility types were incorrectly accepted as an AST surface.'
+}
+Write-Host 'AST_NOTES_JSON_EXCLUDED_OK'
 $httpRequestClassMethodOutput = Join-Path $output 'class-method-http-request-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-request-next.xps') -o $httpRequestClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST HTTP request class-method compilation failed.' }

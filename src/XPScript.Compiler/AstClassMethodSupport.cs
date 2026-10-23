@@ -40,7 +40,7 @@ internal static class AstClassMethodSupport
             .Contains(name, StringComparer.OrdinalIgnoreCase) ||
         new[] { "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement" }
             .Contains(name, StringComparer.OrdinalIgnoreCase) ||
-        new[] { "NotesHTTPRequest", "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement" }
+        new[] { "NotesHTTPRequest" }
             .Contains(name, StringComparer.OrdinalIgnoreCase);
 
     internal static XpTypeSymbol DeclaredType(TypeSyntax? syntax, SymbolTable symbols)

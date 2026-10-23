@@ -1,10 +1,6 @@
 Option Declare
 
 Class NotesJsonMethods
-    Public Function AcceptHttp(ByVal value As NotesHTTPRequest) As Boolean
-        AcceptHttp = value Is Nothing
-    End Function
-
     Public Function AcceptNavigator(ByVal value As XPJSONNavigator) As Boolean
         AcceptNavigator = value Is Nothing
     End Function
