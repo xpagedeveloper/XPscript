@@ -88,6 +88,11 @@ if ($LASTEXITCODE -ne 0 -or $astRunCompatibilityText -notlike '*APPLICATION_NEWL
     throw "AST run legacy-option compatibility regression: $astRunCompatibilityText"
 }
 
+$daemonDependencyText = dotnet $compiler run (Join-Path $root 'tests/ast-compile-probe/mysql-native-next.xps') --info --Args 'daemon-dependency-check' 2>&1 | Out-String
+if ($LASTEXITCODE -ne 0 -or $daemonDependencyText -notlike '*MySqlConnector 2.6.2*' -or $daemonDependencyText -notlike '*MYSQL_AST_OK*') {
+    throw "Default daemon run dependency-info regression: $daemonDependencyText"
+}
+
 $defaultRunText = dotnet $compiler run $astSource --platform win-x64 --Args 'default-run-check' | Out-String
 if ($LASTEXITCODE -ne 0 -or $defaultRunText -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $defaultRunText -notlike '*APPLICATION_NEWLINE_END*') {
     throw "Default AST run regression: $defaultRunText"

@@ -122,6 +122,7 @@ public static class CompilerDaemonServer
                     {
                         var parameters = root.GetProperty("params");
                         var debug = parameters.TryGetProperty("debug", out var debugElement) && debugElement.ValueKind == JsonValueKind.True;
+                        var info = parameters.TryGetProperty("info", out var infoElement) && infoElement.ValueKind == JsonValueKind.True;
                         debugRequest = debug;
                         var source = parameters.GetProperty("source").GetString() ?? "";
                         var outputDirectory = parameters.GetProperty("outputDirectory").GetString() ?? "";
@@ -146,7 +147,7 @@ public static class CompilerDaemonServer
                         try
                         {
                             using var securityScope = ApplicationSecurityModeContext.Push(securityMode);
-                            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+                            using var diagnosticMode = CompilerDiagnosticMode.Push(debug, info);
                             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
                             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
                             var result = await RunCompiler.CompileWithResultAsync(source, outputDirectory, runtimeIdentifier, debug, shutdown.Token).ConfigureAwait(false);
