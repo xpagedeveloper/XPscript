@@ -1832,7 +1832,7 @@ if ($LASTEXITCODE -ne 0 -or ($applicationNewLineResult -join "`n") -notmatch 'AP
 $invalidDefault = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optional-default-error.xps') -o (Join-Path $output 'invalid-default') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($invalidDefault -join "`n") -notmatch "Default value for Optional parameter 'value' is incompatible with its type") { throw 'AST invalid Optional default was not rejected by binding.' }
 $evaluateRemovedError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'evaluate-removed-error.xps') -o (Join-Path $output 'evaluate-removed-error') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($evaluateRemovedError -join "`n") -notmatch "Undefined function 'Evaluate'") { throw 'AST removed Evaluate function was not rejected.' }
+if ($LASTEXITCODE -ne 2 -or ($evaluateRemovedError -join "`n") -notmatch "The name 'Evaluate' does not exist in the current context") { throw 'AST removed Evaluate function was not rejected.' }
 $erlOutput = Join-Path $output 'erl-physical-source-line'
 dotnet $compiler ast-compile (Join-Path $root 'samples/erl-physical-source-line.xps') -o $erlOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Erl/Format/Error compatibility fixture failed to compile.' }
