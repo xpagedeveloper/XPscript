@@ -163,7 +163,8 @@ public sealed class BoundStatementEmitter
                     output.Write("}", indent + 1, statement.Span);
                     Line("}");
                 }
-                else if (expression.Expression is BoundCallExpression multiListCall && multiListCall.Target is null &&
+                else if (expression.Expression is BoundCallExpression multiListCall &&
+                    (multiListCall.Target is null or BoundMemberAccessExpression) &&
                     multiListCall.Function.ReturnType == typeof(void) &&
                     multiListCall.Function.ByRefParameters is not null &&
                     multiListCall.Arguments.Zip(multiListCall.Function.ByRefParameters).Any(pair =>
@@ -173,6 +174,10 @@ public sealed class BoundStatementEmitter
                     Line("{");
                     var callArguments = new List<string>();
                     var copyBacks = new List<(string Location, string Value, TextSpan? Span)>();
+                    var receiverName = output.Temporary();
+                    var memberTarget = multiListCall.Target as BoundMemberAccessExpression;
+                    if (memberTarget is not null)
+                        output.Write($"var {receiverName} = {_expressions.Emit(memberTarget.Receiver)};", indent + 1, memberTarget.Receiver.Span);
                     for (var i = 0; i < multiListCall.Arguments.Count; i++)
                     {
                         var argument = multiListCall.Arguments[i];
@@ -202,7 +207,8 @@ public sealed class BoundStatementEmitter
                     }
                     output.Write("try", indent + 1, statement.Span);
                     output.Write("{", indent + 1, statement.Span);
-                    output.Write($"{multiListCall.Function.Name}({string.Join(", ", callArguments)});", indent + 2, statement.Span);
+                    var invocationTarget = memberTarget is null ? multiListCall.Function.Name : $"{receiverName}.{memberTarget.Name}";
+                    output.Write($"{invocationTarget}({string.Join(", ", callArguments)});", indent + 2, statement.Span);
                     output.Write("}", indent + 1, statement.Span);
                     output.Write("finally", indent + 1, statement.Span);
                     output.Write("{", indent + 1, statement.Span);

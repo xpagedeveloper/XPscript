@@ -1,0 +1,13 @@
+Class Writer
+    Public Sub Update(ByRef value As Long)
+        value = value + 7
+    End Sub
+End Class
+
+Sub Main()
+    Dim values List As Long
+    values("value") = 4
+    Dim writer As New Writer
+    Call writer.Update(values("value"))
+    Print CStr(values("value"))
+End Sub
