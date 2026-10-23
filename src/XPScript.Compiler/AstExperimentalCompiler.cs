@@ -854,6 +854,7 @@ using XpJsonObject = XPScriptJsonObject;
 using XpJsonArray = XPScriptJsonArray;
 using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
+{{(Regex.IsMatch(fullSource, @"(?i)\b(ShowDialog|LoadFileDialog|OpenFileDialog|SaveFileDialog)\b") ? UIDialogRuntimeSource.Code : "")}}
 {{(usesArchive ? ArchiveRuntimeSource.Code + ArchiveMemoryRuntimeSource.Code + ArchiveIteratorRuntimeSource.Code : "")}}
 {{(usesArchive && source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ? ArchiveExtendedReaderRuntimeSource.Code + ArchiveExtendedWriterRuntimeSource.Code + ArchiveExtendedWriterFactoryRuntimeSource.Code : "")}}
 {{(usesNetworkTools ? NetworkToolsRuntimeSource.Code : "")}}
@@ -1450,9 +1451,9 @@ internal static class Program
     public static object Format(object? value, object? pattern = null) => pattern is null ? CStr(value) : (value is XpDate date ? date.Value : Convert.ToDateTime(value)).ToString(CStr(pattern), System.Globalization.CultureInfo.InvariantCulture);
     public static object InputBox(object? prompt = null, object? title = null, object? defaultValue = null) => XPScriptRuntime.InputBox(prompt);
     public static object MsgBox(object? prompt = null, object? boxType = null, object? title = null) => XPScriptRuntime.MsgBox(prompt);
-    public static object ChDrive(object? drive) => true;
+    public static object ChDrive(object? drive) { LSFileRuntime.ChDrive(drive); return true; }
     public static void AstChDir(object? path) => System.Environment.CurrentDirectory = System.IO.Path.GetFullPath(CStr(path));
-    public static object Erase(object? value) => true;
+    public static object Erase(object? value) { LSArrayRuntime.Erase(value); return true; }
     public static object JsonParse(object? value) => XPScriptNativeJson.Parse(value);
     public static object JsonStringify(object? value) => XPScriptNativeJson.Stringify(value);
     public static long GetTickCount() => Environment.TickCount64;
@@ -1470,10 +1471,29 @@ internal static class Program
         public static string Error(object? number) => Program.Error(number);
         public static string Error() => Program.Error();
         public static string ErrorValue() => XPScriptErrorRuntime.Description;
-        public static string ShowDialog(object? message, object? title = null, object? kind = null, object? values = null) => string.Empty;
-        public static string LoadFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
-        public static string OpenFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
-        public static string SaveFileDialog(object? title = null, object? initialPath = null, object? filter = null) => string.Empty;
+        private static string InvokeDialog(string methodName, object?[] args)
+        {
+            var type = Type.GetType("XPScriptUIDialogRuntime", throwOnError: false);
+            System.Reflection.MethodInfo? method = null;
+            if (type is not null)
+            {
+                foreach (var candidate in type.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
+                {
+                    if (candidate.Name == methodName && candidate.GetParameters().Length == args.Length)
+                    {
+                        method = candidate;
+                        break;
+                    }
+                }
+            }
+            if (method is null)
+                throw new XPScriptRuntimeException(5, "XPScript desktop dialog backend is unavailable.");
+            return Convert.ToString(method.Invoke(null, args), System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
+        }
+        public static string ShowDialog(object? message, object? title = null, object? kind = null, object? values = null) => InvokeDialog("ShowDialog", [message, title, kind, values]);
+        public static string LoadFileDialog(object? title = null, object? initialPath = null, object? filter = null) => InvokeDialog("LoadFileDialog", [title, initialPath, filter]);
+        public static string OpenFileDialog(object? title = null, object? initialPath = null, object? filter = null) => InvokeDialog("OpenFileDialog", [title, initialPath, filter]);
+        public static string SaveFileDialog(object? title = null, object? initialPath = null, object? filter = null) => InvokeDialog("SaveFileDialog", [title, initialPath, filter]);
         public static bool Like(string value, string pattern) => System.Text.RegularExpressions.Regex.IsMatch(value ?? string.Empty, "^" + System.Text.RegularExpressions.Regex.Escape(pattern ?? string.Empty).Replace("\\\\*", ".*").Replace("\\\\?", ".") + "$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 {{moduleFields}}

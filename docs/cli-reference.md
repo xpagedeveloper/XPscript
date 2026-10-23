@@ -4,7 +4,7 @@ This page is the searchable reference for the XPScript compiler and host command
 
 ## `xpscript` compiler and runtime
 
-Running `xpscript` with no arguments prints the built-in CLI usage reference. `compile` and `run` use the AST compiler by default. The explicit `ast-compile` and `ast-run` names are available when a script or automation wants to state that choice directly. During migration, `legacy-compile`/`compilev1` and `legacy-run`/`runv1` retain the previous compiler behavior. For `run` and `compile`, `--info` may be placed before or after the command name. Program arguments for `run` are accepted only through `--Args`, which keeps XPScript CLI options unambiguous regardless of their position.
+Running `xpscript` (or the shipped `xpscriptc` executable) with no arguments prints the built-in CLI usage reference. `compile` and `run` use the AST compiler by default. The explicit `ast-compile` and `ast-run` names are available when a script or automation wants to state that choice directly. During migration, `legacy-compile`/`compilev1` and `legacy-run`/`runv1` retain the previous compiler behavior. For `run` and `compile`, `--info` may be placed before or after the command name. Program arguments for `run` are accepted only through `--Args`, which keeps XPScript CLI options unambiguous regardless of their position.
 
 
 | Command/option | Syntax | Parameters | Description | Example |
