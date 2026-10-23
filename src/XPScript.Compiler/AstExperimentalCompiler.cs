@@ -1190,9 +1190,22 @@ internal static class Program
     public static object Rnd(object? value = null) => Random.Shared.NextDouble();
     public static long ShellId(object? program, object? windowStyle = null)
     {
-        if (XPScriptRuntime.CStr(program).Trim().Length == 0)
+        var file = XPScriptRuntime.CStr(program).Trim();
+        if (file.Length == 0)
             throw new XPScriptRuntimeException(5, "Shell requires a program or script name.");
-        return 33L;
+        try
+        {
+            using var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }) ?? throw new XPScriptRuntimeException(5, "Shell could not start the program.");
+            return process.Id;
+        }
+        catch (System.ComponentModel.Win32Exception ex)
+        {
+            throw new XPScriptRuntimeException(53, ex.Message);
+        }
     }
     public static long Shell(object? command, object? windowStyle = null, object? unused = null)
     {

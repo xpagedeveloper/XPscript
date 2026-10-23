@@ -1,4 +1,7 @@
 Sub Main()
+    Dim processId As Long
+    processId = ShellId("dotnet")
+    If processId <= 0 Then Error 6340, "ShellId did not return a process identifier"
     Dim failure As Long
     On Error Resume Next
     Call ShellId("")

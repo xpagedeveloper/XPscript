@@ -499,7 +499,7 @@ $shellIdOutput = Join-Path $output 'shell-id-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'shell-id-next.xps') -o $shellIdOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST ShellId compilation failed.' }
 $shellIdResult = dotnet (Join-Path $shellIdOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($shellIdResult -join "`n") -ne 'SHELL_ID_GUARD_OK') { throw 'AST ShellId guard regression failed.' }
+if ($LASTEXITCODE -ne 0 -or ($shellIdResult -join "`n") -ne 'SHELL_ID_GUARD_OK') { throw 'AST ShellId regression failed.' }
 Write-Host 'AST_SHELL_ID_OK'
 
 $msgBoxOutput = Join-Path $output 'msgbox-next'
