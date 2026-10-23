@@ -202,9 +202,10 @@ if ($LASTEXITCODE -ne 0 -or $compileV1Text -notlike '*result: ok*' -or -not (Tes
 }
 
 foreach ($legacyTarget in @('desktop', 'console')) {
-    $legacyTargetText = dotnet $compiler legacy-compile $astSource --target $legacyTarget --runtime=false --single-file=false 2>&1 | Out-String
-    if ($LASTEXITCODE -eq 0 -or $legacyTargetText -notlike '*--target currently supports webiis*') {
-        throw "Legacy --target $legacyTarget validation regression: $legacyTargetText"
+    $legacyTargetOutput = Join-Path $resultRoot "legacy-target-$legacyTarget"
+    $legacyTargetText = dotnet $compiler legacy-compile $astSource --target $legacyTarget -o $legacyTargetOutput --runtime=false --single-file=false 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 0 -or $legacyTargetText -notlike '*result: ok*' -or -not (Test-Path $legacyTargetOutput)) {
+        throw "Legacy --target $legacyTarget compatibility regression: $legacyTargetText"
     }
 }
 

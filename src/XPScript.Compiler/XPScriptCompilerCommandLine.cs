@@ -259,8 +259,8 @@ public static class XPScriptCompilerCommandLine
 
             if (resultFormat is not ("text" or "json" or "xml"))
                 throw new ArgumentException("--result-format must be text, json, or xml.");
-            if (target is not null && target != "webiis")
-                throw new ArgumentException("--target currently supports webiis.");
+            if (target is not null && target is not ("desktop" or "console" or "webiis"))
+                throw new ArgumentException("--target must be desktop, console, or webiis.");
             if (target == "webiis" && embedAssets)
                 throw new ArgumentException("--embed-assets is supported for desktop executable compilation. Web and browser-WASM assets are packaged as application assets.");
 
