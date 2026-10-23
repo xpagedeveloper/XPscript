@@ -174,6 +174,7 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Get\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^,]+)\s*,\s*(?<value>[A-Za-z_]\w*)\s*$", "${indent}${value} = AstGet(${file}, ${position}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Seek\s+#?(?<file>[^,\s]+)\s*,\s*(?<position>[^\r\n]+)\r?$", "${indent}Call AstSeek(${file}, ${position})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Reset\s*$", "${indent}Call AstReset()");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Stop\s*$", "${indent}Call AstStop()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)ChDrive\s+(?<drive>[^\r\n]+)\r?$", "${indent}Call AstChDrive(${drive})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)ChDir\s+(?<path>[^\r\n]+)\r?$", "${indent}Call AstChDir(${path})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)(?<operation>Lock|Unlock)\s+#?(?<file>[^,\s]+)\s*,\s*(?<start>[^\s]+)\s+To\s+(?<end>[^\r\n]+)\r?$", "${indent}Call Ast${operation}Bytes(${file}, ${start}, ${end})");
@@ -185,7 +186,10 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)FileCopy\s+(?<source>.+?)\s*,\s*(?<destination>[^\r\n]+)\r?$", "${indent}Call AstFileCopy(${source}, ${destination})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Name\s+(?<source>.+?)\s+As\s+(?<destination>[^\r\n]+)\r?$", "${indent}Call AstNameFile(${source}, ${destination})");
         source = Regex.Replace(source, @"(?<![\w.])Input\$\s*\(\s*(?<count>[^,()]+)\s*,\s*#\s*(?<file>[^)]+)\)", "AstInputChars(${count}, ${file})", RegexOptions.IgnoreCase);
-        source = source.Replace("Error$", "ErrorValue()", StringComparison.OrdinalIgnoreCase);
+        // Error$ is the string-valued spelling of Error(...), not a
+        // parameterless function followed by an argument list.
+        source = source.Replace("Error$", "Error", StringComparison.OrdinalIgnoreCase);
+        source = source.Replace("Format$", "Format", StringComparison.OrdinalIgnoreCase);
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)p\.[A-Za-z_]\w*(?:\s*=.*)?$", "${indent}Call AstNoOp()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Print\s+p\.[A-Za-z_]\w*\s*$", "${indent}Call AstNoOp()");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)ReDim\s+(?<preserve>Preserve\s+)?(?<name>[A-Za-z_]\w*)\s*\((?<bounds>[^)]*)\)(?:\s+As\s+[A-Za-z_]\w*)?\s*$", match =>
@@ -613,8 +617,7 @@ public static class AstExperimentalCompiler
              XpTypeSymbol.FromClr(typeof(long)), XpTypeSymbol.FromClr(typeof(long)), XpTypeSymbol.FromClr(typeof(long))]));
         symbols.Declare(new FunctionSymbol("Date.Difference", typeof(double), [typeof(object)],
             XpTypeSymbol.FromClr(typeof(double)), [XpTypeSymbol.User("Date")]));
-        symbols.Declare(new FunctionSymbol("Format$", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
-        symbols.Declare(new FunctionSymbol("Format$", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("Format", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         foreach (var (name, value) in new[] { ("Jsonelem_type_object", 1L), ("Jsonelem_type_array", 2L), ("Jsonelem_type_string", 3L), ("Jsonelem_type_number", 4L), ("Jsonelem_type_boolean", 5L), ("Jsonelem_type_utf8_bytearray", 6L), ("Jsonelem_type_empty", 64L) })
             symbols.Declare(new VariableSymbol(name, typeof(long), XpTypeSymbol.FromClr(typeof(long))));
         foreach (var name in new[] { "Date", "Date$", "Format", "Format$", "ChDrive", "Erase", "JsonParse" })
@@ -638,6 +641,7 @@ public static class AstExperimentalCompiler
                 mainSymbol.NativeTargetName = "__xps_application_main";
         symbols.Declare(new VariableSymbol("RequestScope", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Err", typeof(object), XpTypeSymbol.Variant));
+        symbols.Declare(new VariableSymbol("Erl", typeof(object), XpTypeSymbol.Variant));
         // Bind class bodies before module entry points so body diagnostics are
         // not masked by a later overload error in Main. Cache the emitted
         // members so constructors and accessors are not emitted twice.
@@ -924,6 +928,7 @@ internal static class Program
     public static string AstPrintText(object? value) => XPScriptNullRuntime.IsNull(value) ? "Variable is null" : value is ILSObjectReference reference && reference.IsNothing ? "Variable is Nothing" : value is DateTime date ? date.ToString(CultureInfo.InvariantCulture) : Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
     public static dynamic RequestScope = new ExpandoObject();
     public static dynamic Err => XPScriptErrorRuntime.Err;
+    public static dynamic Erl => XPScriptErrorRuntime.Erl;
     public static dynamic SEARCH_BREADTH = 1723L;
     public static dynamic SEARCH_DEPTH = 1724L;
     public static dynamic Command => XPScriptRuntime.Command();
@@ -1441,6 +1446,7 @@ internal static class Program
     public static void AstNameFile(object? source, object? destination) => File.Move(CStr(source), CStr(destination), true);
     public static string AstInputChars(object? count, object? file) => LSFileRuntime.InputChars(checked((int)XPScriptRuntime.CLng(file)), checked((int)XPScriptRuntime.CLng(count)));
     public static void AstNoOp() { }
+    public static void AstStop() => throw new XPScriptRuntimeException(5, "Stop statement reached.");
     public sealed class XpDate : IComparable<XpDate> {
         public DateTime Value { get; }
         public XpDate() : this(default) { }

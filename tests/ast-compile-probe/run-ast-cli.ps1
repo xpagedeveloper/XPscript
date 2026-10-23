@@ -1833,6 +1833,11 @@ $invalidDefault = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optiona
 if ($LASTEXITCODE -ne 2 -or ($invalidDefault -join "`n") -notmatch "Default value for Optional parameter 'value' is incompatible with its type") { throw 'AST invalid Optional default was not rejected by binding.' }
 $evaluateRemovedError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'evaluate-removed-error.xps') -o (Join-Path $output 'evaluate-removed-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($evaluateRemovedError -join "`n") -notmatch "Undefined function 'Evaluate'") { throw 'AST removed Evaluate function was not rejected.' }
+$erlOutput = Join-Path $output 'erl-physical-source-line'
+dotnet $compiler ast-compile (Join-Path $root 'samples/erl-physical-source-line.xps') -o $erlOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Erl/Format/Error compatibility fixture failed to compile.' }
+$erlRun = dotnet (Join-Path $erlOutput 'Generated.dll') 2>&1
+if ($LASTEXITCODE -ne 0 -or ($erlRun -join "`n") -notmatch 'Erl=5') { throw 'AST Erl/Format/Error compatibility fixture failed at runtime.' }
 dotnet $compiler ast-compile $source -o $output
 if ($LASTEXITCODE -ne 0) { throw 'AST CLI compilation failed.' }
 $assembly = Join-Path $output 'Generated.dll'

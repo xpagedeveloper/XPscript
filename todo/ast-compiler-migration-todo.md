@@ -356,6 +356,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [x] Replace AST `Input$` empty-string helpers with `LSFileRuntime.Input`; `file-input-record-next.xps` is a permanent AST CLI regression.
   - [x] Replace AST `Erase` and dialog helper placeholders with the shared List/array and UI-dialog runtimes; dialog binding remains lazy so non-UI programs do not acquire desktop dependencies.
   - [x] Replace the AST console `ExpandoObject` fallback with a typed runtime console preserving `Write`, `WriteLine`, `ReadLine`, `Beep` and Android log routing; normal console output remains covered by the AST runtime sample.
+  - [x] Bind the documented `Format`/`Format$`, `Error$`, `Erl` and `Stop` compatibility surfaces to the shared AST runtime; `erl-physical-source-line.xps` verifies AST error-line execution (`Erl=5`).
   - [x] Replace AST `DateAdd`/`DateDiff` placeholders with the existing `XPScriptRuntime` implementations; `date-builtins-next.xps` verifies day and month intervals.
   - [x] Bind AST `DatePart`, `Weekday`, `MonthName` and `WeekdayName` to existing `XPScriptRuntime` implementations; `date-parts-next.xps` verifies their migrated behavior.
   - [x] Bind AST `DateValue`, `TimeValue` and three-argument `TimeNumber` to existing `XPScriptRuntime` implementations; `date-values-next.xps` verifies their migrated behavior.
