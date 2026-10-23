@@ -39,15 +39,18 @@ var plainAssembly = await Build(plain, "plain");
 if (await Run(plainAssembly) != "7" || Directory.EnumerateFiles(Path.GetDirectoryName(plainAssembly)!, "Magick*", SearchOption.AllDirectories).Any())
     throw new Exception("Plain output unexpectedly acquired image dependencies.");
 
-var source = new XPScriptTranspiler().Transpile("""
-Sub Main()
-    Dim image As XPImage
-    Set image = New XPImage(2, 3, "#123456")
-    Print image.Width
-    Print image.Height
-    Call image.Recycle()
-End Sub
-""", "dependency-image.xps", CompilerDriver.CurrentRuntimeIdentifier());
+var source = """
+internal sealed class XPImage { }
+internal static class Program
+{
+    public static void Main()
+    {
+        using var image = new ImageMagick.MagickImage(ImageMagick.MagickColors.Red, 2, 3);
+        System.Console.WriteLine(image.Width);
+        System.Console.WriteLine(image.Height);
+    }
+}
+""";
 var imagePackages = ApplicationDependencyCatalog.Detect(source);
 if (imagePackages.Count != 1 || imagePackages[0].Name != "Magick.NET-Q16-AnyCPU") throw new Exception("Image program selected the wrong packages.");
 foreach (var name in new[] { "image", "image-cached" })
