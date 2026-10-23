@@ -98,10 +98,21 @@ if ($LASTEXITCODE -ne 0 -or $legacyRunText -notlike '*APPLICATION_NEWLINE_BEGIN*
     throw "Legacy run alias regression: $legacyRunText"
 }
 
+$runV1Text = dotnet $compiler runv1 $astSource --platform win-x64 --no-daemon --Args 'runv1-check' | Out-String
+if ($LASTEXITCODE -ne 0 -or $runV1Text -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $runV1Text -notlike '*APPLICATION_NEWLINE_END*') {
+    throw "runv1 legacy alias regression: $runV1Text"
+}
+
 $legacyOutput = Join-Path $resultRoot 'legacy-compile'
 $legacyOutputText = dotnet $compiler legacy-compile $astSource -o $legacyOutput --runtime=false --single-file=false --debug | Out-String
 if ($LASTEXITCODE -ne 0 -or $legacyOutputText -notlike '*result: ok*' -or -not (Test-Path $legacyOutput)) {
     throw "Legacy compile option compatibility regression: $legacyOutputText"
+}
+
+$compileV1Output = Join-Path $resultRoot 'compilev1'
+$compileV1Text = dotnet $compiler compilev1 $astSource -o $compileV1Output --runtime=false --single-file=false | Out-String
+if ($LASTEXITCODE -ne 0 -or $compileV1Text -notlike '*result: ok*' -or -not (Test-Path $compileV1Output)) {
+    throw "compilev1 legacy alias regression: $compileV1Text"
 }
 
 foreach ($legacyTarget in @('desktop', 'console')) {
