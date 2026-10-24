@@ -37,7 +37,7 @@ internal static class AstObjectSupportRegistry
         "XPJsonArray",
         "XPJsonObject",
         "XPJsonElement", "XPJsonValidationResult", "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall", "XPAttachmentCollection", "Path",
-        "NotesHTTPRequest", "XPNotesHTTPRequest", "NotesSession", "NotesDatabase",
+        "NotesHTTPRequest", "XPNotesHTTPRequest", "NotesSession", "NotesDatabase", "NotesDocument",
         "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
         "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
         "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
@@ -57,7 +57,7 @@ internal static class AstObjectSupportRegistry
         "XPSpreadsheet", "XPWorksheet", "XPCell", "XPRange",
         "UIForm", "UIListView"
         ,"NotesMail", "NotesDatabaseAccess", "NotesView", "NotesDocumentCollection",
-        "NotesNoteCollection", "NotesDocument", "NotesItem", "NotesRichTextItem", "NotesRichTextNavigator",
+        "NotesNoteCollection", "NotesItem", "NotesRichTextItem", "NotesRichTextNavigator",
         "NotesRichTextParagraphStyle", "NotesRichTextRange", "NotesRichTextSection", "NotesRichTextStyle",
         "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink", "NotesName", "NotesDateTime",
         "NotesAgentResult", "NotesAgent", "NotesStream", "NotesDXLImporter", "NotesDXLExporter",
