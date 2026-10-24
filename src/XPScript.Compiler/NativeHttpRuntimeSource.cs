@@ -274,10 +274,10 @@ internal sealed class XPScriptHttpClient : IDisposable
         {
             throw new XPScriptRuntimeException(5, "HTTP request timed out.");
         }
-        catch (System.Net.Http.HttpRequestException)
+        catch (System.Net.Http.HttpRequestException ex)
         {
             if (_tls.LastError.Length > 0) throw _tls.Failure("HTTP request");
-            throw new XPScriptRuntimeException(5, "HTTP request failed.");
+            throw new XPScriptRuntimeException(5, "HTTP request failed: " + ex.Message);
         }
         catch (IOException)
         {
