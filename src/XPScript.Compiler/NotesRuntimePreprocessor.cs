@@ -20,7 +20,7 @@ internal sealed class NotesRuntimePreprocessor
         ["NotesRichTextItem"] = ["DateTimeValue"]
     };
 
-    public string Transform(string source)
+    public string Transform(string source, bool preserveAstConstants = false)
     {
         ArgumentNullException.ThrowIfNull(source);
         if (!source.Contains("Notes", StringComparison.OrdinalIgnoreCase)) return source;
@@ -61,9 +61,14 @@ internal sealed class NotesRuntimePreprocessor
                 continue;
             }
 
-            var rewritten = Regex.Replace(line, @"\bNotesConst\s*\.", "XPScriptNotesConst.", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_DEPTH\b", "XPScriptNotesConst.SEARCH_DEPTH", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_BREADTH\b", "XPScriptNotesConst.SEARCH_BREADTH", RegexOptions.IgnoreCase);
+            var rewritten = preserveAstConstants
+                ? Regex.Replace(line, @"\bNotesConst\s*\.\s*", "", RegexOptions.IgnoreCase)
+                : Regex.Replace(line, @"\bNotesConst\s*\.", "XPScriptNotesConst.", RegexOptions.IgnoreCase);
+            if (!preserveAstConstants)
+            {
+                rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_DEPTH\b", "XPScriptNotesConst.SEARCH_DEPTH", RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_BREADTH\b", "XPScriptNotesConst.SEARCH_BREADTH", RegexOptions.IgnoreCase);
+            }
             rewritten = Regex.Replace(rewritten, @"\bNew\s+NotesSession\s*\((.*)\)", "XPScriptNotes.CreateSession($1)", RegexOptions.IgnoreCase);
 
             if (Regex.IsMatch(rewritten, @"\.GetFirstDocumentByKey\s*\(", RegexOptions.IgnoreCase))

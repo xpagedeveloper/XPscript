@@ -537,12 +537,12 @@ Sub Main()
 
             Set currentEntity = mime.GetFirstChildEntity()
             If Not currentEntity Is Nothing Then
-                Set currentEntity = currentEntity.GetNextEntity(1724)
+                Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
                 Do While Not currentEntity Is Nothing
                     If currentEntity.ContentType = "text" And currentEntity.ContentSubType = "plain" Then
                         foundNestedAfterReopen = True
                     End If
-                    Set currentEntity = currentEntity.GetNextEntity(1724)
+                    Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
                 Loop
             End If
             Set currentEntity = mime.GetFirstChildEntity()
@@ -614,7 +614,7 @@ Sub Main()
                 If currentEntity.ContentType = "text" And currentEntity.ContentSubType = "html" Then
                     foundHtml = True
                 End If
-                    Set currentEntity = currentEntity.GetNextEntity(1724)
+                    Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
             Loop
 
             If foundHtml Then

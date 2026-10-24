@@ -141,7 +141,7 @@ public static class AstExperimentalCompiler
         var usesNotesSession = AstObjectSupportRegistry.UsesObject(fullSource, "NotesSession");
         if (usesNotesSession)
         {
-            source = new NotesRuntimePreprocessor().Transform(source);
+            source = new NotesRuntimePreprocessor().Transform(source, preserveAstConstants: true);
             fullSource = source;
         }
         ValidateAstAiCallbacks(fullSource);
