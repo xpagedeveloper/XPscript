@@ -152,4 +152,24 @@ Sub Main()
     Call noteCollection.Remove(doc)
     Call noteCollection.Intersect(docs)
     Call noteCollection.ClearCollection()
+    Print created.IsValidDate
+    Print created.IsDST
+    Print created.TimeZone
+    Print created.LocalTime
+    Print created.GMTTime
+    Print created.ZoneTime
+    Print created.DateOnly
+    Print created.TimeOnly
+    Call created.SetNow()
+    Call created.SetAnyDate()
+    Call created.SetAnyTime()
+    Call created.AdjustSecond(1)
+    Call created.AdjustMinute(1)
+    Call created.AdjustHour(1)
+    Call created.AdjustDay(1)
+    Call created.AdjustMonth(1)
+    Call created.AdjustYear(1)
+    Print created.TimeDifference(created)
+    Print created.TimeDifferenceDouble(created)
+    Call created.ConvertToZone(0)
 End Sub
