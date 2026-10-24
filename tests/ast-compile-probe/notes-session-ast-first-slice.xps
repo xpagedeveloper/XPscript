@@ -126,4 +126,15 @@ Sub Main()
     Print access.IsPublicReader
     Print access.IsPublicWriter
     Print access.CannotReplicateOrCopy
+    Print view.Name
+    Print view.ColumnNames
+    Print view.Columns
+    Set doc = view.GetDocumentByKey("Customer")
+    Set docs = view.GetAllDocumentsByKey("Customer", True)
+    Set docs = view.FullTextSearch("customer")
+    Set doc = view.GetFirstDocument()
+    Set doc = view.GetNextDocument(doc)
+    view.AutoUpdate = False
+    view.AutoUpdate = True
+    Call view.Refresh()
 End Sub
