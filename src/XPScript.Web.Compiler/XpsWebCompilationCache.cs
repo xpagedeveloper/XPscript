@@ -47,6 +47,8 @@ public sealed record XpsWebCompilationCacheMetrics(
 public sealed class XpsWebCompilationCache : IAsyncDisposable
 {
     public const string CacheDirectoryEnvironmentVariable = "XPSCRIPT_WEB_CACHE_DIRECTORY";
+    private const int GlobalMaxConcurrentCompilations = 16;
+    private static readonly SemaphoreSlim GlobalCompilationGate = new(GlobalMaxConcurrentCompilations, GlobalMaxConcurrentCompilations);
 
     private sealed class Entry
     {
@@ -238,25 +240,33 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
             DebugStep("persistent-cache:miss", fullPath);
         }
 
-        await _compilationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        Interlocked.Increment(ref _compilationStarts);
-        var started = Stopwatch.GetTimestamp();
+        await GlobalCompilationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var unit = await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
-            DebugStep("compile:done", fullPath);
-            return unit;
-        }
-        catch
-        {
-            Interlocked.Increment(ref _compilationFailures);
-            throw;
+            await _compilationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            Interlocked.Increment(ref _compilationStarts);
+            var started = Stopwatch.GetTimestamp();
+            try
+            {
+                var unit = await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
+                DebugStep("compile:done", fullPath);
+                return unit;
+            }
+            catch
+            {
+                Interlocked.Increment(ref _compilationFailures);
+                throw;
+            }
+            finally
+            {
+                _compilationGate.Release();
+                var elapsed = Stopwatch.GetElapsedTime(started);
+                Interlocked.Add(ref _compilationDurationTicks, Math.Max(0, elapsed.Ticks));
+            }
         }
         finally
         {
-            _compilationGate.Release();
-            var elapsed = Stopwatch.GetElapsedTime(started);
-            Interlocked.Add(ref _compilationDurationTicks, Math.Max(0, elapsed.Ticks));
+            GlobalCompilationGate.Release();
         }
     }
 
