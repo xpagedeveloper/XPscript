@@ -11,6 +11,7 @@ public sealed class XpsWebCompilationCacheOptions
     public long MaxSourceBytes { get; init; } = 4 * 1024 * 1024;
     public TimeSpan IdleTtl { get; init; } = TimeSpan.FromMinutes(20);
     public TimeSpan FailureBackoff { get; init; } = TimeSpan.FromSeconds(2);
+    public int MaxConcurrentCompilations { get; init; } = 4;
     public string ConfigurationIdentity { get; init; } = "ast-compiler-2026-10-20";
     public bool EnablePersistentCache { get; init; } = true;
     public string? PersistentCacheDirectory { get; init; }
@@ -25,6 +26,8 @@ public sealed class XpsWebCompilationCacheOptions
             throw new ArgumentOutOfRangeException(nameof(IdleTtl), "IdleTtl must be between 1 second and 1 day.");
         if (FailureBackoff < TimeSpan.FromMilliseconds(100) || FailureBackoff > TimeSpan.FromMinutes(5))
             throw new ArgumentOutOfRangeException(nameof(FailureBackoff), "FailureBackoff must be between 100 ms and 5 minutes.");
+        if (MaxConcurrentCompilations is < 1 or > 256)
+            throw new ArgumentOutOfRangeException(nameof(MaxConcurrentCompilations), "MaxConcurrentCompilations must be between 1 and 256.");
         if (string.IsNullOrWhiteSpace(ConfigurationIdentity) || ConfigurationIdentity.Length > 512)
             throw new ArgumentException("ConfigurationIdentity must contain 1 to 512 characters.", nameof(ConfigurationIdentity));
         if (PersistentCacheDirectory is not null && string.IsNullOrWhiteSpace(PersistentCacheDirectory))
@@ -64,6 +67,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
     private readonly Dictionary<string, Entry> _entries;
     private readonly XpsWebCompiler _compiler;
     private readonly XpsWebCompilationCacheOptions _options;
+    private readonly SemaphoreSlim _compilationGate;
     private long _cacheHits;
     private long _cacheMisses;
     private long _compilationStarts;
@@ -77,6 +81,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
         _options = options ?? new XpsWebCompilationCacheOptions();
         _options.Validate();
+        _compilationGate = new SemaphoreSlim(_options.MaxConcurrentCompilations, _options.MaxConcurrentCompilations);
         _entries = new Dictionary<string, Entry>(StringComparer.Ordinal);
     }
 
@@ -224,6 +229,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
             DebugStep("persistent-cache:miss", fullPath);
         }
 
+        await _compilationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         Interlocked.Increment(ref _compilationStarts);
         var started = Stopwatch.GetTimestamp();
         try
@@ -239,6 +245,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         }
         finally
         {
+            _compilationGate.Release();
             var elapsed = Stopwatch.GetElapsedTime(started);
             Interlocked.Add(ref _compilationDurationTicks, Math.Max(0, elapsed.Ticks));
         }
