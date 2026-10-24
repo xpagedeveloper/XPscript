@@ -163,7 +163,7 @@ jobs:
           - rid: linux-arm64
             os: ubuntu-latest
           - rid: osx-x64
-            os: macos-13
+            os: macos-latest
           - rid: osx-arm64
             os: macos-14
     runs-on: ${{ matrix.os }}
