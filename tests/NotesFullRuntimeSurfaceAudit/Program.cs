@@ -23,6 +23,12 @@ var samplePaths = new[]
     Path.Combine(repoRoot, "samples", "notes-mime-entity-surface.xps"),
     Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps"),
     Path.Combine(repoRoot, "samples", "notes-view-native-multikey-dxl.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-extended-surface.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-columnnames-domino-runtime-test.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-navigation-v1-domino-runtime-test.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-navigation-v2-domino-runtime-test.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-navigation-v3-domino-runtime-test.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-navigator-cache-policy-compile.xps")
 };
 foreach (var samplePath in samplePaths)
 {
