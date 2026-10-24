@@ -42,6 +42,22 @@ function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
     }
     return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd() }
 }
+function Invoke-BoundedDotnetRun([string[]] $arguments, [int] $timeoutMilliseconds = 120000) {
+    $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
+    foreach ($argument in $arguments) { [void]$info.ArgumentList.Add($argument) }
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    $info.UseShellExecute = $false
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $info
+    [void]$process.Start()
+    if (-not $process.WaitForExit($timeoutMilliseconds)) {
+        $process.Kill($true)
+        $process.WaitForExit()
+        return @{ TimedOut = $true; ExitCode = $null; Output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd() }
+    }
+    return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd() }
+}
 $compileHelp = dotnet $compiler compile --help 2>&1
 if ($LASTEXITCODE -ne 0 -or ($compileHelp -join "`n") -notmatch 'Usage:' -or ($compileHelp -join "`n") -notmatch '--target desktop\|console\|webiis' -or ($compileHelp -join "`n") -notmatch 'desktop\s+Create a desktop executable') { throw 'AST compile command help regression failed.' }
 $astCompileHelp = dotnet $compiler ast-compile -h 2>&1
@@ -1273,8 +1289,8 @@ if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime regression fail
 & (Join-Path $PSScriptRoot 'run-ast-constructor.ps1')
 & (Join-Path $PSScriptRoot 'run-ast-destructor.ps1')
 & (Join-Path $PSScriptRoot 'run-ast-image-get.ps1')
-dotnet run --project (Join-Path $root 'tests/AstHttpRuntimeProbe') -c Release -- $root --accessors-only
-if ($LASTEXITCODE -ne 0) { throw 'AST HTTP accessor reference/security regression failed.' }
+$httpAccessorProbe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $root 'tests/AstHttpRuntimeProbe'), '-c', 'Release', '--no-restore', '--', $root, '--accessors-only')
+if ($httpAccessorProbe.TimedOut -or $httpAccessorProbe.ExitCode -ne 0 -or $httpAccessorProbe.Output -notmatch 'AST_HTTP_ACCESSORS_OK') { throw 'AST HTTP accessor reference/security regression failed.' }
 foreach ($fixture in @('http-property-signature-only', 'tabular-reference-properties', 'tabular-reference-signatures', 'native-reference-properties', 'native-reference-signatures')) {
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture)
     if ($LASTEXITCODE -ne 0) { throw "AST native reference accessor compilation failed: $fixture" }
@@ -1468,8 +1484,8 @@ foreach ($sheetInvalid in @('spreadsheet-member-error', 'spreadsheet-constructor
     $sheetFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$sheetInvalid.xps") -o (Join-Path $output $sheetInvalid) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($sheetFailure -join "`n") -notmatch "$sheetInvalid.xps:(2|3):") { throw "Spreadsheet diagnostic or source span lost: $sheetInvalid" }
 }
-dotnet run --project (Join-Path $root 'tests/AstHttpRuntimeProbe') -c Release
-if ($LASTEXITCODE -ne 0) { throw 'AST native HTTP/TLS runtime regression failed.' }
+$httpRuntimeProbe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $root 'tests/AstHttpRuntimeProbe'), '-c', 'Release', '--no-restore', '--', $root)
+if ($httpRuntimeProbe.TimedOut -or $httpRuntimeProbe.ExitCode -ne 0) { throw 'AST native HTTP/TLS runtime regression failed.' }
 foreach ($httpInvalid in @('http-member-error', 'http-constructor-error', 'http-readonly-error', 'http-arity-error')) {
     $httpFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$httpInvalid.xps") -o (Join-Path $output $httpInvalid) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($httpFailure -join "`n") -notmatch "$httpInvalid.xps:(2|3):") { throw "HTTP diagnostic or source span lost: $httpInvalid" }
