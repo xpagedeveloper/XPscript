@@ -13,7 +13,13 @@ internal sealed class AdvancedXPScriptTranspiler
     {
         ["String"] = "string", ["Integer"] = "int", ["Long"] = "long", ["Double"] = "double",
         ["Single"] = "float", ["Boolean"] = "bool", ["Byte"] = "byte", ["Currency"] = "decimal",
-        ["Date"] = "DateTime", ["Variant"] = "dynamic", ["Object"] = "object", ["Byte[]"] = "byte[]", ["XPImage"] = "XPImage?"
+        ["Date"] = "DateTime", ["Variant"] = "dynamic", ["Object"] = "object", ["Byte[]"] = "byte[]", ["XPImage"] = "XPImage?",
+        ["SystemInventory"] = "object", ["SystemInventorySnapshot"] = "object",
+        ["SystemInventorySystemInfo"] = "object", ["SystemInventoryCpuInfo"] = "object",
+        ["SystemInventoryMemoryInfo"] = "object", ["SystemInventoryPhysicalDiskInfo"] = "object",
+        ["SystemInventoryVolumeInfo"] = "object", ["SystemInventoryGraphicsAdapterInfo"] = "object",
+        ["SystemInventoryNetworkAdapterInfo"] = "object", ["InstalledSoftwareInfo"] = "object",
+        ["XPAttachmentCollection"] = "object"
     };
 
     private static readonly string[] RuntimeFunctions =

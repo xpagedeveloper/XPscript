@@ -810,7 +810,7 @@ await File.WriteAllTextAsync(cliSource,diagnosticSource);
 async Task<JsonElement> CompileCliAsync(bool debug)
 {
     var cliPsi=new ProcessStartInfo("dotnet"){RedirectStandardOutput=true,RedirectStandardError=true,UseShellExecute=false,WorkingDirectory=repo};
-    foreach(var arg in new[]{"run","--project","src/XPScript.Compiler/XPScript.Compiler.csproj","-c","Release","--no-build","--","compile",cliSource,"--result-format","json"}) cliPsi.ArgumentList.Add(arg);
+    foreach(var arg in new[]{"run","--project","src/XPScript.Compiler/XPScript.Compiler.csproj","-c","Release","--no-build","--","compilev1",cliSource,"--result-format","json"}) cliPsi.ArgumentList.Add(arg);
     if(debug) cliPsi.ArgumentList.Add("--debug");
     using var cli=Process.Start(cliPsi) ?? throw new Exception("Could not start CLI compiler.");
     var stdout=await cli.StandardOutput.ReadToEndAsync();

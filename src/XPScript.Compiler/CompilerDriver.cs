@@ -601,6 +601,12 @@ public sealed class CompilerDriver
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
+            var stagedSourcePath = Path.Combine(tempRoot, Path.GetFileName(sourcePath));
+            if (!Path.GetFullPath(sourcePath).Equals(Path.GetFullPath(stagedSourcePath), StringComparison.OrdinalIgnoreCase))
+            {
+                CompilerSecureFileCopy.CopyValidatedRegularFile(sourcePath, stagedSourcePath, "XPScript source");
+                CompilerPathSecurity.HardenTemporaryFile(stagedSourcePath);
+            }
             if (IsAndroidRuntime(runtimeIdentifier))
             {
                 var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
