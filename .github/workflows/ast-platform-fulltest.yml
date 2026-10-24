@@ -12,6 +12,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ast-platform-fulltest-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ast-platform:
     name: AST ${{ matrix.name }}
