@@ -62,4 +62,17 @@ Sub Main()
     Call doc.CopyAllItems(doc, True)
     Set item = doc.CopyItem(item, "StatusCopy")
     Print doc.Remove(True)
+    Print docs.Count
+    Print docs.FirstNoteId
+    Set doc = docs.GetFirstDocument()
+    Set doc = docs.GetLastDocument()
+    Set doc = docs.GetNthDocument(1)
+    Set doc = docs.GetNextDocument(doc)
+    Set doc = docs.GetPrevDocument(doc)
+    Set doc = docs.GetDocument(1)
+    Set docs = docs.Clone()
+    Print docs.Contains(doc)
+    Call docs.Merge(doc)
+    Call docs.Intersect(doc)
+    Call docs.Subtract(doc)
 End Sub
