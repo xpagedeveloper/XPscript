@@ -35,28 +35,38 @@ function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
     $process = [System.Diagnostics.Process]::new()
     $process.StartInfo = $info
     [void]$process.Start()
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
     if (-not $process.WaitForExit(10000)) {
         $process.Kill($true)
         $process.WaitForExit()
-        return @{ TimedOut = $true; ExitCode = $null; Output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd() }
+        return @{ TimedOut = $true; ExitCode = $null; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
     }
-    return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd() }
+    return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
 }
 function Invoke-BoundedDotnetRun([string[]] $arguments, [int] $timeoutMilliseconds = 120000) {
-    $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
-    foreach ($argument in $arguments) { [void]$info.ArgumentList.Add($argument) }
-    $info.RedirectStandardOutput = $true
-    $info.RedirectStandardError = $true
-    $info.UseShellExecute = $false
-    $process = [System.Diagnostics.Process]::new()
-    $process.StartInfo = $info
-    [void]$process.Start()
-    if (-not $process.WaitForExit($timeoutMilliseconds)) {
-        $process.Kill($true)
-        $process.WaitForExit()
-        return @{ TimedOut = $true; ExitCode = $null; Output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd() }
+    $stdoutPath = [System.IO.Path]::GetTempFileName()
+    $stderrPath = [System.IO.Path]::GetTempFileName()
+    try {
+        $quotedArguments = @($arguments | ForEach-Object {
+            $argument = [string]$_
+            if ($argument -match '[\s"]') { '"' + $argument.Replace('"', '\\"') + '"' } else { $argument }
+        })
+        $process = Start-Process -FilePath 'dotnet' -ArgumentList $quotedArguments -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -NoNewWindow -PassThru
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        while (-not $process.HasExited -and $stopwatch.ElapsedMilliseconds -lt $timeoutMilliseconds) {
+            Start-Sleep -Milliseconds 100
+        }
+        if (-not $process.HasExited) {
+            $process.Kill($true)
+            $process.WaitForExit()
+            return @{ TimedOut = $true; ExitCode = $null; Output = (Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue) + (Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue) }
+        }
+        return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = (Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue) + (Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue) }
     }
-    return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $process.StandardOutput.ReadToEnd() + $process.StandardError.ReadToEnd() }
+    finally {
+        Remove-Item -LiteralPath $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
+    }
 }
 function Assert-HttpAccessorProbe {
     $probe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $root 'tests/AstHttpRuntimeProbe'), '-c', 'Release', '--no-restore', '--', $root, '--accessors-only')
