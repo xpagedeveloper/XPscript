@@ -1,0 +1,22 @@
+Option Declare
+
+Sub Main()
+    Dim args(3) As String
+    Dim result As Variant
+    Dim expected As String
+
+    expected = "meta & | < > ^ % ! $(XPSCRIPT_PHP2SHELL_SENTINEL)"
+    args(0) = "-NoLogo"
+    args(1) = "-NoProfile"
+    args(2) = "-File"
+    args(3) = "samples/shellexecute-argv-helper.ps1"
+    ReDim Preserve args(4)
+    args(4) = expected
+
+    result = ShellExecute("pwsh", args, 5000)
+    If result.ExitCode <> 0 Then Error 5, "ShellExecute shell-metacharacter child failed: " & result.Error
+    If result.Output <> expected Then Error 5, "Shell metacharacters were not preserved as one structured argument: " & result.Output
+    If Instr(result.Output, "XPSCRIPT_PHP2SHELL_EXECUTED") <> 0 Then Error 5, "Shell metacharacter input was executed."
+
+    Print "SHELLEXECUTE-SHELL-META=OK"
+End Sub

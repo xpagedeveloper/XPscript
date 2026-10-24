@@ -204,6 +204,12 @@ $shellArgsOutput = Join-Path $output 'shell-structured-arguments'
 dotnet $compiler ast-compile (Join-Path $root 'samples/shell-structured-arguments.xps') -o $shellArgsOutput
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $shellArgsOutput 'Generated.dll'))) { throw 'AST ShellArgs regression failed.' }
 Write-Host 'AST_SHELL_ARGS_OK'
+$shellMetaOutput = Join-Path $output 'shellexecute-shell-meta-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'shellexecute-shell-meta-next.xps') -o $shellMetaOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST ShellExecute shell-metacharacter regression compilation failed.' }
+$shellMetaResult = dotnet (Join-Path $shellMetaOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($shellMetaResult -join "`n") -notmatch 'SHELLEXECUTE-SHELL-META=OK') { throw 'AST ShellExecute shell-metacharacter regression failed.' }
+Write-Host 'AST_SHELLEXECUTE_SHELL_META_OK'
 $jsonSchemaOutput = Join-Path $output 'xpjsonschema-boolean-runtime'
 dotnet $compiler ast-compile (Join-Path $root 'samples/xpjsonschema-boolean-runtime.xps') -o $jsonSchemaOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST JSON schema boolean regression compilation failed.' }
