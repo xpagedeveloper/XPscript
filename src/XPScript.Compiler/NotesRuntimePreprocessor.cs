@@ -199,7 +199,12 @@ internal sealed class NotesRuntimePreprocessor
     {
         var args = rawArguments.Trim();
         if (!type.Equals("NotesSession", StringComparison.OrdinalIgnoreCase)) throw new CompilerException($"{type} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
-        if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("NotesSession requires the Notes/Domino runtime directory argument.");
-        return $"XPScriptNotes.CreateSession({args})";
+        // A parameterless NotesSession follows the legacy runtime contract: the
+        // generated runtime resolves Notes/Domino from the registry and notes.ini.
+        // Keep explicit runtime/ini arguments supported for callers that need to
+        // override autodetection.
+        return string.IsNullOrWhiteSpace(args)
+            ? "XPScriptNotes.CreateSession()"
+            : $"XPScriptNotes.CreateSession({args})";
     }
 }
