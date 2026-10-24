@@ -2,7 +2,8 @@ using System.Diagnostics;
 using System.Text.Json;
 
 var repo = Path.GetFullPath(args.Length > 0 ? args[0] : ".");
-var probeRoot = Path.Combine(Path.GetTempPath(), "XPScript-McpProbe-" + Guid.NewGuid().ToString("N"));
+var probeRoot = Path.Combine(repo, "out", "mcp-probe-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(probeRoot);
 var probeOutput = Path.Combine(probeRoot, "published-output");
 var psi = new ProcessStartInfo("dotnet") { RedirectStandardInput=true, RedirectStandardOutput=true, RedirectStandardError=true, UseShellExecute=false, WorkingDirectory=repo };
 psi.Environment["XPSCRIPT_TEMP_ROOT"] = probeRoot;
@@ -756,7 +757,7 @@ if (astDebugError.GetProperty("diagnosticCode").GetString()!=astErrors[0].GetPro
 var astSemanticDiagnostic=await CallAsync(new {jsonrpc="2.0",id=29,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main()\n    Print missingValue\nEnd Sub",filename="ast-semantic-error.xps"}}});
 var astSemanticError=astSemanticDiagnostic.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
 if (astSemanticError.GetProperty("diagnosticCode").GetString()!="XPS2008" || astSemanticError.GetProperty("category").GetString()!="semantic" || astSemanticError.GetProperty("file").GetString()!="ast-semantic-error.xps" || astSemanticError.GetProperty("line").GetInt32()!=2 || astSemanticError.GetProperty("position").GetInt32()!=11 || astSemanticError.GetProperty("endColumn").GetInt32()<=astSemanticError.GetProperty("position").GetInt32()) throw new Exception("AST MCP semantic diagnostics lost source mapping.");
-var astParityRoot=Path.Combine(Path.GetTempPath(),"XPScript","ast-parity",Guid.NewGuid().ToString("N"));
+var astParityRoot=Path.Combine(probeRoot,"ast-parity");
 Directory.CreateDirectory(astParityRoot);
 try
 {
@@ -802,7 +803,7 @@ var mcpNormalIdentity=DiagnosticIdentity(structured.GetProperty("errors")[0]);
 var mcpDebugIdentity=DiagnosticIdentity(structuredDebug.GetProperty("errors")[0]);
 if (mcpNormalIdentity != mcpDebugIdentity) throw new Exception($"MCP debug changed source diagnostic identity. normal={mcpNormalIdentity} debug={mcpDebugIdentity}");
 
-var cliRoot=Path.Combine(Path.GetTempPath(),"XPScript","mcp-parity",Guid.NewGuid().ToString("N"));
+var cliRoot=Path.Combine(probeRoot,"mcp-parity");
 Directory.CreateDirectory(cliRoot);
 var cliSource=Path.Combine(cliRoot,"agent.xps");
 await File.WriteAllTextAsync(cliSource,diagnosticSource);

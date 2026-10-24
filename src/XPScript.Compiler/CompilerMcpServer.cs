@@ -111,8 +111,7 @@ public static class CompilerMcpServer
             throw new McpException(-32602, "filename must be a simple .xps filename without a directory path.");
         var rid = GetOptionalString(arguments, "runtimeIdentifier") ?? CompilerDriver.CurrentRuntimeIdentifier();
         var debug = GetOptionalBoolean(arguments, "debug");
-        var root = Path.Combine(Path.GetTempPath(), "XPScript", "mcp", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root);
+        var root = CompilerPathSecurity.CreateOwnedTemporaryDirectory("mcp-validate-");
         try
         {
             var path = Path.Combine(root, filename);
@@ -123,7 +122,7 @@ public static class CompilerMcpServer
             foreach (var diagnostic in result.Errors) if (!string.IsNullOrWhiteSpace(diagnostic.File)) diagnostic.File = filename;
             return result;
         }
-        finally { try { Directory.Delete(root, true); } catch { } }
+        finally { try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(root); } catch { } }
     }
 
     private static async Task<object> AstValidateAsync(JsonElement arguments)
@@ -133,9 +132,8 @@ public static class CompilerMcpServer
         var filename = GetOptionalString(arguments, "filename") ?? "program.xps";
         if (!Path.GetFileName(filename).Equals(filename, StringComparison.Ordinal) || !Path.GetExtension(filename).Equals(".xps", StringComparison.OrdinalIgnoreCase))
             throw new McpException(-32602, "filename must be a simple .xps filename without a directory path.");
-        var root = Path.Combine(Path.GetTempPath(), "XPScript", "mcp-ast", Guid.NewGuid().ToString("N"));
+        var root = CompilerPathSecurity.CreateOwnedTemporaryDirectory("mcp-ast-");
         var debug = GetOptionalBoolean(arguments, "debug");
-        Directory.CreateDirectory(root);
         try
         {
             var sourcePath = Path.Combine(root, filename);
@@ -167,7 +165,7 @@ public static class CompilerMcpServer
         {
             return new { result = "error", source = new { entryPoint = filename }, compiler = "ast", errors = new[] { new { file = filename, line = 0, position = 0, endLine = 0, endColumn = 0, description = exception.Message, diagnosticCode = CompilerDiagnosticCodes.InternalCompilationFailed, severity = "error", category = "compiler" } } };
         }
-        finally { try { Directory.Delete(root, true); } catch { } }
+        finally { try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(root); } catch { } }
     }
 
     private static async Task<object> VirtualCompileAsync(JsonElement arguments)
