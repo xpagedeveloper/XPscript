@@ -43,10 +43,7 @@ public static class CompilerPathSecurity
         if (string.IsNullOrWhiteSpace(prefix))
             throw new ArgumentException("Temporary directory prefix must not be empty.", nameof(prefix));
 
-        var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
-        var logicalRoot = string.IsNullOrWhiteSpace(configuredRoot)
-            ? Path.Combine(Path.GetTempPath(), "XPScript")
-            : Path.Combine(Path.GetFullPath(configuredRoot), "XPScript");
+        var logicalRoot = GetLogicalTemporaryRoot();
         Directory.CreateDirectory(logicalRoot);
         var physicalRoot = CanonicalizeExistingDirectory(logicalRoot);
         var directory = Path.Combine(physicalRoot, prefix + Guid.NewGuid().ToString("N"));
@@ -95,7 +92,7 @@ public static class CompilerPathSecurity
     public static void DeleteOwnedTemporaryDirectory(string path)
     {
         var full = CanonicalizeExistingDirectory(Path.GetFullPath(path));
-        var logicalTempRoot = Path.Combine(Path.GetTempPath(), "XPScript");
+        var logicalTempRoot = GetLogicalTemporaryRoot();
         if (!Directory.Exists(logicalTempRoot)) return;
         var tempRoot = CanonicalizeExistingDirectory(logicalTempRoot);
         EnsureLexicallyContained(tempRoot, full, "Compiler temporary workspace", full);
@@ -126,6 +123,14 @@ public static class CompilerPathSecurity
         }
 
         if (lastError is not null) throw lastError;
+    }
+
+    private static string GetLogicalTemporaryRoot()
+    {
+        var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        return string.IsNullOrWhiteSpace(configuredRoot)
+            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            : Path.Combine(Path.GetFullPath(configuredRoot), "XPScript");
     }
 
     private static string CanonicalizeExistingDirectory(string path)

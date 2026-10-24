@@ -221,7 +221,7 @@ public static class CompilerMcpServer
             return new { result = "ok", compiler = "ast", source = new { entryPoint = filename }, output = outputPath, errors = Array.Empty<CompileDiagnostic>(), info = BuildInfo("compile", filename, GetOptionalString(arguments, "runtimeIdentifier"), outputDirectory, true) };
         }
         catch (Exception ex) { return new { result = "error", compiler = "ast", source = new { entryPoint = filename }, errors = new[] { new CompileDiagnostic { File = filename, Description = ex.Message, DiagnosticCode = CompilerDiagnosticCodes.InternalCompilationFailed, Category = "compiler" } }, info = BuildInfo("compile", filename, GetOptionalString(arguments, "runtimeIdentifier"), outputDirectory, true) }; }
-        finally { if (string.IsNullOrWhiteSpace(output)) try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(root); } catch { } }
+        finally { try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(root); } catch { } }
     }
 
     private static string ValidateFilename(string filename)
