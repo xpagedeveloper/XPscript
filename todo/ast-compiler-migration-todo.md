@@ -578,13 +578,13 @@ Initial implementation: expression conversions and a method-body emitter for ass
 ## Phase 10: Compatibility harness
 
 - [x] Build a corpus of existing XPscript samples and test programs. `tests/ast-compat` contains focused fixtures plus the repository sweep over representative `samples/` and `demo/` programs; the sweep records compatible successes and existing failures separately.
-- [ ] Run each compatible source through legacy and AST compiler paths.
-- [ ] Compare compile success/failure.
+- [x] Run each compatible source through legacy and AST compiler paths. The deterministic compatibility corpus contains 15 representative `.xps` sources and `tests/ast-compat/run-ast-compat.ps1` compiles and executes every one through both paths.
+- [x] Compare compile success/failure for the deterministic corpus and mapped negative fixtures. `run-ast-compat.ps1` verifies successful compilation on both paths, while `run-diagnostic-compat.ps1` verifies paired rejection and AST-only capability behavior.
 - [ ] Compare diagnostic locations and categories.
 - [ ] Run representative corpus cases through the MCP/AI machine compiler as well as the normal compiler.
 - [x] Compare CLI and machine/MCP compile success/failure for the same source. `CompilerMcpProtocolProbe` exercises shared valid fixtures through legacy and AST MCP validation and checks the AST CLI parity fixture.
 - [x] Compare CLI and machine/MCP structured diagnostics for the same source. The permanent protocol probe compares diagnostic code, source, line, column, span and message identity for normal/debug CLI and MCP paths.
-- [ ] Compare observable runtime output.
+- [x] Compare observable runtime output for the deterministic corpus. The compatibility harness requires exact legacy/AST output equality for all 15 fixtures; broader repository/demo behavior remains a separate audit.
 - [x] Compare generated target behavior for console on the supported desktop RIDs. The AST target matrix compiles and executes `shared-runtime.xps` for `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64`; the GitHub workflow runs the same target-specific compilation on matching hosted runners.
 - [ ] Compare web target behavior.
 - [ ] Compare desktop/Avalonia behavior.
