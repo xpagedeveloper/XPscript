@@ -2,8 +2,10 @@ using System.Diagnostics;
 using System.Text.Json;
 
 var repo = Path.GetFullPath(args.Length > 0 ? args[0] : ".");
+var probeRoot = Path.Combine(Path.GetTempPath(), "XPScript-McpProbe-" + Guid.NewGuid().ToString("N"));
+var probeOutput = Path.Combine(probeRoot, "published-output");
 var psi = new ProcessStartInfo("dotnet") { RedirectStandardInput=true, RedirectStandardOutput=true, RedirectStandardError=true, UseShellExecute=false, WorkingDirectory=repo };
-psi.Environment["XPSCRIPT_TEMP_ROOT"] = Path.Combine(Path.GetTempPath(), "XPScript-McpProbe-" + Guid.NewGuid().ToString("N"));
+psi.Environment["XPSCRIPT_TEMP_ROOT"] = probeRoot;
 foreach (var a in new[]{"run","--project","src/XPScript.Compiler/XPScript.Compiler.csproj","-c","Release","--no-build","--","mcp"}) psi.ArgumentList.Add(a);
 using var p=Process.Start(psi) ?? throw new Exception("Could not start MCP server.");
 async Task<JsonElement> CallAsync(object request) { await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(request)); await p.StandardInput.FlushAsync(); string line; try { line=await p.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30)) ?? throw new Exception("MCP server closed stdout."); } catch (TimeoutException ex) { if (!p.HasExited) p.Kill(entireProcessTree: true); throw new Exception("MCP server did not respond within 30 seconds.", ex); } try { using var d=JsonDocument.Parse(line); return d.RootElement.Clone(); } catch { throw new Exception("Non-JSON data leaked to MCP stdout: "+line); } }
@@ -33,7 +35,7 @@ var virtualCompile = await CallAsync(new { jsonrpc="2.0", id="virtual-compile", 
 var virtualContent = virtualCompile.GetProperty("result").GetProperty("structuredContent");
 if (virtualContent.GetProperty("result").GetString() != "ok" || virtualContent.GetProperty("compiler").GetString() != "ast" || virtualContent.GetProperty("info").GetProperty("info").GetBoolean() != true)
     throw new Exception("MCP virtual AST compile did not return successful extended info: " + virtualCompile);
-var realCompile = await CallAsync(new { jsonrpc="2.0", id="real-compile", method="tools/call", @params=new { name="xpscript_compile", arguments=new { source="Sub Main()\nEnd Sub", filename="real-compile.xps", runtimeIdentifier="win-x64", debug=true, securityMode="warn" } } });
+var realCompile = await CallAsync(new { jsonrpc="2.0", id="real-compile", method="tools/call", @params=new { name="xpscript_compile", arguments=new { source="Sub Main()\nEnd Sub", filename="real-compile.xps", outputDirectory=probeOutput, runtimeIdentifier="win-x64", debug=true, securityMode="warn" } } });
 var realContent = realCompile.GetProperty("result").GetProperty("structuredContent");
 if (realContent.GetProperty("result").GetString() != "ok" || realContent.GetProperty("compiler").GetString() != "ast" || !File.Exists(realContent.GetProperty("output").GetString()))
     throw new Exception("MCP real AST compile did not produce an output artifact: " + realCompile);

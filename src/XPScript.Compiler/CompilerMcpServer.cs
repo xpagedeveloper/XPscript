@@ -199,7 +199,10 @@ public static class CompilerMcpServer
         var filename = ValidateFilename(GetOptionalString(arguments, "filename") ?? "program.xps");
         var root = CompilerPathSecurity.CreateOwnedTemporaryDirectory("mcp-compile-");
         var output = GetOptionalString(arguments, "outputDirectory");
-        var outputDirectory = string.IsNullOrWhiteSpace(output) ? Path.Combine(root, "output") : Path.GetFullPath(output);
+        // The request root is for source/staging files only. Published output must
+        // survive request cleanup; when the caller does not provide an output
+        // directory, use the server working directory rather than the temp root.
+        var outputDirectory = string.IsNullOrWhiteSpace(output) ? Environment.CurrentDirectory : Path.GetFullPath(output);
         Directory.CreateDirectory(root);
         var sourcePath = Path.Combine(root, filename);
         try
