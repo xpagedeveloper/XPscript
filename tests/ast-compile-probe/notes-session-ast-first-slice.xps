@@ -88,4 +88,22 @@ Sub Main()
     Call docs.StampAll("Status", "Open")
     Call docs.StampAllMulti(doc)
     Call docs.RemoveAll(True)
+    Print item.Name
+    Print item.Text
+    Print item.Type
+    Print item.ValueLength
+    Print item.IsAuthors
+    Print item.IsEncrypted
+    Print item.IsNames
+    Print item.IsProtected
+    Print item.IsReaders
+    Print item.IsSigned
+    Print item.IsSummary
+    Print item.Values
+    Set created = item.LastModified
+    Set created = item.DateTimeValue
+    Set item = item.CopyToDocument(doc)
+    Set item = item.CopyToDocument(doc, "StatusCopy2")
+    Call item.SaveAttachment("file.txt", "file.txt")
+    Call item.Remove()
 End Sub

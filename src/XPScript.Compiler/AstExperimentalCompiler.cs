@@ -382,6 +382,12 @@ public static class AstExperimentalCompiler
             DeclareNativeStatic(symbols, "XPScriptNotes.RecycleForReplacement", [typeof(object), typeof(object)], "XPScriptNotes.RecycleForReplacement");
             DeclareNativeStatic(symbols, "XPScriptNotes.NormalizeObjectResult", [typeof(object)], "XPScriptNotes.NormalizeObjectResult");
             DeclareNativeStatic(symbols, "XPScriptNotes.NothingValue", [], "XPScriptNotes.NothingValue");
+            symbols.Declare(new TypeSymbol("XPScriptNotesValueApi", typeof(object), XpTypeSymbol.User("XPScriptNotesValueApi")));
+            symbols.Declare(new VariableSymbol("XPScriptNotesValueApi", typeof(object), XpTypeSymbol.User("XPScriptNotesValueApi")));
+            DeclareNativeStatic(symbols, "XPScriptNotesValueApi.GetItemValues", [typeof(object)], "XPScriptNotesValueApi.GetItemValues");
+            DeclareNativeStatic(symbols, "XPScriptNotesValueApi.GetItemValueAt", [typeof(object), typeof(object)], "XPScriptNotesValueApi.GetItemValueAt");
+            DeclareNativeStatic(symbols, "XPScriptNotesValueApi.GetDocumentItemValues", [typeof(object), typeof(object)], "XPScriptNotesValueApi.GetDocumentItemValues");
+            DeclareNativeStatic(symbols, "XPScriptNotesValueApi.GetDocumentItemValueAt", [typeof(object), typeof(object), typeof(object)], "XPScriptNotesValueApi.GetDocumentItemValueAt");
         }
         symbols.Declare(new TypeSymbol("XPScriptIncrementRuntime", typeof(object), XpTypeSymbol.User("XPScriptIncrementRuntime")));
         symbols.Declare(new VariableSymbol("XPScriptIncrementRuntime", typeof(object), XpTypeSymbol.User("XPScriptIncrementRuntime")));
