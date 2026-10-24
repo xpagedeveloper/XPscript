@@ -55,10 +55,21 @@ public sealed class StatementParser
         if (IsIdentifier("Const"))
         {
             var start = Current.Span.Start;
+            NextToken();
+            var name = Match(SyntaxKind.IdentifierToken);
+            string? typeName = null;
+            if (Current.Kind == SyntaxKind.AsKeyword)
+            {
+                NextToken();
+                typeName = Match(SyntaxKind.IdentifierToken).Text;
+            }
+            Match(SyntaxKind.EqualsToken);
+            var value = Current;
+            NextToken();
             while (Current.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken)
                 NextToken();
             var end = Current.Span.Start;
-            return new ConstStatementSyntax(new TextSpan(start, end - start));
+            return new ConstStatementSyntax(name.Text, typeName, value, new TextSpan(start, end - start));
         }
         if (Current.Kind is SyntaxKind.GoToKeyword or SyntaxKind.GoSubKeyword)
         {

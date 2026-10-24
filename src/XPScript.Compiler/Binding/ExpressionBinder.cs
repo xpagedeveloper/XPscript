@@ -91,7 +91,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         // error for the recovery token.
         if (_allowDynamicMembers && string.IsNullOrEmpty(name))
             return new BoundLiteralExpression(null, typeof(object));
-        if (_symbols.TryLookup(name, out var symbol) &&
+        if (_symbols.TryLookup(name, out var symbol) && symbol is ConstantSymbol constant)
+            return new BoundLiteralExpression(constant.Value, constant.Type, constant.SemanticType);
+        if (_symbols.TryLookup(name, out symbol) &&
             symbol is VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol)
             return new BoundNameExpression(symbol);
         if (_symbols.LookupAll(name).OfType<FunctionSymbol>().FirstOrDefault(function => function.ParameterTypes.Count == 0) is { } zeroArgumentFunction)

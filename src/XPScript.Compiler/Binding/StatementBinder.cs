@@ -20,7 +20,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     {
         BoundStatement? bound = syntax switch
         {
-            ConstStatementSyntax => new BoundNoOpStatement(),
+            ConstStatementSyntax constant => BindConst(constant),
             AssignmentStatementSyntax assignment => BindAssignment(assignment.Target, assignment.Expression),
             DimStatementSyntax dim => BindDim(dim),
             SetStatementSyntax set => BindAssignment(set.Target, set.Expression, isSet: true),
@@ -46,6 +46,35 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         if (bound is not null)
             bound.Span = syntax.Span;
         return bound;
+    }
+
+    private BoundStatement BindConst(ConstStatementSyntax syntax)
+    {
+        var value = syntax.ValueToken.Value ?? syntax.ValueToken.Kind switch
+        {
+            SyntaxKind.TrueKeyword => true,
+            SyntaxKind.FalseKeyword => false,
+            _ => null
+        };
+        var type = value switch
+        {
+            bool => typeof(bool),
+            long => typeof(long),
+            double => typeof(double),
+            string => typeof(string),
+            _ => typeof(object)
+        };
+        var semanticType = syntax.TypeName is null ? XpTypeSymbol.FromClr(type) : syntax.TypeName.Trim().ToUpperInvariant() switch
+        {
+            "BOOLEAN" => XpTypeSymbol.FromClr(typeof(bool)),
+            "STRING" => XpTypeSymbol.FromClr(typeof(string)),
+            "INTEGER" or "LONG" => XpTypeSymbol.FromClr(typeof(long)),
+            "SINGLE" or "DOUBLE" or "CURRENCY" => XpTypeSymbol.FromClr(typeof(double)),
+            _ => XpTypeSymbol.Variant
+        };
+        if (!_symbols.TryDeclare(new ConstantSymbol(syntax.Name, value, type, semanticType), out var code, out var message))
+            _diagnostics.Add(new SyntaxDiagnostic(code!, message!, syntax.Span));
+        return new BoundNoOpStatement();
     }
 
     private BoundStatement? BindTransfer(GoToStatementSyntax syntax)

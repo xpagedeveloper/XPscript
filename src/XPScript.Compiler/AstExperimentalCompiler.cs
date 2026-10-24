@@ -232,13 +232,17 @@ public static class AstExperimentalCompiler
             .Select(declaration => Regex.Match(declaration.Text, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+?)\s*$", RegexOptions.IgnoreCase))
             .Where(match => match.Success)
             .ToArray();
-        // Procedure-level Const statements are represented as no-op syntax today;
-        // retain their compatibility visibility until local constant symbols are lowered.
-        var compatibilityConstants = Regex.Matches(fullSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
+        var moduleConstants = Regex.Matches(moduleSource, @"^\s*Const\s+(?<name>[A-Za-z_]\w*)\s*(?:As\s+\w+\s*)?=\s*(?<value>.+)$", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>()
-            .Where(match => !applicationConstants.Any(application => application.Groups["name"].Value.Equals(match.Groups["name"].Value, StringComparison.OrdinalIgnoreCase)))
             .ToArray();
-        var allConstants = applicationConstants.Concat(compatibilityConstants).ToArray();
+        // Module-level constants are emitted as fields. Procedure-level Const
+        // declarations are bound structurally by StatementBinder and remain
+        // local to the procedure.
+        var allConstants = applicationConstants
+            .Concat(moduleConstants)
+            .GroupBy(match => match.Groups["name"].Value, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToArray();
         var moduleArrayDeclarations = Regex.Matches(AstModuleFieldSupport.DeclarationSource(fullSource), @"(?im)^\s*(?:(?:Public|Private)\s+)?(?:Dim\s+)?(?<name>[A-Za-z_]\w*)\s*\((?<bounds>[^\r\n]*)\)\s+As\s+(?<type>[A-Za-z_]\w*)")
             .Cast<Match>()
             .ToArray();

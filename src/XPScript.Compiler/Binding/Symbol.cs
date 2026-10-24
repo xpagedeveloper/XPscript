@@ -28,6 +28,11 @@ public abstract record Symbol(string Name)
     public abstract SymbolKind Kind { get; }
 }
 
+public sealed record ConstantSymbol(string Name, object? Value, Type Type, XpTypeSymbol? SemanticType = null) : Symbol(Name)
+{
+    public override SymbolKind Kind => SymbolKind.Variable;
+}
+
 public sealed record VariableSymbol(string Name, Type Type, XpTypeSymbol? SemanticType = null) : Symbol(Name)
 {
     public override SymbolKind Kind => SymbolKind.Variable;
