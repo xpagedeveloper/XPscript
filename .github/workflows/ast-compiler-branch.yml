@@ -35,6 +35,8 @@ jobs:
         run: dotnet run --project ./tests/ast-compile-probe/AstCompileProbe.csproj -c Release
       - name: Run Android compiler metadata probe
         run: dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
+      - name: Install WebAssembly workload
+        run: dotnet workload install wasm-tools
       - name: Verify browser WASM AST target
         shell: pwsh
         run: |
