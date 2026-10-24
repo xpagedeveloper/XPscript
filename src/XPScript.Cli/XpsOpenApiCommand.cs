@@ -222,7 +222,7 @@ internal static class XpsOpenApiCommand
 Usage:
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
   xpscript openapi import <spec.yaml|spec.yml|spec.json> [-o output.xps] [--operation operationId|path] [--status-file status.json]
-  xpscript openapi client generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--class ApiClass]
+  xpscript openapi client generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--class ApiClass] [--operation operationId|path]
 
 `generate` and `import` retain their existing REST server behavior.
 `client generate` creates an XPHttpClient-based API consumer.
