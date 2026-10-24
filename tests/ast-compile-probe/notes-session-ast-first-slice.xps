@@ -8,6 +8,9 @@ Sub Main()
     Dim docs As NotesDocumentCollection
     Dim agentResult As NotesAgentResult
     Dim noteCollection As NotesNoteCollection
+    Dim access As NotesDatabaseAccess
+    Dim created As NotesDateTime
+    Dim modified As NotesDocumentCollection
     Set session = New NotesSession("runtime")
     Print session.UserName
     Print session.Platform
@@ -26,4 +29,13 @@ Sub Main()
     Set agentResult = db.RunAgent("RefreshCustomers", doc)
     Set doc = db.CreateDocument()
     Set noteCollection = db.CreateNoteCollection(True)
+    Set docs = db.AllDocuments
+    Set doc = db.GetProfileDocument("Profile")
+    Set created = db.Created
+    Set created = db.LastModified
+    Print db.FileFormat
+    Set access = db.QueryAccess()
+    Set modified = db.GetModifiedDocuments()
+    Set docs = db.CreateDocumentCollection()
+    Call db.RemoveFTIndex()
 End Sub
