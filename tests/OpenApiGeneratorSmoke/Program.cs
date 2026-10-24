@@ -34,6 +34,36 @@ if (args is ["--verify-definition-client-scoped", var scopedDefinitionPath])
     return;
 }
 
+if (args is ["--verify-import-limits"])
+{
+    var paths = new JsonObject();
+    foreach (var index in Enumerable.Range(1, 301))
+        paths[$"/limit-{index}"] = new JsonObject
+        {
+            ["get"] = new JsonObject
+            {
+                ["operationId"] = $"LimitEndpoint{index}",
+                ["responses"] = new JsonObject { ["200"] = new JsonObject { ["description"] = "OK" } }
+            }
+        };
+    var specification = new JsonObject
+    {
+        ["openapi"] = "3.0.3",
+        ["info"] = new JsonObject { ["title"] = "OpenAPI endpoint limit regression", ["version"] = "1.0" },
+        ["paths"] = paths
+    };
+    try
+    {
+        _ = new XpsOpenApiImporter().Import(specification.ToJsonString(), "", "endpoint-limit.json");
+        throw new Exception("OpenAPI import should reject specifications over the 300-endpoint limit.");
+    }
+    catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("at most 300 endpoints", StringComparison.Ordinal))
+    {
+        Console.WriteLine("OPENAPI-IMPORT-ENDPOINT-LIMIT=OK");
+        return;
+    }
+}
+
 VerifyClientRegeneration();
 if (args is ["--regeneration-only"]) return;
 
@@ -520,6 +550,33 @@ try
 catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("at most 300 classes/schemas", StringComparison.Ordinal))
 {
     Console.WriteLine("OPENAPI-IMPORT-CLASS-LIMIT=OK");
+}
+
+var endpointLimitSpecification = new JsonObject
+{
+    ["openapi"] = "3.0.3",
+    ["info"] = new JsonObject { ["title"] = "OpenAPI endpoint limit regression", ["version"] = "1.0" },
+    ["paths"] = new JsonObject()
+};
+var endpointLimitPaths = (JsonObject)endpointLimitSpecification["paths"]!;
+foreach (var index in Enumerable.Range(1, 301))
+    endpointLimitPaths[$"/limit-{index}"] = new JsonObject
+    {
+        ["get"] = new JsonObject
+        {
+            ["operationId"] = $"LimitEndpoint{index}",
+            ["responses"] = new JsonObject { ["200"] = new JsonObject { ["description"] = "OK" } }
+        }
+    };
+
+try
+{
+    _ = new XpsOpenApiImporter().Import(endpointLimitSpecification.ToJsonString(), "", "endpoint-limit.json");
+    throw new Exception("OpenAPI import should reject specifications over the 300-endpoint limit.");
+}
+catch (XpsOpenApiGenerationException ex) when (ex.Message.Contains("at most 300 endpoints", StringComparison.Ordinal))
+{
+    Console.WriteLine("OPENAPI-IMPORT-ENDPOINT-LIMIT=OK");
 }
 
 var fortnoxImportSpecification = """
