@@ -362,11 +362,11 @@ execute
 ### Cache key
 
 - [x] Cache by canonical root/source identity, not only URL text.
-- [ ] Include compiler version in cache identity.
-- [ ] Include target/runtime/code-generation options in cache identity.
-- [ ] Include configured preprocessor identities + versions + ordering in cache identity.
-- [ ] Include the root source and every included source dependency in invalidation/hash calculation.
-- [ ] Include relevant project/reference/native dependency configuration.
+- [x] Include compiler version in cache identity; `XPScriptCompilationSnapshotBuilder` records the compiler informational version.
+- [x] Include target/runtime/code-generation options in cache identity; the snapshot records the runtime identifier and effective web compiler configuration.
+- [x] Include configured preprocessor identities + versions + ordering in cache identity; `XpsWebCompilationCache` includes the ordered active preprocessor specifications.
+- [x] Include the root source and every included source dependency in invalidation/hash calculation; `WebDispatcherSmoke` verifies root and include edits.
+- [x] Include relevant project/reference/native dependency configuration; web snapshots include managed and native external inputs and invalidate when they change.
 - [x] Prevent one site/tenant from receiving another site's cached executable.
 
 ### Invalidation
