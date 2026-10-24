@@ -106,4 +106,24 @@ Sub Main()
     Set item = item.CopyToDocument(doc, "StatusCopy2")
     Call item.SaveAttachment("file.txt", "file.txt")
     Call item.Remove()
+    Print access.Parent.FilePath
+    Print access.UserName
+    Print access.Level
+    Print access.LevelName
+    Print access.AccessFlags
+    Print access.NamesList
+    Print access.Groups
+    Print access.Roles
+    Print access.CannotCreateDocuments
+    Print access.IsServerEntry
+    Print access.CannotDeleteDocuments
+    Print access.CanCreatePersonalAgents
+    Print access.CanCreatePersonalFolders
+    Print access.IsPersonEntry
+    Print access.IsGroupEntry
+    Print access.CanCreateSharedFolders
+    Print access.CanCreateLotusScriptAgents
+    Print access.IsPublicReader
+    Print access.IsPublicWriter
+    Print access.CannotReplicateOrCopy
 End Sub

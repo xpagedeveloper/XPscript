@@ -37,7 +37,7 @@ internal static class AstObjectSupportRegistry
         "XPJsonArray",
         "XPJsonObject",
         "XPJsonElement", "XPJsonValidationResult", "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall", "XPAttachmentCollection", "Path",
-        "NotesHTTPRequest", "XPNotesHTTPRequest", "NotesSession", "NotesDatabase", "NotesDocument", "NotesDocumentCollection", "NotesItem",
+        "NotesHTTPRequest", "XPNotesHTTPRequest", "NotesSession", "NotesDatabase", "NotesDatabaseAccess", "NotesDocument", "NotesDocumentCollection", "NotesItem",
         "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
         "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
         "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
@@ -56,7 +56,7 @@ internal static class AstObjectSupportRegistry
         "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement",
         "XPSpreadsheet", "XPWorksheet", "XPCell", "XPRange",
         "UIForm", "UIListView"
-        ,"NotesMail", "NotesDatabaseAccess", "NotesView",
+        ,"NotesMail", "NotesView",
         "NotesNoteCollection", "NotesRichTextItem", "NotesRichTextNavigator",
         "NotesRichTextParagraphStyle", "NotesRichTextRange", "NotesRichTextSection", "NotesRichTextStyle",
         "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink", "NotesName", "NotesDateTime",
