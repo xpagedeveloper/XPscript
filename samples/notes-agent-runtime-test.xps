@@ -26,12 +26,19 @@ Sub Main()
 
     Print "AGENT-NAME=" & agent.Name
     Print "AGENT-OWNER=" & agent.Owner
+    Print "AGENT-COMMON-OWNER=" & agent.CommonOwner
     Print "AGENT-COMMENT=" & agent.Comment
+    Print "AGENT-HAS-RUN-SINCE-MODIFIED=" & CStr(agent.HasRunSinceModified)
     Print "AGENT-ENABLED=" & CStr(agent.IsEnabled)
+    Print "AGENT-IS-NOTES-AGENT=" & CStr(agent.IsNotesAgent)
+    Print "AGENT-IS-PUBLIC=" & CStr(agent.IsPublic)
     Print "AGENT-TRIGGER=" & CStr(agent.Trigger)
     Print "AGENT-TARGET=" & CStr(agent.Target)
     Print "AGENT-HTTP-URL=" & agent.HttpURL
     Print "AGENT-ON-BEHALF-OF=" & agent.OnBehalfOf
+    Print "AGENT-NOTES-URL=" & agent.NotesURL
+    Print "AGENT-PARAMETER-DOC-ID=" & agent.ParameterDocID
+    Print "AGENT-SERVER-NAME=" & agent.ServerName
 
     result = agent.Run()
     Print "AGENT-RUN=" & CStr(result)
