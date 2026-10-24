@@ -1504,8 +1504,9 @@ foreach ($classInvalid in @('class-method-scope-error', 'class-method-private-er
 }
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-case.xps') -o (Join-Path $output 'class-method-case')
 if ($LASTEXITCODE -ne 0) { throw 'AST case-insensitive class method compilation failed.' }
-$classCaseResult = dotnet (Join-Path $output 'class-method-case/Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($classCaseResult -join "`n") -ne '3') { throw 'AST case-insensitive class member execution failed.' }
+$classCaseProbe = Invoke-BoundedDotnetRun @((Join-Path $output 'class-method-case/Generated.dll'))
+if ($classCaseProbe.TimedOut) { throw 'AST case-insensitive class member execution timed out.' }
+if ($classCaseProbe.ExitCode -ne 0 -or $classCaseProbe.Output.Trim() -ne '3') { throw "AST case-insensitive class member execution failed.`n$($classCaseProbe.Output)" }
 $spreadsheetProject = Join-Path $root 'tests/AstSpreadsheetRuntimeProbe/AstSpreadsheetRuntimeProbe.csproj'
 $spreadsheetBuild = Invoke-BoundedDotnetRun @('build', $spreadsheetProject, '-c', 'Release', '--no-restore', '-p:UseSharedCompilation=false', '-p:UseAppHost=false', '-m:1')
 if ($spreadsheetBuild.TimedOut) { throw 'AST native spreadsheet runtime probe build timed out.' }
