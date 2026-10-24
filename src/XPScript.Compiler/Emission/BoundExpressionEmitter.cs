@@ -179,6 +179,7 @@ public sealed class BoundExpressionEmitter
         "XPAITOOLCALL" => "XPScriptAiToolCall",
         "NOTESMIMEENTITY" => "XPScriptNotesMIMEEntity",
         "NOTESMIMEHEADER" => "XPScriptNotesMIMEHeader",
+        "NOTESEMBEDDEDOBJECT" => "XPScriptNotesEmbeddedObject",
         "PATH" => "XpPath",
         _ => null
     });

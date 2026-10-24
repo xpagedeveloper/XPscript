@@ -40,6 +40,7 @@ internal static class AstObjectSupportRegistry
         "NotesHTTPRequest", "XPNotesHTTPRequest", "NotesSession", "NotesMail", "NotesStream", "NotesAgent", "NotesDXLImporter", "NotesDXLExporter", "NotesDatabase", "NotesDatabaseAccess", "NotesView", "NotesNoteCollection", "NotesDateTime", "NotesName", "NotesDocument", "NotesDocumentCollection", "NotesItem",
         "NotesRichTextItem", "NotesRichTextNavigator", "NotesRichTextParagraphStyle", "NotesRichTextRange", "NotesRichTextSection", "NotesRichTextStyle", "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink",
         "NotesMIMEEntity", "NotesMIMEHeader",
+        "NotesEmbeddedObject",
         "NotesViewEntry",
         "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
         "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
@@ -55,12 +56,10 @@ internal static class AstObjectSupportRegistry
         "NetworkHostResult", "NetworkSubnetInfo", "NetworkTlsVersionResult", "NetworkCertificateResult",
         "NetworkHttpHeadersResult", "NetworkHttpSecurityHeadersResult", "NetworkRedirectResult", "NetworkBannerResult",
         "NetworkPortExposureInfo",
-        "NotesEmbeddedObject",
         "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement",
         "XPSpreadsheet", "XPWorksheet", "XPCell", "XPRange",
         "UIForm", "UIListView",
-        "NotesEmbeddedObject"
-        ,"XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn"
+        "XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn"
         ,"XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
         "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection"
         ,"XPHttpDbSupabase", "XPHttpDbDominoRest", "XPAITool", "XPAiResponse"

@@ -105,6 +105,12 @@ public sealed class SymbolTable
         // compiler catalog. Keep the AST binder aligned with that generated
         // runtime surface.
         Declare(new PropertySymbol("NotesEmbeddedObject.FileCreated", typeof(object), XpTypeSymbol.User("NotesDateTime")));
+        foreach (var property in new[] { "FileEncoding", "FileModified", "FileSize", "Name", "Parent", "Source", "Type" })
+            Declare(new PropertySymbol("NotesEmbeddedObject." + property, typeof(object), XpTypeSymbol.Variant));
+        Declare(new FunctionSymbol("NotesEmbeddedObject.ExtractFile", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        Declare(new FunctionSymbol("NotesEmbeddedObject.ToByteArray", typeof(object), Array.Empty<Type>(), XpTypeSymbol.Variant, Array.Empty<XpTypeSymbol>()));
+        Declare(new FunctionSymbol("NotesEmbeddedObject.Remove", typeof(object), Array.Empty<Type>(), XpTypeSymbol.Variant, Array.Empty<XpTypeSymbol>()));
+        Declare(new FunctionSymbol("NotesEmbeddedObject.Recycle", typeof(object), Array.Empty<Type>(), XpTypeSymbol.Variant, Array.Empty<XpTypeSymbol>()));
         Declare(new VariableSymbol("XPScriptNotesConst.SEARCH_DEPTH", typeof(long), XpTypeSymbol.Variant));
         ImportNotesMimeOverloads();
         ImportXPAiOverloads();
