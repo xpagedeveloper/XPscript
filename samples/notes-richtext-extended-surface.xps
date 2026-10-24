@@ -1,0 +1,53 @@
+' Compile-only coverage for the remaining rich-text members.
+Option Declare
+
+Sub CompileRichTextSurface()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim doc As NotesDocument
+    Dim rich As NotesRichTextItem
+    Dim nav As NotesRichTextNavigator
+    Dim style As NotesRichTextStyle
+    Dim paragraph As NotesRichTextParagraphStyle
+    Dim tab As NotesRichTextTab
+
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", "apps\customers.nsf")
+    Set doc = db.CreateDocument()
+    Set rich = doc.CreateRichTextItem("Body")
+    Set nav = rich.CreateNavigator()
+    Set style = session.CreateRichTextStyle()
+    Set paragraph = session.CreateRichTextParagraphStyle()
+    Set tab = paragraph.SetTab(1440, 0)
+
+    Call rich.AppendTable(1, 1)
+    Call nav.FindLastElement(1)
+    Call nav.FindNextElement()
+    Call nav.FindNextString("text", nav.RT_FIND_CASEINSENSITIVE)
+    Call nav.FindNthElement(1, 1)
+    Print nav.RTELEM_TYPE_DOCLINK
+    Print nav.RTELEM_TYPE_FILEATTACHMENT
+    Print nav.RTELEM_TYPE_OLE
+    Print nav.RTELEM_TYPE_SECTION
+    Print nav.RTELEM_TYPE_TABLE
+    Print nav.RTELEM_TYPE_TABLECELL
+    Print nav.RTELEM_TYPE_TEXTPARAGRAPH
+    Print nav.RTELEM_TYPE_TEXTRUN
+    Print nav.RT_FIND_ACCENTINSENSITIVE
+    Print nav.RT_FIND_CASESENSITIVE
+    Print nav.RT_FIND_PITCHINSENSITIVE
+
+    style.Effects = 1
+    Print style.IsDefault
+    style.PassThruHTML = True
+    paragraph.InterLineSpacing = 1
+    paragraph.SpacingAbove = 0
+    paragraph.SpacingBelow = 0
+    Call paragraph.ClearAllTabs()
+    Print paragraph.Tabs
+    Call tab.Clear()
+End Sub
+
+Sub Main()
+    Print "NOTES-RICHTEXT-EXTENDED-SURFACE=COMPILED"
+End Sub

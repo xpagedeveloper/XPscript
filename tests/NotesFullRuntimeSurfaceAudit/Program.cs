@@ -30,6 +30,7 @@ var samplePaths = new[]
     ,Path.Combine(repoRoot, "samples", "notes-view-navigation-v3-domino-runtime-test.xps")
     ,Path.Combine(repoRoot, "samples", "notes-view-navigator-cache-policy-compile.xps")
     ,Path.Combine(repoRoot, "samples", "notes-view-navigator-entry-extended-surface.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-richtext-extended-surface.xps")
 };
 foreach (var samplePath in samplePaths)
 {
