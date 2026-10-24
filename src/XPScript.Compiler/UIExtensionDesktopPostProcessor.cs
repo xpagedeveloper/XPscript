@@ -116,9 +116,13 @@ internal sealed class UIExtensionDesktopPostProcessor
 
         var needsListView = NeedsListView(generated);
 
-        var replaced = ShowDialogPattern.Replace(generated, Replacement, 1);
-        if (ReferenceEquals(replaced, generated) || string.Equals(replaced, generated, StringComparison.Ordinal))
-            throw new CompilerException("Unable to install the desktop UIForm runtime bridge into generated code.");
+        var replaced = generated;
+        if (generated.Contains("public string ShowDialog()", StringComparison.Ordinal))
+        {
+            replaced = ShowDialogPattern.Replace(generated, Replacement, 1);
+            if (ReferenceEquals(replaced, generated) || string.Equals(replaced, generated, StringComparison.Ordinal))
+                throw new CompilerException("Unable to install the desktop UIForm runtime bridge into generated code.");
+        }
 
         replaced = RewriteDialogCalls(replaced);
         replaced = replaced
@@ -128,6 +132,9 @@ internal sealed class UIExtensionDesktopPostProcessor
             + "\n";
 
         replaced = NormalizeLineEndings(replaced);
+        if (!replaced.Contains("internal sealed class XPScriptUIForm", StringComparison.Ordinal))
+            return replaced;
+
         replaced = new UIFormWindowLifecyclePostProcessor().Transform(replaced);
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
         replaced = new UIFormActionModelPostProcessor().Transform(replaced);
