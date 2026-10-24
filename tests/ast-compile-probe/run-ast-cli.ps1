@@ -24,7 +24,7 @@ $compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
 if (-not (Test-Path -LiteralPath $compiler)) { throw "Compiler DLL not found: $compiler" }
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
-$output = Join-Path $outputRoot 'ast-cli'
+$output = Join-Path $outputRoot ('ast-cli/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
     $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
