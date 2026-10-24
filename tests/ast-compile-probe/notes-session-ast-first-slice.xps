@@ -2,7 +2,15 @@ Option Declare
 
 Sub Main()
     Dim session As NotesSession
+    Dim db As NotesDatabase
     Set session = New NotesSession("runtime")
     Print session.UserName
     Print session.Platform
+    Set db = session.OpenDatabase("", "apps\customers.nsf")
+    Print db.Server
+    Print db.FilePath
+    Print db.FileName
+    Print db.IsOpen
+    Print db.ReplicaID
+    Print db.Title
 End Sub
