@@ -32,7 +32,7 @@ Updated 2026-10-23 on branch `investigate-ast-compiler`.
 
 ## Required continuation
 
-1. Continue the complete legacy command-line parameter audit; desktop/console target aliases and the configured temp-root behavior are now covered, while broader diagnostic and execution parity remains open.
+1. The complete legacy command-line parameter audit is covered by the compatibility suite; remaining work is limited to broader language and target migration gates.
 2. If the next point fails, isolate the failing probe, add or update focused regression coverage, run the focused test and relevant build, then commit and push the fix.
 3. After each accepted green item, create a descriptive commit and push it to GitHub.
 4. Run Graphify after source changes. Use `C:\Python315\Scripts\graphify.exe update .` while the `.local\\bin` trampoline still fails to canonicalize its script path.
@@ -41,7 +41,7 @@ Updated 2026-10-23 on branch `investigate-ast-compiler`.
 
 The completed run covered the AST CLI language/runtime probes, including constructors, destructors, properties, indexed properties, arrays/redim, lists, ByRef/reference storage, XML/CSV/JSON, HTTP/XPAI, XPImage, Notes HTTP, control flow, static initialization, and object/class lifecycle.
 
-The legacy command-line compatibility baseline passes with `tests/cli-compatibility/run-cli-compatibility.ps1` (`CLI_COMMAND_LINE_COMPATIBILITY_OK`). It now also verifies successful legacy `--target desktop` and `--target console` output; broader legacy option diagnostics and execution parity remain open in `todo/ast-compiler-migration-todo.md`.
+The legacy command-line compatibility baseline passes with `tests/cli-compatibility/run-cli-compatibility.ps1` (`CLI_COMMAND_LINE_COMPATIBILITY_OK`). It verifies legacy target output, aliases, diagnostics and execution semantics.
 
 The AST target-matrix probe also passed with `TARGET_MATRIX_OK` after an external NuGet restore. The probe verifies the configured desktop/browser target metadata and target routing; physical Android device/emulator validation remains a local setup gate.
 
