@@ -6,6 +6,11 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "../..")
+$compatTempRoot = Join-Path $root "out/ast-compat-temp"
+if ([string]::IsNullOrWhiteSpace($env:XPSCRIPT_TEMP_ROOT)) {
+    $env:XPSCRIPT_TEMP_ROOT = $compatTempRoot
+}
+$null = New-Item -ItemType Directory -Force -Path $env:XPSCRIPT_TEMP_ROOT
 $compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
     Join-Path $root "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll"
 } else {
