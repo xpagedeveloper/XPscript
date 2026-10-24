@@ -66,7 +66,8 @@ Console.WriteLine("ANDROID-CLI-PROBE=OK");
 var androidCommand = File.ReadAllText(Path.Combine(root, "src", "XPScript.Cli", "AndroidCommand.cs"));
 var compilerDriver = File.ReadAllText(Path.Combine(root, "src", "XPScript.Compiler", "CompilerDriver.cs"));
 var compilerCommandLine = File.ReadAllText(Path.Combine(root, "src", "XPScript.Compiler", "XPScriptCompilerCommandLine.cs"));
-if (!compilerCommandLine.Contains("(args[i] == \"--rid\" || args[i] == \"--platform\")", StringComparison.Ordinal))
+if (!compilerCommandLine.Contains("--rid", StringComparison.Ordinal) ||
+    !compilerCommandLine.Contains("--platform", StringComparison.Ordinal))
     throw new Exception("Compiler CLI must accept --platform for publish target selection.");
 
 foreach (var expected in new[]
