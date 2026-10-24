@@ -202,6 +202,8 @@ public sealed class StatementParser
             var inlineElseIndex = FindTopLevelTokenOnCurrentLine(SyntaxKind.ElseKeyword);
             var inlineStatement = IsRuntimeFileCommand(Current)
                 ? ParseRuntimeFileStatement()
+                : Current.Kind == SyntaxKind.CallKeyword
+                ? ParseCallStatement()
                 : Current.Kind == SyntaxKind.ErrorKeyword
                 ? ParseErrorStatement()
                 : Current.Kind == SyntaxKind.ExitKeyword
@@ -217,6 +219,8 @@ public sealed class StatementParser
                 {
                     var inlineElseStatement = IsRuntimeFileCommand(Current)
                         ? ParseRuntimeFileStatement()
+                        : Current.Kind == SyntaxKind.CallKeyword
+                        ? ParseCallStatement()
                         : Current.Kind == SyntaxKind.ErrorKeyword
                         ? ParseErrorStatement()
                         : Current.Kind == SyntaxKind.ExitKeyword
