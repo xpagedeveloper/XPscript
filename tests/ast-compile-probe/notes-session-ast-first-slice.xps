@@ -12,6 +12,7 @@ Sub Main()
     Dim created As NotesDateTime
     Dim modified As NotesDocumentCollection
     Dim item As NotesItem
+    Dim name As NotesName
     Set session = New NotesSession("runtime")
     Print session.UserName
     Print session.Platform
@@ -172,4 +173,17 @@ Sub Main()
     Print created.TimeDifference(created)
     Print created.TimeDifferenceDouble(created)
     Call created.ConvertToZone(0)
+    Set name = session.CreateName("CN=Alice Example/OU=Dev/O=Example")
+    Print name.Source
+    Print name.Canonical
+    Print name.Abbreviated
+    Print name.IsHierarchical
+    Print name.Common
+    Print name.Organization
+    Print name.OrgUnit1
+    Print name.Surname
+    Print name.Given
+    Print name.Initials
+    Print name.Country
+    Print name.Language
 End Sub
