@@ -17,27 +17,42 @@ internal static class NotesRuntimeMemberTrapPostProcessor
             """
     public static object CreateSession()
     {
-        var runtimeDirectory = TryResolveDefaultRuntimeDirectory();
-        return runtimeDirectory is null
+        var installation = TryResolveDefaultRuntime();
+        return installation is null
             ? NothingValue
-            : new XPScriptNotesSession(runtimeDirectory, null, null);
+            : new XPScriptNotesSession(installation.Value.ProgramDirectory, installation.Value.NotesIni, null);
     }
 
-    private static string? TryResolveDefaultRuntimeDirectory()
+    private static (string ProgramDirectory, string? NotesIni)? TryResolveDefaultRuntime()
     {
         try
         {
             if (OperatingSystem.IsWindows())
             {
-                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\HCL\Notes\Installer");
-                var raw = key?.GetValue("PROGDIR") as string;
-                if (string.IsNullOrWhiteSpace(raw)) return null;
+                var keyPaths = new[]
+                {
+                    @"Software\HCL\Notes\Installer",
+                    @"Software\Lotus\Notes\Installer",
+                    @"Software\WOW6432Node\HCL\Notes\Installer",
+                    @"Software\WOW6432Node\Lotus\Notes\Installer"
+                };
+                foreach (var hive in new[] { Microsoft.Win32.Registry.CurrentUser, Microsoft.Win32.Registry.LocalMachine })
+                foreach (var keyPath in keyPaths)
+                using (var key = hive.OpenSubKey(keyPath))
+                {
+                    if (key is null) continue;
+                    var program = ResolveRegistryPath(key.GetValue("PROGDIR") as string);
+                    if (program is null || !Directory.Exists(program)) continue;
+                    if (!File.Exists(Path.Combine(program, "nnotes.dll"))) continue;
 
-                var expanded = Environment.ExpandEnvironmentVariables(raw.Trim().Trim('\"'));
-                var path = Path.GetFullPath(expanded);
-                if (!Directory.Exists(path)) return null;
-                if (!File.Exists(Path.Combine(path, "nnotes.dll"))) return null;
-                return path;
+                    var data = ResolveRegistryPath(key.GetValue("DATADIR") as string);
+                    var notesIni = ResolveRegistryPath(key.GetValue("NOTESINI") as string)
+                        ?? ResolveRegistryPath(key.GetValue("NOTES.INI") as string)
+                        ?? (data is null ? null : Path.Combine(data, "notes.ini"));
+                    if (notesIni is not null && !File.Exists(notesIni)) notesIni = null;
+                    return (program, notesIni);
+                }
+                return null;
             }
 
             if (OperatingSystem.IsMacOS())
@@ -46,7 +61,7 @@ internal static class NotesRuntimeMemberTrapPostProcessor
                 if (!Directory.Exists(path)) return null;
                 if (!File.Exists(Path.Combine(path, "libnotes.dylib")) &&
                     !File.Exists(Path.Combine(path, "libnotes64.dylib"))) return null;
-                return path;
+                return (path, null);
             }
 
             return null;
@@ -55,6 +70,17 @@ internal static class NotesRuntimeMemberTrapPostProcessor
         {
             return null;
         }
+    }
+
+    private static string? ResolveRegistryPath(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        try
+        {
+            var expanded = Environment.ExpandEnvironmentVariables(raw.Trim().Trim('\"'));
+            return Path.GetFullPath(expanded);
+        }
+        catch { return null; }
     }
 
     public static XPScriptNotesSession CreateSession(object? runtimeDirectory) =>

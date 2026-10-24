@@ -522,6 +522,9 @@ Write-Host 'AST_NOTES_SEARCH_CONSTANTS_OK'
 $notesSessionAstOutput = Join-Path $output 'notes-session-ast-first-slice'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-session-ast-first-slice.xps') -o $notesSessionAstOutput --runtime false --single-file false
 if ($LASTEXITCODE -ne 0) { throw 'AST NotesSession first-slice compilation failed.' }
+$notesSessionIdentityOutput = Join-Path $output 'notes-session-identity'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-session-identity.xps') -o $notesSessionIdentityOutput --runtime false --single-file false
+if ($LASTEXITCODE -ne 0) { throw 'AST NotesSession identity compilation failed.' }
 Write-Host 'AST_NOTES_SESSION_FIRST_SLICE_COMPILE_OK'
 $dateBuiltinsOutput = Join-Path $output 'date-builtins-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'date-builtins-next.xps') -o $dateBuiltinsOutput

@@ -21,6 +21,8 @@ Except for `NotesSession`, objects are created from another Notes object rather 
 
 Exactly one `NotesSession` may be active in a process. The first constructor argument is the directory containing the Notes/Domino native runtime. The second argument is an optional explicit `notes.ini`. The third optional argument is an ID password used during Notes initialization.
 
+`New NotesSession()` performs platform autodetection. On Windows it checks the HCL/Lotus Notes installer registry keys for `PROGDIR`, `DATADIR` and an explicit `NOTESINI` value; when `NOTESINI` is absent it uses `DATADIR\\notes.ini` when that file exists. The discovered program directory and `notes.ini` are passed to native initialization. If no valid installation is found, the constructor returns `Nothing` rather than guessing a runtime path.
+
 ```xpscript
 Dim session As NotesSession
 Set session = New NotesSession("C:\Program Files\HCL\Notes")
@@ -37,8 +39,10 @@ Set sessionWithIni = New NotesSession("C:\Program Files\HCL\Notes", "C:\NotesDat
 | `NotesIni` | String | read-only | Resolved `notes.ini` path, or an empty string when the default configuration is used. |
 | `Username` | String | read-only | Current Notes user name. |
 | `UserName` | String | read-only | Alias of `Username`. |
+| `EffectiveUserName` | String | read-only | Effective Notes user name for the active session; currently the native session user name. |
 | `CommonUsername` | String | read-only | Common-name form derived from the current Notes user name. |
 | `CommonUserName` | String | read-only | Alias of `CommonUsername`. |
+| `UserNameObject` | NotesName | read-only | A NotesName wrapper created from the active session user name. Recycle it when no longer needed. |
 | `NotesVersion` | String | read-only | Notes/Domino runtime version text. |
 | `NotesBuildVersion` | Long | read-only | Runtime build number. |
 | `IsRecycled` | Boolean | read-only | `True` after the session has been recycled. |

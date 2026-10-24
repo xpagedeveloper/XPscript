@@ -122,8 +122,10 @@ internal sealed class XPScriptNotesSession : IDisposable
     public string NotesIni { get; }
     public string Username { get; }
     public string UserName => Username;
+    public string EffectiveUserName => Username;
     public string CommonUsername { get; }
     public string CommonUserName => CommonUsername;
+    public XPScriptNotesName UserNameObject => CreateName(Username);
     public string NotesVersion { get; }
     public long NotesBuildVersion { get; }
     public string Platform { get; }

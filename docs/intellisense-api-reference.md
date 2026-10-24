@@ -56,6 +56,8 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `NotesSession.GetEnvironmentString` | `session.GetEnvironmentString(name [, system])` | `name`: environment variable; optional `system`: use exact system name. | Reads a string from the active Notes/Domino environment. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
 | `NotesSession.GetEnvironmentValue` | `session.GetEnvironmentValue(name [, system])` | `name`: environment variable; optional `system`: use exact system name. | Reads a numeric Notes/Domino environment value. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
 | `NotesSession.SetEnvironmentVar` | `session.SetEnvironmentVar(name, value [, system])` | `name`, `value`, optional `system`. | Creates or updates a Notes/Domino environment variable. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
+| `NotesSession.EffectiveUserName` | `session.EffectiveUserName` | none | Returns the effective native Notes user name. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
+| `NotesSession.UserNameObject` | `session.UserNameObject` | none | Returns a `NotesName` wrapper for the active user name. Recycle the returned object when finished. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
 
 ## Notes MIME
 
