@@ -793,6 +793,7 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
 - [x] Import and reconcile REST server/client OpenAPI work from all `test-openapi*` branches, including regeneration and multi-definition behavior. Full `OpenApiGeneratorSmoke` coverage is green on the AST default path.
 - [ ] Before migrating `NotesSession` into the AST route, extract and migrate its shared runtime dependency slice as a tested unit. The current `notes-session-ast-first-slice.xps` probe compiles through AST and generates `Generated.dll` when the configured temporary root is writable; the previously observed generated-source errors are no longer reproducible. Full NotesSession lifecycle/native-runtime execution and broader database/document integration remain open. Do not mark `NotesSession` AST support complete until those runtime gates are verified.
   - [x] Re-ran `NotesFullRuntimeSurfaceAudit` with the `NotesSession` filter after building serially with `-p:UseSharedCompilation=false -p:BuildInParallel=false -m:1`; all 32 declared public members passed the generated-source surface audit. This verifies the public surface only and does not close the generated-source dependency/lifecycle gap above.
+  - [x] Parameterless `New NotesSession()` now follows the legacy autodetection contract in both compiler routes; focused AST and legacy compilation passed with `XPSCRIPT_TEMP_ROOT`.
 - [ ] Complete the Definition of Done audit before changing the package version to `0.9.4 Beta`.
 
 ## Final phase: manual local-environment and hardware verification
