@@ -1,0 +1,8 @@
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Set session = New NotesSession("runtime")
+    Print session.UserName
+    Print session.Platform
+End Sub

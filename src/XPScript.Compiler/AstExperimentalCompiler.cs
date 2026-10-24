@@ -138,6 +138,12 @@ public static class AstExperimentalCompiler
         if (usesNetworkTools)
             source = new NetworkToolsObjectPreprocessor().Transform(source);
         var fullSource = source;
+        var usesNotesSession = AstObjectSupportRegistry.UsesObject(fullSource, "NotesSession");
+        if (usesNotesSession)
+        {
+            source = new NotesRuntimePreprocessor().Transform(source);
+            fullSource = source;
+        }
         ValidateAstAiCallbacks(fullSource);
         var runtimeFeatures = RuntimeFeatures.Detect(fullSource);
         var usesAi = runtimeFeatures.Ai;
@@ -367,6 +373,16 @@ public static class AstExperimentalCompiler
         foreach (var compatibilityName in AstObjectSupportRegistry.CompatibilityNames)
             symbols.Declare(new VariableSymbol(compatibilityName, typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new TypeSymbol("XPJsonSchema", typeof(object), XpTypeSymbol.User("XPJsonSchema")));
+        if (usesNotesSession)
+        {
+            symbols.Declare(new TypeSymbol("XPScriptNotes", typeof(object), XpTypeSymbol.User("XPScriptNotes")));
+            symbols.Declare(new VariableSymbol("XPScriptNotes", typeof(object), XpTypeSymbol.User("XPScriptNotes")));
+            DeclareNativeStatic(symbols, "XPScriptNotes.CreateSession", [typeof(object)], "XPScriptNotes.CreateSession");
+            DeclareNativeStatic(symbols, "XPScriptNotes.RecycleValue", [typeof(object)], "XPScriptNotes.RecycleValue");
+            DeclareNativeStatic(symbols, "XPScriptNotes.RecycleForReplacement", [typeof(object), typeof(object)], "XPScriptNotes.RecycleForReplacement");
+            DeclareNativeStatic(symbols, "XPScriptNotes.NormalizeObjectResult", [typeof(object)], "XPScriptNotes.NormalizeObjectResult");
+            DeclareNativeStatic(symbols, "XPScriptNotes.NothingValue", [], "XPScriptNotes.NothingValue");
+        }
         symbols.Declare(new TypeSymbol("XPScriptIncrementRuntime", typeof(object), XpTypeSymbol.User("XPScriptIncrementRuntime")));
         symbols.Declare(new VariableSymbol("XPScriptIncrementRuntime", typeof(object), XpTypeSymbol.User("XPScriptIncrementRuntime")));
         DeclareNativeStatic(symbols, "XPScriptIncrementRuntime.Increment", [typeof(object)], "XPScriptIncrementRuntime.Increment");
@@ -863,6 +879,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{(usesNetworkTools ? NetworkToolsRuntimeSource.Code : "")}}
 {{((usesAi || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema") || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonValidationResult")) ? JsonSchemaRuntimeSource.Code : "")}}
 {{AstRuntimeSource.Code}}
+{{(usesNotesSession ? NotesRuntimeSourceBuilder.Build() : "")}}
 {{OperatorArrayCompatibilityRuntimeSource.Code}}
 {{VariantIndexRuntimeSource.Code}}
 {{AstImageSupport.RuntimeCode(fullSource)}}
