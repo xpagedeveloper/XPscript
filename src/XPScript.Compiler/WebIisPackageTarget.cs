@@ -58,7 +58,7 @@ internal static class WebIisPackageTarget
 
         var args = new List<string>
         {
-            "publish", project, "-c", "Release", "-o", destination,
+            "publish", project, "-c", "Release", "-o", destination, "--no-restore",
             "--self-contained", selfContained ? "true" : "false",
             "-p:SkipUnifiedPublish=true",
             "-p:BuildInParallel=false",
