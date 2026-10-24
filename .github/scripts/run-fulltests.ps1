@@ -4,6 +4,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$fullTestTempRoot = Join-Path (Get-Location) 'out/fulltest-temp'
+if ([string]::IsNullOrWhiteSpace($env:XPSCRIPT_TEMP_ROOT)) {
+  $env:XPSCRIPT_TEMP_ROOT = $fullTestTempRoot
+}
+New-Item -ItemType Directory -Force -Path $env:XPSCRIPT_TEMP_ROOT | Out-Null
 $compilerDll = (Resolve-Path './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll').Path
 New-Item -ItemType Directory -Force -Path ./out/fulltest | Out-Null
 $runtimeTimeoutMilliseconds = 50000
