@@ -1,0 +1,33 @@
+' Compile-only coverage for the extended NotesDocumentCollection API.
+Option Declare
+
+Sub CompileNotesDocumentCollectionSurface()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim docs As NotesDocumentCollection
+    Dim doc As NotesDocument
+    Dim index As Integer
+
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", "apps\customers.nsf")
+    Set docs = db.CreateDocumentCollection()
+
+    Print docs.IsSorted
+    Set doc = docs.GetLastDocument()
+    Set doc = docs.GetNthDocument(1)
+    Call docs.GetPrevDocument(doc)
+    Call docs.DeleteDocument(doc)
+    Call docs.StampAllMulti(doc)
+    Call docs.RemoveAll(True)
+    Call docs.GetEnumerator()
+
+    index = 0
+    ForAll currentDoc In docs
+        index = index + 1
+    End ForAll
+    Print index
+End Sub
+
+Sub Main()
+    Print "NOTES-DOCUMENT-COLLECTION-EXTENDED-SURFACE=COMPILED"
+End Sub

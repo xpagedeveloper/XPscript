@@ -484,7 +484,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
                 }
 
                 if (fileTimes.Length > 1 && fileTimes[1].HasValue)
-                    System.IO.File.SetLastWriteTimeUtc(filePath, fileTimes[1].Value);
+                    System.IO.File.SetLastWriteTimeUtc(filePath, fileTimes[1].GetValueOrDefault());
             }
         }
     }

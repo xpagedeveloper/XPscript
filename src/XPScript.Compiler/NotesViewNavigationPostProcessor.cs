@@ -370,7 +370,7 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
     private const uint NoteIdCategory = 0x80000000u;
     private const uint NoteIdCategoryTotal = 0xC0000000u;
 
-    internal bool IsViewRowConflict(nint database, uint noteId)
+    internal bool IsViewRowConflict(uint database, uint noteId)
     {
         EnsureInitialized();
         var note = Resolve<NSFNoteOpenDelegate>("NSFNoteOpen")(database, noteId, 0, out var handle);

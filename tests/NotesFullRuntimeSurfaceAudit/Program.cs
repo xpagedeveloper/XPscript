@@ -15,9 +15,14 @@ var samplePaths = new[]
     Path.Combine(repoRoot, "samples", "notes-session-full-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-database-full-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-database-query-access-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-database-full-surface-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-document-collection-extended-surface.xps"),
     Path.Combine(repoRoot, "samples", "notes-dbdirectory-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-extended-surface.xps"),
+    Path.Combine(repoRoot, "samples", "notes-modified-documents-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-mime-entity-surface.xps"),
-    Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps")
+    Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps"),
+    Path.Combine(repoRoot, "samples", "notes-view-native-multikey-dxl.xps")
 };
 foreach (var samplePath in samplePaths)
 {
