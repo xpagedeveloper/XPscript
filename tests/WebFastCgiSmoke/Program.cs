@@ -293,6 +293,56 @@ End Sub
     }))
     await using (var imageAdapter = new XpsFastCgiAdapter(options, server, dispatcher))
     {
+        var hotPath = Path.Combine(root, "hot.xps");
+        await File.WriteAllTextAsync(hotPath, """
+[Anonymous]
+[Get]
+Sub Index()
+    Response.Write("FASTCGI-FIRST")
+End Sub
+""");
+        var hotFirstInput = BuildRequest(
+            31,
+            new Dictionary<string, string>
+            {
+                ["REQUEST_METHOD"] = "GET",
+                ["SCRIPT_NAME"] = "/hot.xps",
+                ["SERVER_NAME"] = "localhost",
+                ["SERVER_PROTOCOL"] = "HTTP/1.1",
+                ["SCRIPT_FILENAME"] = hotPath
+            },
+            []);
+        var hotFirstStream = new FragmentedDuplexStream(hotFirstInput, 3);
+        await imageAdapter.ProcessConnectionAsync(hotFirstStream);
+        var hotFirstOutput = ParseResponse(hotFirstStream.Written);
+        if (!hotFirstOutput.Contains("FASTCGI-FIRST", StringComparison.Ordinal))
+            throw new Exception("FastCGI initial hot-source response was not returned.");
+
+        await File.WriteAllTextAsync(hotPath, """
+[Anonymous]
+[Get]
+Sub Index()
+    Response.Write("FASTCGI-CHANGED")
+End Sub
+""");
+        var hotChangedInput = BuildRequest(
+            33,
+            new Dictionary<string, string>
+            {
+                ["REQUEST_METHOD"] = "GET",
+                ["SCRIPT_NAME"] = "/hot.xps",
+                ["SERVER_NAME"] = "localhost",
+                ["SERVER_PROTOCOL"] = "HTTP/1.1",
+                ["SCRIPT_FILENAME"] = hotPath
+            },
+            []);
+        var hotChangedStream = new FragmentedDuplexStream(hotChangedInput, 3);
+        await imageAdapter.ProcessConnectionAsync(hotChangedStream);
+        var hotChangedOutput = ParseResponse(hotChangedStream.Written);
+        if (!hotChangedOutput.Contains("FASTCGI-CHANGED", StringComparison.Ordinal) ||
+            hotChangedOutput.Contains("FASTCGI-FIRST", StringComparison.Ordinal))
+            throw new Exception("FastCGI source changes were not recognized between requests.");
+
         var imageInput = BuildRequest(
             29,
             new Dictionary<string, string>
