@@ -33,8 +33,10 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Restore compiler for target RID
+        timeout-minutes: 15
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj -r ${{ matrix.rid }}
       - name: Build compiler
+        timeout-minutes: 15
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Run AST lexer and emission probes
         timeout-minutes: 10
