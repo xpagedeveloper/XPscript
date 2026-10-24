@@ -1,0 +1,55 @@
+name: AST Platform FullTest
+
+on:
+  push:
+    branches:
+      - investigate-ast-compiler
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ast-platform:
+    name: AST ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-latest
+            rid: linux-x64
+          - name: macOS
+            os: macos-latest
+            rid: osx-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore compiler for target RID
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj -r ${{ matrix.rid }}
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Run AST lexer and emission probes
+        run: |
+          dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
+          dotnet run --project ./tests/ast-emission/AstEmissionProbe.csproj -c Release
+      - name: Run AST CLI regression
+        shell: pwsh
+        run: ./tests/ast-compile-probe/run-ast-cli.ps1
+      - name: Compile and execute AST target sample
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP "ast-${{ matrix.rid }}"
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile ./tests/ast-compile-probe/shared-runtime.xps --output $output --rid ${{ matrix.rid }}
+          $assembly = Join-Path $output 'Generated.dll'
+          if (-not (Test-Path $assembly)) { throw "AST ${{ matrix.rid }} compilation did not produce Generated.dll." }
+          $actual = ((& dotnet $assembly) -join "`n").Trim()
+          if ([string]::IsNullOrWhiteSpace($actual)) { throw 'AST target executable produced no output.' }
+          Write-Host "AST_${{ matrix.rid }}_FULLTEST=OK"
