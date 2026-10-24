@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
+using XPScript.Web.Compiler;
 using XPScript.Web.Kestrel;
 using XPScript.Web.Runtime;
 
@@ -711,6 +712,45 @@ try
                     throw new Exception($"Structured telemetry field '{property.Name}' leaked request path, query, header or body data.");
             }
         }
+    }
+
+    var hotSourcePath = Path.Combine(root, "hot-reload.xps");
+    await File.WriteAllTextAsync(hotSourcePath, """
+[Anonymous]
+[Get]
+Sub Index()
+    Response.Write("KESTREL-FIRST")
+End Sub
+""");
+    await using (var hotCache = new XpsWebCompilationCache(new XpsWebCompiler(), new XpsWebCompilationCacheOptions
+    {
+        ConfigurationIdentity = "kestrel-hot-reload-smoke-v1",
+        PersistentCacheDirectory = Path.Combine(root, ".cache")
+    }))
+    await using (var hotDispatcher = new XpsWebDispatcher(root, hotCache))
+    {
+        var hotOptions = new XpsKestrelOptions { Port = 0, EnableStaticFiles = false };
+        var hotServerInfo = new XpsServerInfo("kestrel-hot-reload", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test");
+        await using var hotApp = XpsKestrelAdapter.Build(hotOptions, hotServerInfo, hotDispatcher);
+        await hotApp.StartAsync();
+        var hotAddress = hotApp.Urls.Single(url => url.StartsWith("http://", StringComparison.Ordinal));
+        using var hotClient = new HttpClient { BaseAddress = new Uri(hotAddress) };
+        var firstHotResponse = await hotClient.GetStringAsync("/hot-reload");
+        if (!firstHotResponse.Contains("KESTREL-FIRST", StringComparison.Ordinal))
+            throw new Exception("Kestrel initial hot-source response was not returned.");
+
+        await File.WriteAllTextAsync(hotSourcePath, """
+[Anonymous]
+[Get]
+Sub Index()
+    Response.Write("KESTREL-CHANGED")
+End Sub
+""");
+        var changedHotResponse = await hotClient.GetStringAsync("/hot-reload");
+        if (!changedHotResponse.Contains("KESTREL-CHANGED", StringComparison.Ordinal) ||
+            changedHotResponse.Contains("KESTREL-FIRST", StringComparison.Ordinal))
+            throw new Exception("Kestrel source changes were not recognized between requests.");
+        await hotApp.StopAsync();
     }
 
     await app.StopAsync();
