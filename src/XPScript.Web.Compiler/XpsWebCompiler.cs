@@ -144,6 +144,7 @@ public sealed class XpsWebCompiler
             : Path.Combine(Path.GetFullPath(configuredTempRoot), "XPScript");
         var workspace = Path.Combine(workspaceRoot, "web", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
+        CompilerPathSecurity.HardenTemporaryDirectory(workspace);
         try
         {
             // Generated diagnostics retain the original XPScript source name via
@@ -161,7 +162,10 @@ public sealed class XpsWebCompiler
             DebugStep($"workspace-ready image={usesImage}", fullSourcePath);
 
             var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workspace, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
-            psi.ArgumentList.Add("publish"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c"); psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("--nologo"); psi.ArgumentList.Add("--no-restore"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(Path.Combine(workspace, "publish"));
+            var publishDirectory = Path.Combine(workspace, "publish");
+            Directory.CreateDirectory(publishDirectory);
+            CompilerPathSecurity.HardenTemporaryDirectory(publishDirectory);
+            psi.ArgumentList.Add("publish"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c"); psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("--nologo"); psi.ArgumentList.Add("--no-restore"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(publishDirectory);
             DebugStep("restore:start", fullSourcePath);
             await RunDotNetAsync(workspace, ["restore", projectPath, "--nologo"], cancellationToken).ConfigureAwait(false);
             DebugStep("restore:done", fullSourcePath);
@@ -574,6 +578,9 @@ internal static class Script
         var workspace = Path.Combine(root, "web-ast", Guid.NewGuid().ToString("N"));
         var output = Path.Combine(workspace, "publish");
         Directory.CreateDirectory(workspace);
+        CompilerPathSecurity.HardenTemporaryDirectory(workspace);
+        Directory.CreateDirectory(output);
+        CompilerPathSecurity.HardenTemporaryDirectory(output);
         var relativeSourcePath = Path.GetRelativePath(sourceRoot, sourcePath);
         if (relativeSourcePath == ".." || relativeSourcePath.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
             throw new XpsWebCompilationException("Web source must be inside the configured web root.");

@@ -4,7 +4,7 @@ using System.Security.Principal;
 
 namespace XPScript.Compiler;
 
-internal static class CompilerPathSecurity
+public static class CompilerPathSecurity
 {
     public static string ResolveProjectLocalFile(string sourceDirectory, string declaredPath, string kind)
     {
