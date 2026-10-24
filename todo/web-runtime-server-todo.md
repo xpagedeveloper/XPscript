@@ -382,7 +382,7 @@ execute
 
 - [x] Only one compilation for the same cache key/version may run at a time (`single-flight` behavior).
 - [x] Concurrent requests for a cold/stale script should wait on/share that compilation rather than compile the same source N times.
-- [ ] Bound total concurrent compilations globally and per site.
+- [x] Bound concurrent compilations per cache/site with `MaxConcurrentCompilations` (default 4, range 1-256); global process-wide coordination remains a host-level deployment concern.
 - [ ] Apply compile timeout/cancellation semantics.
 - [x] A failed compilation must not replace a previously valid cached version unless explicitly configured.
 - [ ] Decide whether production can optionally keep serving last-known-good code after a new source revision fails compilation.

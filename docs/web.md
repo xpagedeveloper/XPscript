@@ -179,6 +179,8 @@ Already compiled files are reused while their source/dependency snapshot remains
 
 `XpsWebCompilationCacheOptions.EnablePersistentCache` controls persistent artifact reuse for custom hosts. `PersistentCacheDirectory` can override the default per-site cache directory under the process user's local application data directory.
 
+`XpsWebCompilationCacheOptions.MaxConcurrentCompilations` limits the number of different cold/stale source files that a cache instance compiles at once. It defaults to `4` and accepts values from `1` through `256`. Requests for the same source continue to share one single-flight compilation. This keeps a burst of requests from starting an unbounded number of AST/MSBuild compilations while allowing unrelated sources to compile concurrently.
+
 ## Request
 
 The Request API uses a singular method for the common first-value case and an `All` method when HTTP permits multiple values.
