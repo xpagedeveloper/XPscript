@@ -11,6 +11,7 @@ Sub Main()
     Dim access As NotesDatabaseAccess
     Dim created As NotesDateTime
     Dim modified As NotesDocumentCollection
+    Dim item As NotesItem
     Set session = New NotesSession("runtime")
     Print session.UserName
     Print session.Platform
@@ -38,4 +39,19 @@ Sub Main()
     Set modified = db.GetModifiedDocuments()
     Set docs = db.CreateDocumentCollection()
     Call db.RemoveFTIndex()
+    Print doc.NoteID
+    Print doc.UniversalID
+    Print doc.IsNewNote
+    Print doc.IsResponse
+    Print doc.IsDeleted
+    Print doc.IsValid
+    Print doc.HasItem("Form")
+    Print doc.GetValue("Form")
+    Print doc.GetString("Form")
+    Print doc.GetNumber("Amount")
+    Set item = doc.GetFirstItem("Form")
+    Set item = doc.ReplaceItemValue("Status", "Open")
+    Call doc.SetString("Status", "Closed")
+    Call doc.SetNumber("Amount", 10)
+    Call doc.RemoveItem("Status")
 End Sub
