@@ -7,6 +7,7 @@ Sub Main()
     Dim doc As NotesDocument
     Dim docs As NotesDocumentCollection
     Dim agentResult As NotesAgentResult
+    Dim noteCollection As NotesNoteCollection
     Set session = New NotesSession("runtime")
     Print session.UserName
     Print session.Platform
@@ -23,4 +24,6 @@ Sub Main()
     Set docs = db.Search("Form = \"Customer\"")
     Set docs = db.FullTextSearch("customer")
     Set agentResult = db.RunAgent("RefreshCustomers", doc)
+    Set doc = db.CreateDocument()
+    Set noteCollection = db.CreateNoteCollection(True)
 End Sub
