@@ -1393,6 +1393,11 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-runtime.xps
 if ($LASTEXITCODE -ne 0) { throw 'AST ByRef index compilation failed.' }
 $byRefIndexResult = dotnet (Join-Path $output 'indexed-byref-runtime/Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($byRefIndexResult -join "`n") -ne 'INDEXED_BYREF_RUNTIME_OK') { throw 'AST ByRef index alias/exception execution failed.' }
+$listPropertyByRefOutput = Join-Path $output 'indexed-byref-property-list-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-property-list-next.xps') -o $listPropertyByRefOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST indexed ByRef property List-element compilation failed.' }
+$listPropertyByRefResult = dotnet (Join-Path $listPropertyByRefOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listPropertyByRefResult -join "`n") -ne "11`n11") { throw 'AST indexed ByRef property List-element copy-back failed.' }
 foreach ($byRefInvalid in @('indexed-byref-module-type-error', 'indexed-byref-property-error', 'indexed-byref-literal-error', 'indexed-byref-type-error', 'indexed-byref-mode-error', 'indexed-byref-complex-error')) {
     $byRefFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$byRefInvalid.xps") -o (Join-Path $output $byRefInvalid) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($byRefFailure -join "`n") -notmatch "$byRefInvalid.xps:(5|8|9|16):") { throw "ByRef index diagnostic source mapping lost: $byRefInvalid" }
