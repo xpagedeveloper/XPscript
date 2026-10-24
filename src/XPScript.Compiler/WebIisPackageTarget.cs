@@ -64,7 +64,6 @@ internal static class WebIisPackageTarget
             "-p:BuildInParallel=false",
             "-p:BaseOutputPath=" + Path.Combine(isolatedBuildRoot, "bin") + Path.DirectorySeparatorChar,
             "-p:IntermediateOutputPath=" + Path.Combine(isolatedBuildRoot, "obj") + Path.DirectorySeparatorChar,
-            "--no-restore",
             "--nologo"
         };
         if (selfContained)
