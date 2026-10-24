@@ -1,4 +1,5 @@
 using System.Text;
+using XPScript.Compiler;
 using XPScript.Web.Compiler;
 using XPScript.Web.Runtime;
 
@@ -141,6 +142,14 @@ End Sub
             throw new Exception("Changed root source did not invalidate the cached compiled unit.");
         if (!changed.Unit.Routes.ContainsKey("Changed"))
             throw new Exception("Changed source route table was not compiled.");
+    }
+
+    await using (var baselineConfiguration = await cache.AcquireAsync(indexPath, root))
+    using (SourcePreprocessorConfigurationContext.Push(["replace:Sub=Sub"]))
+    await using (var changedConfiguration = await cache.AcquireAsync(indexPath, root))
+    {
+        if (ReferenceEquals(baselineConfiguration.Unit, changedConfiguration.Unit))
+            throw new Exception("Changed preprocessor configuration did not invalidate the cached compiled unit.");
     }
 
     await using (var sameSourceDifferentSiteIdentity = await cache.AcquireAsync(indexPath, parent))

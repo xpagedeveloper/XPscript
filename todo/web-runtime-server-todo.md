@@ -579,7 +579,7 @@ All examples must be reconsidered after the object API has been finalized.
 - [x] Application concurrency
 - [x] source edit invalidates cache
 - [x] included-file edit invalidates parent script cache
-- [ ] preprocessor version/order invalidates cache
+- [x] preprocessor version/order invalidates cache; `WebDispatcherSmoke` changes the active preprocessor configuration between acquisitions and verifies a new compiled unit is created.
 - [x] simultaneous cold requests compile once
 - [x] compile failure does not poison unrelated cache entries
 - [x] traversal/encoded traversal rejected
