@@ -21,7 +21,16 @@ public static class XPScriptCompilationSnapshotBuilder
         string runtimeIdentifier,
         string configurationIdentity = "default",
         long maxDependencyBytes = long.MaxValue,
-        bool includeExternalInputs = false,
+        CancellationToken cancellationToken = default)
+        => CreateAsync(sourcePath, allowedSourceRoot, runtimeIdentifier, configurationIdentity, maxDependencyBytes, false, cancellationToken);
+
+    public static Task<XPScriptCompilationSnapshot> CreateAsync(
+        string sourcePath,
+        string allowedSourceRoot,
+        string runtimeIdentifier,
+        string configurationIdentity,
+        long maxDependencyBytes,
+        bool includeExternalInputs,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(allowedSourceRoot);
