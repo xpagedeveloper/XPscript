@@ -140,7 +140,7 @@ internal static class AndroidCommand
 
     private static string ResolveApplicationPackageName(string sourcePath)
     {
-        const string fallback = "eu.xpscript.debugapp";
+        const string fallback = "eu.xpscript.app";
         var source = File.ReadAllText(sourcePath);
         var matches = Regex.Matches(source, @"(?im)^\s*Application\.PackageName\s*=\s*""(?<value>(?:""""|[^""])*)""\s*(?:'.*)?$", RegexOptions.CultureInvariant);
         if (matches.Count == 0) return fallback;
