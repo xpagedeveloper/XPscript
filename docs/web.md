@@ -177,7 +177,7 @@ Startup warms the default document and its direct precompile targets. Nested tar
 
 Already compiled files are reused while their source/dependency snapshot remains unchanged. Ordinary server-side `.xps` pages also persist their compiled DLL/PDB artifact on disk. The persistent cache survives process restarts and is reused only when the source/dependency snapshot, runtime/compiler configuration, compiler build identity and web runtime build identity still match. Changed source or dependencies automatically invalidate the artifact. Browser-WASM pages keep their separate bundle cache. The response is allowed to complete before sublevel warmup runs in the background.
 
-`XpsWebCompilationCacheOptions.EnablePersistentCache` controls persistent artifact reuse for custom hosts. `PersistentCacheDirectory` can override the default per-site cache directory under the process user's local application data directory.
+`XpsWebCompilationCacheOptions.EnablePersistentCache` controls persistent artifact reuse for custom hosts. `PersistentCacheDirectory` can override the default per-site cache directory under the process user's local application data directory. Cache snapshots include the root source, `Include` dependencies and referenced managed/native files, so changing any of them invalidates the compiled artifact.
 
 `XpsWebCompilationCacheOptions.MaxConcurrentCompilations` limits the number of different cold/stale source files that a cache instance compiles at once. It defaults to `4` and accepts values from `1` through `256`. Requests for the same source continue to share one single-flight compilation. This keeps a burst of requests from starting an unbounded number of AST/MSBuild compilations while allowing unrelated sources to compile concurrently.
 

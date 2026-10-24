@@ -21,6 +21,7 @@ public static class XPScriptCompilationSnapshotBuilder
         string runtimeIdentifier,
         string configurationIdentity = "default",
         long maxDependencyBytes = long.MaxValue,
+        bool includeExternalInputs = false,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(allowedSourceRoot);
@@ -30,7 +31,7 @@ public static class XPScriptCompilationSnapshotBuilder
             configurationIdentity,
             maxDependencyBytes,
             [Path.GetFullPath(allowedSourceRoot)],
-            includeExternalInputs: false,
+            includeExternalInputs,
             cancellationToken);
     }
 

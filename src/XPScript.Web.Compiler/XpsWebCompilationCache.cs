@@ -200,7 +200,8 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
                 runtimeIdentifier,
                 _options.ConfigurationIdentity,
                 _options.MaxSourceBytes,
-                cancellationToken).ConfigureAwait(false);
+                includeExternalInputs: true,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (CompilerException ex)
         {
