@@ -636,10 +636,6 @@ public static class AstExperimentalCompiler
         var usesDatabaseAttachments = Regex.IsMatch(source, @"(?i)\.\s*Attachments\s*\(");
         var usesDatabaseDynamicRuntime = AstSqliteSupport.Uses(fullSource) || AstMySqlSupport.Uses(fullSource) || AstHttpDatabaseSupport.Uses(fullSource) ||
             AstMsSqlSupport.Uses(fullSource) || AstSupabaseSupport.Uses(fullSource) ||
-            source.Contains("XPScriptDbSqlite", StringComparison.OrdinalIgnoreCase) ||
-            source.Contains("XPScriptDbMsSql", StringComparison.OrdinalIgnoreCase) ||
-            source.Contains("XPDBSQLite", StringComparison.OrdinalIgnoreCase) ||
-            source.Contains("XPDbMsSql", StringComparison.OrdinalIgnoreCase) ||
             usesDatabaseAttachments;
         if (usesApplication)
             foreach (var mainSymbol in symbols.LookupAll("Main").OfType<FunctionSymbol>())

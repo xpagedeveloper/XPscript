@@ -353,6 +353,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [x] Restrict unresolved member fallback to Variant receivers rather than every object-backed user type; regress both properties and calls with XPS2009 and member source spans.
 - [ ] Replace experimental runtime placeholders (including HTTP/TLS, image, UI, error and environment helpers) with existing runtime implementations before claiming sample compatibility.
   - [x] Removed the remaining direct sample-name database runtime fallbacks from AST generated dependency selection; SQLite and MSSQL activation now uses the central object-support detectors. Release compiler build and the full AST CLI probe passed on 2026-10-24.
+  - [x] Removed the final database type-name fallback checks (`XPScriptDbSqlite`, `XPScriptDbMsSql`, `XPDBSQLite`, `XPDbMsSql`); focused SQLite/MySQL/MSSQL/Supabase AST probes passed on 2026-10-24.
   - [x] Explicitly exclude the legacy Notes `CreateSAXParser`/`NotesSAXParser` surface from AST migration; XML processing uses the native `XPXml` API instead.
   - [x] Replace the AST `GetObject` empty `ExpandoObject` placeholder with the existing Windows COM/moniker activation contract; the AST COM activation-error fixture passes.
   - [x] Replace AST `Input$` empty-string helpers with `LSFileRuntime.Input`; `file-input-record-next.xps` is a permanent AST CLI regression.
