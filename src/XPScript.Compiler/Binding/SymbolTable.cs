@@ -100,6 +100,11 @@ public sealed class SymbolTable
         XpsShellResultAstSupport.Import(this);
         AstPathValueSupport.Import(this);
         AstAttachmentSupport.Import(this);
+        // NotesEmbeddedObject is emitted by the Notes runtime source, but its
+        // surface is conditional and therefore is not present in the shared
+        // compiler catalog. Keep the AST binder aligned with that generated
+        // runtime surface.
+        Declare(new PropertySymbol("NotesEmbeddedObject.FileCreated", typeof(object), XpTypeSymbol.User("NotesDateTime")));
         ImportXPAiOverloads();
     }
 
