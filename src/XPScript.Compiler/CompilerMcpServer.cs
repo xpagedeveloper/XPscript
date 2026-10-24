@@ -180,7 +180,10 @@ public static class CompilerMcpServer
         try
         {
             await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
-            using var diagnosticMode = CompilerDiagnosticMode.Push(GetOptionalBoolean(arguments, "debug"));
+            using var diagnosticMode = CompilerDiagnosticMode.Push(GetOptionalBoolean(arguments, "debug"), true);
+            using var securityMode = ApplicationSecurityModeContext.Push(ParseSecurityMode(arguments));
+            using var preprocessors = SourcePreprocessorConfigurationContext.Push(GetOptionalStringArray(arguments, "sourcePreprocessors"));
+            using var restricted = PushIncludePolicy(arguments, root);
             var result = await AstExperimentalCompiler.CompileAsync(sourcePath, Path.Combine(root, "output")).ConfigureAwait(false);
             return new { result = "ok", source = new { entryPoint = filename }, compiler = "ast", info = BuildInfo("virtual-compile", filename, GetOptionalString(arguments, "runtimeIdentifier"), null, true) };
         }
@@ -203,6 +206,9 @@ public static class CompilerMcpServer
         {
             await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
             using var diagnosticMode = CompilerDiagnosticMode.Push(GetOptionalBoolean(arguments, "debug"), true);
+            using var securityMode = ApplicationSecurityModeContext.Push(ParseSecurityMode(arguments));
+            using var preprocessors = SourcePreprocessorConfigurationContext.Push(GetOptionalStringArray(arguments, "sourcePreprocessors"));
+            using var restricted = PushIncludePolicy(arguments, root);
             var result = await RunCompiler.CompileWithResultAsync(sourcePath, outputDirectory, GetOptionalString(arguments, "runtimeIdentifier") ?? CompilerDriver.CurrentRuntimeIdentifier(), GetOptionalBoolean(arguments, "debug")).ConfigureAwait(false);
             return new { result = result.Success ? "ok" : "error", compiler = "ast", source = new { entryPoint = filename }, output = result.Output, errors = result.Errors, info = BuildInfo("compile", filename, GetOptionalString(arguments, "runtimeIdentifier"), outputDirectory, true) };
         }
@@ -242,6 +248,22 @@ public static class CompilerMcpServer
     private static string GetRequiredString(JsonElement arguments, string name) => GetOptionalString(arguments, name) ?? throw new McpException(-32602, $"Missing required argument: {name}");
     private static string? GetOptionalString(JsonElement arguments, string name) => arguments.ValueKind == JsonValueKind.Object && arguments.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
     private static bool GetOptionalBoolean(JsonElement arguments, string name) => arguments.ValueKind == JsonValueKind.Object && arguments.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False && value.GetBoolean();
+    private static IReadOnlyList<string> GetOptionalStringArray(JsonElement arguments, string name) =>
+        arguments.ValueKind == JsonValueKind.Object && arguments.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Array
+            ? value.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.String).Select(item => item.GetString()!).ToArray()
+            : [];
+    private static ApplicationSecurityMode ParseSecurityMode(JsonElement arguments)
+    {
+        var text = GetOptionalString(arguments, "securityMode");
+        try { return ApplicationSecurityModeContext.Parse(text, ApplicationSecurityMode.Off); }
+        catch (ArgumentException ex) { throw new McpException(-32602, ex.Message); }
+    }
+    private static IDisposable? PushIncludePolicy(JsonElement arguments, string sourceRoot)
+    {
+        if (!GetOptionalBoolean(arguments, "restricted")) return null;
+        var roots = GetOptionalStringArray(arguments, "sourceRoots");
+        return IncludeSecurityContext.Push(roots.Count == 0 ? [sourceRoot] : roots);
+    }
 
     private static void WriteResponse(JsonElement id, object result) => Console.WriteLine(JsonSerializer.Serialize(new { jsonrpc="2.0", id, result }, JsonOptions));
     private static void WriteError(JsonElement? id, int code, string message) => Console.WriteLine(JsonSerializer.Serialize(new { jsonrpc="2.0", id, error=new { code, message } }, JsonOptions));

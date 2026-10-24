@@ -11,7 +11,23 @@ if (init.GetProperty("result").GetProperty("protocolVersion").GetString() != "20
 await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new {jsonrpc="2.0",method="notifications/initialized"})); await p.StandardInput.FlushAsync();
 var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new{}});
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
-foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
+foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_virtual_compile","xpscript_compile","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
+var concurrentRequests = Enumerable.Range(10, 8)
+    .Select(id => new { jsonrpc="2.0", id, method="tools/call", @params=new { name="xpscript_symbols", arguments=new { search="XP" } } })
+    .ToArray();
+foreach (var request in concurrentRequests)
+{
+    await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(request));
+}
+await p.StandardInput.FlushAsync();
+var concurrentIds = new HashSet<int>();
+foreach (var _ in concurrentRequests)
+{
+    var line = await p.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30)) ?? throw new Exception("MCP server closed during concurrent requests.");
+    using var response = JsonDocument.Parse(line);
+    concurrentIds.Add(response.RootElement.GetProperty("id").GetInt32());
+}
+if (!concurrentRequests.Select(request => request.id).ToHashSet().SetEquals(concurrentIds)) throw new Exception("Concurrent MCP request ids were not all returned.");
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
 var arrayBytesSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/image-array-byte-interop.xps"));
 var arrayBytesResult = await CallAsync(new { jsonrpc="2.0",id="image-array-byte-interop",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=arrayBytesSource,filename="image-array-byte-interop.xps" } } });
