@@ -775,8 +775,8 @@ public static class AstExperimentalCompiler
                 ? string.Empty
                 : imageCleanup + " System.GC.SuppressFinalize(this);";
             var delete = classDeclaration.BaseType is null
-                ? $"public virtual void Delete() {{ {explicitCleanup} }}"
-                : $"public override void Delete() {{ {explicitCleanup} base.Delete(); }}";
+                ? "private bool __xps_delete_started; " + $"public virtual void Delete() {{ if (__xps_delete_started) return; __xps_delete_started = true; {explicitCleanup} }}"
+                : "private bool __xps_delete_started; " + $"public override void Delete() {{ if (__xps_delete_started) return; __xps_delete_started = true; {explicitCleanup} base.Delete(); }}";
             var memberBodies = emittedClassMembers[classDeclaration.Identifier.Text];
             if (classDeclaration.Members.OfType<DestructorDeclarationSyntax>().Any())
             {
