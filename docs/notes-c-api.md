@@ -21,7 +21,7 @@ Except for `NotesSession`, objects are created from another Notes object rather 
 
 Exactly one `NotesSession` may be active in a process. The first constructor argument is the directory containing the Notes/Domino native runtime. The second argument is an optional explicit `notes.ini`. The third optional argument is an ID password used during Notes initialization.
 
-`New NotesSession()` performs platform autodetection. On Windows it checks the HCL/Lotus Notes installer registry keys for `PROGDIR`, `DATADIR` and an explicit `NOTESINI` value; when `NOTESINI` is absent it uses `DATADIR\\notes.ini` when that file exists. The discovered program directory and `notes.ini` are passed to native initialization. If no valid installation is found, the constructor returns `Nothing` rather than guessing a runtime path.
+`New NotesSession()` performs platform autodetection. On Windows it checks the HCL Notes installer key and then the HCL Domino installer key for `PROGDIR`. The shared runtime then resolves `notes.ini` from an explicit value, `NOTESINI`, the program/current directory, or the registry `DATADIR`; its `Directory=` entry supplies `DataDir`. If no valid installation is found, the constructor returns `Nothing` rather than guessing a runtime path.
 
 ```xpscript
 Dim session As NotesSession

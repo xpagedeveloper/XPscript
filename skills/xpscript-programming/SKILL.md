@@ -205,7 +205,7 @@ For native Notes/Domino code, use `docs/notes-c-api.md` as the primary object-mo
 
 Only `NotesSession` is constructed with `New`. Obtain databases, views, documents, items, names, date/time values, MIME entities, collections and agent results from their owning Notes objects.
 
-Use `New NotesSession()` for platform autodetection. On Windows it resolves the HCL/Lotus installer registry entries for the Notes program directory and `notes.ini`; pass an explicit program directory only when the documented installation is intentionally outside that configuration.
+Use `New NotesSession()` for platform autodetection. On Windows it resolves the HCL Notes/Domino installer registry entries for the program directory, then the shared runtime resolves `notes.ini` and its `Directory=` data path. Pass an explicit program directory only when the documented installation is intentionally outside that configuration.
 
 `NotesSession.EffectiveUserName` returns the active native session user name, and `NotesSession.UserNameObject` creates a `NotesName` wrapper for that value. Recycle the returned `NotesName` when it is no longer needed.
 
