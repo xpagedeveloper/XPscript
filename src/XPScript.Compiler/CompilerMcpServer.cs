@@ -22,45 +22,42 @@ public static class CompilerMcpServer
         }
 
         var compiler = new CompilerDriver();
+        var responseGate = new SemaphoreSlim(1, 1);
+        var requests = new List<Task>();
         string? line;
         while ((line = await Console.In.ReadLineAsync().ConfigureAwait(false)) is not null)
         {
             if (string.IsNullOrWhiteSpace(line)) continue;
-            try
-            {
-                using var request = JsonDocument.Parse(line);
-                var root = request.RootElement;
-                var id = root.TryGetProperty("id", out var idElement) ? idElement.Clone() : (JsonElement?)null;
-                var method = root.TryGetProperty("method", out var methodElement) ? methodElement.GetString() : null;
-                var parameters = root.TryGetProperty("params", out var paramsElement) ? paramsElement : default;
-
-                if (method == "notifications/initialized") continue;
-                if (id is null) continue;
-
-                object result = method switch
-                {
-                    "initialize" => Initialize(),
-                    "ping" => new { },
-                    "tools/list" => new { tools = Tools() },
-                    "tools/call" => await CallToolAsync(compiler, parameters).ConfigureAwait(false),
-                    _ => throw new McpException(-32601, $"Method not found: {method}")
-                };
-                WriteResponse(id.Value, result);
-            }
-            catch (McpException ex)
-            {
-                WriteError(TryReadId(line), ex.Code, ex.Message);
-            }
-            catch (JsonException)
-            {
-                WriteError(null, -32700, "Parse error.");
-            }
-            catch (Exception)
-            {
-                WriteError(TryReadId(line), -32603, "Internal error.");
-            }
+            requests.Add(ProcessRequestAsync(line, compiler, responseGate));
         }
+        await Task.WhenAll(requests).ConfigureAwait(false);
         return 0;
+    }
+
+    private static async Task ProcessRequestAsync(string line, CompilerDriver compiler, SemaphoreSlim responseGate)
+    {
+        try
+        {
+            using var request = JsonDocument.Parse(line);
+            var root = request.RootElement;
+            var id = root.TryGetProperty("id", out var idElement) ? idElement.Clone() : (JsonElement?)null;
+            var method = root.TryGetProperty("method", out var methodElement) ? methodElement.GetString() : null;
+            var parameters = root.TryGetProperty("params", out var paramsElement) ? paramsElement.Clone() : default;
+            if (method == "notifications/initialized" || id is null) return;
+            object result = method switch
+            {
+                "initialize" => Initialize(),
+                "ping" => new { },
+                "tools/list" => new { tools = Tools() },
+                "tools/call" => await CallToolAsync(compiler, parameters).ConfigureAwait(false),
+                _ => throw new McpException(-32601, $"Method not found: {method}")
+            };
+            await responseGate.WaitAsync().ConfigureAwait(false);
+            try { WriteResponse(id.Value, result); } finally { responseGate.Release(); }
+        }
+        catch (McpException ex) { await WriteErrorAsync(responseGate, TryReadId(line), ex.Code, ex.Message).ConfigureAwait(false); }
+        catch (JsonException) { await WriteErrorAsync(responseGate, null, -32700, "Parse error.").ConfigureAwait(false); }
+        catch (Exception) { await WriteErrorAsync(responseGate, TryReadId(line), -32603, "Internal error.").ConfigureAwait(false); }
     }
 
     private static object Initialize() => new
@@ -74,6 +71,8 @@ public static class CompilerMcpServer
     [
         Tool("xpscript_validate", "Validate XPScript source without executing it.", new { type="object", properties=new { source=new { type="string" }, filename=new { type="string", description="Simple virtual .xps filename." }, runtimeIdentifier=new { type="string" }, debug=new { type="boolean", description="Include debug diagnostics while preserving source-mapped XPScript locations." } }, required=new[]{"source"} }),
         Tool("xpscript_ast_validate", "Validate source through the experimental AST compiler without executing it.", new { type="object", properties=new { source=new { type="string" }, filename=new { type="string", description="Simple virtual .xps filename." }, debug=new { type="boolean", description="Enable debug diagnostics without changing AST source diagnostic identity." } }, required=new[]{"source"} }),
+        Tool("xpscript_virtual_compile", "Compile source through the AST compiler without publishing an application. Always returns extended compiler info.", new { type="object", properties=new { source=new { type="string" }, filename=new { type="string" }, runtimeIdentifier=new { type="string" }, debug=new { type="boolean" }, securityMode=new { type="string" }, restricted=new { type="boolean" }, sourceRoots=new { type="array", items=new { type="string" } }, sourcePreprocessors=new { type="array", items=new { type="string" } } }, required=new[]{"source"} }),
+        Tool("xpscript_compile", "Compile and publish an XPScript application through the same AST run compiler used by CLI/debugger execution. Always returns extended compiler info.", new { type="object", properties=new { source=new { type="string" }, filename=new { type="string" }, outputDirectory=new { type="string" }, runtimeIdentifier=new { type="string" }, debug=new { type="boolean" }, securityMode=new { type="string" }, restricted=new { type="boolean" }, sourceRoots=new { type="array", items=new { type="string" } }, sourcePreprocessors=new { type="array", items=new { type="string" } } }, required=new[]{"source"} }),
         Tool("xpscript_symbols", "Search the public XPScript symbol catalog.", new { type="object", properties=new { search=new { type="string" } } }),
         Tool("xpscript_describe", "Describe an exact public XPScript symbol.", new { type="object", properties=new { name=new { type="string" } }, required=new[]{"name"} }),
         Tool("xpscript_explain", "Explain a stable XPScript diagnostic code.", new { type="object", properties=new { diagnosticCode=new { type="string" } }, required=new[]{"diagnosticCode"} })
@@ -91,6 +90,8 @@ public static class CompilerMcpServer
         {
             "xpscript_validate" => await ValidateAsync(compiler, arguments).ConfigureAwait(false),
             "xpscript_ast_validate" => await AstValidateAsync(arguments).ConfigureAwait(false),
+            "xpscript_virtual_compile" => await VirtualCompileAsync(arguments).ConfigureAwait(false),
+            "xpscript_compile" => await CompileAsync(arguments).ConfigureAwait(false),
             "xpscript_symbols" => CompilerSymbolCatalog.Search(GetOptionalString(arguments, "search") ?? ""),
             "xpscript_describe" => CompilerSymbolCatalog.Find(GetRequiredString(arguments, "name")) ?? throw new McpException(-32602, "Unknown XPScript symbol."),
             "xpscript_explain" => CompilerDiagnosticCatalog.Find(GetRequiredString(arguments, "diagnosticCode")) ?? throw new McpException(-32602, "Unknown XPScript diagnostic code."),
@@ -169,12 +170,82 @@ public static class CompilerMcpServer
         finally { try { Directory.Delete(root, true); } catch { } }
     }
 
+    private static async Task<object> VirtualCompileAsync(JsonElement arguments)
+    {
+        var source = GetRequiredString(arguments, "source");
+        if (source.Length > MaxSourceChars) throw new McpException(-32602, $"source exceeds the {MaxSourceChars} character validation limit.");
+        var filename = ValidateFilename(GetOptionalString(arguments, "filename") ?? "program.xps");
+        var root = CompilerPathSecurity.CreateOwnedTemporaryDirectory("mcp-virtual-");
+        var sourcePath = Path.Combine(root, filename);
+        try
+        {
+            await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
+            using var diagnosticMode = CompilerDiagnosticMode.Push(GetOptionalBoolean(arguments, "debug"));
+            var result = await AstExperimentalCompiler.CompileAsync(sourcePath, Path.Combine(root, "output")).ConfigureAwait(false);
+            return new { result = "ok", source = new { entryPoint = filename }, compiler = "ast", info = BuildInfo("virtual-compile", filename, GetOptionalString(arguments, "runtimeIdentifier"), null, true) };
+        }
+        catch (CompilerException ex) { return AstError(filename, ex); }
+        catch (Exception ex) { return AstInternalError(filename, "virtual-compile", ex); }
+        finally { try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(root); } catch { } }
+    }
+
+    private static async Task<object> CompileAsync(JsonElement arguments)
+    {
+        var source = GetRequiredString(arguments, "source");
+        if (source.Length > MaxSourceChars) throw new McpException(-32602, $"source exceeds the {MaxSourceChars} character compilation limit.");
+        var filename = ValidateFilename(GetOptionalString(arguments, "filename") ?? "program.xps");
+        var root = CompilerPathSecurity.CreateOwnedTemporaryDirectory("mcp-compile-");
+        var output = GetOptionalString(arguments, "outputDirectory");
+        var outputDirectory = string.IsNullOrWhiteSpace(output) ? Path.Combine(root, "output") : Path.GetFullPath(output);
+        Directory.CreateDirectory(root);
+        var sourcePath = Path.Combine(root, filename);
+        try
+        {
+            await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
+            using var diagnosticMode = CompilerDiagnosticMode.Push(GetOptionalBoolean(arguments, "debug"), true);
+            var result = await RunCompiler.CompileWithResultAsync(sourcePath, outputDirectory, GetOptionalString(arguments, "runtimeIdentifier") ?? CompilerDriver.CurrentRuntimeIdentifier(), GetOptionalBoolean(arguments, "debug")).ConfigureAwait(false);
+            return new { result = result.Success ? "ok" : "error", compiler = "ast", source = new { entryPoint = filename }, output = result.Output, errors = result.Errors, info = BuildInfo("compile", filename, GetOptionalString(arguments, "runtimeIdentifier"), outputDirectory, true) };
+        }
+        catch (Exception ex) { return new { result = "error", compiler = "ast", source = new { entryPoint = filename }, errors = new[] { new CompileDiagnostic { File = filename, Description = ex.Message, DiagnosticCode = CompilerDiagnosticCodes.InternalCompilationFailed, Category = "compiler" } }, info = BuildInfo("compile", filename, GetOptionalString(arguments, "runtimeIdentifier"), outputDirectory, true) }; }
+        finally { if (string.IsNullOrWhiteSpace(output)) try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(root); } catch { } }
+    }
+
+    private static string ValidateFilename(string filename)
+    {
+        if (!Path.GetFileName(filename).Equals(filename, StringComparison.Ordinal) || !Path.GetExtension(filename).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+            throw new McpException(-32602, "filename must be a simple .xps filename without a directory path.");
+        return filename;
+    }
+
+    private static object BuildInfo(string operation, string filename, string? runtimeIdentifier, string? output, bool ast) => new
+    {
+        operation, compiler = ast ? "ast" : "legacy", filename,
+        runtimeIdentifier = runtimeIdentifier ?? CompilerDriver.CurrentRuntimeIdentifier(), output,
+        debug = CompilerDiagnosticMode.Debug, info = true,
+        processId = Environment.ProcessId, compilerVersion = typeof(CompilerMcpServer).Assembly.GetName().Version?.ToString() ?? "unknown"
+    };
+
+    private static object AstError(string filename, CompilerException exception) => new
+    {
+        result = "error", source = new { entryPoint = filename }, compiler = "ast",
+        errors = exception.GeneratedDiagnostics.Count > 0 ? exception.GeneratedDiagnostics : [new CompileDiagnostic { File = filename, Description = exception.Message, DiagnosticCode = exception.DiagnosticCode, Category = exception.Category }],
+        info = BuildInfo("virtual-compile", filename, null, null, true)
+    };
+
+    private static object AstInternalError(string filename, string operation, Exception exception) => new
+    {
+        result = "error", source = new { entryPoint = filename }, compiler = "ast",
+        errors = new[] { new CompileDiagnostic { File = filename, Description = exception.Message, DiagnosticCode = CompilerDiagnosticCodes.InternalCompilationFailed, Category = "compiler" } },
+        info = BuildInfo(operation, filename, null, null, true)
+    };
+
     private static string GetRequiredString(JsonElement arguments, string name) => GetOptionalString(arguments, name) ?? throw new McpException(-32602, $"Missing required argument: {name}");
     private static string? GetOptionalString(JsonElement arguments, string name) => arguments.ValueKind == JsonValueKind.Object && arguments.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
     private static bool GetOptionalBoolean(JsonElement arguments, string name) => arguments.ValueKind == JsonValueKind.Object && arguments.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False && value.GetBoolean();
 
     private static void WriteResponse(JsonElement id, object result) => Console.WriteLine(JsonSerializer.Serialize(new { jsonrpc="2.0", id, result }, JsonOptions));
     private static void WriteError(JsonElement? id, int code, string message) => Console.WriteLine(JsonSerializer.Serialize(new { jsonrpc="2.0", id, error=new { code, message } }, JsonOptions));
+    private static async Task WriteErrorAsync(SemaphoreSlim gate, JsonElement? id, int code, string message) { await gate.WaitAsync().ConfigureAwait(false); try { WriteError(id, code, message); } finally { gate.Release(); } }
     private static JsonElement? TryReadId(string line) { try { using var doc=JsonDocument.Parse(line); return doc.RootElement.TryGetProperty("id", out var id) ? id.Clone() : null; } catch { return null; } }
     private sealed class McpException(int code, string message) : Exception(message) { public int Code { get; } = code; }
 }
