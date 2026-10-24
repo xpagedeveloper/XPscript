@@ -38,6 +38,7 @@ internal static class AstObjectSupportRegistry
         "XPJsonObject",
         "XPJsonElement", "XPJsonValidationResult", "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall", "XPAttachmentCollection", "Path",
         "NotesHTTPRequest", "XPNotesHTTPRequest", "NotesSession", "NotesMail", "NotesStream", "NotesAgent", "NotesDXLImporter", "NotesDXLExporter", "NotesDatabase", "NotesDatabaseAccess", "NotesView", "NotesNoteCollection", "NotesDateTime", "NotesName", "NotesDocument", "NotesDocumentCollection", "NotesItem",
+        "NotesRichTextItem", "NotesRichTextNavigator", "NotesRichTextParagraphStyle", "NotesRichTextRange", "NotesRichTextSection", "NotesRichTextStyle", "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink",
         "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
         "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
         "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo"
@@ -56,10 +57,6 @@ internal static class AstObjectSupportRegistry
         "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement",
         "XPSpreadsheet", "XPWorksheet", "XPCell", "XPRange",
         "UIForm", "UIListView",
-        "NotesRichTextItem", "NotesRichTextNavigator",
-        "NotesRichTextParagraphStyle", "NotesRichTextRange", "NotesRichTextSection", "NotesRichTextStyle",
-        "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink",
-        
         "NotesMIMEEntity", "NotesMIMEHeader", "NotesEmbeddedObject", "NotesViewEntry"
         ,"XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn"
         ,"XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
