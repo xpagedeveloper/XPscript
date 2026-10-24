@@ -22,6 +22,10 @@ EMPTY_SETTER = re.compile(
     re.DOTALL,
 )
 RICH_TEXT_FILE = re.compile(r"NotesRichText|NotesEmbeddedObject")
+FINAL_SURFACE_AUDIT_FILES = {
+    "NotesViewNavigationV2PostProcessor.cs",
+    "NotesViewNavigationV3PostProcessor.cs",
+}
 
 
 def load_allowlist() -> dict[str, str]:
@@ -100,6 +104,8 @@ def main() -> int:
         # such member survives in the generated runtime. Scanning the intermediate
         # processor source here therefore reports APIs that are not actually exposed.
         if RICH_TEXT_FILE.search(path.name) is not None:
+            continue
+        if path.name in FINAL_SURFACE_AUDIT_FILES:
             continue
 
         for match in PROPERTY_HEAD.finditer(text):

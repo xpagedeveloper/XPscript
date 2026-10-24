@@ -114,6 +114,7 @@ internal sealed class XPScriptNotesViewRow
     internal int IndentLevel { get; }
     internal XPScriptNotesViewEntryType Type { get; }
     internal bool IsDocument => Type == XPScriptNotesViewEntryType.Document;
+    internal bool IsConflict => IsDocument && _session.Api.IsViewRowConflict(Database.Handle, NoteId);
 
     internal object?[] GetColumnValues()
     {
@@ -368,6 +369,15 @@ internal sealed class XPScriptNotesViewNavigator : XPScriptNotesOwnedObject
     private const uint ReadMaskSummaryValues = 0x00001000;
     private const uint NoteIdCategory = 0x80000000u;
     private const uint NoteIdCategoryTotal = 0xC0000000u;
+
+    internal bool IsViewRowConflict(nint database, uint noteId)
+    {
+        EnsureInitialized();
+        var note = Resolve<NSFNoteOpenDelegate>("NSFNoteOpen")(database, noteId, 0, out var handle);
+        Check(note, "NSFNoteOpen(view conflict)");
+        try { return HasItem(handle, "$Conflict"); }
+        finally { CloseNote(handle); }
+    }
 
     internal XPScriptNotesViewRow[] ReadViewRows(nint collection, XPScriptNotesDatabase database, string viewName, XPScriptNotesSession session)
     {
