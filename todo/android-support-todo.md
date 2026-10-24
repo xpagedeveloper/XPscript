@@ -89,7 +89,7 @@ The first implementation must stay intentionally small. Do not start with Avalon
 
 - [x] Compile Android APK samples locally, without starting an emulator: Video, Carousel, Audio, Progress/ActivityIndicator, Slider, Switch, Icon, Card/Panel, ScrollView, ListView, full UIForm manual test, media manual test, CameraPreview, UIForm regression and asset regression.
 - [x] Verify the local compiler and AndroidCompilerProbe with .NET 10 / Android workload.
-- [ ] Run the generated APKs on a physical device or local emulator; this remains intentionally opt-in and was not started in this environment.
+- [ ] Run the generated APKs on a physical device or local emulator; this remains intentionally opt-in and is deferred to the final local-environment and hardware verification phase in `todo/ast-compiler-migration-todo.md`.
 - [x] Complete headless Android debug-output/runtime-error APK builds. Generated Android projects explicitly use `AndroidLinkMode=None`; both `android-debug-output-regression.xps` and `android-debug-runtime-error.xps` now build locally. Physical/emulator log verification remains separate.
 
 Reuse the existing shared UIForm model. Android should add a platform backend, not fork the XPScript UI API.
