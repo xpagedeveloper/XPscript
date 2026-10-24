@@ -2834,9 +2834,7 @@ paths:
 
 static async Task VerifyDefinition(string definitionPath, bool verifyServer, bool verifyClient)
 {
-    var fullPath = Path.IsPathRooted(definitionPath)
-        ? definitionPath
-        : Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, definitionPath));
+    var fullPath = ResolveDefinitionPath(definitionPath);
     if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI definition was not found.", fullPath);
     var specification = File.ReadAllText(fullPath);
     XpsOpenApiGenerationResult? server = verifyServer ? new XpsOpenApiGenerator().Generate(specification, Path.GetFileName(fullPath)) : null;
@@ -2870,7 +2868,7 @@ static async Task VerifyDefinition(string definitionPath, bool verifyServer, boo
 
 static async Task VerifyScopedClient(string definitionPath)
 {
-    var fullPath = Path.GetFullPath(definitionPath);
+    var fullPath = ResolveDefinitionPath(definitionPath);
     if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI definition was not found.", fullPath);
     var specification = File.ReadAllText(fullPath);
     var fileName = Path.GetFileName(fullPath);
@@ -2883,4 +2881,14 @@ static async Task VerifyScopedClient(string definitionPath)
     await File.WriteAllTextAsync(clientPath, client.Source + "\nSub Main()\nEnd Sub\n");
     _ = new XPScriptTranspiler().TranspileRestricted(await File.ReadAllTextAsync(clientPath), clientPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
     Console.WriteLine($"OPENAPI-SCOPED-CLIENT={fileName} OPERATIONS={client.Operations.Count} MODELS={client.Models.Count} COMPILE=OK");
+}
+
+static string ResolveDefinitionPath(string definitionPath)
+{
+    if (Path.IsPathRooted(definitionPath)) return definitionPath;
+
+    var workingDirectoryPath = Path.GetFullPath(definitionPath);
+    if (File.Exists(workingDirectoryPath)) return workingDirectoryPath;
+
+    return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, definitionPath));
 }
