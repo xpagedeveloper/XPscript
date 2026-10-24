@@ -589,7 +589,8 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Compare web target behavior.
 - [ ] Compare desktop/Avalonia behavior.
   - [x] AST desktop-target compilation was verified with `demo/desktop-ui/customer-form.xps`; Avalonia 12.0.3 desktop dependencies were resolved locally and `Generated.exe` was produced. `DesktopUIFormLifecycleSmoke` also passes.
-  - [ ] Full legacy/AST desktop runtime parity remains open: `DesktopUIFormBridgeSmoke` currently fails in the legacy `UIExtensionDesktopPostProcessor` before AST execution, so this is tracked as a legacy baseline defect rather than claimed parity.
+  - [x] The legacy desktop bridge baseline now passes `DesktopUIFormBridgeSmoke` and `DesktopUIFormLifecycleSmoke`; dialog-only sources no longer enter UIForm lifecycle rewriting when no UIForm runtime is generated.
+  - [ ] Full legacy/AST desktop runtime parity remains open because the smoke tests currently verify transpilation and bridge/lifecycle contracts rather than launching a complete Avalonia application through both compiler paths.
 - [ ] Compare Android/mobile behavior as support matures.
 - [x] Audit every legacy compiler command-line parameter and confirm that it is implemented and behaviorally compatible in the AST compiler, including aliases, defaults, validation, diagnostics and execution semantics; `tests/cli-compatibility/run-cli-compatibility.ps1` passed `CLI_COMMAND_LINE_COMPATIBILITY_OK` with coverage for the complete currently supported parameter set.
   - [x] AST `run` accepts the legacy `--no-daemon`, `--info` and `--result-format` options with validation and executable compatibility coverage; `--no-daemon` is intentionally ignored because AST-run has no daemon path.
