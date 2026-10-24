@@ -22,6 +22,11 @@ test -f ./out/generated-openapi.xps
 dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate ./tests/OpenApiGeneratorSmoke/petstore.json -o ./out/generated-openapi-json.xps --force
 test -f ./out/generated-openapi-json.xps
 
+dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client generate ./tests/OpenApiGeneratorSmoke/petstore.yaml -o ./out/selected-openapi-client.xps --operation getPet
+grep -q "Function GetPet" ./out/selected-openapi-client.xps
+! grep -q "Function CreatePet" ./out/selected-openapi-client.xps
+echo "OPENAPI-CLI-OPERATION-SELECTION=OK"
+
 digitalocean_out=$(mktemp -d ./out/digitalocean-cli-XXXXXX)
 dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi generate ./test/openapi/digitalocean.yaml -o "$digitalocean_out/full-server.xps"
 dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client generate ./test/openapi/digitalocean.yaml -o "$digitalocean_out/full-client.xps"
