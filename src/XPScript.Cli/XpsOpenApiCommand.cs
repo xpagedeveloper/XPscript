@@ -154,7 +154,10 @@ internal static class XpsOpenApiCommand
         }
         var existing = File.ReadAllText(outputPath);
         WriteStatus(statusPath, "importing", 10, 0, 0, null);
-        var result = new XpsOpenApiImporter().ImportFile(specificationPath, existing);
+        var result = new XpsOpenApiImporter().ImportFile(
+            specificationPath,
+            existing,
+            new XpsOpenApiGenerationOptions(includedOperations));
         if (result.Changed) ValidateAndReplace(outputPath, result.Source, statusPath, result.AddedProcedures.Count, result.AddedClasses.Count);
         WriteStatus(statusPath, "completed", 100, result.AddedProcedures.Count, result.AddedClasses.Count, outputPath);
         Console.WriteLine($"OpenAPI {result.OpenApiVersion} additive import: {(result.Changed ? "updated" : "no additions")}");
