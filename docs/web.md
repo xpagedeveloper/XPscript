@@ -181,6 +181,10 @@ Already compiled files are reused while their source/dependency snapshot remains
 
 `XpsWebCompilationCacheOptions.MaxConcurrentCompilations` limits the number of different cold/stale source files that a cache instance compiles at once. It defaults to `4` and accepts values from `1` through `256`. Requests for the same source continue to share one single-flight compilation. This keeps a burst of requests from starting an unbounded number of AST/MSBuild compilations while allowing unrelated sources to compile concurrently.
 
+Kestrel and FastCGI create one dispatcher/cache for the lifetime of the host process, so warm requests reuse the live compiled unit and only cold or invalidated sources enter the compiler. CGI is process-per-request by design; it still reuses persistent compiled artifacts when enabled, but cannot retain an in-memory live compiler between requests. Custom hosts should likewise create one `XpsWebDispatcher` and keep it alive for the host lifetime rather than constructing one inside each request handler.
+
+WebIIS uses the generated out-of-process worker behind ASP.NET Core Module V2; that worker uses the same long-lived dispatcher/cache and the `.xpscript-cache` persistent artifact directory. An IIS application-pool recycle starts a new hot compiler instance and preserves only artifacts that remain valid for the new compiler/runtime identity.
+
 ## Request
 
 The Request API uses a singular method for the common first-value case and an `All` method when HTTP permits multiple values.
