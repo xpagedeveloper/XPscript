@@ -374,7 +374,7 @@ execute
 - [x] Invalidate when root `.xps` changes.
 - [x] Invalidate when any included `.xps` changes.
 - [x] Invalidate when a referenced managed/native dependency changes where relevant.
-- [ ] Invalidate when compiler/preprocessor configuration changes.
+- [x] Invalidate when compiler/preprocessor configuration changes, including the AST/legacy web switch and configured source preprocessors.
 - [x] Make invalidation race-safe while requests are running.
 - [x] Existing in-flight requests may finish on an immutable old compiled unit while new requests switch atomically to the new unit.
 

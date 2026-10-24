@@ -194,11 +194,12 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
     {
         try
         {
+            var configurationIdentity = BuildEffectiveConfigurationIdentity();
             return await XPScriptCompilationSnapshotBuilder.CreateAsync(
                 fullPath,
                 fullSiteRoot,
                 runtimeIdentifier,
-                _options.ConfigurationIdentity,
+                configurationIdentity,
                 _options.MaxSourceBytes,
                 includeExternalInputs: true,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -207,6 +208,13 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         {
             throw new XpsWebCompilationException("Unable to build a safe web compilation identity: " + ex.Message, ex);
         }
+    }
+
+    private string BuildEffectiveConfigurationIdentity()
+    {
+        var legacy = Environment.GetEnvironmentVariable("XPSCRIPT_WEB_LEGACY") ?? string.Empty;
+        var preprocessors = string.Join("\u001f", SourcePreprocessorConfigurationContext.Current);
+        return _options.ConfigurationIdentity + "\u001eweb-legacy=" + legacy + "\u001epreprocessors=" + preprocessors;
     }
 
     private async Task<XpsCompiledWebUnit> CompileMeasuredAsync(
