@@ -30,7 +30,11 @@ function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeou
     }
     $timer.Stop()
     Write-Host "FULLTEST_PROCESS_EXIT label=$label pid=$($p.Id) exit_code=$($p.ExitCode) elapsed_ms=$($timer.ElapsedMilliseconds)"
-    $stdout = $stdoutTask.GetAwaiter().GetResult(); $stderr = $stderrTask.GetAwaiter().GetResult()
+    # A descendant process can inherit the redirected pipe and keep it open
+    # after the bounded child has exited. Never let output collection turn a
+    # completed test into an unbounded harness hang.
+    $stdout = if ($stdoutTask.Wait(5000)) { $stdoutTask.GetAwaiter().GetResult() } else { "FULLTEST_OUTPUT_TIMEOUT: stdout for $label" }
+    $stderr = if ($stderrTask.Wait(5000)) { $stderrTask.GetAwaiter().GetResult() } else { "FULLTEST_OUTPUT_TIMEOUT: stderr for $label" }
     if ($stdout) { Write-Host $stdout.TrimEnd() }; if ($stderr) { Write-Host $stderr.TrimEnd() }
     return [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $stdout + $stderr }
   } finally { $p.Dispose() }
