@@ -514,7 +514,7 @@ Configuration precedence (CLI/config/env) must be explicitly defined rather than
 - [x] Source changes should invalidate only affected script dependency graphs.
 - [x] Next request compiles changed code once and atomically publishes it to cache after success.
 - [x] Define optional eager/precompile mode for production startup/deployment.
-- [ ] Provide a command to precompile/validate all reachable `.xps` files before deployment.
+- [x] Provide `xpscript web precompile --root DIR` to compile and validate all `.xps` files beneath the web root before deployment; failures are reported and produce a non-zero exit code.
 - [x] Compile errors should have a production-safe HTTP response while retaining full diagnostics in server logs.
 - [ ] Development mode may display source diagnostics only after explicit opt-in.
 

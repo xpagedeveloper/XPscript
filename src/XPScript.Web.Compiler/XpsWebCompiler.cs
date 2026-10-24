@@ -586,6 +586,7 @@ internal static class Script
             throw new XpsWebCompilationException("Web source must be inside the configured web root.");
         var stagedSourcePath = Path.Combine(workspace, relativeSourcePath);
         StageWebSourceTree(sourceRoot, workspace, sourcePath, stagedSourcePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(stagedSourcePath)!);
         var runtimeAssembly = typeof(XpsWebContext).Assembly.Location;
         File.Copy(runtimeAssembly, Path.Combine(workspace, "XPScript.Web.Runtime.dll"), overwrite: true);
         File.Copy(runtimeAssembly, Path.Combine(Path.GetDirectoryName(stagedSourcePath)!, "XPScript.Web.Runtime.dll"), overwrite: true);

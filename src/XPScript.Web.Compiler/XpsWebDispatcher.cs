@@ -178,6 +178,31 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         }
     }
 
+    public async Task<int> PrecompileAllAsync(CancellationToken cancellationToken = default)
+    {
+        var sources = Directory.EnumerateFiles(_resolver.Root, "*.xps", SearchOption.AllDirectories)
+            .OrderBy(path => path, _pathComparer)
+            .ToArray();
+        var failures = 0;
+        foreach (var source in sources)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                WriteConsole($"Precompiling: {ToWebPath(source)}");
+                await using var lease = await _cache.AcquireAsync(source, _resolver.Root, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                failures++;
+                XpsWebConsoleErrorFallback.Write(ex, ToWebPath(source), "precompile-all");
+            }
+        }
+
+        Console.WriteLine($"Precompiled {sources.Length - failures}/{sources.Length} .xps file(s).");
+        return failures == 0 ? 0 : 1;
+    }
+
     private void WriteDebugException(XpsWebContext context, Exception exception, string? scriptPath, string? requestedRoute)
     {
         if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_DEBUG"), "1", StringComparison.Ordinal))

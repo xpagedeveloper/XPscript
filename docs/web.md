@@ -171,6 +171,8 @@ Examples are `10;30s`, `100;1m`, `1000;1h` and `5000;1d`. An authenticated reque
 
 ## PreCompile
 
+For deployment validation, run `xpscript web precompile --root ./site`. The command uses the same AST web compiler and persistent cache as the host, scans every `.xps` file below the web root (including nested directories), reports each compilation failure, and returns a non-zero exit code if any file fails. Generated runtime artifacts remain in the compiler cache rather than the web root.
+
 `[PreCompile:file.xps]` asks the web engine to warm another route. If the extension is omitted, the engine also tries `.xps`. A missing target is reported and skipped rather than stopping the server.
 
 Startup warms the default document and its direct precompile targets. Nested targets are not recursively warmed at startup. If `index.xps` precompiles `kalle.xps`, and `kalle.xps` declares `[PreCompile:nisse.xps]`, `nisse.xps` is warmed after the first real request to `kalle.xps`.

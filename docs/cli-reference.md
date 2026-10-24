@@ -77,6 +77,7 @@ For the complete JSON `--config` file format and all supported `web` and `fastCg
 | Command/option | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `web` | `xpscript web --root PATH [options]` | `PATH`: XPScript web root. | Starts the persistent Kestrel web host. | [index.xps](../demo/kestrel/index.xps) |
+| `web precompile` | `xpscript web precompile --root PATH` | `PATH`: XPScript web root. | Compiles every `.xps` file beneath the root through the AST web compiler before deployment; returns exit code 1 when any file fails. | [index.xps](../demo/kestrel/index.xps) |
 | `--root` | `--root PATH` | `PATH`: directory containing web `.xps` files. | Selects the required web application root. | [index.xps](../demo/kestrel/index.xps) |
 | `--default-document` | `--default-document FILE.xps` | `FILE.xps`: default route file, normally `index.xps`. | Changes the file resolved for directory/default-document requests. | [index.xps](../demo/kestrel/index.xps) |
 | `--address` | `--address IP` | `IP`: listener address. | Selects the Kestrel bind address. | [index.xps](../demo/kestrel/index.xps) |

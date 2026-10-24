@@ -79,6 +79,9 @@ static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
 
 static async Task<int> RunWebAsync(string[] commandArgs)
 {
+    if (commandArgs.Length > 0 && commandArgs[0].Equals("precompile", StringComparison.OrdinalIgnoreCase))
+        return await RunWebPrecompileAsync(commandArgs[1..]);
+
     var debug = commandArgs.Any(value => value.Equals("--debug", StringComparison.OrdinalIgnoreCase));
     if (debug)
     {
@@ -308,6 +311,13 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     }
 }
 
+static async Task<int> RunWebPrecompileAsync(string[] commandArgs)
+{
+    var root = RequireRoot(commandArgs);
+    await using var dispatcher = new XpsWebDispatcher(root);
+    return await dispatcher.PrecompileAllAsync();
+}
+
 static async Task<int> RunFastCgiAsync(string[] commandArgs)
 {
     commandArgs = XpsHostConfig.Apply("fastcgi", commandArgs);
@@ -531,6 +541,7 @@ Usage:
                 [--session-same-site Strict|Lax|None] [--session-secure]
                 [--structured-log FILE] [--operational-external]
                 [--static-files] [--static-max-bytes BYTES] [--static-allow EXT MIME]
+  xpscript web precompile --root DIR
   xpscript web [--config FILE] --root DIR [web options...]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] [--listen ADDRESS:PORT]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] --unix-socket PATH
@@ -542,7 +553,7 @@ Command model:
   openapi  Generate XPScript REST server source from OpenAPI 3.0/3.1 YAML or JSON.
   service  Install compiled XPScript services using the native service manager.
   android  Discover and deploy to Android devices and emulators.
-  web      Run the standalone Kestrel runtime.
+  web      Run the standalone Kestrel runtime, or precompile all web sources.
   fastcgi  Run the FastCGI web runtime.
 
 Running `xpscript` without arguments prints this usage reference. `--info` may appear before or after `run`/`compile`. For `run`, only the value supplied to `--Args` is forwarded to the compiled program; for example `xpscript run main.xps --Args "first second"` launches the generated program as `main.exe first second` on Windows.\n\nThe same xpscript executable owns all command modes. The XPScript.Compiler project provides shared compiler services and command handling.
@@ -573,6 +584,7 @@ Examples:
   xpscript service install ./worker --name xps-worker --display-name "XPScript Worker" --start auto
   xpscript android devices
   xpscript web ./site
+  xpscript web precompile --root ./site
   xpscript web --config ./production.cfg
   xpscript web --root ./site --sessions
   xpscript web --root ./site --default-document home.xps
