@@ -349,15 +349,15 @@ internal static class RunCompiler
         var isAndroid = IsAndroidRuntime(runtimeIdentifier);
         var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
         var startup = isAndroid || string.IsNullOrWhiteSpace(startupObject) ? string.Empty : $"    <StartupObject>{EscapeXml(startupObject)}</StartupObject>\n";
-        var androidAbi = runtimeIdentifier is "android-arm64" ? "arm64-v8a" : "x86_64";
         var androidProperties = isAndroid
             ? $"    <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>\n" +
               "    <AndroidApplication>true</AndroidApplication>\n" +
               $"    <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>\n" +
-              $"    <AndroidSupportedAbis>{androidAbi}</AndroidSupportedAbis>\n" +
               "    <AndroidPackageFormat>apk</AndroidPackageFormat>\n" +
               "    <ApplicationId>eu.xpscript.app</ApplicationId>\n"
             : string.Empty;
+        var useAppHost = !isAndroid && (CompilePublishLayoutContext.IncludeRuntime || (CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile));
+        var publishSingleFile = !isAndroid && CompilePublishLayoutContext.SingleFile;
 
         return $"""
 <Project Sdk="Microsoft.NET.Sdk">
@@ -370,9 +370,9 @@ internal static class RunCompiler
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
-    <UseAppHost>{(CompilePublishLayoutContext.IncludeRuntime || (CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile)).ToString().ToLowerInvariant()}</UseAppHost>
+    <UseAppHost>{useAppHost.ToString().ToLowerInvariant()}</UseAppHost>
     <SelfContained>{CompilePublishLayoutContext.IncludeRuntime.ToString().ToLowerInvariant()}</SelfContained>
-    <PublishSingleFile>{CompilePublishLayoutContext.SingleFile.ToString().ToLowerInvariant()}</PublishSingleFile>
+    <PublishSingleFile>{publishSingleFile.ToString().ToLowerInvariant()}</PublishSingleFile>
     <NuGetAudit>{(ApplicationSecurityModeContext.Current != ApplicationSecurityMode.Off).ToString().ToLowerInvariant()}</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
