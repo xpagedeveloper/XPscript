@@ -140,7 +140,7 @@ internal static class RunCompiler
             var isAndroid = IsAndroidRuntime(runtimeIdentifier);
             await File.WriteAllTextAsync(projectPath, BuildProject(references, usesMimeKit, runtimeIdentifier, startupObject), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(programPath,
-                isAndroid ? generatedSource + Environment.NewLine + AndroidHostSource.Code : generatedSource,
+                isAndroid ? CombineGeneratedSources(generatedSource, AndroidHostSource.Code) : generatedSource,
                 cancellationToken).ConfigureAwait(false);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
@@ -186,6 +186,33 @@ internal static class RunCompiler
         {
             try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(tempRoot); } catch { }
         }
+    }
+
+    private static string CombineGeneratedSources(string generatedSource, string hostSource)
+    {
+        var usings = new List<string>();
+        var body = new StringBuilder();
+
+        foreach (var source in new[] { generatedSource, hostSource })
+        {
+            foreach (var line in source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+            {
+                var trimmed = line.TrimStart();
+                if (line.Length == trimmed.Length &&
+                    (trimmed.StartsWith("using ", StringComparison.Ordinal) ||
+                     trimmed.StartsWith("global using ", StringComparison.Ordinal)) &&
+                    trimmed.EndsWith(';'))
+                {
+                    if (!usings.Contains(trimmed, StringComparer.Ordinal))
+                        usings.Add(trimmed);
+                    continue;
+                }
+
+                body.AppendLine(line);
+            }
+        }
+
+        return string.Join(Environment.NewLine, usings) + Environment.NewLine + body;
     }
 
     private static async Task<(int ExitCode, string Stdout, string Stderr, string AssetsPath)> ExecuteBuildAsync(
