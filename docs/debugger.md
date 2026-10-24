@@ -24,7 +24,7 @@ If Application.IsDebugging Then
 End If
 ```
 
-See `samples/application-is-debugging.xps` for a complete runnable example.
+See [`samples/application-is-debugging.xps`](../samples/application-is-debugging.xps) for a complete runnable example.
 
 ## Version 1 capabilities
 

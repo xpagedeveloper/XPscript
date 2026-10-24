@@ -101,7 +101,7 @@ For Android UIForm development, use:
 xpscript android run samples/android-uiform-regression.xps --device physical --serial <adb-serial> --platform android-arm64 --debug
 ```
 
-For isolated Video/Audio testing, use `samples/android-uiform-media-manual-test.xps`. It uses HTTP media sources and logs explicit `MEDIA TEST ...` markers:
+For isolated Video/Audio testing, use [`samples/android-uiform-media-manual-test.xps`](../samples/android-uiform-media-manual-test.xps). It uses HTTP media sources and logs explicit `MEDIA TEST ...` markers:
 
 ```text
 xpscript android run samples/android-uiform-media-manual-test.xps --device emulator --platform android-x64 --debug

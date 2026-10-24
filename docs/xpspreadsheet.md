@@ -490,4 +490,4 @@ Call copy.FromJson(rows)
 Print copy.Rows[0].Get("name")
 ```
 
-The runtime regression is `samples/csv-json-roundtrip.xps`.
+The runtime regression is [`samples/csv-json-roundtrip.xps`](../samples/csv-json-roundtrip.xps).

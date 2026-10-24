@@ -151,4 +151,4 @@ The wrapper performing a successful root or direct-child content/header mutation
 
 The verified surface covers root, direct-child and nested MIME traversal/mutation, arbitrary header lookup, MIME parameter access, content streams/readers, encoding operations, preamble handling, and MIME directory lifecycle. Named document-level MIME items other than `Body` remain outside the supported surface.
 
-See `samples/notes-mime-entity-surface.xps` for executable root readback, multipart attachment, save/reopen, metadata, charset and traversal regression coverage.
+See [`samples/notes-mime-entity-surface.xps`](../samples/notes-mime-entity-surface.xps) for executable root readback, multipart attachment, save/reopen, metadata, charset and traversal regression coverage.

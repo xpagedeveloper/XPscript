@@ -432,4 +432,4 @@ Validation objects expose:
 - DTD validation rejects `SYSTEM` and `PUBLIC` external identifiers.
 - The API does not fetch external entities or schemas.
 
-See `samples/native-xml-dom-regression.xps` for executable creation, navigation, attributes, insertion, replacement, deletion, parsing and clearing coverage.
+See [`samples/native-xml-dom-regression.xps`](../samples/native-xml-dom-regression.xps) for executable creation, navigation, attributes, insertion, replacement, deletion, parsing and clearing coverage.
