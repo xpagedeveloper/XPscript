@@ -863,6 +863,8 @@ using XpJsonElement = XPScriptJsonElement;
 {{(usesNetworkTools ? NetworkToolsRuntimeSource.Code : "")}}
 {{((usesAi || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema") || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonValidationResult")) ? JsonSchemaRuntimeSource.Code : "")}}
 {{AstRuntimeSource.Code}}
+{{OperatorArrayCompatibilityRuntimeSource.Code}}
+{{VariantIndexRuntimeSource.Code}}
 {{AstImageSupport.RuntimeCode(fullSource)}}
 {{AstCsvSupport.RuntimeCode(fullSource)}}
 {{AstXmlSupport.RuntimeCode(fullSource)}}
