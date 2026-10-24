@@ -33,6 +33,7 @@ var samplePaths = new[]
     ,Path.Combine(repoRoot, "samples", "notes-richtext-extended-surface.xps")
     ,Path.Combine(repoRoot, "samples", "notes-mail-surface.xps")
     ,Path.Combine(repoRoot, "samples", "notes-mail-no-mime-surface.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-stream-runtime-test.xps")
 };
 foreach (var samplePath in samplePaths)
 {
@@ -83,7 +84,8 @@ var classes = new[]
     (Runtime: "XPScriptNotesRichTextParagraphStyle", Surface: "NotesRichTextParagraphStyle", Anchor: (string?)null),
     (Runtime: "XPScriptNotesRichTextTab", Surface: "NotesRichTextTab", Anchor: (string?)null),
     (Runtime: "XPScriptNotesColorObject", Surface: "NotesColorObject", Anchor: (string?)null),
-    (Runtime: "XPScriptNotesMail", Surface: "NotesMail", Anchor: (string?)"Send")
+    (Runtime: "XPScriptNotesMail", Surface: "NotesMail", Anchor: (string?)"Send"),
+    (Runtime: "XPScriptNotesStream", Surface: "NotesStream", Anchor: (string?)"ReadText")
 };
 
 var requestedSurfaces = new HashSet<string>(args, StringComparer.OrdinalIgnoreCase);
