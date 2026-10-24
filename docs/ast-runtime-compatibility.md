@@ -42,8 +42,6 @@ placeholders. The current entries are:
 | --- | --- |
 | `NotesAgentPostProcessor.IsNotesAgent` | A `NotesAgent` wrapper is always an agent, so this is a compatibility discriminator rather than missing state. |
 | `NotesRuntimeValueSource.IsValidDate` | A constructed `NotesDateTime` is valid by construction; invalid native values fail during construction/conversion. |
-| `NotesViewNavigationV2PostProcessor.IsConflict` | Native conflict metadata is not exposed yet. |
-| `NotesViewNavigationV3PostProcessor.IsConflict` | Same pending native conflict metadata, while V3 also provides read-state behavior. |
 
 Rich-text postprocessor files are excluded from the source scan because they
 contain intermediate declarations. The final rich-text surface is checked by

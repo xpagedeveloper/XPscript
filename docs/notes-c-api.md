@@ -117,6 +117,8 @@ Dim view As NotesView
 Set view = db.OpenView("People")
 ```
 
+`NotesViewEntry.IsConflict` is `True` when the underlying document contains the native `$Conflict` marker. Category and total entries return `False`; the AST runtime reads the marker through the native Notes API.
+
 ### Properties
 
 | Property | Type | Access | Description |
