@@ -37,6 +37,7 @@ var samplePaths = new[]
     ,Path.Combine(repoRoot, "samples", "notes-agent-runtime-test.xps")
     ,Path.Combine(repoRoot, "samples", "notes-agent-types-domino-runtime-test.xps")
     ,Path.Combine(repoRoot, "samples", "notes-dxl-import-export-surface.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-navigator-entry-extended-surface.xps")
 };
 foreach (var samplePath in samplePaths)
 {
