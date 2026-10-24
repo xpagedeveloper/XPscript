@@ -206,11 +206,19 @@ public static class CompilerMcpServer
         {
             await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
             using var diagnosticMode = CompilerDiagnosticMode.Push(GetOptionalBoolean(arguments, "debug"), true);
-            using var securityMode = ApplicationSecurityModeContext.Push(ParseSecurityMode(arguments));
-            using var preprocessors = SourcePreprocessorConfigurationContext.Push(GetOptionalStringArray(arguments, "sourcePreprocessors"));
-            using var restricted = PushIncludePolicy(arguments, root);
-            var result = await RunCompiler.CompileWithResultAsync(sourcePath, outputDirectory, GetOptionalString(arguments, "runtimeIdentifier") ?? CompilerDriver.CurrentRuntimeIdentifier(), GetOptionalBoolean(arguments, "debug")).ConfigureAwait(false);
-            return new { result = result.Success ? "ok" : "error", compiler = "ast", source = new { entryPoint = filename }, output = result.Output, errors = result.Errors, info = BuildInfo("compile", filename, GetOptionalString(arguments, "runtimeIdentifier"), outputDirectory, true) };
+            var security = ParseSecurityMode(arguments);
+            var roots = GetOptionalStringArray(arguments, "sourceRoots");
+            var preprocessors = GetOptionalStringArray(arguments, "sourcePreprocessors");
+            var outputPath = await AstExperimentalCompiler.CompileAsync(
+                sourcePath,
+                outputDirectory,
+                GetOptionalString(arguments, "runtimeIdentifier"),
+                security,
+                GetOptionalBoolean(arguments, "restricted"),
+                roots,
+                preprocessors,
+                cancellationToken: default).ConfigureAwait(false);
+            return new { result = "ok", compiler = "ast", source = new { entryPoint = filename }, output = outputPath, errors = Array.Empty<CompileDiagnostic>(), info = BuildInfo("compile", filename, GetOptionalString(arguments, "runtimeIdentifier"), outputDirectory, true) };
         }
         catch (Exception ex) { return new { result = "error", compiler = "ast", source = new { entryPoint = filename }, errors = new[] { new CompileDiagnostic { File = filename, Description = ex.Message, DiagnosticCode = CompilerDiagnosticCodes.InternalCompilationFailed, Category = "compiler" } }, info = BuildInfo("compile", filename, GetOptionalString(arguments, "runtimeIdentifier"), outputDirectory, true) }; }
         finally { if (string.IsNullOrWhiteSpace(output)) try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(root); } catch { } }
