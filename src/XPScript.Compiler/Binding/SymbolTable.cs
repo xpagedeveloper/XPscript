@@ -105,7 +105,54 @@ public sealed class SymbolTable
         // compiler catalog. Keep the AST binder aligned with that generated
         // runtime surface.
         Declare(new PropertySymbol("NotesEmbeddedObject.FileCreated", typeof(object), XpTypeSymbol.User("NotesDateTime")));
+        Declare(new VariableSymbol("XPScriptNotesConst.SEARCH_DEPTH", typeof(long), XpTypeSymbol.Variant));
+        ImportNotesMimeOverloads();
         ImportXPAiOverloads();
+    }
+
+    private void ImportNotesMimeOverloads()
+    {
+        var entity = XpTypeSymbol.User("NotesMIMEEntity");
+        var header = XpTypeSymbol.User("NotesMIMEHeader");
+        Declare(new TypeSymbol("NotesMIMEEntity", typeof(object), entity));
+        Declare(new TypeSymbol("NotesMIMEHeader", typeof(object), header));
+
+        foreach (var property in new[]
+        {
+            "BoundaryStart", "BoundaryEnd", "Charset", "ContentAsText", "ContentID",
+            "ContentLocation", "ContentSubType", "ContentType", "Encoding", "HeaderObjects",
+            "Headers", "InputStream", "IsDiscretePart", "IsMessagePart", "IsMultipart",
+            "Parent", "Preamble", "Reader"
+        })
+            Declare(new PropertySymbol("NotesMIMEEntity." + property, property is "BoundaryStart" or "BoundaryEnd" or "Charset" or "ContentAsText" or "ContentID" or "ContentLocation" or "ContentSubType" or "ContentType" or "Headers" or "Preamble" ? typeof(string) : typeof(object), property is "BoundaryStart" or "BoundaryEnd" or "Charset" or "ContentAsText" or "ContentID" or "ContentLocation" or "ContentSubType" or "ContentType" or "Headers" or "Preamble" ? XpTypeSymbol.FromClr(typeof(string)) : XpTypeSymbol.Variant));
+
+        var entityMethods = new (string Name, int Arity)[]
+        {
+            ("AppendChildEntity", 1), ("CreateChildEntity", 0), ("CreateChildEntity", 1),
+            ("CreateHeader", 1), ("CreateHeader", 2), ("DecodeContent", 0), ("EncodeContent", 1),
+            ("GetChildren", 0), ("GetContentAsBytes", 1), ("GetContentAsText", 1),
+            ("GetContentAsText", 2), ("GetEntityAsText", 1), ("GetFirstChildEntity", 0),
+            ("GetHeaders", 0), ("GetHeaders", 1), ("GetInputStream", 0), ("GetInputStream", 1),
+            ("GetNextEntity", 0), ("GetNextEntity", 1), ("GetNextSibling", 0),
+            ("GetNthHeader", 1), ("GetNthHeader", 2), ("GetParentEntity", 0),
+            ("GetPrevSibling", 0), ("GetSomeHeaders", 1), ("Remove", 0),
+            ("RemoveChildEntity", 1), ("RemoveHeaders", 1), ("SetContentFromBytes", 3),
+            ("SetContentFromText", 3)
+        };
+        foreach (var (method, arity) in entityMethods)
+            Declare(new FunctionSymbol("NotesMIMEEntity." + method, method is "GetSomeHeaders" ? typeof(string) : typeof(object), Enumerable.Repeat(typeof(object), arity).ToArray(), method is "GetSomeHeaders" ? XpTypeSymbol.FromClr(typeof(string)) : XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, arity).ToArray()));
+
+        foreach (var property in new[] { "HeaderName", "Parent" })
+            Declare(new PropertySymbol("NotesMIMEHeader." + property, property == "HeaderName" ? typeof(string) : typeof(object), property == "HeaderName" ? XpTypeSymbol.FromClr(typeof(string)) : XpTypeSymbol.Variant));
+
+        var headerMethods = new (string Name, int Arity)[]
+        {
+            ("AddValText", 1), ("GetHeaderVal", 0), ("GetHeaderValAndParams", 0),
+            ("GetParamVal", 1), ("Remove", 0), ("SetHeaderVal", 1),
+            ("SetHeaderValAndParams", 1), ("SetParamVal", 2)
+        };
+        foreach (var (method, arity) in headerMethods)
+            Declare(new FunctionSymbol("NotesMIMEHeader." + method, method is "GetHeaderVal" or "GetHeaderValAndParams" or "GetParamVal" ? typeof(string) : typeof(object), Enumerable.Repeat(typeof(object), arity).ToArray(), method is "GetHeaderVal" or "GetHeaderValAndParams" or "GetParamVal" ? XpTypeSymbol.FromClr(typeof(string)) : XpTypeSymbol.Variant, Enumerable.Repeat(XpTypeSymbol.Variant, arity).ToArray()));
     }
 
     private void ImportXPAiOverloads()

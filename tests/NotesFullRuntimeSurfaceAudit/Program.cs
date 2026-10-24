@@ -87,6 +87,8 @@ var classes = new[]
     (Runtime: "XPScriptNotesRichTextStyle", Surface: "NotesRichTextStyle", Anchor: (string?)null),
     (Runtime: "XPScriptNotesRichTextParagraphStyle", Surface: "NotesRichTextParagraphStyle", Anchor: (string?)null),
     (Runtime: "XPScriptNotesRichTextTab", Surface: "NotesRichTextTab", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesMIMEEntity", Surface: "NotesMIMEEntity", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesMIMEHeader", Surface: "NotesMIMEHeader", Anchor: (string?)null),
     (Runtime: "XPScriptNotesColorObject", Surface: "NotesColorObject", Anchor: (string?)null),
     (Runtime: "XPScriptNotesMail", Surface: "NotesMail", Anchor: (string?)"Send"),
     (Runtime: "XPScriptNotesStream", Surface: "NotesStream", Anchor: (string?)"ReadText"),
@@ -119,7 +121,10 @@ var allowedGuardedMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase
 {
     "NotesDocument.CreateMIMEEntity",
     "NotesDocument.GetMIMEEntity",
-    "NotesItem.GetMIMEEntity"
+    "NotesItem.GetMIMEEntity",
+    // The native MIME iterator deliberately implements SEARCH_DEPTH only;
+    // other search modes are rejected explicitly rather than silently ignored.
+    "NotesMIMEEntity.GetNextEntity"
 };
 
 var missing = new List<string>();

@@ -69,6 +69,11 @@ Sub Main()
             Print "FAIL: immediate ContentAsText mismatch: " & mime.ContentAsText
         End If
 
+        ' Exercise the complete root content and boundary surface in the permanent MIME probe.
+        Print "MIME boundaries: " & mime.BoundaryStart & " / " & mime.BoundaryEnd
+        Call mime.EncodeContent(1725)
+        Call mime.DecodeContent()
+
         Set attachmentHeader = mime.GetNthHeader("Content-Type")
         If Not attachmentHeader Is Nothing And attachmentHeader.GetHeaderValAndParams() = "text/plain; charset=UTF-8" Then
             Print "PASS: root Content-Type header lookup"
@@ -86,6 +91,8 @@ Sub Main()
         Call contentStream.Recycle()
         Set contentStream = Nothing
     End If
+    Call attachmentHeader.AddValText("; charset=UTF-8")
+    Call attachmentHeader.SetHeaderValAndParams(attachmentHeader.GetHeaderValAndParams())
 
     Call doc.CloseMIMEEntities()
     Set mime = Nothing
@@ -530,12 +537,12 @@ Sub Main()
 
             Set currentEntity = mime.GetFirstChildEntity()
             If Not currentEntity Is Nothing Then
-                Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
+                Set currentEntity = currentEntity.GetNextEntity(1724)
                 Do While Not currentEntity Is Nothing
                     If currentEntity.ContentType = "text" And currentEntity.ContentSubType = "plain" Then
                         foundNestedAfterReopen = True
                     End If
-                    Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
+                    Set currentEntity = currentEntity.GetNextEntity(1724)
                 Loop
             End If
             Set currentEntity = mime.GetFirstChildEntity()
@@ -607,7 +614,7 @@ Sub Main()
                 If currentEntity.ContentType = "text" And currentEntity.ContentSubType = "html" Then
                     foundHtml = True
                 End If
-                Set currentEntity = currentEntity.GetNextEntity(SEARCH_DEPTH)
+                    Set currentEntity = currentEntity.GetNextEntity(1724)
             Loop
 
             If foundHtml Then
