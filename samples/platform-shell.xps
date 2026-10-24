@@ -1,13 +1,27 @@
 Sub Main()
     Print "PLATFORM=" & Platform()
 
+    Dim result As Variant
+    Dim args(2) As String
     If Platform() = "Windows" Then
-        Call Shell("cmd.exe /c echo XPScript-Windows")
+        args(0) = "/c"
+        args(1) = "echo"
+        args(2) = "XPScript-Windows"
+        result = ShellExecute("cmd.exe", args)
     ElseIf Platform() = "Linux" Then
-        Call Shell("/bin/sh -c \"echo XPScript-Linux\"")
+        args(0) = "-c"
+        args(1) = "echo XPScript-Linux"
+        args(2) = ""
+        result = ShellExecute("/bin/sh", args)
     ElseIf Platform() = "MacOS" Then
-        Call Shell("/bin/sh -c \"echo XPScript-MacOS\"")
+        args(0) = "-c"
+        args(1) = "echo XPScript-MacOS"
+        args(2) = ""
+        result = ShellExecute("/bin/sh", args)
     Else
         Print "Shell sample skipped for unsupported platform"
+        Exit Sub
     End If
+
+    Print Trim(result.Output)
 End Sub
