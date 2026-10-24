@@ -13,7 +13,7 @@ Sub Main()
     Dim modified As NotesDocumentCollection
     Dim item As NotesItem
     Dim name As NotesName
-    Set session = New NotesSession("runtime")
+    Set session = New NotesSession()
     Print session.UserName
     Print session.Platform
     Set db = session.OpenDatabase("", "apps\customers.nsf")
