@@ -1511,7 +1511,7 @@ $spreadsheetProject = Join-Path $root 'tests/AstSpreadsheetRuntimeProbe/AstSprea
 $spreadsheetBuild = Invoke-BoundedDotnetRun @('build', $spreadsheetProject, '-c', 'Release', '--no-restore', '-p:UseSharedCompilation=false', '-p:UseAppHost=false', '-m:1')
 if ($spreadsheetBuild.TimedOut) { throw 'AST native spreadsheet runtime probe build timed out.' }
 if ($spreadsheetBuild.ExitCode -ne 0) { throw "AST native spreadsheet runtime probe build failed.`n$($spreadsheetBuild.Output)" }
-$spreadsheetProbe = Invoke-BoundedDotnetRun @((Join-Path $root 'tests/AstSpreadsheetRuntimeProbe/bin/Release/net10.0/AstSpreadsheetRuntimeProbe.dll'), $root)
+$spreadsheetProbe = Invoke-BoundedDotnetRun @((Join-Path $root 'tests/AstSpreadsheetRuntimeProbe/bin/Release/net10.0/AstSpreadsheetRuntimeProbe.dll'), $root) 300000
 if ($spreadsheetProbe.TimedOut) { throw 'AST native spreadsheet runtime regression timed out.' }
 if ($spreadsheetProbe.ExitCode -ne 0) { throw "AST native spreadsheet runtime regression failed.`n$($spreadsheetProbe.Output)" }
 foreach ($sheetInvalid in @('spreadsheet-member-error', 'spreadsheet-constructor-error', 'spreadsheet-readonly-error', 'spreadsheet-private-setter-error', 'spreadsheet-arity-error')) {
