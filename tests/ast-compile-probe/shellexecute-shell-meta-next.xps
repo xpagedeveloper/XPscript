@@ -18,5 +18,13 @@ Sub Main()
     If result.Output <> expected Then Error 5, "Shell metacharacters were not preserved as one structured argument: " & result.Output
     If Instr(result.Output, "XPSCRIPT_PHP2SHELL_EXECUTED") <> 0 Then Error 5, "Shell metacharacter input was executed."
 
+    On Error Resume Next
+    result = ShellExecute("pwsh & echo XPSCRIPT_PHP2SHELL_EXECUTED", args, 1000)
+    Dim executableError As String
+    executableError = Error$
+    On Error GoTo 0
+    If executableError = "" And result.ExitCode = 0 Then Error 5, "Shell metacharacters in the executable path were accepted as a command."
+    If executableError = "" And Instr(result.Output, "XPSCRIPT_PHP2SHELL_EXECUTED") <> 0 Then Error 5, "Executable-path shell metacharacters were executed."
+
     Print "SHELLEXECUTE-SHELL-META=OK"
 End Sub
