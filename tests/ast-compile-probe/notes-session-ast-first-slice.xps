@@ -137,4 +137,19 @@ Sub Main()
     view.AutoUpdate = False
     view.AutoUpdate = True
     Call view.Refresh()
+    noteCollection.SelectionFormula = "Form = \"Customer\""
+    noteCollection.SelectDocuments = True
+    noteCollection.SelectForms = True
+    noteCollection.SelectAllDataNotes(True)
+    noteCollection.SelectAllDesignElements(False)
+    Print noteCollection.Parent.FilePath
+    Print noteCollection.Count
+    Set created = noteCollection.LastBuildTime
+    Call noteCollection.BuildCollection()
+    Print noteCollection.GetFirstNoteID()
+    Print noteCollection.GetNextNoteID("00000001")
+    Call noteCollection.Add(doc)
+    Call noteCollection.Remove(doc)
+    Call noteCollection.Intersect(docs)
+    Call noteCollection.ClearCollection()
 End Sub
