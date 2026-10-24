@@ -29,6 +29,7 @@ public static class Program
     {
         public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";
     }
+    public static string AstPrintText(object? value) => XPScriptRuntime.PrintText(value);
     {{method}}
 }
 """;
@@ -74,7 +75,22 @@ var referenceEnd = runtimeSource.IndexOf("    public static LSArray Fixed", refe
 var referenceProbe = $$"""
 using System;
 using System.Linq;
-internal static class XPScriptRuntime { public static int CInt(object? value) => Convert.ToInt32(value); }
+using System.Collections.Generic;
+internal interface IXPScriptArrayStorage
+{
+    int Rank { get; }
+    bool IsAllocated { get; }
+    object? Get(params object?[] indices);
+    void Set(object? value, params object?[] indices);
+    int LBound(int dimension = 1);
+    int UBound(int dimension = 1);
+    void Erase();
+}
+internal static class XPScriptRuntime
+{
+    public static int CInt(object? value) => Convert.ToInt32(value);
+    public static byte CByte(object? value) => Convert.ToByte(value);
+}
 {{runtimeSource[referenceStart..referenceEnd]}}
 }
 public static class Guard
