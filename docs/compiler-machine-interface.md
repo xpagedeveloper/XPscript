@@ -155,9 +155,11 @@ XPScript exposes a local Model Context Protocol server over standard input/outpu
 xpscript mcp
 ```
 
-The server implements JSON-RPC MCP initialization, tool discovery and tool calls. It advertises compiler-owned tools for validation, symbol search, exact symbol description and diagnostic explanation. `xpscript_validate` accepts source text plus a virtual simple `.xps` filename and optional runtime identifier, and returns the normal versioned `CompileResult` object. The server keeps one `CompilerDriver` alive for the session so repeated validation uses the measured warm compiler path instead of starting a compiler process for every request.
+The server implements JSON-RPC MCP initialization, tool discovery and tool calls. It advertises compiler-owned tools for validation, virtual AST compilation, real AST compilation, symbol search, exact symbol description and diagnostic explanation. `xpscript_validate` accepts source text plus a virtual simple `.xps` filename and optional runtime identifier, and returns the normal versioned `CompileResult` object. The server keeps the compiler service warm and supports concurrent requests with isolated per-request staging workspaces.
 
-The MCP transport is local and non-executing. It does not expose compile, run or debugger operations. This keeps AI validation permissions separate from artifact publication and execution permissions.
+The MCP transport is local and does not execute the produced application. `xpscript_virtual_compile` performs AST validation/compilation without retaining a published artifact. `xpscript_compile` performs a real AST compilation and returns the published artifact path. Both tools return extended `info` metadata; real compilation accepts `runtimeIdentifier`, `debug`, `securityMode`, `restricted`, `sourceRoots`, `sourcePreprocessors` and an optional `outputDirectory`. When `outputDirectory` is omitted, the artifact is written to the MCP server working directory, never to the per-request temp workspace. An explicit output directory is the recommended integration choice.
+
+Each request owns a unique staging directory below `XPSCRIPT_TEMP_ROOT` when configured, or the system/user temp directory otherwise. The staging directory is removed in a `finally` path after the request. Cleanup is restricted to the current request's directory and cannot remove another thread's workspace or an explicitly published output directory.
 
 The existing debugger protocol is not changed by MCP. A later optimization may reuse the same warm compiler-service lifetime inside debugger and run/test hosts after cache invalidation and behavioral equivalence are measured.
 
@@ -185,9 +187,9 @@ Start the local MCP server with:
 xpscript mcp
 ```
 
-It communicates over stdin/stdout using JSON-RPC/MCP and currently exposes `xpscript_validate`, `xpscript_symbols`, `xpscript_describe` and `xpscript_explain`. It does not expose application execution or deployment.
+It communicates over stdin/stdout using JSON-RPC/MCP and exposes `xpscript_validate`, `xpscript_ast_validate`, `xpscript_virtual_compile`, `xpscript_compile`, `xpscript_symbols`, `xpscript_describe` and `xpscript_explain`. It does not execute the compiled application.
 
-A validation tool call accepts `source`, optional `filename`, and optional `runtimeIdentifier`. Compiler debug mode is deliberately not exposed through MCP. Example arguments:
+A validation tool call accepts `source`, optional `filename`, and optional `runtimeIdentifier`. Virtual compilation accepts the same source-oriented arguments. A real compilation additionally accepts the output and compiler options described above. Example validation arguments:
 
 ```json
 {
@@ -197,16 +199,16 @@ A validation tool call accepts `source`, optional `filename`, and optional `runt
 }
 ```
 
-MCP intentionally exposes only compiler diagnostics suitable for machine consumers and source-level repair. Internal compiler debug mode, generated `Program.cs` troubleshooting details, raw exceptions and stack traces are not part of the MCP surface. `--debug` remains a local XPScript development and compiler-troubleshooting facility. MCP transport/parser/internal server exceptions remain standardized JSON-RPC errors.
+MCP exposes structured diagnostics and extended compiler information suitable for machine consumers and source-level repair. `debug` on a real compile enables compiler diagnostic reporting; generated `Program.cs` troubleshooting details, raw exceptions and stack traces are not exposed as an unstructured protocol surface. MCP transport/parser/internal server exceptions remain standardized JSON-RPC errors.
 
 Recommended integration flow:
 
-1. Call `xpscript_validate` with a simple virtual `.xps` filename.
+1. Call `xpscript_validate` or `xpscript_virtual_compile` with a simple virtual `.xps` filename.
 2. Consume `structuredContent` and key repairs on `diagnosticCode`, source range and structured `properties`.
 3. Modify XPScript source, never generated C#.
-4. Validate again until the structured result succeeds.
+4. Validate or virtually compile again until the structured result succeeds.
 5. If validation reports an internal compiler failure that cannot be repaired from the structured diagnostics, stop automated repair and investigate it locally with the XPScript CLI/compiler development tooling.
-6. Compile/run/deploy only through a separately authorized workflow.
+6. Call `xpscript_compile` only through a separately authorized artifact-publication workflow and provide an explicit `outputDirectory` where possible.
 
 ### Debug and security contract
 
