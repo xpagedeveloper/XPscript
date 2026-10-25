@@ -3,7 +3,13 @@ Option Explicit
 Sub Main()
     If Not FileExists("tests/ast-compile-probe/file-exists-aliases-next.xps") Then Error 9860, "FileExists alias failed"
     If Not DirExists("tests/ast-compile-probe") Then Error 9861, "DirExists alias failed"
-    If Not IsDir("C:") Then Error 9862, "IsDir drive designator failed"
-    If Not DirExists("C:") Then Error 9863, "DirExists drive designator failed"
+    Dim rootPath As String
+    If Platform() = "Windows" Then
+        rootPath = Left(CurDir(), 2)
+    Else
+        rootPath = "/"
+    End If
+    If Not IsDir(rootPath) Then Error 9862, "IsDir platform root failed"
+    If Not DirExists(rootPath) Then Error 9863, "DirExists platform root failed"
     Print "FILE_EXISTS_ALIASES_AST_OK"
 End Sub
