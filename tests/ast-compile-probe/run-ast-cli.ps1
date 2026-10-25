@@ -925,6 +925,21 @@ foreach ($methodDiagnostic in $methodDiagnostics.GetEnumerator()) {
     }
 }
 Write-Host 'AST_CLASS_METHOD_DIAGNOSTICS_OK'
+$constructorDiagnostics = @{
+    'constructor-arity-error.xps' = 'XPS2004'
+    'constructor-type-error.xps' = 'XPS2004'
+    'constructor-private-error.xps' = 'XPS2009'
+    'constructor-overloads-ambiguous-error.xps' = 'XPS2005'
+    'constructor-overloads-no-match-error.xps' = 'XPS2004'
+    'constructor-overloads-private-error.xps' = 'XPS2009'
+}
+foreach ($constructorDiagnostic in $constructorDiagnostics.GetEnumerator()) {
+    $constructorDiagnosticText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot $constructorDiagnostic.Key) -o (Join-Path $output ([IO.Path]::GetFileNameWithoutExtension($constructorDiagnostic.Key))) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($constructorDiagnosticText -join "`n") -notmatch $constructorDiagnostic.Value) {
+        throw "AST constructor diagnostic regression failed for $($constructorDiagnostic.Key)."
+    }
+}
+Write-Host 'AST_CONSTRUCTOR_DIAGNOSTICS_OK'
 $constructorParity = @{
     'class-constructor-parity.xps' = 'CONSTRUCTOR_PARITY_OK'
     'class-constructor-derived-parity.xps' = 'DERIVED_CONSTRUCTOR_PARITY_OK'
