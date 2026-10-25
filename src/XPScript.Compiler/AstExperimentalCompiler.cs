@@ -392,6 +392,8 @@ public static class AstExperimentalCompiler
             symbols.Declare(new VariableSymbol("XPScriptNotes", typeof(object), XpTypeSymbol.User("XPScriptNotes")));
             DeclareNativeStatic(symbols, "XPScriptNotes.CreateSession", [], "XPScriptNotes.CreateSession");
             DeclareNativeStatic(symbols, "XPScriptNotes.CreateSession", [typeof(object)], "XPScriptNotes.CreateSession");
+            DeclareNativeStatic(symbols, "XPScriptNotes.CreateSession", [typeof(object), typeof(object)], "XPScriptNotes.CreateSession");
+            DeclareNativeStatic(symbols, "XPScriptNotes.CreateSession", [typeof(object), typeof(object), typeof(object)], "XPScriptNotes.CreateSession");
             DeclareNativeStatic(symbols, "XPScriptNotes.RecycleValue", [typeof(object)], "XPScriptNotes.RecycleValue");
             DeclareNativeStatic(symbols, "XPScriptNotes.RecycleForReplacement", [typeof(object), typeof(object)], "XPScriptNotes.RecycleForReplacement");
             DeclareNativeStatic(symbols, "XPScriptNotes.NormalizeObjectResult", [typeof(object)], "XPScriptNotes.NormalizeObjectResult");

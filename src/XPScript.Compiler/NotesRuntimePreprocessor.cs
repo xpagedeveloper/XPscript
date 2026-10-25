@@ -79,7 +79,9 @@ internal sealed class NotesRuntimePreprocessor
                 rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_DEPTH\b", "XPScriptNotesConst.SEARCH_DEPTH", RegexOptions.IgnoreCase);
                 rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_BREADTH\b", "XPScriptNotesConst.SEARCH_BREADTH", RegexOptions.IgnoreCase);
             }
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+NotesSession\s*\((.*)\)", "XPScriptNotes.CreateSession($1)", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+NotesSession\b(?:\s*\(([^()]*)\))?", match =>
+                $"XPScriptNotes.CreateSession({(match.Groups[1].Success ? match.Groups[1].Value : string.Empty)})",
+                RegexOptions.IgnoreCase);
 
             if (Regex.IsMatch(rewritten, @"\.GetFirstDocumentByKey\s*\(", RegexOptions.IgnoreCase))
                 throw new CompilerException("NotesView.GetFirstDocumentByKey has been renamed to NotesView.GetDocumentByKey.");
