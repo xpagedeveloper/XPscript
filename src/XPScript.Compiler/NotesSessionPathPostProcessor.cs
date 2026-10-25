@@ -188,6 +188,7 @@ internal static class NotesSessionPathPostProcessor
     private static IEnumerable<string> EnumerateNotesIniCandidates(string runtimeDirectory)
     {
         yield return Path.Combine(runtimeDirectory, "notes.ini");
+        yield return Path.Combine(runtimeDirectory, "Data", "notes.ini");
         yield return Path.Combine(Environment.CurrentDirectory, "notes.ini");
 
         if (!OperatingSystem.IsWindows()) yield break;
