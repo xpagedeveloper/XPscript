@@ -6,8 +6,8 @@ public sealed record ApplicationPackagePatchGroup(string Name, IReadOnlyList<str
 public static class ApplicationDependencyCatalog
 {
     public const string XPScriptReleaseVersion = "0.9.3-beta";
-    public const string AvaloniaVersion = "12.0.3";
-    public const string AvaloniaWebViewVersion = "12.0.1";
+    public const string AvaloniaVersion = "12.1.4";
+    public const string AvaloniaWebViewVersion = "12.1.1";
     public const string MicrosoftDataSqliteVersion = "10.0.11";
     public const string MicrosoftDataSqlClientVersion = "7.1.1";
     public const string MySqlConnectorVersion = "2.6.2";
@@ -33,7 +33,7 @@ public static class ApplicationDependencyCatalog
 
     public static IReadOnlyList<ApplicationPackagePatchGroup> PatchGroups { get; } =
     [
-        new("Avalonia", ["Avalonia", "Avalonia.Desktop", "Avalonia.Themes.Fluent", "Avalonia.Controls.WebView"])
+        new("Avalonia", ["Avalonia", "Avalonia.Desktop", "Avalonia.Themes.Fluent"])
     ];
 
     public static ApplicationPackagePatchGroup? FindPatchGroup(string packageName) =>

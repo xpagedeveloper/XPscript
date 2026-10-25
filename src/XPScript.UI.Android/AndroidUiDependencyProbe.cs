@@ -2,5 +2,5 @@ namespace XPScript.UI.Android;
 
 public static class AndroidUiDependencyProbe
 {
-    public const string AvaloniaCompatibilityVersion = "12.0.3";
+    public const string AvaloniaCompatibilityVersion = "12.1.4";
 }

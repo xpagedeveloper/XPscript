@@ -30,7 +30,7 @@ if (!uiProject.Contains("<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAs
     throw new Exception("Android UIForm generated project must disable CopyLocalLockFileAssemblies to avoid duplicate AndroidX bindings.");
 if (uiProject.Contains("<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>", StringComparison.Ordinal))
     throw new Exception("Android UIForm generated project still enables CopyLocalLockFileAssemblies.");
-if (!uiProject.Contains("<PackageReference Include=\"Avalonia\" Version=\"12.0.3\" />", StringComparison.Ordinal))
+if (!uiProject.Contains("<PackageReference Include=\"Avalonia\" Version=\"12.1.4\" />", StringComparison.Ordinal))
     throw new Exception("Android UIForm generated project must match the working Avalonia Android dependency graph.");
 
 if (uiProject.Contains("<SelfContained>", StringComparison.Ordinal))
@@ -40,8 +40,8 @@ if (uiProject.Contains("<UseAppHost>", StringComparison.Ordinal))
 
 foreach (var expected in new[]
 {
-    "<PackageReference Include=\"Avalonia.Android\" Version=\"12.0.3\" />",
-    "<PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"12.0.3\" />",
+    "<PackageReference Include=\"Avalonia.Android\" Version=\"12.1.4\" />",
+    "<PackageReference Include=\"Avalonia.Themes.Fluent\" Version=\"12.1.4\" />",
     "<PackageReference Include=\"Xamarin.AndroidX.Camera.Core\" Version=\"1.4.2.1\" />",
     "<PackageReference Include=\"Xamarin.AndroidX.Camera.Camera2\" Version=\"1.4.2.1\" />",
     "<PackageReference Include=\"Xamarin.AndroidX.Camera.View\" Version=\"1.4.2.1\" />",
@@ -606,7 +606,7 @@ if (!browserWasmSource.Contains("UIFormAppAssets.CopyAssetsToDirectory(sourcePat
     throw new Exception("Browser-WASM UIForm bundles must publish the shared assets directory.");
 
 var compilerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerDriver.cs"));
-if (!compilerSource.Contains("<PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"12.0.1\" />", StringComparison.Ordinal))
+if (!compilerSource.Contains("<PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"12.1.1\" />", StringComparison.Ordinal))
     throw new Exception("Android UIForm generated project must include Avalonia.Controls.WebView for shared WebView support.");
 if (!compilerSource.Contains("<PackageReference Include=\"Xamarin.AndroidX.Media3.ExoPlayer\" Version=\"1.11.1\" />", StringComparison.Ordinal) ||
     !compilerSource.Contains("<PackageReference Include=\"Xamarin.AndroidX.Media3.Ui\" Version=\"1.11.1\" />", StringComparison.Ordinal))
