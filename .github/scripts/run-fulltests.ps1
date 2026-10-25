@@ -17,6 +17,7 @@ $compileTimeoutMilliseconds = if ($IsWindows) { 180000 } else { 60000 }
 function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeoutMilliseconds, [string] $label) {
   $stdoutPath = [System.IO.Path]::GetTempFileName()
   $stderrPath = [System.IO.Path]::GetTempFileName()
+  $p = $null
   try {
     $startedAt = [DateTimeOffset]::UtcNow
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
@@ -34,9 +35,10 @@ function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeou
     if (-not $p.HasExited) {
       $timer.Stop()
       Write-Host "FULLTEST_PROCESS_TIMEOUT label=$label pid=$($p.Id) elapsed_ms=$($timer.ElapsedMilliseconds)"
-      Write-Error "FULLTEST_TIMEOUT: $label (pid=$($p.Id))"
       try { $p.Kill($true) } catch { Write-Warning "Failed to kill ${label}: $_" }
       [void] $p.WaitForExit(10000)
+      # ErrorActionPreference is Stop: report only after terminating the child.
+      Write-Error "FULLTEST_TIMEOUT: $label (pid=$($p.Id))" -ErrorAction Continue
       exit 124
     }
     $p.WaitForExit()
