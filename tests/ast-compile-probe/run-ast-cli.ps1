@@ -987,6 +987,23 @@ foreach ($constructorFixture in $constructorCoverage.GetEnumerator()) {
     }
 }
 Write-Host 'AST_CONSTRUCTOR_COVERAGE_OK'
+$constructorReferenceCoverage = @{
+    'constructor-byref.xps' = 'CONSTRUCTOR_BYREF_OK'
+    'constructor-optional.xps' = 'CONSTRUCTOR_OPTIONAL_OK'
+    'constructor-reference-byval.xps' = 'CONSTRUCTOR_REFERENCE_BYVAL_OK'
+    'constructor-reference-variant.xps' = 'CONSTRUCTOR_VARIANT_OK'
+    'constructor-reference-implicit.xps' = 'CONSTRUCTOR_REFERENCE_IMPLICIT_OK'
+}
+foreach ($constructorFixture in $constructorReferenceCoverage.GetEnumerator()) {
+    $constructorOutput = Join-Path $output ([IO.Path]::GetFileNameWithoutExtension($constructorFixture.Key))
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot $constructorFixture.Key) -o $constructorOutput
+    if ($LASTEXITCODE -ne 0) { throw "AST constructor reference compilation failed for $($constructorFixture.Key)." }
+    $constructorResult = dotnet (Join-Path $constructorOutput 'Generated.dll')
+    if ($LASTEXITCODE -ne 0 -or ($constructorResult -join "`n") -notmatch $constructorFixture.Value) {
+        throw "AST constructor reference regression failed for $($constructorFixture.Key)."
+    }
+}
+Write-Host 'AST_CONSTRUCTOR_REFERENCE_COVERAGE_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-derived-next.xps') -o $derivedClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST derived scalar class-method compilation failed.' }
 $derivedClassMethodResult = dotnet (Join-Path $derivedClassMethodOutput 'Generated.dll')
