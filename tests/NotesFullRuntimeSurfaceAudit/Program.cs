@@ -55,6 +55,31 @@ var build = builder.GetMethod("Build", BindingFlags.Static | BindingFlags.Public
 var source = (string?)build.Invoke(null, null) ?? throw new InvalidOperationException("Notes runtime source was null.");
 var sample = string.Join("\n", samplePaths.Select(File.ReadAllText));
 
+var userIdResolver = source.IndexOf("private string ResolveUserIdFile()", StringComparison.Ordinal);
+if (userIdResolver < 0)
+    throw new InvalidOperationException("Notes runtime does not expose the user.id resolver.");
+var userIdResolverEnd = source.IndexOf("\n    }", userIdResolver, StringComparison.Ordinal);
+if (userIdResolverEnd < 0)
+    throw new InvalidOperationException("Notes user.id resolver could not be delimited.");
+var userIdResolverBody = source[userIdResolver..userIdResolverEnd];
+foreach (var candidate in new[]
+{
+    "Path.Combine(DataDir, \"user.id\")",
+    "Path.Combine(RuntimeDirectory, \"Data\", \"user.id\")",
+    "Path.Combine(RuntimeDirectory, \"user.id\")"
+})
+{
+    if (!userIdResolverBody.Contains(candidate, StringComparison.Ordinal))
+        throw new InvalidOperationException($"Notes user.id resolution is missing candidate: {candidate}");
+}
+
+var userIdAssignment = source.IndexOf("Environment.SetEnvironmentVariable(\"KeyFileName\", userId)", StringComparison.Ordinal);
+var notesInitialization = source.IndexOf("Api.Initialize(", StringComparison.Ordinal);
+var apiUserIdAssignment = source.IndexOf("Api.SetEnvironmentVariable(\"KeyFileName\", userId)", StringComparison.Ordinal);
+if (userIdAssignment < 0 || notesInitialization < 0 || userIdAssignment > notesInitialization || apiUserIdAssignment < notesInitialization)
+    throw new InvalidOperationException("Notes initialization does not select user.id before native initialization and restore it in the API environment.");
+Console.WriteLine("Notes user.id initialization contract: OK");
+
 var syntaxTree = CSharpSyntaxTree.ParseText(source);
 var root = syntaxTree.GetCompilationUnitRoot();
 var parseErrors = syntaxTree.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).Take(20).ToArray();
