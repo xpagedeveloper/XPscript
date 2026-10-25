@@ -411,43 +411,35 @@ if (Should-Run 'platform') {
   foreach ($sample in @('networktools-native-local-smoke','networktools-phase2-local-smoke')) { Run-Xps "./samples/$sample.xps" $sample | Out-Null }
   $astNetworkOutput = './out/fulltest/networktools-ast-safe'
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/networktools-local-safe.xps','-o',$astNetworkOutput) $compileTimeoutMilliseconds 'AST NetworkTools safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  $astNetworkExecutable = if ($IsWindows) { Join-Path $astNetworkOutput 'Generated.exe' } else { Join-Path $astNetworkOutput 'Generated' }
-  $astNetworkRun = Invoke-Bounded (if (Test-Path $astNetworkExecutable) { $astNetworkExecutable } else { 'dotnet' }) (if (Test-Path $astNetworkExecutable) { @() } else { @((Join-Path $astNetworkOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST NetworkTools safe runtime'
+  $astNetworkRun = Invoke-Bounded 'dotnet' @((Join-Path $astNetworkOutput 'Generated.dll')) $runtimeTimeoutMilliseconds 'AST NetworkTools safe runtime'
   if ($astNetworkRun.ExitCode -ne 0 -or $astNetworkRun.Output -notmatch 'NETWORKTOOLS_AST_SAFE_OK') { throw 'AST NetworkTools safe regression did not complete.' }
   $astHttpDbOutput = './out/fulltest/http-database-ast-safe'
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/http-database-native-safe.xps','-o',$astHttpDbOutput) $compileTimeoutMilliseconds 'AST HTTP database safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  $astHttpDbExecutable = if ($IsWindows) { Join-Path $astHttpDbOutput 'Generated.exe' } else { Join-Path $astHttpDbOutput 'Generated' }
-  $astHttpDbRun = Invoke-Bounded (if (Test-Path $astHttpDbExecutable) { $astHttpDbExecutable } else { 'dotnet' }) (if (Test-Path $astHttpDbExecutable) { @() } else { @((Join-Path $astHttpDbOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST HTTP database safe runtime'
+  $astHttpDbRun = Invoke-Bounded 'dotnet' @((Join-Path $astHttpDbOutput 'Generated.dll')) $runtimeTimeoutMilliseconds 'AST HTTP database safe runtime'
   if ($astHttpDbRun.ExitCode -ne 0 -or $astHttpDbRun.Output -notmatch 'HTTP_DATABASE_AST_SAFE_OK') { throw 'AST HTTP database safe regression did not complete.' }
   $astMsSqlAliasOutput = './out/fulltest/mssql-alias-ast-safe'
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/mssql-alias-native-safe.xps','-o',$astMsSqlAliasOutput) $compileTimeoutMilliseconds 'AST MSSQL alias safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  $astMsSqlAliasExecutable = if ($IsWindows) { Join-Path $astMsSqlAliasOutput 'Generated.exe' } else { Join-Path $astMsSqlAliasOutput 'Generated' }
-  $astMsSqlAliasRun = Invoke-Bounded (if (Test-Path $astMsSqlAliasExecutable) { $astMsSqlAliasExecutable } else { 'dotnet' }) (if (Test-Path $astMsSqlAliasExecutable) { @() } else { @((Join-Path $astMsSqlAliasOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST MSSQL alias safe runtime'
+  $astMsSqlAliasRun = Invoke-Bounded 'dotnet' @((Join-Path $astMsSqlAliasOutput 'Generated.dll')) $runtimeTimeoutMilliseconds 'AST MSSQL alias safe runtime'
   if ($astMsSqlAliasRun.ExitCode -ne 0 -or $astMsSqlAliasRun.Output -notmatch 'MSSQL_ALIAS_AST_SAFE_OK') { throw 'AST MSSQL alias safe regression did not complete.' }
   $astAiToolOutput = './out/fulltest/ai-tool-ast-safe'
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/ai-tool-native-safe.xps','-o',$astAiToolOutput) $compileTimeoutMilliseconds 'AST AI tool safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  $astAiToolExecutable = if ($IsWindows) { Join-Path $astAiToolOutput 'Generated.exe' } else { Join-Path $astAiToolOutput 'Generated' }
-  $astAiToolRun = Invoke-Bounded (if (Test-Path $astAiToolExecutable) { $astAiToolExecutable } else { 'dotnet' }) (if (Test-Path $astAiToolExecutable) { @() } else { @((Join-Path $astAiToolOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST AI tool safe runtime'
+  $astAiToolRun = Invoke-Bounded 'dotnet' @((Join-Path $astAiToolOutput 'Generated.dll')) $runtimeTimeoutMilliseconds 'AST AI tool safe runtime'
   if ($astAiToolRun.ExitCode -ne 0 -or $astAiToolRun.Output -notmatch 'AI_TOOL_AST_SAFE_OK') { throw 'AST AI tool safe regression did not complete.' }
   $astValidationOutput = './out/fulltest/json-validation-result-ast-safe'
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/json-validation-result-native-safe.xps','-o',$astValidationOutput) $compileTimeoutMilliseconds 'AST JSON validation result safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  $astValidationExecutable = if ($IsWindows) { Join-Path $astValidationOutput 'Generated.exe' } else { Join-Path $astValidationOutput 'Generated' }
-  $astValidationRun = Invoke-Bounded (if (Test-Path $astValidationExecutable) { $astValidationExecutable } else { 'dotnet' }) (if (Test-Path $astValidationExecutable) { @() } else { @((Join-Path $astValidationOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST JSON validation result safe runtime'
+  $astValidationRun = Invoke-Bounded 'dotnet' @((Join-Path $astValidationOutput 'Generated.dll')) $runtimeTimeoutMilliseconds 'AST JSON validation result safe runtime'
   if ($astValidationRun.ExitCode -ne 0 -or $astValidationRun.Output -notmatch 'JSON_VALIDATION_RESULT_AST_SAFE_OK') { throw 'AST JSON validation result safe regression did not complete.' }
   $astShellOutput = './out/fulltest/shell-result-ast-safe'
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/shell-result-native-safe.xps','-o',$astShellOutput) $compileTimeoutMilliseconds 'AST shell result safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  $astShellExecutable = if ($IsWindows) { Join-Path $astShellOutput 'Generated.exe' } else { Join-Path $astShellOutput 'Generated' }
-  $astShellRun = Invoke-Bounded (if (Test-Path $astShellExecutable) { $astShellExecutable } else { 'dotnet' }) (if (Test-Path $astShellExecutable) { @() } else { @((Join-Path $astShellOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST shell result safe runtime'
+  $astShellRun = Invoke-Bounded 'dotnet' @((Join-Path $astShellOutput 'Generated.dll')) $runtimeTimeoutMilliseconds 'AST shell result safe runtime'
   if ($astShellRun.ExitCode -ne 0 -or $astShellRun.Output -notmatch 'SHELL_RESULT_AST_SAFE_OK') { throw 'AST shell result safe regression did not complete.' }
   $astPathOutput = './out/fulltest/path-value-ast-safe'
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/path-value-native-safe.xps','-o',$astPathOutput) $compileTimeoutMilliseconds 'AST path value safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  $astPathExecutable = if ($IsWindows) { Join-Path $astPathOutput 'Generated.exe' } else { Join-Path $astPathOutput 'Generated' }
-  $astPathRun = Invoke-Bounded (if (Test-Path $astPathExecutable) { $astPathExecutable } else { 'dotnet' }) (if (Test-Path $astPathExecutable) { @() } else { @((Join-Path $astPathOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST path value safe runtime'
+  $astPathRun = Invoke-Bounded 'dotnet' @((Join-Path $astPathOutput 'Generated.dll')) $runtimeTimeoutMilliseconds 'AST path value safe runtime'
   if ($astPathRun.ExitCode -ne 0 -or $astPathRun.Output -notmatch 'PATH_VALUE_AST_SAFE_OK') { throw 'AST path value safe regression did not complete.' }
   $astFileInfoOutput = './out/fulltest/file-info-ast-safe'
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/file-info-native-safe.xps','-o',$astFileInfoOutput) $compileTimeoutMilliseconds 'AST file info safe compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  $astFileInfoExecutable = if ($IsWindows) { Join-Path $astFileInfoOutput 'Generated.exe' } else { Join-Path $astFileInfoOutput 'Generated' }
-  $astFileInfoRun = Invoke-Bounded (if (Test-Path $astFileInfoExecutable) { $astFileInfoExecutable } else { 'dotnet' }) (if (Test-Path $astFileInfoExecutable) { @() } else { @((Join-Path $astFileInfoOutput 'Generated.dll')) }) $runtimeTimeoutMilliseconds 'AST file info safe runtime'
+  $astFileInfoRun = Invoke-Bounded 'dotnet' @((Join-Path $astFileInfoOutput 'Generated.dll')) $runtimeTimeoutMilliseconds 'AST file info safe runtime'
   if ($astFileInfoRun.ExitCode -ne 0 -or $astFileInfoRun.Output -notmatch 'FILE_INFO_AST_SAFE_OK') { throw 'AST file info safe regression did not complete.' }
   Run-Xps ./samples/systeminventory-local-smoke.xps systeminventory-local-smoke | Out-Null
   Write-Host 'PLATFORM_FULLTEST: passed'
