@@ -224,6 +224,13 @@ internal sealed class XPScriptExtendedMemoryArchiveV3
             for (var i = array.LBound(); i <= array.UBound(); i++) result[offset++] = Convert.ToByte(array.Get(i), System.Globalization.CultureInfo.InvariantCulture);
             return result;
         }
+        if (value is System.Array managedArray)
+        {
+            if (managedArray.Rank != 1) throw new XPScriptRuntimeException(13, "Archive requires a one-dimensional Byte array.");
+            var result = new byte[managedArray.Length];
+            for (var i = 0; i < result.Length; i++) result[i] = Convert.ToByte(managedArray.GetValue(i), System.Globalization.CultureInfo.InvariantCulture);
+            return result;
+        }
         throw new XPScriptRuntimeException(13, "Archive requires a Byte array.");
     }
 }

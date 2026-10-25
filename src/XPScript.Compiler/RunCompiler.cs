@@ -136,9 +136,19 @@ internal static class RunCompiler
             var projectPath = Path.Combine(tempRoot, "Generated.csproj");
             var programPath = Path.Combine(tempRoot, "Program.cs");
             var references = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
-            var usesMimeKit = generatedSource.Contains("MimeKit.", StringComparison.Ordinal);
+            var dependencies = ApplicationDependencyCatalog.Detect(generatedSource).ToList();
+            if ((generatedSource.Contains("XPScriptExtendedMemoryArchive", StringComparison.Ordinal) ||
+                 generatedSource.Contains("XPScriptExtendedArchiveWriterFactory", StringComparison.Ordinal) ||
+                 generatedSource.Contains("SharpCompress", StringComparison.Ordinal)) &&
+                !dependencies.Any(package => package.Name.Equals("SharpCompress", StringComparison.OrdinalIgnoreCase)))
+            {
+                dependencies.Add(new ApplicationPackageReference(
+                    "SharpCompress",
+                    ApplicationDependencyCatalog.ResolveVersion("SharpCompress", ApplicationDependencyCatalog.SharpCompressVersion),
+                    "Extended Archive runtime"));
+            }
             var isAndroid = IsAndroidRuntime(runtimeIdentifier);
-            await File.WriteAllTextAsync(projectPath, BuildProject(references, usesMimeKit, runtimeIdentifier, startupObject), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(projectPath, BuildProject(references, dependencies, runtimeIdentifier, startupObject), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(programPath,
                 isAndroid ? CombineGeneratedSources(generatedSource, AndroidHostSource.Code) : generatedSource,
                 cancellationToken).ConfigureAwait(false);
@@ -324,7 +334,7 @@ internal static class RunCompiler
 
     private static string BuildProject(
         IReadOnlyList<(string Name, string Path)> references,
-        bool usesMimeKit,
+        IReadOnlyList<ApplicationPackageReference> dependencies,
         string? runtimeIdentifier,
         string? startupObject = null)
     {
@@ -342,10 +352,11 @@ internal static class RunCompiler
             items.AppendLine("  </ItemGroup>");
         }
 
-        var mimeKitVersion = ApplicationDependencyCatalog.ResolveVersion("MimeKit", ApplicationDependencyCatalog.MimeKitVersion);
-        var packageItems = usesMimeKit
-            ? $"  <ItemGroup>\n    <PackageReference Include=\"MimeKit\" Version=\"{mimeKitVersion}\" />\n  </ItemGroup>\n"
-            : string.Empty;
+        var packageItems = dependencies.Count == 0
+            ? string.Empty
+            : "  <ItemGroup>\n" + string.Join(Environment.NewLine, dependencies.Select(package =>
+                $"    <PackageReference Include=\"{EscapeXml(package.Name)}\" Version=\"{EscapeXml(package.Version)}\" />")) +
+              "\n  </ItemGroup>\n";
         var isAndroid = IsAndroidRuntime(runtimeIdentifier);
         var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
         var startup = isAndroid || string.IsNullOrWhiteSpace(startupObject) ? string.Empty : $"    <StartupObject>{EscapeXml(startupObject)}</StartupObject>\n";

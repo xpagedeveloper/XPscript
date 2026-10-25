@@ -40,7 +40,12 @@ global using System.Threading.Tasks;
     {
         try
         {
-            if (ApplicationDependencyCatalog.Detect(generatedSource).Count > 0)
+            // Archive runtime code is emitted as generated source and needs
+            // SharpCompress beside the compiled application. Keep this
+            // dependency conditional: ordinary AST programs remain in-process
+            // and do not restore the archive package.
+            if (generatedSource.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ||
+                ApplicationDependencyCatalog.Detect(generatedSource).Count > 0)
                 return await RunCompiler.CompileGeneratedWithDependenciesAsync(generatedSource, outputDirectory, debug, cancellationToken).ConfigureAwait(false);
             return await CompileCoreAsync(generatedSource, outputDirectory, debug, cancellationToken).ConfigureAwait(false);
         }

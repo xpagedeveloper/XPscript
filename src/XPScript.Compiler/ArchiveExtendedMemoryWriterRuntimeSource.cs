@@ -221,6 +221,13 @@ internal sealed class XPScriptExtendedMemoryArchiveV2
             for (var i = array.LBound(); i <= array.UBound(); i++) result[offset++] = Convert.ToByte(array.Get(i), System.Globalization.CultureInfo.InvariantCulture);
             return result;
         }
+        if (value is System.Array managedArray)
+        {
+            if (managedArray.Rank != 1) throw new XPScriptRuntimeException(13, "Archive requires a one-dimensional Byte array.");
+            var result = new byte[managedArray.Length];
+            for (var i = 0; i < result.Length; i++) result[i] = Convert.ToByte(managedArray.GetValue(i), System.Globalization.CultureInfo.InvariantCulture);
+            return result;
+        }
         throw new XPScriptRuntimeException(13, "Archive requires a Byte array.");
     }
 
@@ -355,7 +362,10 @@ internal static class XPScriptArchiveExtendedMemoryWriter
         if (entries.Count == 0) return new byte[1024];
 
         using var output = new System.IO.MemoryStream();
-        using (var writer = new System.Formats.Tar.TarWriter(output, System.Formats.Tar.TarEntryFormat.Pax, leaveOpen: true))
+        // The memory reader uses SharpCompress. USTAR is broadly interoperable
+        // with it; PAX output from System.Formats.Tar is rejected by some
+        // SharpCompress versions even for otherwise simple entries.
+        using (var writer = new System.Formats.Tar.TarWriter(output, System.Formats.Tar.TarEntryFormat.Ustar, leaveOpen: true))
         {
             foreach (var pending in entries)
             {
