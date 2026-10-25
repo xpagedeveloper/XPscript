@@ -249,6 +249,16 @@ internal static class CompilerBuildEnvironment
     private static string EnsureTrailingSeparator(string path) =>
         path.EndsWith(Path.DirectorySeparatorChar) || path.EndsWith(Path.AltDirectorySeparatorChar) ? path : path + Path.DirectorySeparatorChar;
 
+    private static bool IsUsablePackageCache(string packagePath)
+    {
+        if (!Directory.Exists(packagePath)) return false;
+        if (!Directory.EnumerateFiles(packagePath, "*.nuspec", SearchOption.TopDirectoryOnly).Any()) return false;
+        return Directory.EnumerateFiles(packagePath, "*.*", SearchOption.AllDirectories)
+            .Any(path => path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ||
+                        path.EndsWith(".props", StringComparison.OrdinalIgnoreCase) ||
+                        path.EndsWith(".targets", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static void ConfigureGeneratedDependencies(ProcessStartInfo startInfo, string root)
     {
         var generatedSource = Path.Combine(root, "Program.cs");
@@ -269,7 +279,7 @@ internal static class CompilerBuildEnvironment
             foreach (var package in packages)
             {
                 var packagePath = Path.Combine(packageRoot, package.Name.ToLowerInvariant(), package.Version);
-                var status = Directory.Exists(packagePath) ? "already available locally" : "will be restored/downloaded";
+                var status = IsUsablePackageCache(packagePath) ? "already available locally" : "will be restored/downloaded";
                 Console.Error.WriteLine($"  {package.Name} {package.Version} ({package.Reason}) - {status}");
             }
         }
