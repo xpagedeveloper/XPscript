@@ -925,6 +925,22 @@ foreach ($methodDiagnostic in $methodDiagnostics.GetEnumerator()) {
     }
 }
 Write-Host 'AST_CLASS_METHOD_DIAGNOSTICS_OK'
+$constructorParity = @{
+    'class-constructor-parity.xps' = 'CONSTRUCTOR_PARITY_OK'
+    'class-constructor-derived-parity.xps' = 'DERIVED_CONSTRUCTOR_PARITY_OK'
+    'class-constructor-reference-parity.xps' = 'REFERENCE_CONSTRUCTOR_PARITY_OK'
+    'class-destructor-parity.xps' = 'DESTRUCTOR_PARITY_OK'
+}
+foreach ($constructorFixture in $constructorParity.GetEnumerator()) {
+    $constructorOutput = Join-Path $output ([IO.Path]::GetFileNameWithoutExtension($constructorFixture.Key))
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot $constructorFixture.Key) -o $constructorOutput
+    if ($LASTEXITCODE -ne 0) { throw "AST constructor lifecycle compilation failed for $($constructorFixture.Key)." }
+    $constructorResult = dotnet (Join-Path $constructorOutput 'Generated.dll')
+    if ($LASTEXITCODE -ne 0 -or ($constructorResult -join "`n") -notmatch $constructorFixture.Value) {
+        throw "AST constructor lifecycle regression failed for $($constructorFixture.Key)."
+    }
+}
+Write-Host 'AST_CONSTRUCTOR_LIFECYCLE_PARITY_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-derived-next.xps') -o $derivedClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST derived scalar class-method compilation failed.' }
 $derivedClassMethodResult = dotnet (Join-Path $derivedClassMethodOutput 'Generated.dll')
