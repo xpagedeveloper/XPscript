@@ -83,6 +83,15 @@ internal sealed class NotesRuntimePreprocessor
                 $"XPScriptNotes.CreateSession({(match.Groups[1].Success ? match.Groups[1].Value : string.Empty)})",
                 RegexOptions.IgnoreCase);
 
+            var convertMimeAssignment = Regex.Match(rewritten, @"^([A-Za-z_]\w*)\.ConvertMIME\s*=\s*(.+)$", RegexOptions.IgnoreCase);
+            if (convertMimeAssignment.Success && notesVariables.Contains(convertMimeAssignment.Groups[1].Value) &&
+                notesVariableTypes.TryGetValue(convertMimeAssignment.Groups[1].Value, out var convertMimeType) &&
+                convertMimeType.Equals("NotesSession", StringComparison.OrdinalIgnoreCase))
+            {
+                output.Add(indent + $"Call XPScriptNotes.SetConvertMIME({convertMimeAssignment.Groups[1].Value}, {convertMimeAssignment.Groups[2].Value})");
+                continue;
+            }
+
             if (Regex.IsMatch(rewritten, @"\.GetFirstDocumentByKey\s*\(", RegexOptions.IgnoreCase))
                 throw new CompilerException("NotesView.GetFirstDocumentByKey has been renamed to NotesView.GetDocumentByKey.");
 
@@ -93,7 +102,9 @@ internal sealed class NotesRuntimePreprocessor
             {
                 var name = recycle.Groups[1].Value;
                 output.Add(indent + $"Call XPScriptNotes.RecycleValue({name})");
-                output.Add(indent + $"{name} = XPScriptNotes.NothingValue");
+                if (!notesVariableTypes.TryGetValue(name, out var recycledType) ||
+                    !recycledType.Equals("NotesSession", StringComparison.OrdinalIgnoreCase))
+                    output.Add(indent + $"{name} = XPScriptNotes.NothingValue");
                 continue;
             }
 

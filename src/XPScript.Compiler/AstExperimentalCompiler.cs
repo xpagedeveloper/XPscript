@@ -394,6 +394,7 @@ public static class AstExperimentalCompiler
             DeclareNativeStatic(symbols, "XPScriptNotes.CreateSession", [typeof(object)], "XPScriptNotes.CreateSession");
             DeclareNativeStatic(symbols, "XPScriptNotes.CreateSession", [typeof(object), typeof(object)], "XPScriptNotes.CreateSession");
             DeclareNativeStatic(symbols, "XPScriptNotes.CreateSession", [typeof(object), typeof(object), typeof(object)], "XPScriptNotes.CreateSession");
+            DeclareNativeStatic(symbols, "XPScriptNotes.SetConvertMIME", [typeof(object), typeof(object)], "XPScriptNotes.SetConvertMIME");
             DeclareNativeStatic(symbols, "XPScriptNotes.RecycleValue", [typeof(object)], "XPScriptNotes.RecycleValue");
             DeclareNativeStatic(symbols, "XPScriptNotes.RecycleForReplacement", [typeof(object), typeof(object)], "XPScriptNotes.RecycleForReplacement");
             DeclareNativeStatic(symbols, "XPScriptNotes.NormalizeObjectResult", [typeof(object)], "XPScriptNotes.NormalizeObjectResult");

@@ -14,6 +14,13 @@ internal static class XPScriptNotes
     public static XPScriptNotesSession CreateSession(object? runtimeDirectory, object? notesIni, object? idPassword) =>
         new(XPScriptRuntime.CStr(runtimeDirectory), XPScriptRuntime.CStr(notesIni), XPScriptRuntime.CStr(idPassword));
 
+    public static void SetConvertMIME(object? sessionValue, object? value)
+    {
+        if (sessionValue is not XPScriptNotesSession session)
+            throw new XPScriptRuntimeException(13, "ConvertMIME requires a NotesSession.");
+        session.ConvertMIME = XPScriptRuntime.CBool(value);
+    }
+
     public static void RecycleValue(object? value)
     {
         if (value is null) return;

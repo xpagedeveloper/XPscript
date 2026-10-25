@@ -15,7 +15,7 @@ The supported XPscript Notes classes are:
 - `NotesDateTime`
 - `NotesAgentResult`
 
-Except for `NotesSession`, objects are created from another Notes object rather than with `New`. Every Notes object supports `Recycle()`, and every wrapper exposes `IsRecycled` while it is alive. Explicitly recycling a typed Notes variable also sets that XPscript variable to `Nothing`.
+Except for `NotesSession`, objects are created from another Notes object rather than with `New`. Every Notes object supports `Recycle()`, and every wrapper exposes `IsRecycled` while it is alive. Explicitly recycling a typed Notes variable sets that XPscript variable to `Nothing`, except for `NotesSession`; the session reference remains available so `session.IsRecycled` can be checked after recycling.
 
 ## NotesSession
 
