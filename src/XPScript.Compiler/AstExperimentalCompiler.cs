@@ -142,8 +142,13 @@ public static class AstExperimentalCompiler
         if (usesNetworkTools)
             source = new NetworkToolsObjectPreprocessor().Transform(source);
         var fullSource = source;
-        var usesNotesSession = AstObjectSupportRegistry.UsesObject(fullSource, "NotesSession");
-        if (usesNotesSession)
+        // Any Notes object can require the generated Notes runtime. In
+        // particular, NotesMail is valid without an explicit NotesSession
+        // variable, so gating runtime emission on NotesSession alone leaves
+        // the binder with a type that the generated program cannot resolve.
+        var usesNotesRuntime = Regex.IsMatch(fullSource,
+            @"(?i)\b(?:NotesSession|NotesMail|NotesStream|NotesAgent|NotesDXLImporter|NotesDXLExporter|NotesDatabase|NotesDatabaseAccess|NotesView|NotesNoteCollection|NotesDateTime|NotesName|NotesDocument|NotesDocumentCollection|NotesItem|NotesRichTextItem|NotesRichTextNavigator|NotesRichTextParagraphStyle|NotesRichTextRange|NotesRichTextSection|NotesRichTextStyle|NotesRichTextTab|NotesRichTextTable|NotesRichTextDocLink|NotesMIMEEntity|NotesMIMEHeader|NotesEmbeddedObject|NotesViewEntry|NotesViewEntryCollection)\b");
+        if (usesNotesRuntime)
         {
             source = new NotesRuntimePreprocessor().Transform(source, preserveAstConstants: true);
             fullSource = source;
@@ -377,7 +382,7 @@ public static class AstExperimentalCompiler
         foreach (var compatibilityName in AstObjectSupportRegistry.CompatibilityNames)
             symbols.Declare(new VariableSymbol(compatibilityName, typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new TypeSymbol("XPJsonSchema", typeof(object), XpTypeSymbol.User("XPJsonSchema")));
-        if (usesNotesSession)
+        if (usesNotesRuntime)
         {
             symbols.Declare(new TypeSymbol("XPScriptNotes", typeof(object), XpTypeSymbol.User("XPScriptNotes")));
             symbols.Declare(new VariableSymbol("XPScriptNotes", typeof(object), XpTypeSymbol.User("XPScriptNotes")));
@@ -890,7 +895,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{(usesNetworkTools ? NetworkToolsRuntimeSource.Code : "")}}
 {{((usesAi || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema") || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonValidationResult")) ? JsonSchemaRuntimeSource.Code : "")}}
 {{AstRuntimeSource.Code}}
-{{(usesNotesSession ? NotesRuntimeSourceBuilder.Build() : "")}}
+{{(usesNotesRuntime ? NotesRuntimeSourceBuilder.Build() : "")}}
 {{OperatorArrayCompatibilityRuntimeSource.Code}}
 {{VariantIndexRuntimeSource.Code}}
 {{AstImageSupport.RuntimeCode(fullSource)}}

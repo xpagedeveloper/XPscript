@@ -157,7 +157,13 @@ public sealed class Lexer
             while (char.IsLetterOrDigit(Current) || Current is '_' or '$')
                 _position++;
             var text = _text[start.._position];
-            return new SyntaxToken(KeywordKind(text), text, null, Span(start, text.Length));
+            // A member name follows a dot and is an identifier even when it
+            // happens to have the same spelling as a language keyword. Notes
+            // exposes members such as NotesMail.SendTo, and tokenizing the
+            // trailing "To" as ToKeyword makes an otherwise valid member
+            // access impossible to parse.
+            var kind = IsMemberName(start) ? SyntaxKind.IdentifierToken : KeywordKind(text);
+            return new SyntaxToken(kind, text, null, Span(start, text.Length));
         }
 
         _position++;
@@ -191,6 +197,14 @@ public sealed class Lexer
     private char Current => _position < _text.Length ? _text[_position] : '\0';
     private char Peek(int offset) => _position + offset < _text.Length ? _text[_position + offset] : '\0';
     private char CurrentAt(int position) => position < _text.Length ? _text[position] : '\0';
+
+    private bool IsMemberName(int start)
+    {
+        var previous = start - 1;
+        while (previous >= 0 && _text[previous] is ' ' or '\t')
+            previous--;
+        return previous >= 0 && _text[previous] == '.';
+    }
 
     private bool IsRemCommentStart()
     {

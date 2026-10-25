@@ -531,6 +531,10 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Notes search constants compilation failed.
 $notesSearchResult = dotnet (Join-Path $notesSearchOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($notesSearchResult -join "`n") -ne 'NOTES_SEARCH_CONSTANTS_OK') { throw 'AST Notes search constants regression failed.' }
 Write-Host 'AST_NOTES_SEARCH_CONSTANTS_OK'
+$notesMailKeywordMembersOutput = Join-Path $output 'notes-mail-sendto-keyword-member'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-mail-sendto-keyword-member.xps') -o $notesMailKeywordMembersOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST NotesMail keyword-named member compilation failed.' }
+Write-Host 'AST_NOTES_MAIL_KEYWORD_MEMBERS_COMPILE_OK'
 
 $notesSessionAstOutput = Join-Path $output 'notes-session-ast-first-slice'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'notes-session-ast-first-slice.xps') -o $notesSessionAstOutput --runtime false --single-file false

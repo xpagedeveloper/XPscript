@@ -113,6 +113,8 @@ public sealed class SymbolTable
         Declare(new FunctionSymbol("NotesEmbeddedObject.Recycle", typeof(object), Array.Empty<Type>(), XpTypeSymbol.Variant, Array.Empty<XpTypeSymbol>()));
         Declare(new VariableSymbol("XPScriptNotesConst.SEARCH_DEPTH", typeof(long), XpTypeSymbol.Variant));
         ImportNotesMimeOverloads();
+        foreach (var property in new[] { "SendTo", "CopyTo", "BlindCopyTo" })
+            Declare(new PropertySymbol("NotesMail." + property, typeof(object), XpTypeSymbol.Variant, CanRead: true, CanWrite: true));
         ImportXPAiOverloads();
     }
 
