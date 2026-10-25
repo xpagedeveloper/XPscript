@@ -1,0 +1,13 @@
+Sub Main()
+    Dim image As XPImage
+        Dim image As New XPImage(1, 1)
+        On Error Resume Next
+        Set image = XPImage.Load("assets/missing.png")
+        If Err = 0 Then Error 6, "missing packaged XPImage asset did not fail"
+        On Error GoTo 0
+    On Error Resume Next
+        image.Save("assets/xpimage-write.png")
+    If Err = 0 Then Error 6, "packaged XPImage asset was writable"
+    On Error GoTo 0
+    Print "XPIMAGE_ASSET_OK"
+End Sub

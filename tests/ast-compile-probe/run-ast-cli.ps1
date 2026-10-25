@@ -1597,6 +1597,15 @@ dotnet $compiler ast-compile $imageSource -o $imageOutput
 if ($LASTEXITCODE -ne 0) { throw 'Native AST XPImage compilation failed.' }
 $imageResult = dotnet (Join-Path $imageOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($imageResult -join "`n") -ne "4`n3`n12`n0`n4`n2`n4`n3`n4`n0`n20`n2`n0`nTrue`n5`nTrue`n5`n4`nTrue`nTrue`nTrue`n2`n3`nXPIMAGE_AST_OK") { throw 'Native AST image operations, loading, ByVal/ByRef or cleanup regression failed.' }
+$assetFixtureRoot = Join-Path $output ('xpimage-assets-' + [Guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Force -Path (Join-Path $assetFixtureRoot 'assets') | Out-Null
+Copy-Item (Join-Path $PSScriptRoot 'xpimage-asset-next.xps') (Join-Path $assetFixtureRoot 'xpimage-asset-next.xps')
+$assetOutput = Join-Path $assetFixtureRoot 'ast'
+dotnet $compiler ast-compile (Join-Path $assetFixtureRoot 'xpimage-asset-next.xps') -o $assetOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST packaged XPImage asset compilation failed.' }
+$assetResult = dotnet (Join-Path $assetOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($assetResult -join "`n") -ne 'XPIMAGE_ASSET_OK') { throw 'AST packaged XPImage asset load/read-only regression failed.' }
+Write-Host 'AST_XPIMAGE_ASSET_OK'
 $imageNotice = Get-Content (Join-Path $imageOutput 'Third-party-license.txt') -Raw
 if ($imageNotice -notmatch 'Magick.NET-Q16-AnyCPU' -or $imageNotice -notmatch 'Magick.NET.Core' -or $imageNotice -match 'License text could not be resolved') { throw 'AST image addon notices are incomplete.' }
 $imageVariantOutput = Join-Path $imageFixtureRoot 'variant-return'
