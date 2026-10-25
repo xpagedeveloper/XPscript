@@ -421,7 +421,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [x] Remove the fixture's Windows-only C-drive assumption: Windows tests the current drive designator and Linux/macOS test their filesystem root. Windows AST execution passed on 2026-10-25; Linux/macOS execution remains verified by the permanent Language FullTest matrix when CI completes.
   - [x] Bind the documented AST `Path` object surface; `path-object-next.xps` verifies construction and all documented path methods.
   - [x] Bind the documented AST `FileInfo` metadata surface for files and directories; `file-info-next.xps` verifies metadata, flags and timestamps.
-- [ ] Remove sample-specific identifiers and type coercions from binders/emission and runtime scaffolding.
+- [x] Remove sample-specific identifiers and type coercions from binders/emission and runtime scaffolding. All listed fallback/coercion removals are complete; the full AST CLI compilation probe and Windows Platform FullTest passed without sample-name-driven binding failures.
   - [x] Remove the unconditional `matrix` local-symbol scaffold; undeclared `matrix` now follows normal XPS2008 binding diagnostics.
   - [x] Remove global `ForAll` alias scaffolding; undeclared array/string/dynamic aliases are now created in the loop body scope and existing aliases retain their normal symbol semantics.
   - [x] Remove the broad assignment-line global-symbol fallback; undeclared assignment targets now follow normal binder diagnostics instead of becoming module globals.
