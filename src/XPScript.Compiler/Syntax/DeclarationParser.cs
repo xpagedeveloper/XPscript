@@ -470,7 +470,16 @@ public sealed class DeclarationParser
     {
         var lexer = new Lexer(bodyText, bodyOffset);
         SyntaxKind? previous = null;
-        foreach (var token in lexer.Lex())
+        var tokens = lexer.Lex().ToArray();
+        var localNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i + 1 < tokens.Length; i++)
+        {
+            if (tokens[i].Kind == SyntaxKind.DimKeyword &&
+                tokens[i + 1].Kind is SyntaxKind.IdentifierToken or SyntaxKind.ParentKeyword or SyntaxKind.MeKeyword)
+                localNames.Add(tokens[i + 1].Text);
+        }
+
+        foreach (var token in tokens)
         {
             // After a dot these tokens name members (for example XML Parent),
             // not the class-instance Me/Parent reference expressions.
@@ -481,7 +490,10 @@ public sealed class DeclarationParser
             }
             if (token.Kind == SyntaxKind.MeKeyword && !_classMemberContext)
                 _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "'Me' is only valid inside class instance members.", token.Span));
-            else if (token.Kind == SyntaxKind.ParentKeyword && (!_classMemberContext || !_classHasBase))
+            else if (token.Kind == SyntaxKind.ParentKeyword
+                && !localNames.Contains(token.Text)
+                && previous is not (SyntaxKind.DimKeyword or SyntaxKind.ForKeyword or SyntaxKind.ForAllKeyword)
+                && (!_classMemberContext || !_classHasBase))
                 _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "'Parent' requires the current class to Extend a base class.", token.Span));
             previous = token.Kind;
         }

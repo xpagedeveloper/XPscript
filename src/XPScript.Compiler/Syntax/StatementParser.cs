@@ -1506,7 +1506,10 @@ public sealed class StatementParser
         if (Current.Kind == SyntaxKind.IdentifierToken)
             return NextToken();
 
-        if (Current.Kind is SyntaxKind.CallKeyword or SyntaxKind.OutputKeyword)
+        if (Current.Kind is SyntaxKind.CallKeyword
+            or SyntaxKind.OutputKeyword
+            or SyntaxKind.ParentKeyword
+            or SyntaxKind.MeKeyword)
         {
             var token = NextToken();
             return new SyntaxToken(SyntaxKind.IdentifierToken, token.Text, token.Value, token.Span);

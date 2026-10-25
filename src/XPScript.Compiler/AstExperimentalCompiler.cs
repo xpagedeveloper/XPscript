@@ -201,6 +201,7 @@ public static class AstExperimentalCompiler
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Close(?:\s+#?(?<file>[^\s]+))?\s*$", "${indent}Call AstClose(${file})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Print\s+#(?<file>[^,\s]+)\s*,\s*(?<value>[^\r\n]+)\r?$", "${indent}Call AstPrintFile(${file}, ${value})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Line\s+Input\s+#?(?<file>[^,\s]+)\s*,\s*(?<target>[A-Za-z_]\w*)\s*$", "${indent}${target} = AstLineInput(${file})");
+        source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)If\s+(?<condition>.+?)\s+Then\s+Kill\s+(?<path>[^\r\n]+)\r?$", "${indent}If ${condition} Then Call AstKill(${path})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Kill\s+(?<path>[^\r\n]+)\r?$", "${indent}Call AstKill(${path})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)FileCopy\s+(?<source>.+?)\s*,\s*(?<destination>[^\r\n]+)\r?$", "${indent}Call AstFileCopy(${source}, ${destination})");
         source = Regex.Replace(source, @"(?im)^(?<indent>[ \t]*)Name\s+(?<source>.+?)\s+As\s+(?<destination>[^\r\n]+)\r?$", "${indent}Call AstNameFile(${source}, ${destination})");

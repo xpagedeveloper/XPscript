@@ -416,6 +416,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [x] Bind AST `FileDateTime` to the shared file runtime with the same missing-file contract as `FileLen`; `file-date-time-next.xps` verifies the returned date/time value.
   - [x] Bind AST `Dir` to the shared filesystem enumeration contract; `dir-next.xps` verifies wildcard matching and continuation with `Dir()`.
   - [x] Bind AST `FileCopy` and `Name ... As ...` statements to file operations; `file-copy-name-next.xps` verifies copy and rename execution.
+  - [x] Preserve inline `If ... Then Kill ...` statements in the AST path; the full Notes Domino regression now compiles through AST after contextual local `parent` handling and inline `Kill` lowering were added.
   - [x] Bind AST `ChDir` to the shared current-directory contract; `chdir-next.xps` verifies directory changes affect relative file lookup.
   - [x] Bind AST `FileExists` and `DirExists` aliases to the same filesystem predicates as `IsFile` and `IsDir`; `file-exists-aliases-next.xps` verifies both documented aliases.
     - [x] Remove the fixture's Windows-only C-drive assumption: Windows tests the current drive designator and Linux/macOS test their filesystem root. Windows AST execution passed on 2026-10-25; Linux/macOS execution remains verified by the permanent Language FullTest matrix when CI completes.
