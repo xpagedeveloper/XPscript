@@ -202,6 +202,13 @@ internal static class XPScriptRuntime
         return index < 0 ? 0 : index + 1;
     }
 
+    // XPscript accepts case-insensitive intrinsic names, while generated C#
+    // calls are case-sensitive. Keep the documented InStr spelling as an
+    // alias for the existing runtime implementation.
+    public static int InStr(object? source, object? find) => Instr(source, find);
+    public static int InStr(int start, object? source, object? find) => Instr(start, source, find);
+    public static int InStr(int start, object? source, object? find, int compare) => Instr(start, source, find, compare);
+
     public static int StrComp(object? left, object? right, int compare = 0) =>
         string.Compare(CStr(left), CStr(right),
             compare == 1 ? StringComparison.CurrentCultureIgnoreCase : StringComparison.CurrentCulture);

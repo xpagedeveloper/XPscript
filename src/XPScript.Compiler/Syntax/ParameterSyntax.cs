@@ -21,7 +21,9 @@ public sealed class ParameterSyntax(SyntaxToken? modifier, SyntaxToken identifie
     public ExpressionSyntax? DefaultValue { get; } = defaultValue;
     public bool IsOptional => OptionalKeyword is not null;
     public bool IsExplicitByRef => Modifier?.Kind == SyntaxKind.ByRefKeyword;
-    public bool IsByRef => Modifier?.Kind != SyntaxKind.ByValKeyword;
+    // Parameters are passed by value unless the source explicitly requests
+    // ByRef. This matches the legacy compiler and the language reference.
+    public bool IsByRef => Modifier?.Kind == SyntaxKind.ByRefKeyword;
     public bool IsByVal => Modifier?.Kind == SyntaxKind.ByValKeyword;
     public override SyntaxKind Kind => SyntaxKind.Parameter;
     public override TextSpan Span => TextSpan.FromBounds(OptionalKeyword?.Span.Start ?? Modifier?.Span.Start ?? Identifier.Span.Start,

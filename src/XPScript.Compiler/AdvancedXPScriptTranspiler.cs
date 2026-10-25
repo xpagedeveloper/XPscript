@@ -28,7 +28,7 @@ internal sealed class AdvancedXPScriptTranspiler
         "CStr", "CByte", "CInt", "CLng", "CDbl", "CSng", "CCur", "CBool", "CVar", "CDat", "CDate", "DataType", "TypeName",
         "IsArray", "IsDate", "IsEmpty", "IsNull", "IsObject", "IsScalar", "IsNumeric", "Abs", "Int", "Fix", "Round", "Sqr", "Sgn",
         "Sin", "Cos", "Tan", "ATn", "ATn2", "ASin", "ACos", "Exp", "Log", "Fraction", "Rnd", "Val", "Str", "Bin", "Hex", "Oct",
-        "Chr", "Asc", "Instr", "StrComp", "Replace", "Space", "String", "Split", "Join", "Format", "Now", "Today", "Date", "Time",
+        "Chr", "Asc", "Instr", "InStr", "StrComp", "Replace", "Space", "String", "Split", "Join", "Format", "Now", "Today", "Date", "Time",
         "Year", "Month", "Day", "Hour", "Minute", "Second", "DateNumber", "TimeNumber", "DateValue", "TimeValue", "Weekday", "MonthName",
         "WeekdayName", "DateAdd", "DateDiff", "DatePart", "Environ", "CurDir", "FreeFile", "EOF", "LOF", "Seek", "FileLen", "FileDateTime",
         "GetFileAttr", "Dir", "Timer", "Command", "InputBox", "MsgBox"
