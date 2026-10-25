@@ -16,6 +16,8 @@ Sub Main()
     Set db = session.OpenDatabase("", "xpscript.nsf")
     If db Is Nothing Or Not db.IsOpen Then
         Print "NOTES-MODIFIED=SKIP xpscript.nsf is not open"
+        Call db.Recycle()
+        Call session.Recycle()
         Exit Sub
     End If
 
