@@ -73,7 +73,15 @@ function Compile-Xps([string] $source, [string] $name) {
 }
 function Get-XpsExe([string] $name) { $plain = "./out/fulltest/$name"; $win = "$plain.exe"; if (Test-Path $win -PathType Leaf) { return (Resolve-Path $win).Path }; if (Test-Path $plain -PathType Leaf) { return (Resolve-Path $plain).Path }; throw "Executable not found: $name" }
 function Run-Xps([string] $source, [string] $name, [string[]] $arguments = @()) { Compile-Xps $source $name; Write-Host "FULLTEST_RUN=$name"; $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "run $name"; if ($r.ExitCode -ne 0) { exit $r.ExitCode }; return $r }
-function Expect-XpsFailure([string] $name, [string[]] $arguments, [string] $label) { $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "security $label"; if ($r.ExitCode -eq 0) { throw "Security probe unexpectedly succeeded: $label" }; if ([string]::IsNullOrWhiteSpace($r.Output)) { throw "Security probe returned no diagnostic: $label" }; if ($r.Output -match 'SharpCompress') { throw "Security diagnostic exposed implementation detail: $label" } }
+function Expect-XpsFailure([string] $name, [string[]] $arguments, [string] $label) {
+  $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "security $label"
+  if ($r.ExitCode -eq 0) { throw "Security probe unexpectedly succeeded: $label" }
+  if ([string]::IsNullOrWhiteSpace($r.Output)) { throw "Security probe returned no diagnostic: $label" }
+  if ($r.Output -match 'SharpCompress') { throw "Security diagnostic exposed implementation detail: $label" }
+  if ($name.StartsWith('archive-', [StringComparison]::Ordinal) -and $r.Output -match 'Archive file was not found') {
+    throw "Archive security fixture was not found: $label"
+  }
+}
 function Should-Run([string] $name) { return $Suite -eq 'all' -or $Suite -eq $name }
 
 function Test-ArchiveReadOnlyBzip2 {
