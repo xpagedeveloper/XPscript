@@ -941,6 +941,23 @@ foreach ($constructorFixture in $constructorParity.GetEnumerator()) {
     }
 }
 Write-Host 'AST_CONSTRUCTOR_LIFECYCLE_PARITY_OK'
+$constructorCoverage = @{
+    'class-constructor-overloads.xps' = 'OVERLOAD_CONSTRUCTORS_OK'
+    'class-constructor-mixed.xps' = 'MIXED_CONSTRUCTORS_OK'
+    'class-constructor-native.xps' = 'NATIVE_CONSTRUCTORS_OK'
+    'class-constructor-variant.xps' = 'VARIANT_CONSTRUCTORS_OK'
+    'class-constructor-list.xps' = 'LIST_CONSTRUCTORS_OK'
+}
+foreach ($constructorFixture in $constructorCoverage.GetEnumerator()) {
+    $constructorOutput = Join-Path $output ([IO.Path]::GetFileNameWithoutExtension($constructorFixture.Key))
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot $constructorFixture.Key) -o $constructorOutput
+    if ($LASTEXITCODE -ne 0) { throw "AST constructor coverage compilation failed for $($constructorFixture.Key)." }
+    $constructorResult = dotnet (Join-Path $constructorOutput 'Generated.dll')
+    if ($LASTEXITCODE -ne 0 -or ($constructorResult -join "`n") -notmatch $constructorFixture.Value) {
+        throw "AST constructor coverage regression failed for $($constructorFixture.Key)."
+    }
+}
+Write-Host 'AST_CONSTRUCTOR_COVERAGE_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-derived-next.xps') -o $derivedClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST derived scalar class-method compilation failed.' }
 $derivedClassMethodResult = dotnet (Join-Path $derivedClassMethodOutput 'Generated.dll')
