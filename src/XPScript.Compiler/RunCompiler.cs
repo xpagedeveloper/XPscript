@@ -368,6 +368,7 @@ internal static class RunCompiler
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
     <UseAppHost>{useAppHost.ToString().ToLowerInvariant()}</UseAppHost>

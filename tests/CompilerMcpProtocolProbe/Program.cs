@@ -5,9 +5,12 @@ var repo = Path.GetFullPath(args.Length > 0 ? args[0] : ".");
 var probeRoot = Path.Combine(repo, "out", "mcp-probe-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(probeRoot);
 var probeOutput = Path.Combine(probeRoot, "published-output");
+var compiler = Path.Combine(repo, "src", "XPScript.Compiler", "bin", "Release", "net10.0", "xpscriptc.dll");
+if (!File.Exists(compiler)) throw new Exception("Release compiler artifact was not found: " + compiler);
 var psi = new ProcessStartInfo("dotnet") { RedirectStandardInput=true, RedirectStandardOutput=true, RedirectStandardError=true, UseShellExecute=false, WorkingDirectory=repo };
 psi.Environment["XPSCRIPT_TEMP_ROOT"] = probeRoot;
-foreach (var a in new[]{"run","--project","src/XPScript.Compiler/XPScript.Compiler.csproj","-c","Release","--no-build","--","mcp"}) psi.ArgumentList.Add(a);
+psi.ArgumentList.Add(compiler);
+psi.ArgumentList.Add("mcp");
 using var p=Process.Start(psi) ?? throw new Exception("Could not start MCP server.");
 async Task<JsonElement> CallAsync(object request) { await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(request)); await p.StandardInput.FlushAsync(); string line; try { line=await p.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30)) ?? throw new Exception("MCP server closed stdout."); } catch (TimeoutException ex) { if (!p.HasExited) p.Kill(entireProcessTree: true); throw new Exception("MCP server did not respond within 30 seconds.", ex); } try { using var d=JsonDocument.Parse(line); return d.RootElement.Clone(); } catch { throw new Exception("Non-JSON data leaked to MCP stdout: "+line); } }
 var init=await CallAsync(new {jsonrpc="2.0",id=1,method="initialize",@params=new {protocolVersion="2025-06-18",capabilities=new{},clientInfo=new{name="xpscript-ci",version="1"}}});
