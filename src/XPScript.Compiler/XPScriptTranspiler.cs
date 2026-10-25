@@ -136,6 +136,11 @@ public sealed partial class XPScriptTranspiler
         source = new SpreadsheetObjectPreprocessor().Transform(source);
         var networkToolsRequested = runtimeFeatures.NetworkTools;
         source = new NetworkToolsObjectPreprocessor().Transform(source);
+        // NetworkTools is lowered to a Variant compatibility object by the
+        // shared preprocessor.  The legacy emitter does not understand a
+        // bare `New NetworkTools` expression, so route that constructor through
+        // the same generated factory used by the native runtime.
+        source = Regex.Replace(source, @"(?i)\bNew\s+NetworkTools\b", "XPScriptNetworkToolsFactory.Create()");
         source = source.Replace("XPScriptDatabaseAttachmentRuntime.ForSqlite(", "XPScriptDatabaseAttachmentApi.ForSqlite(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForMsSql(", "XPScriptDatabaseAttachmentApi.ForMsSql(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForSupabase(", "XPScriptDatabaseAttachmentApi.ForSupabase(", StringComparison.Ordinal)
