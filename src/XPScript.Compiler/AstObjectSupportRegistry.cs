@@ -51,11 +51,6 @@ internal static class AstObjectSupportRegistry
 
     private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult",
-        "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo",
-        "NetworkHostResult", "NetworkSubnetInfo", "NetworkTlsVersionResult", "NetworkCertificateResult",
-        "NetworkHttpHeadersResult", "NetworkHttpSecurityHeadersResult", "NetworkRedirectResult", "NetworkBannerResult",
-        "NetworkPortExposureInfo",
         "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement",
         "XPSpreadsheet", "XPWorksheet", "XPCell", "XPRange",
         "UIForm", "UIListView",

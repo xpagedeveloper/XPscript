@@ -193,6 +193,12 @@ foreach (var (source, legacy) in new[]
         throw new InvalidOperationException("CSV spreadsheet interop compilation route drifted: " + source);
 }
 Console.WriteLine("AST_BINDING_CSV_NATIVE_OK");
+var networkRoute = typeof(CompilerSymbolCatalog).Assembly.GetType("XPScript.Compiler.AstObjectSupportRegistry")!
+    .GetMethod("UsesUnsupportedObject")!;
+object?[] networkArguments = ["Dim tools As New NetworkTools\nPrint tools.IsPrivateAddress(\"10.0.0.1\")", null];
+if ((bool)networkRoute.Invoke(null, networkArguments)!)
+    throw new InvalidOperationException("NetworkTools unexpectedly routes through the legacy compiler.");
+Console.WriteLine("AST_BINDING_NETWORKTOOLS_NATIVE_OK");
 var imageSymbols = SymbolTable.CreateWithCompilerCatalog();
 imageSymbols.Declare(new LocalSymbol("image", typeof(object), XpTypeSymbol.User("XPImage")));
 foreach (var text in new[] { "New XPImage(2, 3)", "New XPImage(2, 3, \"#123456\")", "image.width", "image.Resize(2)",
