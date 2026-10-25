@@ -15,17 +15,23 @@ $runtimeTimeoutMilliseconds = 50000
 $compileTimeoutMilliseconds = if ($IsWindows) { 180000 } else { 60000 }
 
 function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeoutMilliseconds, [string] $label) {
-  $si = [System.Diagnostics.ProcessStartInfo]::new(); $si.FileName = $fileName; $si.UseShellExecute = $false; $si.RedirectStandardOutput = $true; $si.RedirectStandardError = $true
-  foreach ($argument in $arguments) { [void] $si.ArgumentList.Add([string] $argument) }
-  $p = [System.Diagnostics.Process]::new(); $p.StartInfo = $si
+  $stdoutPath = [System.IO.Path]::GetTempFileName()
+  $stderrPath = [System.IO.Path]::GetTempFileName()
   try {
     $startedAt = [DateTimeOffset]::UtcNow
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
     Write-Host "FULLTEST_PROCESS_START label=$label timeout_ms=$timeoutMilliseconds utc=$($startedAt.ToString('O'))"
-    if (-not $p.Start()) { throw "Unable to start: $label" }
+    $argumentList = ($arguments | ForEach-Object {
+      $argument = [string]$_
+      if ($argument -match '[\s"]') { '"' + $argument.Replace('"','\\"') + '"' } else { $argument }
+    }) -join ' '
+    $p = Start-Process -FilePath $fileName -ArgumentList $argumentList -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -NoNewWindow -PassThru
     Write-Host "FULLTEST_PROCESS_PID label=$label pid=$($p.Id)"
-    $stdoutTask = $p.StandardOutput.ReadToEndAsync(); $stderrTask = $p.StandardError.ReadToEndAsync()
-    if (-not $p.WaitForExit($timeoutMilliseconds)) {
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    while (-not $p.HasExited -and $stopwatch.ElapsedMilliseconds -lt $timeoutMilliseconds) {
+      Start-Sleep -Milliseconds 100
+    }
+    if (-not $p.HasExited) {
       $timer.Stop()
       Write-Host "FULLTEST_PROCESS_TIMEOUT label=$label pid=$($p.Id) elapsed_ms=$($timer.ElapsedMilliseconds)"
       Write-Error "FULLTEST_TIMEOUT: $label (pid=$($p.Id))"
@@ -33,16 +39,17 @@ function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeou
       [void] $p.WaitForExit(10000)
       exit 124
     }
+    $p.WaitForExit()
     $timer.Stop()
     Write-Host "FULLTEST_PROCESS_EXIT label=$label pid=$($p.Id) exit_code=$($p.ExitCode) elapsed_ms=$($timer.ElapsedMilliseconds)"
-    # A descendant process can inherit the redirected pipe and keep it open
-    # after the bounded child has exited. Never let output collection turn a
-    # completed test into an unbounded harness hang.
-    $stdout = if ($stdoutTask.Wait(5000)) { $stdoutTask.GetAwaiter().GetResult() } else { "FULLTEST_OUTPUT_TIMEOUT: stdout for $label" }
-    $stderr = if ($stderrTask.Wait(5000)) { $stderrTask.GetAwaiter().GetResult() } else { "FULLTEST_OUTPUT_TIMEOUT: stderr for $label" }
+    $stdout = Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue
+    $stderr = Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue
     if ($stdout) { Write-Host $stdout.TrimEnd() }; if ($stderr) { Write-Host $stderr.TrimEnd() }
     return [pscustomobject]@{ ExitCode = $p.ExitCode; Output = $stdout + $stderr }
-  } finally { $p.Dispose() }
+  } finally {
+    Remove-Item -LiteralPath $stdoutPath,$stderrPath -Force -ErrorAction SilentlyContinue
+    if ($p) { $p.Dispose() }
+  }
 }
 function Compile-Xps([string] $source, [string] $name) {
   $outputPath = "./out/fulltest/$name"
@@ -314,7 +321,7 @@ if (Should-Run 'platform') {
     Compile-Xps ./demo/archive/archive-replacement-failure-regression.xps archive-replacement-failure-regression
     try {
       (Get-Item $replacementPath).IsReadOnly = $true
-      Expect-XpsFailure archive-replacement-failure-regression @('../../archive-replacement-failure.zip') 'archive replacement failure preserves original'
+      Expect-XpsFailure archive-replacement-failure-regression @('archive-replacement-failure.zip') 'archive replacement failure preserves original'
       $replacementHashAfter = (Get-FileHash $replacementPath -Algorithm SHA256).Hash
       if ($replacementHashAfter -ne $replacementHashBefore) { throw 'Failed Archive replacement changed the original archive.' }
     } finally {
@@ -335,7 +342,7 @@ if (Should-Run 'platform') {
   Set-Content -NoNewline -Path (Join-Path $rollbackTarget 'b-existing.txt') -Value 'original'
   New-Item -ItemType Directory -Force (Join-Path $rollbackTarget 'z-blocked.txt') | Out-Null
   Compile-Xps ./demo/archive/archive-extraction-rollback-regression.xps archive-extraction-rollback-regression
-  Expect-XpsFailure archive-extraction-rollback-regression @('../../archive-extraction-rollback.zip','../../archive-extraction-rollback-target') 'archive extraction commit rollback'
+  Expect-XpsFailure archive-extraction-rollback-regression @('archive-extraction-rollback.zip','archive-extraction-rollback-target') 'archive extraction commit rollback'
   if (Test-Path (Join-Path $rollbackTarget 'a-new.txt')) { throw 'Failed Archive extraction left a newly committed file behind.' }
   if ((Get-Content -Raw (Join-Path $rollbackTarget 'b-existing.txt')) -ne 'original') { throw 'Failed Archive extraction did not restore an overwritten file.' }
   if (-not (Test-Path (Join-Path $rollbackTarget 'z-blocked.txt') -PathType Container)) { throw 'Failed Archive extraction changed the blocking destination directory.' }
