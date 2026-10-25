@@ -377,7 +377,9 @@ if (Should-Run 'platform') {
   Test-ArchiveReadOnlyBzip2
 
 
-  $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  # The suite requires a built compiler above. Reuse it rather than rebuilding
+  # assemblies that can already be loaded by compiler services on Windows.
+  $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release','-p:BuildProjectReferences=false','-p:UseSharedCompilation=false') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   foreach ($sample in @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-security-fixtures','archive-case-sensitivity-regression')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
   $astArchiveOutput = './out/fulltest/archive-memory-ast'
