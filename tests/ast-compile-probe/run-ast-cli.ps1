@@ -913,6 +913,18 @@ foreach ($propertyDiagnostic in $propertyDiagnostics.GetEnumerator()) {
     }
 }
 Write-Host 'AST_PROPERTY_DIAGNOSTICS_OK'
+$methodDiagnostics = @{
+    'class-method-body-error.xps' = 'XPS2008'
+    'class-method-private-error.xps' = 'XPS2009'
+    'class-method-scope-error.xps' = 'XPS2008'
+}
+foreach ($methodDiagnostic in $methodDiagnostics.GetEnumerator()) {
+    $methodDiagnosticText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot $methodDiagnostic.Key) -o (Join-Path $output ([IO.Path]::GetFileNameWithoutExtension($methodDiagnostic.Key))) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($methodDiagnosticText -join "`n") -notmatch $methodDiagnostic.Value) {
+        throw "AST class-method diagnostic regression failed for $($methodDiagnostic.Key)."
+    }
+}
+Write-Host 'AST_CLASS_METHOD_DIAGNOSTICS_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-derived-next.xps') -o $derivedClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST derived scalar class-method compilation failed.' }
 $derivedClassMethodResult = dotnet (Join-Path $derivedClassMethodOutput 'Generated.dll')
