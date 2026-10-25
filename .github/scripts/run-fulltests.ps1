@@ -323,7 +323,10 @@ if (Should-Run 'platform') {
     Compile-Xps ./demo/archive/archive-replacement-failure-regression.xps archive-replacement-failure-regression
     try {
       (Get-Item $replacementPath).IsReadOnly = $true
-      Expect-XpsFailure archive-replacement-failure-regression @((Resolve-Path $replacementPath).Path) 'archive replacement failure preserves original'
+      $replacementFailure = Invoke-Bounded (Get-XpsExe 'archive-replacement-failure-regression') @((Resolve-Path $replacementPath).Path) $runtimeTimeoutMilliseconds 'archive replacement failure preserves original'
+      if ($replacementFailure.ExitCode -eq 0 -or $replacementFailure.Output -notmatch 'Archive save or replacement failed without replacing the original archive') {
+        throw 'Archive replacement probe did not reach the guarded save operation.'
+      }
       $replacementHashAfter = (Get-FileHash $replacementPath -Algorithm SHA256).Hash
       if ($replacementHashAfter -ne $replacementHashBefore) { throw 'Failed Archive replacement changed the original archive.' }
     } finally {
@@ -344,7 +347,11 @@ if (Should-Run 'platform') {
   Set-Content -NoNewline -Path (Join-Path $rollbackTarget 'b-existing.txt') -Value 'original'
   New-Item -ItemType Directory -Force (Join-Path $rollbackTarget 'z-blocked.txt') | Out-Null
   Compile-Xps ./demo/archive/archive-extraction-rollback-regression.xps archive-extraction-rollback-regression
-  Expect-XpsFailure archive-extraction-rollback-regression @((Resolve-Path $rollbackArchive).Path,(Resolve-Path $rollbackTarget).Path) 'archive extraction commit rollback'
+  $rollbackFailure = Invoke-Bounded (Get-XpsExe 'archive-extraction-rollback-regression') @((Resolve-Path $rollbackArchive).Path,(Resolve-Path $rollbackTarget).Path) $runtimeTimeoutMilliseconds 'archive extraction commit rollback'
+  if ($rollbackFailure.ExitCode -eq 0 -or [string]::IsNullOrWhiteSpace($rollbackFailure.Output) -or
+      $rollbackFailure.Output -match 'not found|ZIP only|SharpCompress') {
+    throw 'Archive rollback probe failed before reaching the destination conflict.'
+  }
   if (Test-Path (Join-Path $rollbackTarget 'a-new.txt')) { throw 'Failed Archive extraction left a newly committed file behind.' }
   if ((Get-Content -Raw (Join-Path $rollbackTarget 'b-existing.txt')) -ne 'original') { throw 'Failed Archive extraction did not restore an overwritten file.' }
   if (-not (Test-Path (Join-Path $rollbackTarget 'z-blocked.txt') -PathType Container)) { throw 'Failed Archive extraction changed the blocking destination directory.' }
