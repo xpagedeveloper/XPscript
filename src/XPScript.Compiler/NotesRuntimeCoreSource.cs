@@ -21,6 +21,9 @@ internal static class XPScriptNotes
         session.ConvertMIME = XPScriptRuntime.CBool(value);
     }
 
+    public static bool IsNothing(object? value) => value is ILSObjectReference reference ? reference.IsNothing : value is null;
+    public static bool IsNotNothing(object? value) => !IsNothing(value);
+
     public static void RecycleValue(object? value)
     {
         if (value is null) return;

@@ -128,6 +128,13 @@ internal sealed class NotesRuntimePreprocessor
             foreach (var documentName in notesDocuments.OrderByDescending(value => value.Length)) rewritten = RewriteDocumentItemValues(rewritten, documentName);
             foreach (var itemName in notesItems.OrderByDescending(value => value.Length)) rewritten = RewriteNotesItemValues(rewritten, itemName);
             rewritten = RewriteNothingReturningMembers(rewritten, notesVariableTypes);
+            foreach (var notesVariable in notesVariables.OrderByDescending(value => value.Length))
+            {
+                var escaped = Regex.Escape(notesVariable);
+                rewritten = Regex.Replace(rewritten, $@"\bNot\s+{escaped}\s+Is\s+Nothing\b", $"XPScriptNotes.IsNotNothing({notesVariable})", RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s+Is\s+Not\s+Nothing\b", $"XPScriptNotes.IsNotNothing({notesVariable})", RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s+Is\s+Nothing\b", $"XPScriptNotes.IsNothing({notesVariable})", RegexOptions.IgnoreCase);
+            }
 
             foreach (var collectionName in notesDocumentCollections)
             {

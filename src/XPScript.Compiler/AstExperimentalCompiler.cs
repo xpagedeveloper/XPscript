@@ -395,6 +395,8 @@ public static class AstExperimentalCompiler
             DeclareNativeStatic(symbols, "XPScriptNotes.CreateSession", [typeof(object), typeof(object)], "XPScriptNotes.CreateSession");
             DeclareNativeStatic(symbols, "XPScriptNotes.CreateSession", [typeof(object), typeof(object), typeof(object)], "XPScriptNotes.CreateSession");
             DeclareNativeStatic(symbols, "XPScriptNotes.SetConvertMIME", [typeof(object), typeof(object)], "XPScriptNotes.SetConvertMIME");
+            DeclareNativeStatic(symbols, "XPScriptNotes.IsNothing", [typeof(object)], "XPScriptNotes.IsNothing");
+            DeclareNativeStatic(symbols, "XPScriptNotes.IsNotNothing", [typeof(object)], "XPScriptNotes.IsNotNothing");
             DeclareNativeStatic(symbols, "XPScriptNotes.RecycleValue", [typeof(object)], "XPScriptNotes.RecycleValue");
             DeclareNativeStatic(symbols, "XPScriptNotes.RecycleForReplacement", [typeof(object), typeof(object)], "XPScriptNotes.RecycleForReplacement");
             DeclareNativeStatic(symbols, "XPScriptNotes.NormalizeObjectResult", [typeof(object)], "XPScriptNotes.NormalizeObjectResult");
@@ -549,8 +551,11 @@ public static class AstExperimentalCompiler
         symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CDate", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
-        foreach (var builtin in new[] { "Base64Decode", "Base64Encode", "CByte", "CCur", "CSng", "CVar", "DataType", "DateAdd", "DateDiff", "Day", "FromBase64", "InstrB", "IsArray", "IsDate", "IsElement", "IsEmpty", "IsObject", "IsScalar", "LeftB", "ListTag", "LSet", "Month", "RegexValidate", "RightB", "RSet", "Space", "String", "StrLeft", "StrLeftBack", "StrReverse", "StrRight", "StrRightBack", "StrToken", "TimeNumber", "ToBase64", "UrlDecode", "UrlEncode", "MD5", "SHA1", "SHA256", "SHA384", "SHA512", "HMACSHA256", "HMACSHA384", "HMACSHA512" })
+        foreach (var builtin in new[] { "Base64Decode", "Base64Encode", "CByte", "CCur", "CSng", "CVar", "DataType", "DateAdd", "DateDiff", "Day", "FromBase64", "InstrB", "IsArray", "IsDate", "IsElement", "IsObject", "IsScalar", "LeftB", "ListTag", "LSet", "Month", "RegexValidate", "RightB", "RSet", "Space", "String", "StrLeft", "StrLeftBack", "StrReverse", "StrRight", "StrRightBack", "StrToken", "TimeNumber", "ToBase64", "UrlDecode", "UrlEncode", "MD5", "SHA1", "SHA256", "SHA384", "SHA512", "HMACSHA256", "HMACSHA384", "HMACSHA512" })
             symbols.Declare(new FunctionSymbol(builtin, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
+        // These predicates are Boolean-valued even though the compatibility
+        // runtime exposes most legacy built-ins through Variant carriers.
+        symbols.Declare(new FunctionSymbol("IsEmpty", typeof(bool), [typeof(object)], XpTypeSymbol.FromClr(typeof(bool)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("String", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateAdd", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateDiff", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -1212,7 +1217,7 @@ internal static class Program
     public static object IsArray(object value) => XPScriptRuntime.IsArray(value);
     public static object IsDate(object value) => DateTime.TryParse(CStr(value), out _);
     public static object IsElement(object value) => value is not null;
-    public static object IsEmpty(object value) => value is null;
+    public static bool IsEmpty(object value) => value is null;
     public static object IsObject(object value) => XPScriptNullRuntime.IsObject(value);
     public static object IsScalar(object value) => XPScriptNullRuntime.IsScalar(value);
     public static object LeftB(object value, object count) => Left(value, count);
