@@ -135,6 +135,10 @@ public static class AstExperimentalCompiler
                 return new string(match.Value.Select(c => c is '\r' or '\n' ? c : ' ').ToArray());
             });
         var usesArchive = PreprocessorFeatureGate.ContainsTypeReference(source, "Archive", "ArchiveEntry");
+        // Legacy accepts colon-separated statements, including inline If/Else
+        // forms. Normalize them before AST parsing so the default compiler
+        // preserves that language syntax instead of exposing ColonToken errors.
+        source = new StatementSeparatorPreprocessor().Transform(source, sourcePath);
         if (usesArchive)
             source = new ArchiveObjectPreprocessor().Transform(source, sourcePath);
         var usesNetworkTools = Regex.IsMatch(source,
