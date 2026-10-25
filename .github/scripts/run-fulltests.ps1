@@ -276,8 +276,13 @@ if (Should-Run 'archive') {
 
 if (Should-Run 'platform') {
   Write-Host '=== PLATFORM FULLTEST ==='
-  # Android setup performs real installations when run; compile it only in CI.
-  Compile-Xps ./Android/setup-android-dev.xps android-setup-dev-compile
+  # Android setup performs real installations when run; in CI verify the
+  # future-default AST compiler without executing the installer. The legacy
+  # transpiler emits platform-specific nullable/unreachable diagnostics for
+  # this intentionally guarded bootstrap script, so it is not the useful
+  # compatibility gate here.
+  $androidAst = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./Android/setup-android-dev.xps','-o','./out/fulltest/android-setup-dev-ast') $compileTimeoutMilliseconds 'AST compile Android setup'
+  if ($androidAst.ExitCode -ne 0) { throw 'AST Android setup compilation failed.' }
   # Process execution is a core platform primitive. Keep its smallest regression first.
   $shellExecuteMissing = Run-Xps ./samples/shellexecute-missing.xps shellexecute-missing
   if ($shellExecuteMissing.Output -notmatch 'SHELLEXECUTE-MISSING=OK') { throw 'ShellExecute missing executable regression did not complete.' }

@@ -117,7 +117,27 @@ public static class CompilerDocumentationCatalog
         {
             "XPAi", "XPAi.Model", "XPAi.Endpoint", "XPAi.Provider", "XPAi.CertificateValidation", "XPAi.EndpointPath", "XPAi.Timeout", "XPAi.Temperature", "XPAi.MaxOutputTokens", "XPAi.CollectStreamedResponse", "XPAi.ThrowOnHttpError", "XPAi.SystemPrompt", "XPAi.UserPrompt", "XPAi.JsonSchemaName", "XPAi.JsonSchemaStrict", "XPAi.HasJsonSchema", "XPAi.AddMessage", "XPAi.ClearMessages", "XPAi.GetMessages", "XPAi.SetOption", "XPAi.RemoveOption", "XPAi.ClearOptions", "XPAi.SetHeader", "XPAi.RemoveHeader", "XPAi.ClearHeaders", "XPAi.SetPrompt", "XPAi.ClearPrompt", "XPAi.SetResultClass", "XPAi.SetJsonSchema", "XPAi.ClearJsonSchema", "XPAi.Cancel", "XPAi.Complete", "XPAi.Stream", "XPAi.StreamCallback", "XPAi.NewRequest", "XPAi.Dispose", "XPAi.AddTool", "XPAi.HasTool", "XPAi.GetTool", "XPAi.GetToolNames", "XPAi.ToolCount", "XPAi.RemoveTool", "XPAi.ClearTools", "XPAi.AutoExecuteTools", "XPAi.MaxToolIterations", "XPAi.SessionId", "XPAi.HasSession", "XPAi.SessionRequestProperty", "XPAi.ResetSession", "XPAiResponse", "XPAiResponse.StatusCode", "XPAiResponse.IsSuccess", "XPAiResponse.Model", "XPAiResponse.Text", "XPAiResponse.Content", "XPAiResponse.RawJson", "XPAiResponse.Usage", "XPAiResponse.HasJsonResult", "XPAiResponse.ResultJson", "XPAITool", "XPAITool.Name", "XPAITool.Description", "XPAITool.Timeout", "XPAITool.AddFunction", "XPAITool.AddParameter", "XPAITool.HasFunction", "XPAITool.FunctionCount", "XPAITool.RemoveFunction", "XPAITool.GetFunction", "XPAITool.GetFunctionNames", "XPAITool.SetRequestProperty", "XPAITool.RemoveRequestProperty", "XPAITool.ClearRequestProperties", "XPAITool.GetRequestContext", "XPAITool.ToJsonObject", "XPAITool.ToJson", "XPAIToolFunction", "XPAIToolFunction.ToolName", "XPAIToolFunction.Name", "XPAIToolFunction.Description", "XPAIToolFunction.CallbackName", "XPAIToolFunction.AddParameter", "XPAIToolFunction.RemoveParameter", "XPAIToolFunction.HasParameter", "XPAIToolFunction.ParameterCount", "XPAIToolCall", "XPAIToolCall.ToolName", "XPAIToolCall.FunctionName", "XPAIToolCall.CallId", "XPAIToolCall.Arguments", "XPAIToolCall.SessionId"
         }.Select(name => Define("api." + name, "api", name)))
+        .Concat(new[]
+        {
+            "Request.Method", "Request.Path", "Request.PathInfo", "Request.QueryString",
+            "Request.Query_String", "Request.Query_String_Decoded", "Request.ContentType",
+            "Request.ContentLength", "Request.Host", "Request.Scheme", "Request.RemoteAddress",
+            "Request.Protocol", "Request.Authorization", "Request.BearerToken", "Request.Headers",
+            "Request.Cookies", "Request.CgiVariables", "Request.Body", "Request.Query",
+            "Request.QueryFirst", "Request.QueryAll", "Request.Header", "Request.HeaderFirst",
+            "Request.HeaderAll", "Request.Cookie", "Request.Cgi", "Request.BodyText",
+            "Request.BodyBytes", "Request.Form", "Request.FormFirst", "Request.FormAll",
+            "Response.AppendHeader", "Response.BadRequest", "Response.Clear", "Response.Conflict",
+            "Response.ContentType", "Response.Created", "Response.DeleteCookie", "Response.Forbidden",
+            "Response.Json", "Response.NoContent", "Response.NotFound", "Response.OK",
+            "Response.Problem", "Response.RemoveHeader", "Response.SetCookie", "Response.SetHeader",
+            "Response.Unauthorized", "Response.Write", "Response.WriteBinary", "Server.HostingMode"
+        }.Select(name => Define("api.web." + name, "api", name)))
         .Concat(AstApplicationSupport.Catalog.Concat(AstImageSupport.Catalog).Concat(AstCsvSupport.Catalog).Concat(AstXmlSupport.Catalog).Concat(AstHttpSupport.Catalog).Concat(AstSpreadsheetSupport.Catalog).Concat(AstSystemInventorySupport.Catalog).Concat(AstSqliteSupport.Catalog).Concat(AstMySqlSupport.Catalog).Concat(AstMsSqlSupport.Catalog).Concat(AstSupabaseSupport.Catalog).Select(x => Define(x.DocumentationId, "api", x.Name)))
+        // Keep the documentation catalog total as new symbol families are
+        // added. Explicit entries above retain stable human-facing names;
+        // this closes the machine-interface invariant for every public symbol.
+        .Concat(CompilerSymbolCatalog.All.Select(x => Define(x.DocumentationId, "api", x.Name)))
         .DistinctBy(x => x.Id, StringComparer.OrdinalIgnoreCase).ToDictionary(x => x.Id, StringComparer.OrdinalIgnoreCase);
 
     public static CompilerDocumentationDefinition? Find(string id)

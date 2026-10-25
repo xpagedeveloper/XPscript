@@ -941,15 +941,62 @@ public sealed class CompilerDriver
             if (!string.IsNullOrWhiteSpace(tempRoot) && file.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase))
                 file = Path.GetRelativePath(tempRoot, file);
 
+            var classification = CompilerDiagnosticClassifier.ClassifyUpstream(code, sourceMapped: true);
+            var properties = new List<CompileDiagnosticProperty>();
+            var symbolMatch = code.Equals("CS0103", StringComparison.OrdinalIgnoreCase)
+                ? System.Text.RegularExpressions.Regex.Match(message, @"name '(?<symbol>[^']+)' does not exist", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                : System.Text.RegularExpressions.Regex.Match(message, @"definition for '(?<symbol>[^']+)'", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if ((code.Equals("CS0103", StringComparison.OrdinalIgnoreCase) || code.Equals("CS1061", StringComparison.OrdinalIgnoreCase) || code.Equals("CS0117", StringComparison.OrdinalIgnoreCase)) && symbolMatch.Success)
+            {
+                var symbol = symbolMatch.Groups["symbol"].Value;
+                properties.Add(new CompileDiagnosticProperty
+                {
+                    Name = code.Equals("CS0103", StringComparison.OrdinalIgnoreCase) ? "symbol" : "member",
+                    Value = symbol
+                });
+                foreach (var candidate in CompilerSymbolCatalog.Candidates(symbol))
+                {
+                    properties.Add(new CompileDiagnosticProperty { Name = "candidate", Value = candidate.Name });
+                    properties.Add(new CompileDiagnosticProperty { Name = "candidateKind", Value = candidate.Kind });
+                    properties.Add(new CompileDiagnosticProperty { Name = "candidateSignature", Value = candidate.Signature });
+                }
+            }
+
+            var sourceCode = CompilerDiagnosticMode.Debug ? "Generated C#" : "";
+            if (Path.GetExtension(file).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var diagnosticPath = Path.IsPathRooted(file)
+                        ? file
+                        : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory, file);
+                    if (!File.Exists(diagnosticPath) && Path.GetFileName(diagnosticPath).Equals(Path.GetFileName(sourcePath), StringComparison.OrdinalIgnoreCase))
+                        diagnosticPath = sourcePath;
+                    var lines = File.Exists(diagnosticPath) ? File.ReadAllLines(diagnosticPath) : [];
+                    if (line > 0 && line <= lines.Length)
+                        sourceCode = lines[line - 1];
+                    if (properties.FirstOrDefault(p => p.Name is "symbol" or "member")?.Value is { Length: > 0 } unresolvedSymbol)
+                    {
+                        var matchingLine = lines.FirstOrDefault(value => value.Contains(unresolvedSymbol, StringComparison.Ordinal));
+                        if (!string.IsNullOrWhiteSpace(matchingLine))
+                            sourceCode = matchingLine;
+                    }
+                }
+                catch { }
+            }
+
             diagnostics.Add(new CompileDiagnostic
             {
                 File = Path.GetFileName(file),
                 Line = line,
                 Position = column,
                 Description = message,
-                DiagnosticCode = code,
+                DiagnosticCode = classification.DiagnosticCode ?? code,
+                UpstreamCode = code,
                 Severity = severity,
-                SourceCode = CompilerDiagnosticMode.Debug ? "Generated C#" : ""
+                Category = classification.Category ?? "compiler",
+                Properties = properties,
+                SourceCode = sourceCode
             });
         }
 
