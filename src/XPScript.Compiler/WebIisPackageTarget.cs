@@ -52,8 +52,10 @@ internal static class WebIisPackageTarget
         var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
         var tempRoot = string.IsNullOrWhiteSpace(configuredTempRoot)
             ? Path.Combine(Path.GetTempPath(), "XPScript")
-            : Path.Combine(Path.GetFullPath(configuredTempRoot), "XPScript");
-        var isolatedBuildRoot = Path.Combine(tempRoot, "webiis-host-build-" + Guid.NewGuid().ToString("N"));
+            : Path.GetFullPath(configuredTempRoot);
+        // Keep the per-build workspace isolated while avoiding Windows MAX_PATH
+        // failures when XPSCRIPT_TEMP_ROOT is itself a long repository path.
+        var isolatedBuildRoot = Path.Combine(tempRoot, "w", Guid.NewGuid().ToString("N")[..12]);
         Directory.CreateDirectory(isolatedBuildRoot);
 
         var args = new List<string>

@@ -14,7 +14,10 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 Set-Location -LiteralPath $root
 # Keep generated compiler workspaces inside the repository during the probe so
 # constrained Windows sandboxes cannot redirect them to an inaccessible profile.
-$env:XPSCRIPT_TEMP_ROOT = Join-Path $root 'out/ast-test-temp'
+# Each suite invocation gets an isolated restore/build workspace. Reusing a
+# previous generated project can retain stale NuGet assets and make dependency
+# probes report false incompatibility errors.
+$env:XPSCRIPT_TEMP_ROOT = Join-Path $root ('out/ast-test-temp-' + [Guid]::NewGuid().ToString('N'))
 $null = New-Item -ItemType Directory -Force -Path $env:XPSCRIPT_TEMP_ROOT
 $compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
     Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
