@@ -282,10 +282,11 @@ internal sealed class XPScriptAi : IDisposable
                 throw new XPScriptRuntimeException(5, "XPAi request was cancelled or timed out.");
             throw new XPScriptRuntimeException(5, "XPAi request was cancelled.");
         }
-        catch (System.Net.Http.HttpRequestException)
+        catch (System.Net.Http.HttpRequestException ex)
         {
             if (_tls.LastError.Length > 0) throw _tls.Failure("XPAi request");
-            throw new XPScriptRuntimeException(5, "XPAi HTTP request failed.");
+            var detail = string.IsNullOrWhiteSpace(ex.Message) ? "unknown transport error" : ex.Message;
+            throw new XPScriptRuntimeException(5, "XPAi HTTP request failed: " + detail);
         }
         catch (IOException)
         {
