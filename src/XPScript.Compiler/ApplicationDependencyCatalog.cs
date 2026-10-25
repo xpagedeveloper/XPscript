@@ -9,7 +9,7 @@ public static class ApplicationDependencyCatalog
     public const string AvaloniaVersion = "12.0.3";
     public const string AvaloniaWebViewVersion = "12.0.1";
     public const string MicrosoftDataSqliteVersion = "10.0.11";
-    public const string MicrosoftDataSqlClientVersion = "7.0.2";
+    public const string MicrosoftDataSqlClientVersion = "7.1.1";
     public const string MySqlConnectorVersion = "2.6.2";
     public const string NpgsqlVersion = "10.0.3";
     public const string MimeKitVersion = "4.18.2";

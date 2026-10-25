@@ -38,7 +38,7 @@ The following packages are distributed under the MIT License:
 - [HarfBuzzSharp](https://github.com/mono/SkiaSharp), including its platform native asset packages (`8.3.1.3`)
 - [MicroCom.Runtime](https://github.com/AvaloniaUI/MicroCom) (`0.11.4`)
 - [Microsoft.Data.Sqlite](https://github.com/dotnet/efcore), including `Microsoft.Data.Sqlite.Core` (`10.0.11`)
-- [Microsoft.Data.SqlClient](https://github.com/dotnet/SqlClient), including its abstractions and logging packages (`7.0.2`)
+- [Microsoft.Data.SqlClient](https://github.com/dotnet/SqlClient), including its abstractions and logging packages (`7.1.1`)
 - [Microsoft.Extensions](https://github.com/dotnet/runtime) caching, dependency injection, logging, options, and primitives packages (`9.0.13` and `10.0.0`)
 - [Microsoft.IdentityModel](https://github.com/AzureAD/identitymodel-extensions-for-dotnet) packages (`8.16.0`)
 - [Microsoft.CodeAnalysis](https://github.com/dotnet/roslyn), including `Microsoft.CodeAnalysis.CSharp`, `Common`, and `Analyzers` (`4.14.0` and `3.11.0`)
