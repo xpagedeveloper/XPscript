@@ -899,6 +899,22 @@ Write-Host 'AST_DERIVED_DESTRUCTORS_OK'
 $destructorBodyErrorText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-destructor-body-error.xps') -o (Join-Path $output 'class-destructor-body-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($destructorBodyErrorText -join "`n") -notmatch 'XPS2008') { throw 'AST destructor body diagnostic regression failed.' }
 Write-Host 'AST_DESTRUCTOR_BODY_DIAGNOSTIC_OK'
+$destructorDiagnostics = @{
+    'class-destructor-derived-body-error.xps' = 'XPS2008'
+    'class-destructor-duplicate-error.xps' = 'XPS1012'
+    'class-destructor-function-error.xps' = 'XPS1012'
+    'class-destructor-parameter-error.xps' = 'XPS1012'
+    'class-destructor-private-base-error.xps' = 'XPS2008'
+    'class-destructor-private-member-error.xps' = 'XPS2009'
+    'class-destructor-private-method-error.xps' = 'XPS2009'
+}
+foreach ($destructorDiagnostic in $destructorDiagnostics.GetEnumerator()) {
+    $destructorDiagnosticText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot $destructorDiagnostic.Key) -o (Join-Path $output ([IO.Path]::GetFileNameWithoutExtension($destructorDiagnostic.Key))) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($destructorDiagnosticText -join "`n") -notmatch $destructorDiagnostic.Value) {
+        throw "AST destructor diagnostic regression failed for $($destructorDiagnostic.Key)."
+    }
+}
+Write-Host 'AST_DESTRUCTOR_DIAGNOSTICS_OK'
 $propertyDiagnostics = @{
     'class-property-body-error.xps' = 'XPS2008'
     'class-property-private-error.xps' = 'XPS2009'
