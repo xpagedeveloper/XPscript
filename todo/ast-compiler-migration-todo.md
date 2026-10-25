@@ -589,6 +589,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Compare diagnostic locations and categories.
 - [ ] Run representative corpus cases through the MCP/AI machine compiler as well as the normal compiler.
 - [x] Compare CLI and machine/MCP compile success/failure for the same source. `CompilerMcpProtocolProbe` exercises shared valid fixtures through legacy and AST MCP validation and checks the AST CLI parity fixture.
+  - [x] Re-ran `tests/CompilerMcpProtocolProbe` on Windows on 2026-10-25 against the built compiler artifact; the complete protocol, concurrent request, virtual compile, real compile artifact, diagnostic parity and web validation sequence passed with `MCP protocol probe passed.`
 - [x] Compare CLI and machine/MCP structured diagnostics for the same source. The permanent protocol probe compares diagnostic code, source, line, column, span and message identity for normal/debug CLI and MCP paths.
 - [x] Compare observable runtime output for the deterministic corpus. The compatibility harness requires exact legacy/AST output equality for all 15 fixtures; broader repository/demo behavior remains a separate audit.
 - [x] Compare generated target behavior for console on the supported desktop RIDs. The AST target matrix compiles and executes `shared-runtime.xps` for `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64`; the GitHub workflow runs the same target-specific compilation on matching hosted runners.
