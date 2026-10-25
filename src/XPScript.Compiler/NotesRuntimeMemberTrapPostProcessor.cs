@@ -31,7 +31,9 @@ internal static class NotesRuntimeMemberTrapPostProcessor
             {
                 var notesPath = TryResolveWindowsRuntimeDirectory(@"Software\HCL\Notes\Installer");
                 if (notesPath is not null) return notesPath;
-                return TryResolveWindowsRuntimeDirectory(@"Software\HCL\Domino\Installer");
+                var dominoPath = TryResolveWindowsRuntimeDirectory(@"Software\HCL\Domino\Installer");
+                if (dominoPath is not null) return dominoPath;
+                return TryResolveWindowsStandardRuntimeDirectory();
             }
 
             if (OperatingSystem.IsMacOS())
@@ -53,15 +55,48 @@ internal static class NotesRuntimeMemberTrapPostProcessor
 
     private static string? TryResolveWindowsRuntimeDirectory(string registryPath)
     {
-        using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(registryPath);
-        var raw = key?.GetValue("PROGDIR") as string;
-        if (string.IsNullOrWhiteSpace(raw)) return null;
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(registryPath);
+            var raw = key?.GetValue("PROGDIR") as string;
+            if (string.IsNullOrWhiteSpace(raw)) return null;
 
-        var expanded = Environment.ExpandEnvironmentVariables(raw.Trim().Trim('\"'));
-        var path = Path.GetFullPath(expanded);
-        if (!Directory.Exists(path)) return null;
-        if (!File.Exists(Path.Combine(path, "nnotes.dll"))) return null;
-        return path;
+            var expanded = Environment.ExpandEnvironmentVariables(raw.Trim().Trim('\"'));
+            var path = Path.GetFullPath(expanded);
+            if (!Directory.Exists(path)) return null;
+            if (!File.Exists(Path.Combine(path, "nnotes.dll")) || !HasNotesIni(path)) return null;
+            return path;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool HasNotesIni(string programDirectory)
+    {
+        return File.Exists(Path.Combine(programDirectory, "notes.ini")) ||
+               File.Exists(Path.Combine(programDirectory, "Data", "notes.ini"));
+    }
+
+    private static string? TryResolveWindowsStandardRuntimeDirectory()
+    {
+        var roots = new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+        };
+        foreach (var root in roots.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            foreach (var relative in new[] { Path.Combine("HCL", "Notes"), Path.Combine("HCL", "Domino") })
+            {
+                var path = Path.Combine(root, relative);
+                if (Directory.Exists(path) &&
+                    File.Exists(Path.Combine(path, "nnotes.dll")) &&
+                    HasNotesIni(path)) return path;
+            }
+        }
+        return null;
     }
 
     public static XPScriptNotesSession CreateSession(object? runtimeDirectory) =>
