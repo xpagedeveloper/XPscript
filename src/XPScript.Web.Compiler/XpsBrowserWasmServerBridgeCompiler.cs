@@ -118,6 +118,12 @@ internal static class XpsBrowserWasmServerBridgeCompiler
                 "XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser",
                 StringComparison.Ordinal);
             browserGenerated = BrowserWasmServerBridgeTransportInstaller.TransformGenerated(browserGenerated);
+            // Browser-WASM uses the restricted transpiler directly, so it does
+            // not pass through the normal web compiler's AST runtime injection.
+            // Keep database attachment calls self-contained in this generated
+            // module as well; otherwise the preprocessor emits calls to
+            // XPScriptDatabaseAttachmentApi without its implementation.
+            browserGenerated = AstExperimentalCompiler.EnsureAttachmentRuntime(browserGenerated, includeNativeDatabaseProviders: false);
             var browserModule = BrowserWasmServerBridgeTransportInstaller.TransformBrowserModule(BrowserRuntimeConstant("BrowserModuleJs"));
 
             await File.WriteAllTextAsync(Path.Combine(workspace, "Generated.cs"), browserGenerated, cancellationToken).ConfigureAwait(false);

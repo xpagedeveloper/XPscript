@@ -11,7 +11,7 @@ try
 [Platform:browser-wasm]
 Sub Main()
     Dim form As New UIForm("Dispatcher WASM")
-    Dim db As New HTTPDBSupabase("https://example.invalid", "anon-key")
+    Dim db As New XPHttpDbSupabase("https://example.invalid", "anon-key")
     Dim files As Variant
     Dim attachmentId As String
 
@@ -33,11 +33,13 @@ End Sub
         ConfigurationIdentity = "wasm-dispatcher-probe",
         EnablePersistentCache = false
     });
+    Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", "1");
     await using var dispatcher = new XpsWebDispatcher(root, cache);
 
     var bootstrap = await SendAsync(dispatcher, root, "/");
     Console.WriteLine($"BOOTSTRAP={bootstrap.StatusCode} bytes={bootstrap.Body.Length} compilations={cache.CompilationStarts}");
-    if (bootstrap.StatusCode != 200) throw new Exception($"Bootstrap returned HTTP {bootstrap.StatusCode}.");
+    if (bootstrap.StatusCode != 200)
+        throw new Exception($"Bootstrap returned HTTP {bootstrap.StatusCode}: {Encoding.UTF8.GetString(bootstrap.Body.Span)}");
     var bootstrapText = Encoding.UTF8.GetString(bootstrap.Body.Span);
     if (!bootstrapText.Contains("<base href=\"index.xps/\">", StringComparison.Ordinal))
         throw new Exception("Bootstrap base href is incorrect.");

@@ -10,23 +10,27 @@ namespace XPScript.Compiler;
 /// <summary>Experimental CLI bridge for the currently supported AST compilation slice.</summary>
 public static class AstExperimentalCompiler
 {
-    public static string EnsureAttachmentRuntime(string generated)
+    public static string EnsureAttachmentRuntime(string generated, bool includeNativeDatabaseProviders = true)
     {
         ArgumentNullException.ThrowIfNull(generated);
-        if (!generated.Contains("XPScriptAttachmentCollectionV3", StringComparison.Ordinal) ||
-            generated.Contains("internal sealed class XPScriptAttachmentCollectionV3", StringComparison.Ordinal))
+        var usesAttachmentApi = generated.Contains("XPScriptDatabaseAttachmentApi.", StringComparison.Ordinal);
+        if (!usesAttachmentApi && !generated.Contains("XPScriptAttachmentCollectionV3", StringComparison.Ordinal))
             return generated;
+        if (generated.Contains("internal static class XPScriptDatabaseAttachmentApi", StringComparison.Ordinal))
+            return generated;
+        if (generated.Contains("internal sealed class XPScriptAttachmentCollectionV3", StringComparison.Ordinal))
+            return generated + Environment.NewLine + DatabaseAttachmentRuntimeV3Source.ApiCode;
         var runtime = generated;
         if (!generated.Contains("XPScriptHttpDbSupabase", StringComparison.Ordinal))
             runtime += Environment.NewLine + HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code +
                 (generated.Contains("XPScriptTlsValidationState", StringComparison.Ordinal) ? string.Empty : AstTlsRuntimeCode());
         if (!runtime.Contains("class XPScriptHttpDatabaseDataSourceExtensions", StringComparison.Ordinal))
             runtime += Environment.NewLine + DatabaseUiDataSourceRuntimeSource.BuildHttpDatabaseExtensions();
-        if (!runtime.Contains("class XPScriptDatabaseDataSourceRuntime", StringComparison.Ordinal))
+        if (includeNativeDatabaseProviders && !runtime.Contains("class XPScriptDatabaseDataSourceRuntime", StringComparison.Ordinal))
             runtime += Environment.NewLine + DatabaseUiDataSourceRuntimeSource.Build(true, true, false);
-        if (!runtime.Contains("class XPScriptDbSqlite", StringComparison.Ordinal))
+        if (includeNativeDatabaseProviders && !runtime.Contains("class XPScriptDbSqlite", StringComparison.Ordinal))
             runtime += Environment.NewLine + SqliteDbRuntimeSource.Code;
-        if (!runtime.Contains("class XPScriptDbMsSql", StringComparison.Ordinal))
+        if (includeNativeDatabaseProviders && !runtime.Contains("class XPScriptDbMsSql", StringComparison.Ordinal))
             runtime += Environment.NewLine + MsSqlDbRuntimeSource.Code;
         if (!runtime.Contains("class XPScriptCaseInsensitiveDynamicObject", StringComparison.Ordinal))
             runtime += Environment.NewLine + CaseInsensitiveDynamicObjectRuntimeSource.Code;

@@ -59,6 +59,10 @@ public sealed class XpsBrowserWasmCompiler
             var browserSource = EnsureBrowserEntryPoint(NormalizeVariantSetAssignments(parsed.Source), parsed.Routes);
             var generated = new XPScriptTranspiler().TranspileRestricted(browserSource, sourcePath, Platform, [_webRoot]);
             generated = generated.Replace("XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop", "XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser", StringComparison.Ordinal);
+            // The restricted browser transpiler can emit attachment API calls
+            // without the companion API class when the V3 collection runtime is
+            // already present. Ensure the generated browser module is complete.
+            generated = AstExperimentalCompiler.EnsureAttachmentRuntime(generated, includeNativeDatabaseProviders: false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "Generated.cs"), generated, cancellationToken).ConfigureAwait(false);
             var usesExtendedArchive = generated.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
             await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildProject(typeof(BrowserFormHost).Assembly.Location, usesExtendedArchive), cancellationToken).ConfigureAwait(false);
