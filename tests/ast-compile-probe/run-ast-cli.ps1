@@ -7,6 +7,9 @@ param(
 # compiler/runtime invocation below asserts its exit code and output explicitly.
 $ErrorActionPreference = 'Continue'
 $PSNativeCommandUseErrorActionPreference = $false
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = $utf8
+[Console]::OutputEncoding = $utf8
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 # Generated programs intentionally exercise repository-relative source paths.
 # Normalize the process working directory so the suite behaves the same when
@@ -48,14 +51,24 @@ function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
     return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
 }
 function Invoke-BoundedDotnetRun([string[]] $arguments, [int] $timeoutMilliseconds = 120000) {
-    $stdoutPath = [System.IO.Path]::GetTempFileName()
-    $stderrPath = [System.IO.Path]::GetTempFileName()
-    try {
-        $quotedArguments = @($arguments | ForEach-Object {
+    $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
+    $info.UseShellExecute = $false
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    if ($null -ne $info.ArgumentList) {
+        foreach ($argument in $arguments) { [void]$info.ArgumentList.Add([string]$argument) }
+    } else {
+        $info.Arguments = (($arguments | ForEach-Object {
             $argument = [string]$_
-            if ($argument -match '[\s"]') { '"' + $argument.Replace('"', '\\"') + '"' } else { $argument }
-        })
-        $process = Start-Process -FilePath 'dotnet' -ArgumentList $quotedArguments -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -NoNewWindow -PassThru
+            if ($argument -match '[\s"]') { '"' + $argument.Replace('\', '\\').Replace('"', '\"') + '"' } else { $argument }
+        }) -join ' ')
+    }
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $info
+    [void]$process.Start()
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    try {
         $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
         while (-not $process.HasExited -and $stopwatch.ElapsedMilliseconds -lt $timeoutMilliseconds) {
             Start-Sleep -Milliseconds 100
@@ -63,12 +76,11 @@ function Invoke-BoundedDotnetRun([string[]] $arguments, [int] $timeoutMillisecon
         if (-not $process.HasExited) {
             $process.Kill($true)
             $process.WaitForExit()
-            return @{ TimedOut = $true; ExitCode = $null; Output = (Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue) + (Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue) }
+            return @{ TimedOut = $true; ExitCode = $null; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
         }
-        return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = (Get-Content -LiteralPath $stdoutPath -Raw -ErrorAction SilentlyContinue) + (Get-Content -LiteralPath $stderrPath -Raw -ErrorAction SilentlyContinue) }
-    }
-    finally {
-        Remove-Item -LiteralPath $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
+        return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
+    } finally {
+        $process.Dispose()
     }
 }
 function Assert-HttpAccessorProbe {
