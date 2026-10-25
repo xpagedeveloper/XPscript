@@ -37,7 +37,10 @@ internal static class XpsBrowserWasmServerBridgeCompiler
 {
     private const string Platform = "browser-wasm";
     private const string BridgeCompilerVersion = "4";
-    private const string AvaloniaVersion = "12.0.3";
+    // The server companion references the desktop host assembly. Keep its
+    // Avalonia packages aligned with XPScript.UI.Desktop; the Android host
+    // intentionally retains its separate 12.0.3 compatibility set.
+    private const string AvaloniaVersion = "12.1.4";
     private const string MicrosoftDataSqliteVersion = "10.0.11";
     private const string MicrosoftDataSqlClientVersion = "7.0.2";
     private const string MagickNetVersion = "14.17.1";
