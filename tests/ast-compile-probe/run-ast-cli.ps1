@@ -884,6 +884,21 @@ if ($LASTEXITCODE -ne 0) { throw 'AST derived constructor failure compilation fa
 $derivedConstructorFailureResult = dotnet (Join-Path $derivedConstructorFailureOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($derivedConstructorFailureResult -join "`n") -ne 'CLASS_DERIVED_CONSTRUCTOR_FAILURE_OK') { throw 'AST derived constructor failure cleanup failed.' }
 Write-Host 'AST_DERIVED_CONSTRUCTOR_FAILURE_OK'
+$destructorOutput = Join-Path $output 'class-destructor'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-destructor.xps') -o $destructorOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST class destructor compilation failed.' }
+$destructorResult = dotnet (Join-Path $destructorOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($destructorResult -join "`n") -ne 'CLASS_DESTRUCTOR_OK') { throw 'AST class destructor lifecycle regression failed.' }
+Write-Host 'AST_CLASS_DESTRUCTOR_OK'
+$derivedDestructorOutput = Join-Path $output 'class-destructor-derived'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-destructor-derived.xps') -o $derivedDestructorOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST derived class destructor compilation failed.' }
+$derivedDestructorResult = dotnet (Join-Path $derivedDestructorOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($derivedDestructorResult -join "`n") -ne 'CLASS_DERIVED_DESTRUCTORS_OK') { throw 'AST derived destructor lifecycle regression failed.' }
+Write-Host 'AST_DERIVED_DESTRUCTORS_OK'
+$destructorBodyErrorText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-destructor-body-error.xps') -o (Join-Path $output 'class-destructor-body-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($destructorBodyErrorText -join "`n") -notmatch 'XPS2008') { throw 'AST destructor body diagnostic regression failed.' }
+Write-Host 'AST_DESTRUCTOR_BODY_DIAGNOSTIC_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-derived-next.xps') -o $derivedClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST derived scalar class-method compilation failed.' }
 $derivedClassMethodResult = dotnet (Join-Path $derivedClassMethodOutput 'Generated.dll')
