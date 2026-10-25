@@ -1024,6 +1024,23 @@ foreach ($refRefDiagnostic in $refRefDiagnostics.GetEnumerator()) {
     }
 }
 Write-Host 'AST_REFREF_DIAGNOSTICS_OK'
+$optionalReferenceCoverage = @{
+    'constructor-optional-byref.xps' = 'CONSTRUCTOR_OPTIONAL_BYREF_OK'
+    'constructor-reference-optional.xps' = 'CONSTRUCTOR_REFERENCE_OPTIONAL_OK'
+    'constructor-refref-optional.xps' = 'REFREF_OPTIONAL_OK'
+    'constructor-refref-list.xps' = 'REFREF_LIST_OK'
+    'constructor-refref-module.xps' = 'REFREF_MODULE_OK'
+}
+foreach ($optionalReferenceFixture in $optionalReferenceCoverage.GetEnumerator()) {
+    $optionalReferenceOutput = Join-Path $output ([IO.Path]::GetFileNameWithoutExtension($optionalReferenceFixture.Key))
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot $optionalReferenceFixture.Key) -o $optionalReferenceOutput
+    if ($LASTEXITCODE -ne 0) { throw "AST optional reference compilation failed for $($optionalReferenceFixture.Key)." }
+    $optionalReferenceResult = dotnet (Join-Path $optionalReferenceOutput 'Generated.dll')
+    if ($LASTEXITCODE -ne 0 -or ($optionalReferenceResult -join "`n") -notmatch $optionalReferenceFixture.Value) {
+        throw "AST optional reference regression failed for $($optionalReferenceFixture.Key)."
+    }
+}
+Write-Host 'AST_OPTIONAL_REFERENCE_COVERAGE_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-derived-next.xps') -o $derivedClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST derived scalar class-method compilation failed.' }
 $derivedClassMethodResult = dotnet (Join-Path $derivedClassMethodOutput 'Generated.dll')
