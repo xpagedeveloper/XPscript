@@ -97,10 +97,15 @@ internal sealed class XPScriptNotesSession : IDisposable
             Api = new XPScriptNotesNativeApi(RuntimeDirectory);
             try
             {
+                var userId = ResolveUserIdFile();
+                if (userId.Length > 0)
+                    Environment.SetEnvironmentVariable("KeyFileName", userId);
                 if (string.IsNullOrEmpty(idPassword))
                     Api.Initialize(NotesIni.Length == 0 ? null : NotesIni);
                 else
                     Api.Initialize(NotesIni.Length == 0 ? null : NotesIni, idPassword);
+                if (userId.Length > 0)
+                    Api.SetEnvironmentVariable("KeyFileName", userId);
                 Username = Api.GetUserName();
                 CommonUsername = ExtractCommonUsername(Api.CanonicalizeName(Username));
                 NotesVersion = ResolveNotesVersion(RuntimeDirectory, NotesIni);
@@ -166,6 +171,17 @@ internal sealed class XPScriptNotesSession : IDisposable
                 .Select(group => group.Key + " x" + group.Count().ToString(System.Globalization.CultureInfo.InvariantCulture))
                 .ToList();
         }
+    }
+
+    private string ResolveUserIdFile()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(DataDir, "user.id"),
+            Path.Combine(RuntimeDirectory, "Data", "user.id"),
+            Path.Combine(RuntimeDirectory, "user.id")
+        };
+        return candidates.FirstOrDefault(File.Exists) ?? "";
     }
 
     private static string ExtractCommonUsername(string canonical)

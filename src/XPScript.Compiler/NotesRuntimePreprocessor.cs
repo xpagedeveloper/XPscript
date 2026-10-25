@@ -20,6 +20,14 @@ internal sealed class NotesRuntimePreprocessor
         ["NotesRichTextItem"] = ["DateTimeValue"]
     };
 
+    private static readonly IReadOnlyDictionary<string, int> AstConstants = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["REPLICA_CANDIDATE"] = 1245, ["TEMPLATE_CANDIDATE"] = 1246, ["DATABASE"] = 1247, ["TEMPLATE"] = 1248,
+        ["DBMOD_DOC_DATA"] = 1, ["FORM"] = 4, ["VIEW"] = 8, ["ICON"] = 16, ["ACL"] = 64,
+        ["HELP"] = 256, ["AGENT"] = 512, ["SHAREDFIELD"] = 1024, ["REPLFORMULA"] = 2048, ["DBMOD_DOC_ALL"] = 32767,
+        ["DATA"] = 1, ["ALL"] = 32767, ["SEARCH_BREADTH"] = 1723, ["SEARCH_DEPTH"] = 1724
+    };
+
     public string Transform(string source, bool preserveAstConstants = false)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -62,7 +70,9 @@ internal sealed class NotesRuntimePreprocessor
             }
 
             var rewritten = preserveAstConstants
-                ? Regex.Replace(line, @"\bNotesConst\s*\.\s*", "", RegexOptions.IgnoreCase)
+                ? Regex.Replace(line, @"\bNotesConst\s*\.\s*([A-Za-z_]\w*)", match =>
+                    AstConstants.TryGetValue(match.Groups[1].Value, out var value) ? value.ToString(System.Globalization.CultureInfo.InvariantCulture) : match.Value,
+                    RegexOptions.IgnoreCase)
                 : Regex.Replace(line, @"\bNotesConst\s*\.", "XPScriptNotesConst.", RegexOptions.IgnoreCase);
             if (!preserveAstConstants)
             {
