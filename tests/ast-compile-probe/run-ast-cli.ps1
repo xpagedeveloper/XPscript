@@ -1004,6 +1004,26 @@ foreach ($constructorFixture in $constructorReferenceCoverage.GetEnumerator()) {
     }
 }
 Write-Host 'AST_CONSTRUCTOR_REFERENCE_COVERAGE_OK'
+$refRefArrayOutput = Join-Path $output 'constructor-refref-array'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-refref-array.xps') -o $refRefArrayOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST RefRef array constructor compilation failed.' }
+$refRefArrayResult = dotnet (Join-Path $refRefArrayOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($refRefArrayResult -join "`n") -notmatch 'REFREF_ARRAY_OK') { throw 'AST RefRef array constructor regression failed.' }
+Write-Host 'AST_REFREF_ARRAY_OK'
+$refRefDiagnostics = @{
+    'constructor-refref-element-type-error.xps' = 'XPS2003'
+    'constructor-refref-object-error.xps' = 'XPS2003'
+    'constructor-refref-parent-error.xps' = 'XPS2003'
+    'constructor-refref-property-error.xps' = 'XPS3001'
+    'constructor-refref-temporary-error.xps' = 'XPS2001'
+}
+foreach ($refRefDiagnostic in $refRefDiagnostics.GetEnumerator()) {
+    $refRefDiagnosticText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot $refRefDiagnostic.Key) -o (Join-Path $output ([IO.Path]::GetFileNameWithoutExtension($refRefDiagnostic.Key))) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($refRefDiagnosticText -join "`n") -notmatch $refRefDiagnostic.Value) {
+        throw "AST RefRef diagnostic regression failed for $($refRefDiagnostic.Key)."
+    }
+}
+Write-Host 'AST_REFREF_DIAGNOSTICS_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-derived-next.xps') -o $derivedClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST derived scalar class-method compilation failed.' }
 $derivedClassMethodResult = dotnet (Join-Path $derivedClassMethodOutput 'Generated.dll')
