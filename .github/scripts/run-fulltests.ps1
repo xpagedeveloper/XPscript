@@ -76,6 +76,21 @@ function Run-Xps([string] $source, [string] $name, [string[]] $arguments = @()) 
 function Expect-XpsFailure([string] $name, [string[]] $arguments, [string] $label) { $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "security $label"; if ($r.ExitCode -eq 0) { throw "Security probe unexpectedly succeeded: $label" }; if ([string]::IsNullOrWhiteSpace($r.Output)) { throw "Security probe returned no diagnostic: $label" }; if ($r.Output -match 'SharpCompress') { throw "Security diagnostic exposed implementation detail: $label" } }
 function Should-Run([string] $name) { return $Suite -eq 'all' -or $Suite -eq $name }
 
+function Test-ArchiveReadOnlyBzip2 {
+  # BZip2("archive-read-only-format"), generated with Python's standard bz2
+  # implementation. Keep the fixture independent of the reader under test
+  # and of externally installed compression tools.
+  $fixtureRoot = Join-Path (Get-Location) 'out/fulltest/archive-read-only-fixtures'
+  New-Item -ItemType Directory -Force -Path $fixtureRoot | Out-Null
+  $fixture = Join-Path $fixtureRoot 'payload.txt.bz2'
+  $extracted = Join-Path $fixtureRoot 'bzip2-extracted.txt'
+  [System.IO.File]::WriteAllBytes($fixture, [Convert]::FromBase64String('QlpoOTFBWSZTWdnh4/MAAAIRgAACL2eVICAAIo9TI0ZPKFMABNEz2MnaEcksn9AyCvi7kinChIbPDx+Y'))
+  if (Test-Path -LiteralPath $extracted) { Remove-Item -LiteralPath $extracted -Force }
+  $result = Run-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression @($fixture, $extracted)
+  if ($result.Output -notmatch 'ARCHIVE_READ_ONLY_FORMAT=OK') { throw 'Archive BZip2 read-only regression did not complete.' }
+  if ((Get-Content -LiteralPath $extracted -Raw) -cne 'archive-read-only-format') { throw 'Archive BZip2 extraction payload mismatch.' }
+}
+
 if ($Suite -eq 'language') {
   $compatibility = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compat/run-ast-compat.ps1') 600000 'legacy/AST compatibility corpus'
   if ($compatibility.ExitCode -ne 0 -or $compatibility.Output -notmatch 'AST compatibility baseline passed') {
@@ -268,23 +283,7 @@ if (Should-Run 'archive') {
   Write-Host '=== ARCHIVE FOCUSED TEST ==='
   # Keep compressed TAR regression first here: it is the current focused Archive failure.
   Run-Xps ./demo/archive/archive-compressed-tar.xps archive-compressed-tar | Out-Null
-  Compile-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression
-  $readOnlyFixtureRoot = './out/fulltest/archive-read-only-fixtures'
-  Remove-Item -Recurse -Force $readOnlyFixtureRoot -ErrorAction SilentlyContinue
-  New-Item -ItemType Directory -Force $readOnlyFixtureRoot | Out-Null
-  Set-Content -NoNewline -Path (Join-Path $readOnlyFixtureRoot 'payload.txt') -Value 'archive-read-only-format'
-  $bzip2Command = Get-Command 'bzip2' -ErrorAction SilentlyContinue
-  if (-not $bzip2Command) {
-    Write-Host 'ARCHIVE_READ_ONLY_BZIP2_SKIPPED=NOT_INSTALLED'
-  } else {
-    $bzip2Fixture = Join-Path $readOnlyFixtureRoot 'payload.txt.bz2'
-    $bzip2Process = Invoke-Bounded 'bzip2' @('-k','-f',(Resolve-Path (Join-Path $readOnlyFixtureRoot 'payload.txt')).Path) $runtimeTimeoutMilliseconds 'create BZip2 Archive read-only fixture'
-    if ($bzip2Process.ExitCode -ne 0 -or -not (Test-Path $bzip2Fixture -PathType Leaf)) { throw 'Unable to create BZip2 Archive read-only fixture.' }
-    $bzip2Extract = Join-Path $readOnlyFixtureRoot 'bzip2-extracted.txt'
-    $readOnlyRun = Run-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression @("../../out/fulltest/archive-read-only-fixtures/payload.txt.bz2","../../out/fulltest/archive-read-only-fixtures/bzip2-extracted.txt")
-    if ($readOnlyRun.Output -notmatch 'ARCHIVE_READ_ONLY_FORMAT=OK') { throw 'Archive BZip2 read-only regression did not complete.' }
-    if ((Get-Content -Raw $bzip2Extract) -ne 'archive-read-only-format') { throw 'Archive BZip2 extraction payload mismatch.' }
-  }
+  Test-ArchiveReadOnlyBzip2
 }
 
 if (Should-Run 'platform') {
@@ -374,22 +373,8 @@ if (Should-Run 'platform') {
   $archiveWriteFocused = Run-Xps ./demo/archive/archive-extended-memory-write.xps archive-extended-memory-write-focused
   if ($archiveWriteFocused.Output -notmatch 'ARCHIVE_EXTENDED_MEMORY_WRITE=OK') { throw 'Archive writable format round-trip regression did not complete.' }
 
-  # Compile the focused read-only format probe early and run it against a deterministic
-  # read-only fixture produced by the platform tools available in CI.
-  Compile-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression
-  $readOnlyFixtureRoot = './out/fulltest/archive-read-only-fixtures'
-  Remove-Item -Recurse -Force $readOnlyFixtureRoot -ErrorAction SilentlyContinue
-  New-Item -ItemType Directory -Force $readOnlyFixtureRoot | Out-Null
-  Set-Content -NoNewline -Path (Join-Path $readOnlyFixtureRoot 'payload.txt') -Value 'archive-read-only-format'
-  if (Get-Command 'bzip2' -ErrorAction SilentlyContinue) {
-    $bzip2Fixture = Join-Path $readOnlyFixtureRoot 'payload.txt.bz2'
-    $bzip2Process = Invoke-Bounded 'bzip2' @('-k','-f',(Resolve-Path (Join-Path $readOnlyFixtureRoot 'payload.txt')).Path) $runtimeTimeoutMilliseconds 'create BZip2 Archive read-only fixture'
-    if ($bzip2Process.ExitCode -ne 0 -or -not (Test-Path $bzip2Fixture -PathType Leaf)) { throw 'Unable to create BZip2 Archive read-only fixture.' }
-    $bzip2Extract = Join-Path $readOnlyFixtureRoot 'bzip2-extracted.txt'
-    $readOnlyRun = Run-Xps ./demo/archive/archive-read-only-format-regression.xps archive-read-only-format-regression @("../../out/fulltest/archive-read-only-fixtures/payload.txt.bz2","../../out/fulltest/archive-read-only-fixtures/bzip2-extracted.txt")
-    if ($readOnlyRun.Output -notmatch 'ARCHIVE_READ_ONLY_FORMAT=OK') { throw 'Archive BZip2 read-only regression did not complete.' }
-    if ((Get-Content -Raw $bzip2Extract) -ne 'archive-read-only-format') { throw 'Archive BZip2 extraction payload mismatch.' }
-  }
+  # Keep read-only format coverage mandatory even without platform tools.
+  Test-ArchiveReadOnlyBzip2
 
 
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
