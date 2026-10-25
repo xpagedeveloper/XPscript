@@ -28,7 +28,12 @@ internal static class CompilerBuildEnvironment
         // reinitializing the .NET workload resolver (and its Windows Installer
         // registration) for every generated project, while Android keeps its
         // caller-selected workload/package cache below.
-        var usePersistentRunCache = IsTransientRunBuild(startInfo) || IsDesktopPublish(startInfo);
+        // Desktop publish outputs are caller-specific and are copied into a
+        // user-selected destination. Reusing their intermediate tree can
+        // retain incomplete deps/runtimeconfig metadata after an interrupted
+        // publish. Keep persistent intermediates for transient build/run
+        // paths, but let each desktop publish create a fresh one.
+        var usePersistentRunCache = IsTransientRunBuild(startInfo);
         var cacheRoot = usePersistentRunCache ? PersistentRunCacheRoot() : root;
         var environmentRoot = usePersistentRunCache ? CreatePrivateDirectory(cacheRoot, "environment") : root;
         var processTemp = CreatePrivateDirectory(root, "process-temp", harden: false);
@@ -185,14 +190,17 @@ internal static class CompilerBuildEnvironment
         // that partial cache makes MSBuild fail while copying a non-existent
         // apphost.exe. In that case use the generated project's private obj
         // directory so the build recreates all artifacts from scratch.
-        var appHostPath = Path.Combine(
-            intermediateRoot,
-            "obj",
-            "Release",
-            "net10.0",
-            runtimeIdentifier,
-            "apphost.exe");
-        return !OperatingSystem.IsWindows() || File.Exists(appHostPath);
+        var targetRoot = Path.Combine(intermediateRoot, "obj", "Release", "net10.0", runtimeIdentifier);
+        if (!Directory.Exists(targetRoot)) return false;
+        if (!OperatingSystem.IsWindows()) return true;
+
+        // A partial desktop publish can leave apphost.exe while omitting the
+        // deps/runtimeconfig files that Microsoft.NET.Publish.targets copies.
+        // Reusing that cache produces misleading MSB3030 errors. Require the
+        // complete generated runtime metadata before claiming the cache.
+        return File.Exists(Path.Combine(targetRoot, "apphost.exe"))
+            && Directory.EnumerateFiles(targetRoot, "*.deps.json", SearchOption.TopDirectoryOnly).Any()
+            && Directory.EnumerateFiles(targetRoot, "*.runtimeconfig.json", SearchOption.TopDirectoryOnly).Any();
     }
 
     private static string ExtractSourceIdentity(string generatedSource)

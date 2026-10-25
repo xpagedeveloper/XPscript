@@ -205,7 +205,7 @@ public sealed class CompilerDriver
         var tempBase = string.IsNullOrWhiteSpace(configuredTempRoot)
             ? Path.Combine(Path.GetTempPath(), "XPScript")
             : Path.Combine(Path.GetFullPath(configuredTempRoot), "XPScript");
-        var tempRoot = Path.Combine(tempBase, Guid.NewGuid().ToString("N"));
+        var tempRoot = Path.Combine(tempBase, Guid.NewGuid().ToString("N")[..12]);
         Directory.CreateDirectory(tempRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
 
@@ -570,7 +570,7 @@ public sealed class CompilerDriver
         var baseRoot = string.IsNullOrWhiteSpace(configuredRoot)
             ? Path.Combine(Path.GetTempPath(), "XPScript")
             : Path.Combine(Path.GetFullPath(configuredRoot), "XPScript");
-        var tempRoot = Path.Combine(baseRoot, Guid.NewGuid().ToString("N"));
+        var tempRoot = Path.Combine(baseRoot, Guid.NewGuid().ToString("N")[..12]);
         Directory.CreateDirectory(tempRoot);
         return tempRoot;
     }
