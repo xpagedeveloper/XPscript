@@ -127,6 +127,17 @@ var allowedGuardedMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase
     "NotesMIMEEntity.GetNextEntity"
 };
 
+// These are documented native search flags, not placeholder implementations.
+// Their constant-valued bodies are intentional and should not be reported as
+// suspicious constant members by the surface audit.
+var allowedConstantMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+{
+    "NotesRichTextNavigator.RT_FIND_CASEINSENSITIVE",
+    "NotesRichTextNavigator.RT_FIND_CASESENSITIVE",
+    "NotesRichTextNavigator.RT_FIND_ACCENTINSENSITIVE",
+    "NotesRichTextNavigator.RT_FIND_PITCHINSENSITIVE"
+};
+
 var missing = new List<string>();
 var placeholders = new List<string>();
 var suspiciousConstants = new List<string>();
@@ -164,7 +175,8 @@ foreach (var item in selectedClasses)
             if (!allowedGuardedMembers.Contains(qualifiedName) &&
                 Regex.IsMatch(memberText, @"NotImplementedException|NotSupportedException|Unsupported|not supported", RegexOptions.IgnoreCase))
                 placeholders.Add(qualifiedName);
-            if (Regex.IsMatch(memberText, "=>\\s*(?:false|true|0|\"\")\\s*;", RegexOptions.IgnoreCase))
+            if (!allowedConstantMembers.Contains(qualifiedName) &&
+                Regex.IsMatch(memberText, "=>\\s*(?:false|true|0|\"\")\\s*;", RegexOptions.IgnoreCase))
                 suspiciousConstants.Add(qualifiedName);
         }
     }
