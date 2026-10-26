@@ -134,7 +134,7 @@ if ($dependencyInfoJoined -notmatch 'MySqlConnector\s+2\.6\.2' -or
 }
 Write-Host 'AST_DEPENDENCY_INFO_OK'
 if ($LASTEXITCODE -ne 0) {
-    if ($dependencyInfoJoined -notmatch 'NU1202|NU1900|unable to load|will be restored/downloaded') {
+    if ($dependencyInfoJoined -notmatch 'NU1101|NU1202|NU1801|NU1900|unable to load|will be restored/downloaded') {
         throw "AST dependency --info compilation failed for an unexpected reason.`n$dependencyInfoJoined"
     }
     Write-Host 'AST_DEPENDENCY_INFO_SKIPPED=PACKAGE_RESTORE_UNAVAILABLE'
