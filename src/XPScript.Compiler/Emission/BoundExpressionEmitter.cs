@@ -50,6 +50,7 @@ public sealed class BoundExpressionEmitter
         BoundNameExpression name when name.Symbol is VariableSymbol { Name: "Parent" } => "base",
         BoundNameExpression name => _aliases.TryGetValue(name.Symbol, out var alias) ? alias.Value
             : name.Symbol is LocalSymbol { StaticStorageName: { } storage } ? storage : name.Symbol.Name,
+        BoundMemberAccessExpression member when TryGetSystemQualifiedName(member, out var systemName) => systemName,
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("Console", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("WriteLine", StringComparison.OrdinalIgnoreCase) => "System.Console.WriteLine",
         BoundMemberAccessExpression member when member.Receiver is BoundNameExpression receiver && receiver.Symbol.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) && member.Name.Equals("Parse", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeJson.Parse",
         BoundMemberAccessExpression member when AstApplicationSupport.PropertyTarget(member.Receiver.SemanticType.Name, member.Name) is { } appTarget => appTarget,
@@ -192,6 +193,25 @@ public sealed class BoundExpressionEmitter
         name.StartsWith("XPJson", StringComparison.OrdinalIgnoreCase) ||
         name.StartsWith("XPJSON", StringComparison.OrdinalIgnoreCase) ||
         name is "NotesHTTPRequest" or "XPNotesHTTPRequest" or "XPJSONNavigator" or "XPJSONObject" or "XPJSONArray" or "XPJSONElement";
+
+    private bool TryGetSystemQualifiedName(BoundMemberAccessExpression member, out string name)
+    {
+        if (member.Receiver is BoundNameExpression { Symbol: { Name: var rootName } } &&
+            rootName.Equals("System", StringComparison.OrdinalIgnoreCase))
+        {
+            name = "global::System." + member.Name;
+            return true;
+        }
+
+        if (member.Receiver is BoundMemberAccessExpression nested && TryGetSystemQualifiedName(nested, out var prefix))
+        {
+            name = prefix + "." + member.Name;
+            return true;
+        }
+
+        name = string.Empty;
+        return false;
+    }
 
     private static string JsonMemberName(string name) => name.ToUpperInvariant() switch
     {
