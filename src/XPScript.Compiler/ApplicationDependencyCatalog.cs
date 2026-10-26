@@ -8,7 +8,7 @@ public static class ApplicationDependencyCatalog
     public const string XPScriptReleaseVersion = "0.9.3-beta";
     public const string AvaloniaVersion = "12.1.4";
     public const string AvaloniaWebViewVersion = "12.1.1";
-    public const string MicrosoftDataSqliteVersion = "10.0.11";
+    public const string MicrosoftDataSqliteVersion = "10.0.13";
     public const string MicrosoftDataSqlClientVersion = "7.1.1";
     public const string MySqlConnectorVersion = "2.6.2";
     public const string NpgsqlVersion = "10.0.3";
