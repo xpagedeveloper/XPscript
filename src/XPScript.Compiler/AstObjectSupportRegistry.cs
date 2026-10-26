@@ -58,7 +58,6 @@ internal static class AstObjectSupportRegistry
         ,"XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
         "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection"
         ,"XPHttpDbSupabase", "XPHttpDbDominoRest"
-        ,"XPHttpPart", "XPHttpFile"
     };
 
     public static readonly IReadOnlyList<ObjectDefinition> Objects = BuildObjectDefinitions();
