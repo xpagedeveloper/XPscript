@@ -211,6 +211,8 @@ Use `New NotesSession()` for platform autodetection. On Windows it resolves the 
 
 Run agents through `db.GetAgent(name)`, then `agent.Run()` or `agent.RunWithDocumentContext(document)`. Read `agent.ReturnMessage` for captured output and recycle the agent afterwards. `NotesDatabase.RunAgent` and `NotesAgentResult` were removed; do not generate those obsolete forms.
 
+Use `item.Values = Array("one", "two")` for a Notes text list; homogeneous numeric and NotesDateTime arrays are also supported through AST and legacy. Mixed-type arrays raise error 13. Empty arrays write empty text. See `samples/notes-item-array-runtime-test.xps`.
+
 `NotesDocument.Save()` is a void native save that raises failures. Boolean overloads are also available:
 
 ```xpscript

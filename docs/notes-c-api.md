@@ -263,7 +263,7 @@ Item names used for creation and replacement cannot be empty. Indexed `GetItemVa
 
 ### Generic item values
 
-`ReplaceItemValue` and `NotesItem.Values` currently support scalar values and one-dimensional arrays of homogeneous text, numeric, or `NotesDateTime` values. Mixed arrays and unsupported value kinds raise runtime error 13. An empty or unallocated array writes an empty text value.
+`ReplaceItemValue` and `NotesItem.Values` currently support scalar values and one-dimensional arrays of homogeneous text, numeric, or `NotesDateTime` values. Both AST CLR arrays and legacy LSArray values use this contract, including nonzero lower bounds. Mixed arrays and unsupported value kinds raise runtime error 13. An empty or unallocated array writes an empty text value. See `samples/notes-item-array-runtime-test.xps` for executable coverage.
 
 Current numeric handling accepts XPscript/.NET numeric scalar types and writes list values as Notes number lists. Arrays passed to the setter must be one-dimensional.
 

@@ -141,7 +141,7 @@ internal sealed partial class XPScriptNotesNativeApi
     internal void SetItemValues(nint note, string name, object? value)
     {
         var info = GetFirstItemInfo(note, name);
-        var isArray = value is LSArray;
+        var isArray = value is LSArray or System.Array;
         var values = ExpandValues(value);
         if (values.Length == 0)
         {
@@ -294,6 +294,11 @@ internal sealed partial class XPScriptNotesNativeApi
 
     private static object?[] ExpandValues(object? value)
     {
+        if (value is System.Array nativeArray)
+        {
+            if (nativeArray.Rank != 1) throw new XPScriptRuntimeException(13, "NotesItem.Values requires a one-dimensional array.");
+            return nativeArray.Cast<object?>().ToArray();
+        }
         if (value is not LSArray array) return new object?[] { value };
         if (!array.IsAllocated) return Array.Empty<object?>();
         if (array.Rank != 1) throw new XPScriptRuntimeException(13, "NotesItem.Values requires a one-dimensional array.");
