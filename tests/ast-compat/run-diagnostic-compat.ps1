@@ -1,7 +1,16 @@
+param(
+    [string]$CompilerPath
+)
+
 $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-$compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
+$compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
+    Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
+} else {
+    [System.IO.Path]::GetFullPath($CompilerPath)
+}
+if (-not (Test-Path -LiteralPath $compiler)) { throw "Compiler DLL not found: $compiler" }
 $source = Join-Path $root 'tests/ast-compile-probe/constructor-array-rank-error.xps'
 
 function Get-DiagnosticIdentity([string[]] $lines, [string] $mode) {
