@@ -787,12 +787,12 @@ public sealed class CompilerDriver
             .Replace("    <UseAppHost>true</UseAppHost>\r\n", string.Empty, StringComparison.Ordinal)
             .Replace("    <UseAppHost>true</UseAppHost>\n", string.Empty, StringComparison.Ordinal);
 
-        const string packages = """
+        var packages = $"""
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.4" />
-    <PackageReference Include="Avalonia.Android" Version="12.1.4" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
-    <PackageReference Include="Avalonia.Controls.WebView" Version="12.1.1" />
+    <PackageReference Include="Avalonia" Version="{ApplicationDependencyCatalog.AvaloniaVersion}" />
+    <PackageReference Include="Avalonia.Android" Version="{ApplicationDependencyCatalog.AvaloniaVersion}" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="{ApplicationDependencyCatalog.AvaloniaVersion}" />
+    <PackageReference Include="Avalonia.Controls.WebView" Version="{ApplicationDependencyCatalog.AvaloniaWebViewVersion}" />
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.11.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.Ui" Version="1.11.1" />
     <PackageReference Include="Xamarin.AndroidX.Camera.Core" Version="1.4.2.1" />
