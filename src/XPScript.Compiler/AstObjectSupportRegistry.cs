@@ -52,7 +52,6 @@ internal static class AstObjectSupportRegistry
     private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement",
-        "XPSpreadsheet", "XPWorksheet", "XPCell", "XPRange",
         "UIForm", "UIListView",
     };
 
