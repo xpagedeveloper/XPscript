@@ -133,10 +133,10 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"'{typeName}' requires a connection string argument.");
             return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User(typeName));
         }
-        if (typeName.Equals("XPPathValue", StringComparison.OrdinalIgnoreCase))
+        if (typeName.Equals("Path", StringComparison.OrdinalIgnoreCase) || typeName.Equals("XPPathValue", StringComparison.OrdinalIgnoreCase))
         {
-            if (syntax.Arguments.Count != 1) return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "'XPPathValue' requires a path argument.");
-            return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User(typeName));
+            if (syntax.Arguments.Count != 1) return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "'Path' requires a path argument.");
+            return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User("XPPathValue"));
         }
         if (typeName.Equals("XPFileInfoValue", StringComparison.OrdinalIgnoreCase))
         {

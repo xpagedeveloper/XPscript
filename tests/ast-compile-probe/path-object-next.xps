@@ -1,8 +1,7 @@
 Option Explicit
 
 Sub Main()
-    Dim p As Variant
-    p = New Path("tests/ast-compile-probe/file-exists-aliases-next.xps")
+    Dim p As New Path("tests/ast-compile-probe/file-exists-aliases-next.xps")
 
     If p.FileName() <> "file-exists-aliases-next.xps" Then Error 9870, "Path.FileName failed"
     If p.FileNameWithoutExtension() <> "file-exists-aliases-next" Then Error 9871, "Path.FileNameWithoutExtension failed"
@@ -14,8 +13,7 @@ Sub Main()
     If p.ChangeExtension(".json") = "" Then Error 9877, "Path.ChangeExtension failed"
     If p.Combine("child.txt") = "" Then Error 9879, "Path.Combine failed"
 
-    Dim rootPath As Variant
-    rootPath = New Path("tests/ast-compile-probe")
+    Dim rootPath As New Path("tests/ast-compile-probe")
     If rootPath.Relative("tests/ast-compile-probe/file-exists-aliases-next.xps") <> "file-exists-aliases-next.xps" Then Error 9878, "Path.Relative failed"
 
     Print "PATH_OBJECT_AST_OK"
