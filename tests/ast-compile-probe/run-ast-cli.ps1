@@ -1837,31 +1837,43 @@ Copy-Item (Join-Path $PSScriptRoot 'xpimage-runtime.xps') $imageSource
 $imageOutput = Join-Path $imageFixtureRoot 'ast'
 dotnet $compiler ast-compile $imageSource -o $imageOutput
 if ($LASTEXITCODE -ne 0) { throw 'Native AST XPImage compilation failed.' }
-$imageResult = dotnet (Join-Path $imageOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($imageResult -join "`n") -ne "4`n3`n12`n0`n4`n2`n4`n3`n4`n0`n20`n2`n0`nTrue`n5`nTrue`n5`n4`nTrue`nTrue`nTrue`n2`n3`nXPIMAGE_AST_OK") { throw 'Native AST image operations, loading, ByVal/ByRef or cleanup regression failed.' }
+$imageResult = $null
+$imageExit = 0
+Push-Location $imageFixtureRoot
+try { $imageResult = dotnet (Join-Path $imageOutput 'Generated.dll'); $imageExit = $LASTEXITCODE } finally { Pop-Location }
+if ($imageExit -ne 0 -or ($imageResult -join "`n") -ne "4`n3`n12`n0`n4`n2`n4`n3`n4`n0`n20`n2`n0`nTrue`n5`nTrue`n5`n4`nTrue`nTrue`nTrue`n2`n3`nXPIMAGE_AST_OK") { throw 'Native AST image operations, loading, ByVal/ByRef or cleanup regression failed.' }
 $assetFixtureRoot = Join-Path $output ('xpimage-assets-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path (Join-Path $assetFixtureRoot 'assets') | Out-Null
 Copy-Item (Join-Path $PSScriptRoot 'xpimage-asset-next.xps') (Join-Path $assetFixtureRoot 'xpimage-asset-next.xps')
 $assetOutput = Join-Path $assetFixtureRoot 'ast'
 dotnet $compiler ast-compile (Join-Path $assetFixtureRoot 'xpimage-asset-next.xps') -o $assetOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST packaged XPImage asset compilation failed.' }
-$assetResult = dotnet (Join-Path $assetOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($assetResult -join "`n") -ne 'XPIMAGE_ASSET_OK') { throw 'AST packaged XPImage asset load/read-only regression failed.' }
+$assetResult = $null
+$assetExit = 0
+Push-Location $assetFixtureRoot
+try { $assetResult = dotnet (Join-Path $assetOutput 'Generated.dll'); $assetExit = $LASTEXITCODE } finally { Pop-Location }
+if ($assetExit -ne 0 -or ($assetResult -join "`n") -ne 'XPIMAGE_ASSET_OK') { throw 'AST packaged XPImage asset load/read-only regression failed.' }
 Write-Host 'AST_XPIMAGE_ASSET_OK'
 $imageNotice = Get-Content (Join-Path $imageOutput 'Third-party-license.txt') -Raw
 if ($imageNotice -notmatch 'Magick.NET-Q16-AnyCPU' -or $imageNotice -notmatch 'Magick.NET.Core' -or $imageNotice -match 'License text could not be resolved') { throw 'AST image addon notices are incomplete.' }
 $imageVariantOutput = Join-Path $imageFixtureRoot 'variant-return'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-variant-return.xps') -o $imageVariantOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST image Variant return compilation failed.' }
-$imageVariantResult = dotnet (Join-Path $imageVariantOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($imageVariantResult -join "`n") -ne "3`n4`nTrue") { throw 'AST image Variant return or replaced ByVal ownership failed.' }
+$imageVariantResult = $null
+$imageVariantExit = 0
+Push-Location $imageFixtureRoot
+try { $imageVariantResult = dotnet (Join-Path $imageVariantOutput 'Generated.dll'); $imageVariantExit = $LASTEXITCODE } finally { Pop-Location }
+if ($imageVariantExit -ne 0 -or ($imageVariantResult -join "`n") -ne "3`n4`nTrue") { throw 'AST image Variant return or replaced ByVal ownership failed.' }
 $imageParitySource = Join-Path $imageFixtureRoot 'xpimage-parity.xps'
 Copy-Item (Join-Path $PSScriptRoot 'xpimage-parity.xps') $imageParitySource
 $imageParityOutput = Join-Path $imageFixtureRoot 'parity'
 dotnet $compiler ast-compile $imageParitySource -o $imageParityOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST image parity compilation failed.' }
-$imageParityResult = dotnet (Join-Path $imageParityOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($imageParityResult -join "`n") -ne "4`n6`n0`n0`n3`n2`nXPIMAGE_PARITY_OK") { throw 'AST image output differs from the shared normal compiler contract.' }
+$imageParityResult = $null
+$imageParityExit = 0
+Push-Location $imageFixtureRoot
+try { $imageParityResult = dotnet (Join-Path $imageParityOutput 'Generated.dll'); $imageParityExit = $LASTEXITCODE } finally { Pop-Location }
+if ($imageParityExit -ne 0 -or ($imageParityResult -join "`n") -ne "4`n6`n0`n0`n3`n2`nXPIMAGE_PARITY_OK") { throw 'AST image output differs from the shared normal compiler contract.' }
 foreach ($imageInvalid in @('xpimage-constructor-error', 'xpimage-member-error', 'xpimage-readonly-error')) {
     $invalidResult = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$imageInvalid.xps") -o (Join-Path $imageFixtureRoot $imageInvalid) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($invalidResult -join "`n") -notmatch "$imageInvalid.xps:3:") { throw "AST $imageInvalid lost its source-mapped diagnostic." }
