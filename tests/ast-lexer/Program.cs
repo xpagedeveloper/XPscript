@@ -360,6 +360,15 @@ Equal(SyntaxKind.OrKeyword, booleanRoot.OperatorToken.Kind, "boolean root operat
 Equal(SyntaxKind.UnaryExpression, booleanRoot.Left.Kind, "Not binds before Or");
 Equal(SyntaxKind.NotKeyword, ((UnaryExpressionSyntax)booleanRoot.Left).OperatorToken.Kind, "Not operator");
 
+var isNotAstParser = new ExpressionParser("value Is Not Nothing");
+var isNotAst = isNotAstParser.ParseExpression();
+Equal(0, isNotAstParser.Diagnostics.Count, "Is Not Nothing diagnostics");
+Equal(SyntaxKind.BinaryExpression, isNotAst.Kind, "Is Not Nothing root kind");
+var isNotRoot = (BinaryExpressionSyntax)isNotAst;
+Equal(SyntaxKind.IsKeyword, isNotRoot.OperatorToken.Kind, "Is Not Nothing operator");
+Equal(SyntaxKind.UnaryExpression, isNotRoot.Right.Kind, "Is Not Nothing RHS kind");
+Equal(SyntaxKind.NotKeyword, ((UnaryExpressionSyntax)isNotRoot.Right).OperatorToken.Kind, "Is Not Nothing RHS operator");
+
 var parenAst = new ExpressionParser("(1 + 2) * 3").ParseExpression();
 Equal(SyntaxKind.BinaryExpression, parenAst.Kind, "parenthesized root kind");
 var parenRoot = (BinaryExpressionSyntax)parenAst;

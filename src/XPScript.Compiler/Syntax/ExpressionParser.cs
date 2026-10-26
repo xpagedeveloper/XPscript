@@ -53,7 +53,20 @@ public sealed class ExpressionParser
                 break;
 
             var operatorToken = NextToken();
-            var right = ParseBinaryExpression(precedence);
+            ExpressionSyntax right;
+            if (operatorToken.Kind == SyntaxKind.IsKeyword && Current.Kind == SyntaxKind.NotKeyword)
+            {
+                // LotusScript permits both `value Is Nothing` and
+                // `value Is Not Nothing`. Keep the latter as a unary Not on
+                // the RHS so the binder/emitter can preserve object identity
+                // semantics without treating Not as a normal binary operand.
+                var notToken = NextToken();
+                right = new UnaryExpressionSyntax(notToken, ParseBinaryExpression(precedence));
+            }
+            else
+            {
+                right = ParseBinaryExpression(precedence);
+            }
             left = new BinaryExpressionSyntax(left, operatorToken, right);
         }
 
