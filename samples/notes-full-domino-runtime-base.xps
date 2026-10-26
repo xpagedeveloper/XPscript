@@ -391,7 +391,7 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
     Call docs.Recycle()
     Set dt = session.CreateDateTimeNow()
     Call dt.AdjustDay(-1)
-    Set docs = db.GetModifiedDocuments(dt, 0)
+    Set docs = db.GetModifiedDocuments(dt, NotesConst.All)
     If Not docs Is Nothing Then Call docs.Recycle()
     Call dt.Recycle()
     Set docs = db.AllDocuments
