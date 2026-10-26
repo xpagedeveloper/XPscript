@@ -12,7 +12,11 @@ Sub Main()
 
     Dim verifyOnly As Boolean
     verifyOnly = False
-    If Application.ArgCount > 0 Then verifyOnly = True
+    If Application.ArgCount > 0 Then
+        If LCase(CStr(Application.Args(0))) = "--verify" Or LCase(CStr(Application.Args(0))) = "verify" Then
+            verifyOnly = True
+        End If
+    End If
     Dim dotnet10Ready As Boolean
     Dim studioReady As Boolean
     Dim androidWorkloadReady As Boolean
