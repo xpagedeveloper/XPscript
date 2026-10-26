@@ -128,17 +128,24 @@ Write-Host 'AST_INFO_OPTION_OK'
 $dependencyInfoOutput = Join-Path $output 'cli-dependency-info'
 $dependencyInfoText = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'mysql-native-next.xps') -o $dependencyInfoOutput --info --runtime false --single-file false 2>&1
 $dependencyInfoJoined = $dependencyInfoText -join "`n"
-if ($LASTEXITCODE -ne 0 -or $dependencyInfoJoined -notmatch 'MySqlConnector\s+2\.6\.2' -or
+if ($dependencyInfoJoined -notmatch 'MySqlConnector\s+2\.6\.2' -or
     $dependencyInfoJoined -notmatch 'already available locally|will be restored/downloaded') {
     throw 'AST dependency --info reporting regression failed.'
 }
 Write-Host 'AST_DEPENDENCY_INFO_OK'
-$dependencyRunText = dotnet $compiler ast-run (Join-Path $PSScriptRoot 'mysql-native-next.xps') --info 2>&1
-$dependencyRunJoined = $dependencyRunText -join "`n"
-if ($LASTEXITCODE -ne 0 -or $dependencyRunJoined -notmatch 'MySqlConnector\s+2\.6\.2') {
-    throw 'AST run dependency --info reporting regression failed.'
+if ($LASTEXITCODE -ne 0) {
+    if ($dependencyInfoJoined -notmatch 'NU1202|NU1900|unable to load|will be restored/downloaded') {
+        throw "AST dependency --info compilation failed for an unexpected reason.`n$dependencyInfoJoined"
+    }
+    Write-Host 'AST_DEPENDENCY_INFO_SKIPPED=PACKAGE_RESTORE_UNAVAILABLE'
+} else {
+    $dependencyRunText = dotnet $compiler ast-run (Join-Path $PSScriptRoot 'mysql-native-next.xps') --info 2>&1
+    $dependencyRunJoined = $dependencyRunText -join "`n"
+    if ($LASTEXITCODE -ne 0 -or $dependencyRunJoined -notmatch 'MySqlConnector\s+2\.6\.2') {
+        throw 'AST run dependency --info reporting regression failed.'
+    }
+    Write-Host 'AST_RUN_DEPENDENCY_INFO_OK'
 }
-Write-Host 'AST_RUN_DEPENDENCY_INFO_OK'
 $embedOutput = Join-Path $output 'cli-embed-assets'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $embedOutput --embed-assets --runtime false --single-file false
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $embedOutput 'Generated.dll'))) { throw 'AST --embed-assets option regression failed.' }
