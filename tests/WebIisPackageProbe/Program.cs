@@ -1,7 +1,11 @@
 using System.IO.Compression;
 using XPScript.Compiler;
 
-var root = Path.Combine(Path.GetTempPath(), "xps-webiis-" + Guid.NewGuid().ToString("N"));
+var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+var tempRoot = string.IsNullOrWhiteSpace(configuredTempRoot)
+    ? Path.GetTempPath()
+    : Path.GetFullPath(configuredTempRoot);
+var root = Path.Combine(tempRoot, "xps-webiis-" + Guid.NewGuid().ToString("N"));
 var app = Path.Combine(root, "app");
 var output = Path.Combine(root, "deploy");
 Directory.CreateDirectory(app);
