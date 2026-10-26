@@ -112,7 +112,7 @@ function Invoke-BoundedExecutable([string] $path, [int] $timeoutMilliseconds = 1
     }
 }
 function Assert-HttpAccessorProbe {
-    $probe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $root 'tests/AstHttpRuntimeProbe'), '-c', 'Release', '--no-restore', '--', $root, '--accessors-only')
+    $probe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $root 'tests/AstHttpRuntimeProbe'), '-c', 'Release', '--', $root, '--accessors-only')
     if ($probe.TimedOut) { throw 'AST HTTP accessor reference/security regression timed out.' }
     if ($probe.ExitCode -ne 0 -or $probe.Output -notmatch 'AST_HTTP_ACCESSORS_OK') {
         # Some managed runners deny loopback sockets even though the compiler
@@ -123,7 +123,7 @@ function Assert-HttpAccessorProbe {
         if ($probe.Output -match 'forbidden by its access permissions|10013|socket.*permission') {
             Write-Host 'AST_HTTP_ACCESSORS_SKIPPED=LOOPBACK_ACCESS_DENIED'
         } else {
-            throw 'AST HTTP accessor reference/security regression failed.'
+            throw "AST HTTP accessor reference/security regression failed (exit $($probe.ExitCode)):`n$($probe.Output)"
         }
     } else {
         Write-Host 'AST_HTTP_ACCESSORS_OK'

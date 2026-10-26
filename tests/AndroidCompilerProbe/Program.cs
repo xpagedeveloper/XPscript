@@ -282,7 +282,8 @@ var crossPlatformRuntime = File.ReadAllText(crossPlatformRuntimePath);
 foreach (var expected in new[]
 {
     "File.Exists(XPScriptFileSystemRuntime.ResolvePath(path))",
-    "Directory.Exists(XPScriptFileSystemRuntime.ResolvePath(path))",
+    "NormalizeDirectoryProbe(XPScriptFileSystemRuntime.ResolvePath(path))",
+    "return Directory.Exists(value);",
     "var file = XPScriptFileSystemRuntime.ResolvePath(path);",
     "var left = XPScriptFileSystemRuntime.ResolvePath(leftValue);",
     "new StreamReader(XPScriptFileSystemRuntime.ResolvePath(path)",
@@ -606,7 +607,7 @@ if (!browserWasmSource.Contains("UIFormAppAssets.CopyAssetsToDirectory(sourcePat
     throw new Exception("Browser-WASM UIForm bundles must publish the shared assets directory.");
 
 var compilerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerDriver.cs"));
-if (!compilerSource.Contains("<PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"12.1.1\" />", StringComparison.Ordinal))
+if (!uiProject.Contains($"<PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"{ApplicationDependencyCatalog.AvaloniaWebViewVersion}\" />", StringComparison.Ordinal))
     throw new Exception("Android UIForm generated project must include Avalonia.Controls.WebView for shared WebView support.");
 if (!compilerSource.Contains("<PackageReference Include=\"Xamarin.AndroidX.Media3.ExoPlayer\" Version=\"1.11.1\" />", StringComparison.Ordinal) ||
     !compilerSource.Contains("<PackageReference Include=\"Xamarin.AndroidX.Media3.Ui\" Version=\"1.11.1\" />", StringComparison.Ordinal))
