@@ -40,10 +40,10 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     // The server companion references the desktop host assembly. Keep its
     // Avalonia packages aligned with XPScript.UI.Desktop; the Android host
     // intentionally retains its separate 12.0.3 compatibility set.
-    private const string AvaloniaVersion = "12.1.4";
+    private const string AvaloniaVersion = ApplicationDependencyCatalog.AvaloniaVersion;
     private const string MicrosoftDataSqliteVersion = ApplicationDependencyCatalog.MicrosoftDataSqliteVersion;
     private const string MicrosoftDataSqlClientVersion = ApplicationDependencyCatalog.MicrosoftDataSqlClientVersion;
-    private const string MagickNetVersion = "14.17.1";
+    private const string MagickNetVersion = ApplicationDependencyCatalog.MagickNetVersion;
     private static readonly Regex VariantDeclaration = new(@"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+As\s+Variant\s*$", RegexOptions.CultureInvariant);
 
     private sealed class BuildGate

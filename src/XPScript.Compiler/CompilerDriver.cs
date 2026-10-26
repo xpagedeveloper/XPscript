@@ -6,7 +6,7 @@ namespace XPScript.Compiler;
 
 public sealed class CompilerDriver
 {
-    private const string MimeKitVersion = "4.18.2";
+    private const string MimeKitVersion = ApplicationDependencyCatalog.MimeKitVersion;
     // Large generated API clients are still bounded, while allowing a complete
     // OpenAPI definition to remain one compilable source unit.
     private const long MaximumSourceBytes = 16L * 1024L * 1024L;
