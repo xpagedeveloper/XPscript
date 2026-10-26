@@ -1731,8 +1731,10 @@ foreach ($classInvalid in @('class-method-scope-error', 'class-method-private-er
     $classFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$classInvalid.xps") -o (Join-Path $output $classInvalid) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($classFailure -join "`n") -notmatch "$classInvalid.xps:(3|6|7):") { throw "Class diagnostic source span lost: $classInvalid" }
 }
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-case.xps') -o (Join-Path $output 'class-method-case')
-if ($LASTEXITCODE -ne 0) { throw 'AST case-insensitive class method compilation failed.' }
+$classCaseOutput = Join-Path $output 'class-method-case'
+$classCaseCompile = Invoke-BoundedDotnetRun @($compiler, 'ast-compile', (Join-Path $PSScriptRoot 'class-method-case.xps'), '-o', $classCaseOutput)
+if ($classCaseCompile.TimedOut) { throw 'AST case-insensitive class method compilation timed out.' }
+if ($classCaseCompile.ExitCode -ne 0) { throw "AST case-insensitive class method compilation failed.`n$($classCaseCompile.Output)" }
 $classCaseProbe = Invoke-BoundedDotnetRun @((Join-Path $output 'class-method-case/Generated.dll'))
 if ($classCaseProbe.TimedOut) { throw 'AST case-insensitive class member execution timed out.' }
 if ($classCaseProbe.ExitCode -ne 0 -or $classCaseProbe.Output.Trim() -ne '3') { throw "AST case-insensitive class member execution failed.`n$($classCaseProbe.Output)" }
