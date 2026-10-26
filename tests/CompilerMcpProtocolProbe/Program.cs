@@ -12,11 +12,48 @@ psi.Environment["XPSCRIPT_TEMP_ROOT"] = probeRoot;
 psi.ArgumentList.Add(compiler);
 psi.ArgumentList.Add("mcp");
 using var p=Process.Start(psi) ?? throw new Exception("Could not start MCP server.");
-async Task<JsonElement> CallAsync(object request) { await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(request)); await p.StandardInput.FlushAsync(); string line; try { line=await p.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(30)) ?? throw new Exception("MCP server closed stdout."); } catch (TimeoutException ex) { if (!p.HasExited) p.Kill(entireProcessTree: true); throw new Exception("MCP server did not respond within 30 seconds.", ex); } try { using var d=JsonDocument.Parse(line); return d.RootElement.Clone(); } catch { throw new Exception("Non-JSON data leaked to MCP stdout: "+line); } }
+// Keep the server's diagnostic pipe drained while JSON-RPC responses are read.
+// Otherwise a sufficiently verbose compiler request can fill stderr and block
+// the server before it can write the next stdout response.
+var serverStderrTask = p.StandardError.ReadToEndAsync();
+void Mark(string phase) => Console.Error.WriteLine($"MCP_PROBE_PHASE={phase}");
+async Task<JsonElement> CallAsync(object request)
+{
+    var payload = JsonSerializer.Serialize(request);
+    using var requestDocument = JsonDocument.Parse(payload);
+    var id = requestDocument.RootElement.GetProperty("id").ToString();
+    var elapsed = Stopwatch.StartNew();
+    Mark("request-" + id);
+    await p.StandardInput.WriteLineAsync(payload);
+    await p.StandardInput.FlushAsync();
+    string line;
+    try
+    {
+        line = await p.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromMinutes(3))
+            ?? throw new Exception("MCP server closed stdout for request " + id);
+    }
+    catch (TimeoutException ex)
+    {
+        if (!p.HasExited) p.Kill(entireProcessTree: true);
+        throw new Exception("MCP request " + id + " did not respond within three minutes.", ex);
+    }
+    Mark($"response-{id}-{elapsed.ElapsedMilliseconds}ms");
+    try
+    {
+        using var document = JsonDocument.Parse(line);
+        if (document.RootElement.GetProperty("id").ToString() != id)
+            throw new Exception("Unexpected MCP response id for request " + id + ": " + line);
+        return document.RootElement.Clone();
+    }
+    catch (JsonException ex) { throw new Exception("Non-JSON data leaked to MCP stdout: " + line, ex); }
+}
+Mark("started");
 var init=await CallAsync(new {jsonrpc="2.0",id=1,method="initialize",@params=new {protocolVersion="2025-06-18",capabilities=new{},clientInfo=new{name="xpscript-ci",version="1"}}});
+Mark("initialized-response");
 if (init.GetProperty("result").GetProperty("protocolVersion").GetString() != "2025-06-18") throw new Exception("Unexpected MCP protocol version.");
 await p.StandardInput.WriteLineAsync(JsonSerializer.Serialize(new {jsonrpc="2.0",method="notifications/initialized"})); await p.StandardInput.FlushAsync();
 var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new{}});
+Mark("tools-list-response");
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_virtual_compile","xpscript_compile","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
 var concurrentRequests = Enumerable.Range(10, 8)
@@ -35,7 +72,9 @@ foreach (var _ in concurrentRequests)
     concurrentIds.Add(response.RootElement.GetProperty("id").GetInt32());
 }
 if (!concurrentRequests.Select(request => request.id).ToHashSet().SetEquals(concurrentIds)) throw new Exception("Concurrent MCP request ids were not all returned.");
+Mark("concurrent-symbols-response");
 var virtualCompile = await CallAsync(new { jsonrpc="2.0", id="virtual-compile", method="tools/call", @params=new { name="xpscript_virtual_compile", arguments=new { source="Sub Main()\nEnd Sub", filename="virtual-compile.xps", runtimeIdentifier="win-x64" } } });
+Mark("virtual-compile-response");
 var virtualContent = virtualCompile.GetProperty("result").GetProperty("structuredContent");
 if (virtualContent.GetProperty("result").GetString() != "ok" || virtualContent.GetProperty("compiler").GetString() != "ast" || virtualContent.GetProperty("info").GetProperty("info").GetBoolean() != true)
     throw new Exception("MCP virtual AST compile did not return successful extended info: " + virtualCompile);
@@ -769,9 +808,10 @@ try
     var astCli=new ProcessStartInfo("dotnet"){RedirectStandardOutput=true,RedirectStandardError=true,UseShellExecute=false,WorkingDirectory=repo};
     foreach(var arg in new[]{"run","--project","src/XPScript.Compiler/XPScript.Compiler.csproj","-c","Release","--no-build","--","ast-compile",astParitySource,"-o",Path.Combine(astParityRoot,"output")}) astCli.ArgumentList.Add(arg);
     using var astProcess=Process.Start(astCli) ?? throw new Exception("Could not start AST CLI parity process.");
-    var astCliError=await astProcess.StandardError.ReadToEndAsync();
-    await astProcess.StandardOutput.ReadToEndAsync();
-    await astProcess.WaitForExitAsync();
+    var astCliErrorTask = astProcess.StandardError.ReadToEndAsync();
+    var astCliOutputTask = astProcess.StandardOutput.ReadToEndAsync();
+    await Task.WhenAll(astCliErrorTask, astCliOutputTask, astProcess.WaitForExitAsync());
+    var astCliError = await astCliErrorTask;
     if(astProcess.ExitCode!=2 || !astCliError.Contains("ast-error.xps:3:8: XPS1012:",StringComparison.Ordinal)) throw new Exception("AST CLI diagnostic parity fixture did not preserve its mapped identity.");
     var mcpDiagnostic=astErrors[0];
     if(mcpDiagnostic.GetProperty("diagnosticCode").GetString()!="XPS1012" || mcpDiagnostic.GetProperty("line").GetInt32()!=3 || mcpDiagnostic.GetProperty("position").GetInt32()!=8) throw new Exception("AST MCP diagnostic identity does not match AST CLI.");
@@ -816,9 +856,14 @@ async Task<JsonElement> CompileCliAsync(bool debug)
     foreach(var arg in new[]{"run","--project","src/XPScript.Compiler/XPScript.Compiler.csproj","-c","Release","--no-build","--","compilev1",cliSource,"--result-format","json"}) cliPsi.ArgumentList.Add(arg);
     if(debug) cliPsi.ArgumentList.Add("--debug");
     using var cli=Process.Start(cliPsi) ?? throw new Exception("Could not start CLI compiler.");
-    var stdout=await cli.StandardOutput.ReadToEndAsync();
-    var stderr=await cli.StandardError.ReadToEndAsync();
-    await cli.WaitForExitAsync();
+    // Drain both redirected pipes concurrently. Reading stdout to completion
+    // before stderr can deadlock when the compiler emits enough diagnostics
+    // to fill stderr's OS pipe buffer.
+    var stdoutTask = cli.StandardOutput.ReadToEndAsync();
+    var stderrTask = cli.StandardError.ReadToEndAsync();
+    await Task.WhenAll(stdoutTask, stderrTask, cli.WaitForExitAsync());
+    var stdout = await stdoutTask;
+    var stderr = await stderrTask;
     if(cli.ExitCode==0) throw new Exception("Expected CLI compilation to fail for parity fixture.");
     try { using var doc=JsonDocument.Parse(stdout); return doc.RootElement.Clone(); }
     catch(Exception ex) { throw new Exception("CLI did not return JSON diagnostics. stdout="+stdout+" stderr="+stderr,ex); }
@@ -850,5 +895,6 @@ var tool = list.GetProperty("result").GetProperty("tools").EnumerateArray().Sing
 var properties = tool.GetProperty("inputSchema").GetProperty("properties");
 if (!properties.TryGetProperty("debug", out var debugProperty) || debugProperty.GetProperty("type").GetString()!="boolean") throw new Exception("MCP validate must expose boolean debug mode.");
 p.StandardInput.Close(); if(!p.WaitForExit(5000)){p.Kill(true);throw new Exception("MCP server did not stop after stdin closed.");}
-if(p.ExitCode!=0) throw new Exception("MCP server exit code "+p.ExitCode+": "+await p.StandardError.ReadToEndAsync());
+var serverStderr = await serverStderrTask;
+if(p.ExitCode!=0) throw new Exception("MCP server exit code "+p.ExitCode+": "+serverStderr);
 Console.WriteLine("MCP protocol probe passed.");

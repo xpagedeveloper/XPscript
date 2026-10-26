@@ -31,3 +31,10 @@ jobs:
       - name: Verify CLI command-line compatibility
         shell: pwsh
         run: ./tests/cli-compatibility/run-cli-compatibility.ps1
+      - name: Verify MCP protocol, concurrent requests and AST compilation
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          $env:XPSCRIPT_TEMP_ROOT = Join-Path $env:RUNNER_TEMP 'xpscript-mcp-fulltest'
+          dotnet run --project tests/CompilerMcpProtocolProbe/CompilerMcpProtocolProbe.csproj -c Release -- .
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
