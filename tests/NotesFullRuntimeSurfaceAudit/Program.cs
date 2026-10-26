@@ -55,6 +55,18 @@ var build = builder.GetMethod("Build", BindingFlags.Static | BindingFlags.Public
 var source = (string?)build.Invoke(null, null) ?? throw new InvalidOperationException("Notes runtime source was null.");
 var sample = string.Join("\n", samplePaths.Select(File.ReadAllText));
 
+var notesPreprocessor = compiler.GetType("XPScript.Compiler.NotesRuntimePreprocessor", throwOnError: true)!;
+var transformNotes = notesPreprocessor.GetMethod("Transform")!;
+foreach (var ast in new[] { false, true })
+{
+    const string input = "Dim view As NotesView\nDim doc As NotesDocument\nSet doc = view.GetDocumentByKey(\"key\", True)";
+    var transformed = (string)transformNotes.Invoke(Activator.CreateInstance(notesPreprocessor, nonPublic: true), [input, ast])!;
+    if (transformed.Contains("GetFirstDocumentByKey", StringComparison.Ordinal) ||
+        !transformed.Contains("XPScriptNotes.NormalizeObjectResult(view.GetDocumentByKey(", StringComparison.Ordinal))
+        throw new InvalidOperationException("Notes key lookup was renamed or lost Nothing normalization.");
+}
+Console.WriteLine("NotesView key lookup preprocessing contract: OK");
+
 // DXL log properties return caller-owned MEMHANDLE copies, not DHANDLEs.
 // Mixing the two memory APIs can panic inside Notes instead of returning an error.
 foreach (var method in new[] { "GetDxlImporterLog", "GetDxlExporterLog" })

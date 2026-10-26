@@ -9,7 +9,7 @@ internal sealed class NotesRuntimePreprocessor
     private static readonly Dictionary<string, string[]> NothingReturningMethods = new(StringComparer.OrdinalIgnoreCase)
     {
         ["NotesDatabase"] = ["OpenView", "GetDocumentByNoteId", "OpenDocumentByNoteId", "GetDocumentByUNID", "OpenDocumentByUNID", "Search", "FTSearch", "RunAgent", "GetAgent"],
-        ["NotesView"] = ["GetFirstDocumentByKey", "GetFirstDocument", "GetNextDocument"],
+        ["NotesView"] = ["GetDocumentByKey", "GetFirstDocument", "GetNextDocument"],
         ["NotesDocumentCollection"] = ["GetFirstDocument", "GetNextDocument", "GetDocument"],
         ["NotesDocument"] = ["GetFirstItem"]
     };
@@ -94,8 +94,6 @@ internal sealed class NotesRuntimePreprocessor
 
             if (Regex.IsMatch(rewritten, @"\.GetFirstDocumentByKey\s*\(", RegexOptions.IgnoreCase))
                 throw new CompilerException("NotesView.GetFirstDocumentByKey has been renamed to NotesView.GetDocumentByKey.");
-
-            rewritten = Regex.Replace(rewritten, @"\.GetDocumentByKey\s*\(", ".GetFirstDocumentByKey(", RegexOptions.IgnoreCase);
 
             var recycle = Regex.Match(rewritten, @"^(?:Call\s+)?([A-Za-z_]\w*)\.Recycle\s*\(\s*\)\s*$", RegexOptions.IgnoreCase);
             if (recycle.Success && notesVariables.Contains(recycle.Groups[1].Value))
