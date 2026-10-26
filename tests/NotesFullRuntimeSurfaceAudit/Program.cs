@@ -55,6 +55,22 @@ var build = builder.GetMethod("Build", BindingFlags.Static | BindingFlags.Public
 var source = (string?)build.Invoke(null, null) ?? throw new InvalidOperationException("Notes runtime source was null.");
 var sample = string.Join("\n", samplePaths.Select(File.ReadAllText));
 
+// DXL log properties return caller-owned MEMHANDLE copies, not DHANDLEs.
+// Mixing the two memory APIs can panic inside Notes instead of returning an error.
+foreach (var method in new[] { "GetDxlImporterLog", "GetDxlExporterLog" })
+{
+    var parsed = CSharpSyntaxTree.ParseText(source).GetCompilationUnitRoot();
+    var body = parsed.DescendantNodes().OfType<MethodDeclarationSyntax>()
+        .Single(m => m.Identifier.ValueText == method).ToString();
+    foreach (var api in new[] { "OSMemoryLock", "OSMemoryUnlock", "OSMemoryFree" })
+        if (!body.Contains("\"" + api + "\"", StringComparison.Ordinal))
+            throw new InvalidOperationException(method + " is missing MEMHANDLE operation " + api);
+    if (body.Contains("\"OSLockObject\"", StringComparison.Ordinal) ||
+        body.Contains("\"OSMemGetSize\"", StringComparison.Ordinal))
+        throw new InvalidOperationException(method + " uses the DHANDLE API for a MEMHANDLE.");
+}
+Console.WriteLine("DXL log MEMHANDLE lifetime contract: OK");
+
 var userIdResolver = source.IndexOf("private string ResolveUserIdFile()", StringComparison.Ordinal);
 if (userIdResolver < 0)
     throw new InvalidOperationException("Notes runtime does not expose the user.id resolver.");

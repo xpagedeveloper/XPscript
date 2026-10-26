@@ -197,11 +197,11 @@ if (Should-Run 'language') {
 
 if (Should-Run 'notes') {
   Write-Host '=== NOTES FULLTEST ==='
-  foreach ($sample in @('notes-full-domino-runtime-test','notes-mail-surface','notes-mail-no-mime-surface')) { Compile-Xps "./samples/$sample.xps" $sample }
+  foreach ($sample in @('notes-dxl-log-runtime-test','notes-full-domino-runtime-test','notes-mail-surface','notes-mail-no-mime-surface')) { Compile-Xps "./samples/$sample.xps" $sample }
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/notes-document-send-surface.xps','-o','./out/fulltest/notes-send','--runtime=false') $compileTimeoutMilliseconds 'NotesDocument.Send diagnostics'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   if ($r.Output -notmatch 'warning: NotesDocument\.Send attachForm=True is not supported') { throw 'Expected NotesDocument.Send attachForm compiler warning was not emitted.' }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/NotesRichTextDiagnostic/NotesRichTextDiagnostic.csproj','-c','Release','--','./samples/notes-database-query-access-runtime-test.xps','./out/fulltest/notes-query-access') $compileTimeoutMilliseconds 'Notes QueryAccess surface'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
-  if (-not $IsWindows -and $env:RUNNER_OS -eq 'Linux') { $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/NotesFullRuntimeSurfaceAudit/NotesFullRuntimeSurfaceAudit.csproj','-c','Release','--','NotesSession','NotesDocument','NotesDatabase','NotesDatabaseAccess') $compileTimeoutMilliseconds 'Notes surface audit'; if ($r.ExitCode -ne 0) { exit $r.ExitCode } }
+  if (-not $IsWindows -and $env:RUNNER_OS -eq 'Linux') { $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/NotesFullRuntimeSurfaceAudit/NotesFullRuntimeSurfaceAudit.csproj','-c','Release','--','NotesSession','NotesDocument','NotesDatabase','NotesDatabaseAccess','NotesDXLImporter','NotesDXLExporter') $compileTimeoutMilliseconds 'Notes surface audit'; if ($r.ExitCode -ne 0) { exit $r.ExitCode } }
   Write-Host 'NOTES_FULLTEST: passed'
 }
 

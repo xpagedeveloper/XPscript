@@ -90,6 +90,17 @@ internal sealed class XPScriptNotesDXLImporter : XPScriptNotesObject
         set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 9, value); }
     }
 
+    public void Import(object? filePathValue, object? databaseValue)
+    {
+        if (databaseValue is ILSObjectReference reference)
+            databaseValue = reference.IsNothing ? null : reference.ObjectValue;
+        if (databaseValue is null || ReferenceEquals(databaseValue, XPScriptNotes.NothingValue))
+            throw new XPScriptRuntimeException(91, "NotesDXLImporter.Import requires a NotesDatabase.");
+        if (databaseValue is not XPScriptNotesDatabase database)
+            throw new XPScriptRuntimeException(13, "NotesDXLImporter.Import requires a NotesDatabase.");
+        Import(filePathValue, database);
+    }
+
     public void Import(object? filePathValue, XPScriptNotesDatabase database)
     {
         EnsureAlive();

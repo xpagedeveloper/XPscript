@@ -225,6 +225,8 @@ View key lookup supports scalar keys and one-dimensional arrays. An array key ta
 
 ## Notes MIME
 
+For DXL, obtain the importer with `session.CreateDXLImporter()` and call `importer.Import(path, database)` with an open NotesDatabase (a Variant-held reference is accepted). Read `importer.Log` after import or a handled error; repeated reads leave the importer alive. Recycle the importer explicitly when finished. See `samples/notes-dxl-log-runtime-test.xps`.
+
 Use `NotesMIMEEntity` only with the currently documented native MIME subset in `docs/notes-mime-entity.md`.
 
 Set `NotesSession.ConvertMIME = False` before opening documents whose MIME `Body` must remain a native MIME item. The current document-level native MIME implementation supports the `Body` item only.

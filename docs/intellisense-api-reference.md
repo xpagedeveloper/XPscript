@@ -1,4 +1,12 @@
 # Machine-readable IntelliSense API reference
+## Notes DXL import and result logs
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `NotesDXLImporter.Import` | `importer.Import(path, database)` | `path`: DXL filename; `database`: open NotesDatabase, including a Variant-held reference. | Imports DXL into the supplied database; Nothing raises error 91 and an incompatible database value raises error 13. | [notes-dxl-log-runtime-test.xps](../samples/notes-dxl-log-runtime-test.xps) |
+| `NotesDXLImporter.Log` | `importer.Log` | none | Returns the import result log; repeated reads release each native log copy without recycling the importer. | [notes-dxl-log-runtime-test.xps](../samples/notes-dxl-log-runtime-test.xps) |
+| `NotesDXLExporter.Log` | `exporter.Log` | none | Returns the export result log and releases its native log copy. | [notes-dxl-import-export-surface.xps](../samples/notes-dxl-import-export-surface.xps) |
+
 ## Native JSON conversion
 
 | Member | Syntax | Parameters | Description | Example |

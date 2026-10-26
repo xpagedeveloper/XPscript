@@ -22,7 +22,7 @@ The [Domino JNX project](https://github.com/HCL-TECH-SOFTWARE/domino-jnx) is lic
 
 Copyright Klehmann and contributors.
 
-The [Domino JNA project](https://github.com/klehmann/domino-jna) is licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). XPscript uses its public implementation as a reference for MIME stream serialization and Notes item writeback behavior.
+The [Domino JNA project](https://github.com/klehmann/domino-jna) is licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). XPscript uses its public implementation as a reference for MIME stream serialization, Notes item writeback, and DXL result-log MEMHANDLE ownership. JNX's `AbstractDxlProcessor` and Domino JNA's `AbstractDXLTransfer` confirm that DXL string-property copies use `OSMemoryLock`, `OSMemoryUnlock`, and `OSMemoryFree`; no Java code or runtime dependency is included.
 
 ## NuGet dependencies
 

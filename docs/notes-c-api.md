@@ -19,6 +19,8 @@ Except for `NotesSession`, objects are created from another Notes object rather 
 
 ## NotesSession
 
+DXL importer/exporter `Log` reads a native result-log copy using the MEMHANDLE memory API and releases that copy after conversion to a string. Reading `Log` repeatedly does not recycle the importer/exporter. DXL importer handles remain 32-bit MEMHANDLE values, including on 64-bit Windows.
+
 Exactly one `NotesSession` may be active in a process. The first constructor argument is the directory containing the Notes/Domino native runtime. The second argument is an optional explicit `notes.ini`. The third optional argument is an ID password used during Notes initialization.
 
 `New NotesSession()` performs platform autodetection. On Windows it checks the HCL Notes installer key and then the HCL Domino installer key for `PROGDIR`. If registry access is unavailable, it also checks the standard `Program Files\HCL\Notes` and `Program Files\HCL\Domino` directories. A candidate is accepted only when `nnotes.dll` exists and `notes.ini` exists either beside it or in its `Data` subdirectory. The shared runtime then resolves `notes.ini` from an explicit value, `NOTESINI`, the program/current directory, or the registry `DATADIR`; its `Directory=` entry supplies `DataDir`. If no valid installation is found, the constructor returns `Nothing` rather than guessing a runtime path. Native Notes initialization still requires a usable local ID file and matching Notes configuration.

@@ -103,6 +103,7 @@ Sub Main()
             bootstrapErr = Err
             If bootstrapErr <> 0 Then
                 Print "BOOTSTRAP-DXL-IMPORT-ERROR=" & CStr(bootstrapErr)
+                Print "BOOTSTRAP-DXL-IMPORT-MESSAGE=" & Error$
                 Print "BOOTSTRAP-DXL-IMPORT-LOG-BEGIN"
                 Print importer.Log
                 Print "BOOTSTRAP-DXL-IMPORT-LOG-END"
