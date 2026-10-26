@@ -44,7 +44,7 @@ foreach ($package in $packages) {
 }
 ```
 
-Verify the managed assembly version before compiling:
+Verify the package identity before compiling. A NuGet package's assembly version is not necessarily the same as its package version; for example, `MySqlConnector` package `2.6.2` contains an assembly whose CLR assembly version remains `2.0.0.0`. Check the generated `*.deps.json` or the cache's `.nuspec` instead:
 
 ```powershell
 Get-ChildItem "$env:USERPROFILE\.nuget\packages\mysqlconnector\2.6.2" -Recurse -Filter MySqlConnector.dll |
@@ -54,7 +54,13 @@ Get-ChildItem "$env:USERPROFILE\.nuget\packages\mysqlconnector\2.6.2" -Recurse -
     }
 ```
 
-The result must report `2.6.2.0`. An older DLL found in a project temporary directory is not a valid substitute. Programs that do not use the package must still compile without downloading it.
+Then verify the generated dependency manifest:
+
+```powershell
+Select-String -Path .\out\**\*.deps.json -Pattern 'MySqlConnector/2\.6\.2|mysqlconnector/2\.6\.2'
+```
+
+The manifest must identify `MySqlConnector/2.6.2`. An older DLL found in a project temporary directory is not a valid substitute. Programs that do not use the package must still compile without downloading it.
 
 ## Vulnerability inspection
 
