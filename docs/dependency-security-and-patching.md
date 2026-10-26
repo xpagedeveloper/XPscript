@@ -16,6 +16,46 @@ XPScript first compiles/transpiles the source far enough to determine which opti
 
 For example, an application that does not use SQL Server does not receive `Microsoft.Data.SqlClient` merely because XPScript supports SQL Server.
 
+## Repairing a missing local package cache
+
+Generated applications restore optional packages only when the source uses the corresponding feature. If a required package is missing or incomplete in the local NuGet cache, download the exact package version manually from the official flat-container endpoint and extract it into the user package cache. This does not install software and does not add package files to the repository.
+
+Run from the repository or any PowerShell directory, replacing the entries only when the compiler reports a different package and version:
+
+```powershell
+$packages = @(
+    @{ Id = "MySqlConnector"; Version = "2.6.2" }
+    @{ Id = "Magick.NET-Q16-AnyCPU"; Version = "14.17.1" }
+)
+
+$cache = Join-Path $env:USERPROFILE ".nuget\packages"
+foreach ($package in $packages) {
+    $id = $package.Id.ToLowerInvariant()
+    $version = $package.Version
+    $target = Join-Path $cache "$id\$version"
+    $archive = Join-Path $env:TEMP "$id.$version.nupkg"
+
+    New-Item -ItemType Directory -Force -Path $target | Out-Null
+    Invoke-WebRequest `
+        -Uri "https://api.nuget.org/v3-flatcontainer/$id/$version/$id.$version.nupkg" `
+        -OutFile $archive
+    Expand-Archive -LiteralPath $archive -DestinationPath $target -Force
+    Remove-Item -LiteralPath $archive -Force
+}
+```
+
+Verify the managed assembly version before compiling:
+
+```powershell
+Get-ChildItem "$env:USERPROFILE\.nuget\packages\mysqlconnector\2.6.2" -Recurse -Filter MySqlConnector.dll |
+    ForEach-Object {
+        $assembly = [Reflection.AssemblyName]::GetAssemblyName($_.FullName)
+        "$($_.FullName) -> $($assembly.Version)"
+    }
+```
+
+The result must report `2.6.2.0`. An older DLL found in a project temporary directory is not a valid substitute. Programs that do not use the package must still compile without downloading it.
+
 ## Vulnerability inspection
 
 Use `security` to check the resolved application dependencies against NuGet vulnerability information:
