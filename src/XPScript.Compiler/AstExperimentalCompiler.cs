@@ -135,6 +135,7 @@ public static class AstExperimentalCompiler
                 return new string(match.Value.Select(c => c is '\r' or '\n' ? c : ' ').ToArray());
             });
         var usesArchive = PreprocessorFeatureGate.ContainsTypeReference(source, "Archive", "ArchiveEntry");
+        var usesNameFile = Regex.IsMatch(source, @"(?im)^\s*Name\s+.+\s+As\s+");
         // Legacy accepts colon-separated statements, including inline If/Else
         // forms. Normalize them before AST parsing so the default compiler
         // preserves that language syntax instead of exposing ColonToken errors.
@@ -934,7 +935,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{((usesDatabaseDynamicRuntime || usesDatabaseAttachments) ? HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + AstTlsRuntimeCode() + DatabaseAttachmentRuntimeV2Source.Build(AstSqliteSupport.Uses(fullSource), AstMsSqlSupport.Uses(fullSource)) + DatabaseAttachmentRuntimeV3Source.Code : "")}}
 {{AstHttpSupport.RuntimeCode(fullSource)}}
 {{(AstNotesJsonSupport.Uses(fullSource) || Regex.IsMatch(fullSource, @"(?i)\bNotesHTTPRequest\b") ? JsonHttpCompatibilityRuntimeSource.Code + (AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) || runtimeFeatures.Http ? "" : AstTlsRuntimeCode()) : "")}}
-{{((usesArchive || AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource) || source.Contains("AstNameFile", StringComparison.Ordinal)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
+{{FileSystemPortabilityRuntimeSource.Code}}
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}
 {{AstFileRuntimeCode()}}
@@ -978,7 +979,7 @@ internal sealed class LSConsoleRuntime
 }
 internal static class Program
 {
-    {{(AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") || AstSpreadsheetSupport.UsesSpreadsheet(fullSource) || source.Contains("AstNameFile", StringComparison.Ordinal) ? "static Program() { XPScriptFileSystemRuntime.SetScriptDirectory(" + Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, true) + "); }" : "")}}
+    {{(AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") || AstSpreadsheetSupport.UsesSpreadsheet(fullSource) ? "static Program() { XPScriptFileSystemRuntime.SetScriptDirectory(" + Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, true) + "); }" : "")}}
     private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
     public static bool True = true;
     public static bool False = false;

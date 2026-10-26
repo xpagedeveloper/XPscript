@@ -75,7 +75,7 @@ internal static class AstImageSupport
         "byte[]" => $"LSArrayRuntime.ByteVector({value})", "XPImage" => $"(XPImage)({value})", _ => value
     };
     internal static string RuntimeCode(string source) => AstObjectSupportRegistry.UsesObject(source, "XPImage")
-        ? FileSystemPortabilityRuntimeSource.Code + Environment.NewLine + XPImageRuntimeSource.Code + Environment.NewLine + OwnershipCode : "";
+        ? XPImageRuntimeSource.Code + Environment.NewLine + OwnershipCode : "";
 
     internal static bool IsImageStorage(BoundExpression target) => IsImage(target.SemanticType.Name) &&
         target is BoundNameExpression { Symbol: FieldSymbol } or BoundMemberAccessExpression or BoundIndexedPropertyExpression;
