@@ -934,7 +934,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{((usesDatabaseDynamicRuntime || usesDatabaseAttachments) ? HttpCoreRuntimeSource.Code + NativeHttpRuntimeSource.Code + HttpJsonRuntimeSource.Code + HttpDbRuntimeSource.Code + AstTlsRuntimeCode() + DatabaseAttachmentRuntimeV2Source.Build(AstSqliteSupport.Uses(fullSource), AstMsSqlSupport.Uses(fullSource)) + DatabaseAttachmentRuntimeV3Source.Code : "")}}
 {{AstHttpSupport.RuntimeCode(fullSource)}}
 {{(AstNotesJsonSupport.Uses(fullSource) || Regex.IsMatch(fullSource, @"(?i)\bNotesHTTPRequest\b") ? JsonHttpCompatibilityRuntimeSource.Code + (AstHttpSupport.RuntimeCode(fullSource).Contains("XPScriptTlsValidationState", StringComparison.Ordinal) || runtimeFeatures.Http ? "" : AstTlsRuntimeCode()) : "")}}
-{{((usesArchive || AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
+{{((usesArchive || AstCsvSupport.UsesDocument(fullSource) || AstSpreadsheetSupport.UsesSpreadsheet(fullSource) || source.Contains("AstNameFile", StringComparison.Ordinal)) && !AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") ? FileSystemPortabilityRuntimeSource.Code : "")}}
 {{XPScriptListRuntimeSource.Code}}
 {{AstArrayRuntimeCode()}}
 {{AstFileRuntimeCode()}}
@@ -978,7 +978,7 @@ internal sealed class LSConsoleRuntime
 }
 internal static class Program
 {
-    {{(AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") || AstSpreadsheetSupport.UsesSpreadsheet(fullSource) ? "static Program() { XPScriptFileSystemRuntime.SetScriptDirectory(" + Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, true) + "); }" : "")}}
+    {{(AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") || AstSpreadsheetSupport.UsesSpreadsheet(fullSource) || source.Contains("AstNameFile", StringComparison.Ordinal) ? "static Program() { XPScriptFileSystemRuntime.SetScriptDirectory(" + Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, true) + "); }" : "")}}
     private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
     public static bool True = true;
     public static bool False = false;
@@ -1525,7 +1525,7 @@ internal static class Program
     public static string AstLineInput(object? file) => LSFileRuntime.LineInput(checked((int)XPScriptRuntime.CLng(file)));
     public static void AstKill(object? path) => File.Delete(CStr(path));
     public static void AstFileCopy(object? source, object? destination) => File.Copy(CStr(source), CStr(destination), true);
-    public static void AstNameFile(object? source, object? destination) => File.Move(CStr(source), CStr(destination), true);
+    public static void AstNameFile(object? source, object? destination) => XPScriptFileSystemRuntime.MoveFile(source, destination);
     public static string AstInputChars(object? count, object? file) => LSFileRuntime.InputChars(checked((int)XPScriptRuntime.CLng(file)), checked((int)XPScriptRuntime.CLng(count)));
     public static void AstNoOp() { }
     public static void AstStop() => throw new XPScriptRuntimeException(5, "Stop statement reached.");
