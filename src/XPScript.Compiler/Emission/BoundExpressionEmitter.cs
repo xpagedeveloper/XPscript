@@ -314,6 +314,8 @@ public sealed class BoundExpressionEmitter
                 return "ref " + EmitIndexedReference(argument);
             if (byRef && argument is not BoundNameExpression)
                 throw new NotSupportedException("ByRef conversion requires temporary and copy-back lowering.");
+            if (!byRef && call.Target is BoundMemberAccessExpression { Receiver.SemanticType.IsVariant: true })
+                return $"((dynamic)({Emit(argument)}))";
             if (!byRef && call.Function.SemanticParameterTypes is null && call.Function.ParameterTypes[index].IsArray)
                 return $"({BoundMethodEmitter.CSharpType(call.Function.ParameterTypes[index])})({Emit(argument)})";
             if (!byRef && call.Function.SemanticParameterTypes is { } parameterTypes &&

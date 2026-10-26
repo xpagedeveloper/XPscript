@@ -4,6 +4,8 @@ XPscript exposes the numeric HCL Domino DXL exporter options directly and also p
 
 ## CleanedDXL
 
+Relative destinations for cleaned DXL and design-folder exports resolve against the application working directory captured before Notes initialization, matching ordinary DXL output paths.
+
 `CleanedDXL` is an XPscript exporter option. It is not a native Domino DXL property.
 
 When `False`, export behavior is unchanged and Domino writes raw DXL directly to the requested destination.

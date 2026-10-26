@@ -124,6 +124,10 @@ var variant = new BoundNameExpression(new VariableSymbol("value", typeof(object)
 var dynamicBooleanStore = statements.Emit([new BoundAssignmentStatement(
     new BoundMemberAccessExpression(variant, "Enabled", typeof(object), XpTypeSymbol.Variant),
     new BoundLiteralExpression(true, typeof(bool)), false)]);
+var dynamicReferenceCall = expressions.Emit(new BoundCallExpression(
+    new BoundMemberAccessExpression(variant, "Same", typeof(object), XpTypeSymbol.Variant),
+    new FunctionSymbol("Same", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]),
+    [new BoundNameExpression(new VariableSymbol("other", typeof(object), XpTypeSymbol.Variant))]));
 Equal("XPScriptRuntime.CLng(value)", expressions.Emit(new BoundConversionExpression(variant, XpTypeSymbol.FromClr(typeof(long)), new Conversion(ConversionKind.FromVariant))));
 Equal("while (XPScriptNullRuntime.ConditionValue(value))\n{\n}\n", statements.Emit([new BoundWhileStatement(variant, [])]));
 Equal("while (true)\n{\n}\n", statements.Emit([new BoundDoStatement(null, null, false, [])]));
@@ -244,12 +248,19 @@ public static class Probe
     public sealed class DynamicSettings
     {
         public bool Enabled { get; set; }
+        public bool Same(DynamicSettings other) => ReferenceEquals(this, other);
     }
     public static bool VariantBooleanSetter()
     {
         object value = new DynamicSettings();
         {{dynamicBooleanStore}}
         return ((DynamicSettings)value).Enabled;
+    }
+    public static bool VariantReferenceArgument()
+    {
+        object value = new DynamicSettings();
+        object other = value;
+        return {{dynamicReferenceCall}};
     }
     public static bool CommandResult;
     public static object Array(string value) => new string[] { value };
@@ -365,6 +376,7 @@ Equal(9L, Invoke("SelectFlow"));
 Equal(11L, Invoke("ExceptionalCopyback"));
 Equal(11L, Invoke("ExceptionalAliasCopyback"));
 Equal(true, Invoke("VariantBooleanSetter"));
+Equal(true, Invoke("VariantReferenceArgument"));
 // Reflection boxes ref arguments and writes the updated value back into the array.
 var refArgs = new object?[] { 3L, 0L };
 type.GetMethod("AddInto")!.Invoke(null, refArgs);

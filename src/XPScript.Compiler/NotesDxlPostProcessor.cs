@@ -269,7 +269,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
 
     private void ExportDatabaseDesignToFolders(XPScriptNotesDatabase database, string rootPath)
     {
-        var fullRootPath = System.IO.Path.GetFullPath(rootPath);
+        var fullRootPath = System.IO.Path.GetFullPath(rootPath, Session.Api.ApplicationDirectory);
         System.IO.Directory.CreateDirectory(fullRootPath);
         var temporaryPath = System.IO.Path.Combine(
             fullRootPath,
@@ -300,7 +300,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
             return;
         }
 
-        var fullTargetPath = System.IO.Path.GetFullPath(targetPath);
+        var fullTargetPath = System.IO.Path.GetFullPath(targetPath, Session.Api.ApplicationDirectory);
         var targetDirectory = System.IO.Path.GetDirectoryName(fullTargetPath) ?? System.IO.Directory.GetCurrentDirectory();
         System.IO.Directory.CreateDirectory(targetDirectory);
         var temporaryPath = System.IO.Path.Combine(
