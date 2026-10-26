@@ -35,7 +35,7 @@ function Get-DiagnosticIdentity([string[]] $lines, [string] $mode) {
     }
 }
 
-$legacy = @(& dotnet $compiler $source -o (Join-Path $root 'out/diagnostic-compat-legacy') --runtime=false 2>&1)
+$legacy = @(& dotnet $compiler legacy-compile $source -o (Join-Path $root 'out/diagnostic-compat-legacy') --runtime=false 2>&1)
 $legacyExit = $LASTEXITCODE
 $ast = @(& dotnet $compiler ast-compile $source -o (Join-Path $root 'out/diagnostic-compat-ast') 2>&1)
 $astExit = $LASTEXITCODE
@@ -53,7 +53,7 @@ Write-Host "AST_DIAGNOSTIC_COMPAT=OK code=$($astIdentity.Code) line=$($astIdenti
 # rejects the same source. The reverse direction is not allowed and is covered
 # by the legacy/AST compile-and-runtime parity harness.
 $astOnlySource = Join-Path $root 'samples/null-integer-assignment-error.xps'
-$astOnlyLegacy = @(& dotnet $compiler $astOnlySource -o (Join-Path $root 'out/diagnostic-ast-only-legacy') --runtime=false 2>&1)
+$astOnlyLegacy = @(& dotnet $compiler legacy-compile $astOnlySource -o (Join-Path $root 'out/diagnostic-ast-only-legacy') --runtime=false 2>&1)
 $astOnlyLegacyExit = $LASTEXITCODE
 $astOnlyOutput = Join-Path $root 'out/diagnostic-ast-only'
 $astOnly = @(& dotnet $compiler ast-compile $astOnlySource -o $astOnlyOutput 2>&1)
