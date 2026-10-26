@@ -260,7 +260,10 @@ public sealed class ExpressionParser
 
     private static int GetUnaryPrecedence(SyntaxKind kind) => kind switch
     {
-        SyntaxKind.NotKeyword => 6,
+        // In XPscript/lotusscript, Not applies after comparisons. This makes
+        // `Not value Is Nothing` mean `Not (value Is Nothing)` instead of
+        // attempting to convert the object value to Boolean first.
+        SyntaxKind.NotKeyword => 2,
         SyntaxKind.PlusToken or SyntaxKind.MinusToken => 6,
         _ => 0
     };

@@ -134,7 +134,7 @@ Expressions are the first migration target because the current transpiler perfor
 
 - [x] Implement precedence-based expression parsing.
 - [x] Define precedence and associativity for every XPscript operator.
-- [x] Implement unary `Not`, unary plus and unary minus.
+- [x] Implement unary `Not`, unary plus and unary minus, with LotusScript comparison precedence so `Not value Is Nothing` lowers as `Not (value Is Nothing)` and preserves object identity semantics. The `path-object-next.xps` regression covers this form.
 - [x] Implement arithmetic operators.
 - [x] Implement comparison operators.
 - [x] Implement boolean operators.

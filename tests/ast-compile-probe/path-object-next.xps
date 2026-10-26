@@ -3,6 +3,10 @@ Option Explicit
 Sub Main()
     Dim p As New Path("tests/ast-compile-probe/file-exists-aliases-next.xps")
 
+    If Not p Is Nothing Then
+    Else
+        Error 9860, "Not ... Is Nothing object identity failed"
+    End If
     If p.FileName() <> "file-exists-aliases-next.xps" Then Error 9870, "Path.FileName failed"
     If p.FileNameWithoutExtension() <> "file-exists-aliases-next" Then Error 9871, "Path.FileNameWithoutExtension failed"
     If p.Extension() <> ".xps" Then Error 9872, "Path.Extension failed"
