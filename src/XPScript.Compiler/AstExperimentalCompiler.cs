@@ -389,6 +389,15 @@ public static class AstExperimentalCompiler
         symbols.Declare(new TypeSymbol("XPJsonSchema", typeof(object), XpTypeSymbol.User("XPJsonSchema")));
         if (usesNotesRuntime)
         {
+            // Notes declarations currently use Variant carriers. Preserve the
+            // known ByRef output contract in the bound call instead of adding
+            // ref tokens to generated C# as the legacy postprocessor does.
+            symbols.Declare(new FunctionSymbol("Variant.ComputeWithForm", typeof(bool),
+                [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(bool)),
+                [XpTypeSymbol.Variant, XpTypeSymbol.Variant], [false, false]));
+            symbols.Declare(new FunctionSymbol("Variant.ComputeWithForm", typeof(bool),
+                [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(bool)),
+                [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant], [false, false, true]));
             symbols.Declare(new TypeSymbol("XPScriptNotes", typeof(object), XpTypeSymbol.User("XPScriptNotes")));
             symbols.Declare(new VariableSymbol("XPScriptNotes", typeof(object), XpTypeSymbol.User("XPScriptNotes")));
             DeclareNativeStatic(symbols, "XPScriptNotes.CreateSession", [], "XPScriptNotes.CreateSession");
