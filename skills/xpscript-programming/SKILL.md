@@ -213,6 +213,8 @@ Run agents through `db.GetAgent(name)`, then `agent.Run()` or `agent.RunWithDocu
 
 Use `item.Values = Array("one", "two")` for a Notes text list; homogeneous numeric and NotesDateTime arrays are also supported through AST and legacy. Mixed-type arrays raise error 13. Empty arrays write empty text. See `samples/notes-item-array-runtime-test.xps`.
 
+Rich-text numeric properties such as `style.FontSize` accept ordinary XPscript numeric values through Variant references. Overflow is checked before assignment; retain the existing property value after handling an overflow error. See `samples/notes-richtext-numeric-setters-runtime-test.xps`.
+
 `NotesDocument.Save()` is a void native save that raises failures. Boolean overloads are also available:
 
 ```xpscript

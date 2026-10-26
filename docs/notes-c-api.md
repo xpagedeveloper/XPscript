@@ -17,6 +17,8 @@ The supported XPscript Notes classes are:
 
 Except for `NotesSession`, objects are created from another Notes object rather than with `New`. Every Notes object supports `Recycle()`, and every wrapper exposes `IsRecycled` while it is alive. Explicitly recycling a typed Notes variable sets that XPscript variable to `Nothing`, except for `NotesSession`; the session reference remains available so `session.IsRecycled` can be checked after recycling.
 
+Numeric Notes properties exposed as 32-bit integers accept XPscript numeric values through Variant references, including case-insensitive member names. Conversion is checked before invoking the setter, so overflow leaves the previous value intact. See `samples/notes-richtext-numeric-setters-runtime-test.xps`.
+
 ## NotesSession
 
 DXL importer/exporter `Log` reads a native result-log copy using the MEMHANDLE memory API and releases that copy after conversion to a string. Reading `Log` repeatedly does not recycle the importer/exporter. DXL importer handles remain 32-bit MEMHANDLE values, including on 64-bit Windows.

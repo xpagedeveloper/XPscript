@@ -135,12 +135,17 @@ internal static class NotesRuntimeMemberTrapPostProcessor
 
     public override bool TrySetMember(System.Dynamic.SetMemberBinder binder, object? value)
     {
-        if (HasExactPublicProperty(binder.Name, requireSetter: true)) return false;
-
         var property = FindPublicPropertyIgnoreCase(binder.Name, requireSetter: true);
         if (property is not null)
         {
-            property.SetValue(this, value);
+            var converted = property.PropertyType == typeof(int)
+                ? checked((int)XPScriptRuntime.CLng(value))
+                : value;
+            try { property.SetValue(this, converted); }
+            catch (System.Reflection.TargetInvocationException exception) when (exception.InnerException is not null)
+            {
+                throw exception.InnerException;
+            }
             return true;
         }
 
