@@ -183,6 +183,8 @@ public sealed class CompilerDriver
 
     public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
     {
+        var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? Environment.CurrentDirectory;
+        using var outputLock = CompilerDirectoryLock.Acquire(outputDirectory);
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
         if (IsAndroidRuntime(rid) && !outputPath.EndsWith(".apk", StringComparison.OrdinalIgnoreCase))
             outputPath += ".apk";
@@ -311,6 +313,7 @@ public sealed class CompilerDriver
 
     private async Task<string> CompileForRunAsync(string sourcePath, string outputDirectory, string runtimeIdentifier)
     {
+        using var outputLock = CompilerDirectoryLock.Acquire(outputDirectory);
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
         TargetPrerequisiteValidator.Validate(rid);
         var originalSource = await File.ReadAllTextAsync(sourcePath);

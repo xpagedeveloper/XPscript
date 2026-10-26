@@ -72,6 +72,7 @@ public static class AstExperimentalCompiler
         IReadOnlyList<string>? sourceRoots, IReadOnlyList<string>? sourcePreprocessors,
         bool embedAssets, CancellationToken cancellationToken)
     {
+        using var outputLock = CompilerDirectoryLock.Acquire(outputDirectory);
         if (runtimeIdentifier is not null)
             TargetPrerequisiteValidator.Validate(runtimeIdentifier.Trim().ToLowerInvariant());
         using var securityScope = ApplicationSecurityModeContext.Push(securityMode);
