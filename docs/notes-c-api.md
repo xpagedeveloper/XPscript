@@ -13,7 +13,7 @@ The supported XPscript Notes classes are:
 - `NotesRichTextItem`
 - `NotesName`
 - `NotesDateTime`
-- `NotesAgentResult`
+- `NotesAgent`
 
 Except for `NotesSession`, objects are created from another Notes object rather than with `New`. Every Notes object supports `Recycle()`, and every wrapper exposes `IsRecycled` while it is alive. Explicitly recycling a typed Notes variable sets that XPscript variable to `Nothing`, except for `NotesSession`; the session reference remains available so `session.IsRecycled` can be checked after recycling.
 
@@ -110,8 +110,7 @@ Set serverDb = session.OpenDatabase("CN=Domino01/O=Example", "apps\customers.nsf
 | `Search(formula, maxResults)` | `NotesDocumentCollection` or `Nothing` | Executes a formula search and limits results when `maxResults > 0`. |
 | `FTSearch(query)` | `NotesDocumentCollection` or `Nothing` | Runs a full-text search against the database. |
 | `FTSearch(query, maxResults)` | `NotesDocumentCollection` or `Nothing` | Runs a full-text search with a result limit. The database must have the required FT index for the query. |
-| `RunAgent(name)` | `NotesAgentResult` or `Nothing` | Runs an agent by name. |
-| `RunAgent(name, document)` | `NotesAgentResult` or `Nothing` | Runs an agent with a `NotesDocument` as document context. |
+| `GetAgent(name)` | `NotesAgent` or `Nothing` | Obtains an agent; use `Run()` or `RunWithDocumentContext(document)` to execute it. |
 | `Recycle()` | Void | Recycles owned views, documents, collections, agent results, and then closes the native database handle. |
 
 `FullTextSearch` was an earlier internal/public name. The supported XPscript API is `FTSearch`.
@@ -481,25 +480,6 @@ Represents an agent design element returned by `NotesDatabase.GetAgent` or `Note
 | `Save()` | Void | Persists pending enabled/server-name changes or saves the current agent design state. |
 | `Remove()` | Void | Permanently deletes the agent design note when permitted. |
 
-## NotesAgentResult
-
-Returned by `NotesDatabase.RunAgent`.
-
-### Properties
-
-| Property | Type | Access | Description |
-| --- | --- | --- | --- |
-| `Success` | Boolean | read-only | Currently `True` for a successfully returned agent run result. Native execution failures raise an XPscript runtime error instead of returning a failed result object. |
-| `Status` | Integer | read-only | Currently `0` for a successfully returned agent run result. |
-| `Output` | String | read-only | Captured agent stdout/output text. |
-| `IsRecycled` | Boolean | read-only | `True` after the wrapper has been recycled. |
-
-### Methods
-
-| Member | Return type | Description |
-| --- | --- | --- |
-| `Recycle()` | Void | Invalidates the `NotesAgentResult` wrapper. |
-
 ## Object creation rules
 
 Only `NotesSession` is constructed with `New`.
@@ -513,7 +493,7 @@ These classes must be obtained from the owning Notes object:
 - `NotesItem` and `NotesRichTextItem` from `NotesDocument`
 - `NotesName` from `NotesSession.CreateName`
 - `NotesDateTime` from `NotesSession.CreateDateTime`, `CreateDateTimeNow`, document/item time access, or item metadata
-- `NotesAgentResult` from `NotesDatabase.RunAgent`
+- `NotesAgent` from `NotesDatabase.GetAgent`; read `ReturnMessage` for captured agent output after `Run()` or `RunWithDocumentContext(document)`.
 
 Attempting to use `New` with the other Notes classes is rejected by the compiler.
 

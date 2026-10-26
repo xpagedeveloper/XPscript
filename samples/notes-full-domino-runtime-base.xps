@@ -6,7 +6,7 @@
 ' This master sample exercises the currently exposed Notes runtime surface across:
 ' NotesSession, NotesName, NotesDateTime, NotesDatabase, NotesDocument,
 ' NotesDocumentCollection, NotesNoteCollection, NotesItem, NotesRichTextItem,
-' NotesAgent, NotesAgentResult, NotesStream, NotesView, NotesViewEntry,
+' NotesAgent, NotesStream, NotesView, NotesViewEntry,
 ' NotesViewEntryCollection, NotesViewNavigator, NotesDXLImporter and NotesDXLExporter.
 '
 ' The database lifecycle section creates and removes only a temporary NSF.
@@ -163,7 +163,7 @@ Sub Main()
     Print "STEP=08/17 NotesItem NotesRichTextItem"
     failures = failures + TestItemAndRichText(session, db, TEST_VIEW)
     Print "STEP-RESULT=08 TOTAL=" & CStr(failures)
-    Print "STEP=09/17 NotesAgent NotesAgentResult"
+    Print "STEP=09/17 NotesAgent"
     failures = failures + TestAgent(db, TEST_AGENT)
     Print "STEP-RESULT=09 TOTAL=" & CStr(failures)
     Print "STEP=10/17 NotesStream"
@@ -315,7 +315,6 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
     Dim temp As NotesDocument
     Dim opened As NotesDocument
     Dim profile As NotesDocument
-    Dim result As NotesAgentResult
     Dim agent As NotesAgent
     Dim noteId As String
     Dim unid As String
@@ -440,10 +439,14 @@ Function TestDatabase(ByVal session As Variant, ByVal db As Variant, ByVal viewN
     Print "ProfileIsDesign=" & CStr(profile.IsDesign)
     Call profile.Recycle()
 
-    Set result = db.RunAgent(agentName)
-    If result Is Nothing Then failures = failures + 1 Else Call result.Recycle()
-    Set result = db.RunAgent(agentName, temp)
-    If result Is Nothing Then failures = failures + 1 Else Call result.Recycle()
+    Set agent = db.GetAgent(agentName)
+    If agent Is Nothing Then
+        failures = failures + 1
+    Else
+        If agent.Run() <> 0 Then failures = failures + 1
+        If agent.RunWithDocumentContext(temp) <> 0 Then failures = failures + 1
+        Call agent.Recycle()
+    End If
 
     Call temp.Remove(True)
     Call temp.Recycle()
@@ -951,12 +954,11 @@ End Function
 Function TestAgent(ByVal db As Variant, ByVal agentName As String) As Integer
     Dim failures As Integer
     Dim agent As NotesAgent
-    Dim result As NotesAgentResult
     Dim runResult As Variant
     Dim doc As NotesDocument
     failures = 0
 
-    Print "SECTION=NotesAgent/NotesAgentResult"
+    Print "SECTION=NotesAgent"
 
     Set agent = db.GetAgent(agentName)
     If agent Is Nothing Then
@@ -971,23 +973,16 @@ Function TestAgent(ByVal db As Variant, ByVal agentName As String) As Integer
         Print "AgentTrigger=" & CStr(agent.Trigger)
         runResult = agent.Run()
         Print "AgentRun=" & CStr(runResult)
-        Call agent.Recycle()
-    End If
-
-    Set result = db.RunAgent(agentName)
-    If result Is Nothing Then
-        failures = failures + 1
-    Else
-        Print "Success=" & CStr(result.Success)
-        Print "Status=" & CStr(result.Status)
-        Print "Output=" & result.Output
-        Call result.Recycle()
     End If
 
     Set doc = db.CreateDocument()
     Call doc.ReplaceItemValue("Form", "XPScriptTest")
-    Set result = db.RunAgent(agentName, doc)
-    If result Is Nothing Then failures = failures + 1 Else Call result.Recycle()
+    If Not agent Is Nothing Then
+        Print "Output=" & agent.ReturnMessage
+        If runResult <> 0 Then failures = failures + 1
+        If agent.RunWithDocumentContext(doc) <> 0 Then failures = failures + 1
+        Call agent.Recycle()
+    End If
     Call doc.Recycle()
 
     TestAgent = failures

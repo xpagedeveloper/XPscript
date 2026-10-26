@@ -209,6 +209,8 @@ Use `New NotesSession()` for platform autodetection. On Windows it resolves the 
 
 `NotesSession.EffectiveUserName` returns the active native session user name, and `NotesSession.UserNameObject` creates a `NotesName` wrapper for that value. Recycle the returned `NotesName` when it is no longer needed.
 
+Run agents through `db.GetAgent(name)`, then `agent.Run()` or `agent.RunWithDocumentContext(document)`. Read `agent.ReturnMessage` for captured output and recycle the agent afterwards. `NotesDatabase.RunAgent` and `NotesAgentResult` were removed; do not generate those obsolete forms.
+
 `NotesDocument.Save()` is a void native save that raises failures. Boolean overloads are also available:
 
 ```xpscript
