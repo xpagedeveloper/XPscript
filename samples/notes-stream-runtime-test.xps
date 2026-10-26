@@ -34,7 +34,8 @@ Sub Main()
     Call stream.WriteText("stream-file")
     Call stream.Close()
 
-    If Not stream.Open(path) Then Error 9968, "NotesStream reopen failed"
+    If Not stream.Open(path, "readonly") Then Error 9968, "NotesStream readonly reopen failed"
+    If Not stream.IsReadOnly Then Error 9971, "Readonly mode was not retained"
     stream.Position = 0
     If stream.ReadText() <> "stream-file" Then Error 9969, "NotesStream file roundtrip failed"
     Call stream.Close()

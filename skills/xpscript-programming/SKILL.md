@@ -231,6 +231,8 @@ View key lookup supports scalar keys and one-dimensional arrays. An array key ta
 
 ## Notes MIME
 
+NotesStream relative file paths remain based on the application's initial working directory after Notes initialization. Use `stream.Open(path, "readonly")` for read-only file access; `Close()` closes a file without recycling the stream. See `samples/notes-stream-runtime-test.xps`.
+
 For DXL, obtain the importer with `session.CreateDXLImporter()` and call `importer.Import(path, database)` with an open NotesDatabase (a Variant-held reference is accepted). Read `importer.Log` after import or a handled error; repeated reads leave the importer alive. Recycle the importer explicitly when finished. See `samples/notes-dxl-log-runtime-test.xps`.
 
 Use `NotesMIMEEntity` only with the currently documented native MIME subset in `docs/notes-mime-entity.md`.

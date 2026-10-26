@@ -19,6 +19,8 @@ Except for `NotesSession`, objects are created from another Notes object rather 
 
 Numeric Notes properties exposed as 32-bit integers accept XPscript numeric values through Variant references, including case-insensitive member names. Conversion is checked before invoking the setter, so overflow leaves the previous value intact. See `samples/notes-richtext-numeric-setters-runtime-test.xps`.
 
+`NotesStream.Open` resolves relative filenames against the application working directory captured before loading Notes, so Notes changing the process working directory does not redirect stream files into the Notes installation. Absolute filenames remain supported. See `samples/notes-stream-runtime-test.xps`.
+
 ## NotesSession
 
 DXL importer/exporter `Log` reads a native result-log copy using the MEMHANDLE memory API and releases that copy after conversion to a string. Reading `Log` repeatedly does not recycle the importer/exporter. DXL importer handles remain 32-bit MEMHANDLE values, including on 64-bit Windows.
