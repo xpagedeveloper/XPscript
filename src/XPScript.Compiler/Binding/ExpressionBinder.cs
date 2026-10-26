@@ -713,7 +713,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     {
         if (argument is BoundNameExpression { Symbol: VariableSymbol { HasTypedStorage: false } })
             return Error(syntax, CompilerDiagnosticCodes.TargetApiUnavailable,
-                "ByRef arguments require typed writable storage; initialized or untyped module variables are not implemented yet.");
+                "ByRef arguments require typed writable storage; this module variable does not have a typed storage carrier.");
         if (!_symbols.ClassifyConversion(argument.SemanticType, targetType).IsIdentity || argument.Type != runtimeType)
             return Error(syntax, CompilerDiagnosticCodes.ArgumentTypeMismatch, $"ByRef {description} requires exactly {targetType.Name}.");
         if (argument is BoundIndexExpression location && !location.Expression.SemanticType.IsArray && !location.Expression.SemanticType.IsList
