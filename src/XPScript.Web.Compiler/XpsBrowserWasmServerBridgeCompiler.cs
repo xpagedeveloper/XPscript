@@ -42,7 +42,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     // intentionally retains its separate 12.0.3 compatibility set.
     private const string AvaloniaVersion = "12.1.4";
     private const string MicrosoftDataSqliteVersion = ApplicationDependencyCatalog.MicrosoftDataSqliteVersion;
-    private const string MicrosoftDataSqlClientVersion = "7.0.2";
+    private const string MicrosoftDataSqlClientVersion = ApplicationDependencyCatalog.MicrosoftDataSqlClientVersion;
     private const string MagickNetVersion = "14.17.1";
     private static readonly Regex VariantDeclaration = new(@"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+As\s+Variant\s*$", RegexOptions.CultureInvariant);
 

@@ -14,7 +14,7 @@ namespace XPScript.Web.Compiler;
 public sealed class XpsWebCompiler
 {
     private const string MicrosoftDataSqliteVersion = ApplicationDependencyCatalog.MicrosoftDataSqliteVersion;
-    private const string MicrosoftDataSqlClientVersion = "7.0.2";
+    private const string MicrosoftDataSqlClientVersion = ApplicationDependencyCatalog.MicrosoftDataSqlClientVersion;
     private const long DefaultPersistentCacheMaxBytes = 512L * 1024 * 1024;
     private static readonly TimeSpan DefaultPersistentCacheMaxAge = TimeSpan.FromDays(7);
     private static readonly TimeSpan PersistentCacheSweepInterval = TimeSpan.FromMinutes(5);
