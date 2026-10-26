@@ -10,6 +10,12 @@ Sub Main()
     Set session = New NotesSession()
     Set db = session.OpenDatabase("", "xpscript.nsf")
     Set importer = session.CreateDXLImporter()
+    importer.ExitOnFirstFatalError = True
+    If Not importer.ExitOnFirstFatalError Then Error 5, "DXL Boolean setter failed"
+    On Error Resume Next
+    If importer Is Nothing Then Error 91, "DXL importer was not created"
+    If Err <> 0 Then Error 5, "DXL importer predicate failed"
+    On Error GoTo 0
     Print "DXL-IMPORT-BEGIN"
     Call importer.Import("xpscript-notes-runtime-fixture.dxl", db)
     Print "DXL-IMPORT-END"

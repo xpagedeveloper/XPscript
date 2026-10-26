@@ -110,6 +110,8 @@ public sealed class BoundStatementEmitter
                     expressionText = AstApplicationSupport.ConvertPropertyValue(property.Receiver.SemanticType.Name, property.Name, expressionText);
                 if (BoundExpressionEmitter.RuntimeObjectType(assignment.Target.SemanticType.Name) is { } targetJsonType)
                     expressionText = $"({targetJsonType})({expressionText})";
+                if (assignment.Target is BoundMemberAccessExpression { Receiver.SemanticType.IsVariant: true })
+                    expressionText = $"((dynamic)({expressionText}))";
                 if (AstImageSupport.IsImage(assignment.Target.SemanticType.Name) &&
                     assignment.Target is BoundNameExpression { Symbol: FieldSymbol } or BoundMemberAccessExpression { IsFieldStorage: true })
                 {

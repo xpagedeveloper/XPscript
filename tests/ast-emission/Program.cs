@@ -121,6 +121,9 @@ Equal("while (!(true))\n{\n}\n", statements.Emit([new BoundDoStatement(new Bound
 var widened = new BoundConversionExpression(new BoundLiteralExpression(7L, typeof(long)), XpTypeSymbol.FromClr(typeof(double)), new Conversion(ConversionKind.NumericWidening));
 Equal("((double)(7L))", expressions.Emit(widened));
 var variant = new BoundNameExpression(new VariableSymbol("value", typeof(object), XpTypeSymbol.Variant));
+var dynamicBooleanStore = statements.Emit([new BoundAssignmentStatement(
+    new BoundMemberAccessExpression(variant, "Enabled", typeof(object), XpTypeSymbol.Variant),
+    new BoundLiteralExpression(true, typeof(bool)), false)]);
 Equal("XPScriptRuntime.CLng(value)", expressions.Emit(new BoundConversionExpression(variant, XpTypeSymbol.FromClr(typeof(long)), new Conversion(ConversionKind.FromVariant))));
 Equal("while (XPScriptNullRuntime.ConditionValue(value))\n{\n}\n", statements.Emit([new BoundWhileStatement(variant, [])]));
 Equal("while (true)\n{\n}\n", statements.Emit([new BoundDoStatement(null, null, false, [])]));
@@ -238,6 +241,16 @@ var source = $$"""
 using System;
 public static class Probe
 {
+    public sealed class DynamicSettings
+    {
+        public bool Enabled { get; set; }
+    }
+    public static bool VariantBooleanSetter()
+    {
+        object value = new DynamicSettings();
+        {{dynamicBooleanStore}}
+        return ((DynamicSettings)value).Enabled;
+    }
     public static bool CommandResult;
     public static object Array(string value) => new string[] { value };
     public static bool RunCommand(string command, string[] args)
@@ -351,6 +364,7 @@ Equal(6L, Invoke("ForAllFlow"));
 Equal(9L, Invoke("SelectFlow"));
 Equal(11L, Invoke("ExceptionalCopyback"));
 Equal(11L, Invoke("ExceptionalAliasCopyback"));
+Equal(true, Invoke("VariantBooleanSetter"));
 // Reflection boxes ref arguments and writes the updated value back into the array.
 var refArgs = new object?[] { 3L, 0L };
 type.GetMethod("AddInto")!.Invoke(null, refArgs);
