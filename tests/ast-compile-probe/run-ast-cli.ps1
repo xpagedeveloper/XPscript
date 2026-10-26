@@ -86,6 +86,31 @@ function Invoke-BoundedDotnetRun([string[]] $arguments, [int] $timeoutMillisecon
         $process.Dispose()
     }
 }
+function Invoke-BoundedExecutable([string] $path, [int] $timeoutMilliseconds = 120000) {
+    $info = [System.Diagnostics.ProcessStartInfo]::new($path)
+    $info.UseShellExecute = $false
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $info
+    [void]$process.Start()
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    try {
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        while (-not $process.HasExited -and $stopwatch.ElapsedMilliseconds -lt $timeoutMilliseconds) {
+            Start-Sleep -Milliseconds 100
+        }
+        if (-not $process.HasExited) {
+            $process.Kill($true)
+            $process.WaitForExit()
+            return @{ TimedOut = $true; ExitCode = $null; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
+        }
+        return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
+    } finally {
+        $process.Dispose()
+    }
+}
 function Assert-HttpAccessorProbe {
     $probe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $root 'tests/AstHttpRuntimeProbe'), '-c', 'Release', '--no-restore', '--', $root, '--accessors-only')
     if ($probe.TimedOut) { throw 'AST HTTP accessor reference/security regression timed out.' }
@@ -1654,8 +1679,9 @@ if ($LASTEXITCODE -ne 0 -or ($listStorageResult -join "`n") -ne 'LIST_STABLE_STO
 $listStorageNormal = Join-Path $output $(if ($IsWindows) { 'list-stable-normal.exe' } else { 'list-stable-normal' })
 dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'list-stable-storage.xps') -o $listStorageNormal --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal shared List storage compilation failed.' }
-$listStorageNormalResult = & $listStorageNormal
-if ($LASTEXITCODE -ne 0 -or ($listStorageNormalResult -join "`n") -ne 'LIST_STABLE_STORAGE_OK') { throw 'Normal/AST shared List storage parity failed.' }
+$listStorageNormalResult = Invoke-BoundedExecutable $listStorageNormal
+if ($listStorageNormalResult.TimedOut) { throw 'Normal shared List storage execution timed out.' }
+if ($listStorageNormalResult.ExitCode -ne 0 -or $listStorageNormalResult.Output.Trim() -ne 'LIST_STABLE_STORAGE_OK') { throw 'Normal/AST shared List storage parity failed.' }
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-list-lifetime.xps') -o (Join-Path $output 'indexed-byref-list-lifetime')
 if ($LASTEXITCODE -ne 0) { throw 'AST captured List reference compilation failed.' }
 $listLifetimeResult = dotnet (Join-Path $output 'indexed-byref-list-lifetime/Generated.dll')
@@ -1693,8 +1719,9 @@ foreach ($indexedFixture in @('indexed-byref-module-simple', 'indexed-byref-fiel
 $indexedNormal = Join-Path $output $(if ($IsWindows) { 'indexed-get-normal.exe' } else { 'indexed-get-normal' })
 dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'indexed-get-parity.xps') -o $indexedNormal --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal indexed getter compilation failed.' }
-$indexedNormalResult = & $indexedNormal
-if ($LASTEXITCODE -ne 0 -or ($indexedNormalResult -join "`n") -ne '6') { throw 'Normal/AST indexed getter parity failed.' }
+$indexedNormalResult = Invoke-BoundedExecutable $indexedNormal
+if ($indexedNormalResult.TimedOut) { throw 'Normal indexed getter execution timed out.' }
+if ($indexedNormalResult.ExitCode -ne 0 -or $indexedNormalResult.Output.Trim() -ne '6') { throw 'Normal/AST indexed getter parity failed.' }
 dotnet $compiler ast-compile (Join-Path $root 'samples/indexed-properties.xps') -o (Join-Path $output 'indexed-existing-sample')
 if ($LASTEXITCODE -ne 0) { throw 'Existing indexed scalar sample compilation failed.' }
 $indexedSampleResult = dotnet (Join-Path $output 'indexed-existing-sample/Generated.dll')
@@ -1725,8 +1752,9 @@ if ($LASTEXITCODE -ne 0 -or ($classMethodsResult -join "`n") -ne 'CLASS_METHODS_
 $classNormalPath = Join-Path $output $(if ($IsWindows) { 'class-methods-normal.exe' } else { 'class-methods-normal' })
 dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o $classNormalPath --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal instance class method compilation failed.' }
-$classNormalResult = & $classNormalPath
-if ($LASTEXITCODE -ne 0 -or ($classNormalResult -join "`n") -ne ($classMethodsResult -join "`n")) { throw 'Normal/AST class method parity failed.' }
+$classNormalResult = Invoke-BoundedExecutable $classNormalPath
+if ($classNormalResult.TimedOut) { throw 'Normal instance class method execution timed out.' }
+if ($classNormalResult.ExitCode -ne 0 -or $classNormalResult.Output.Trim() -ne ($classMethodsResult -join "`n").Trim()) { throw 'Normal/AST class method parity failed.' }
 foreach ($classInvalid in @('class-method-scope-error', 'class-method-private-error', 'class-field-private-error', 'class-method-body-error')) {
     $classFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$classInvalid.xps") -o (Join-Path $output $classInvalid) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($classFailure -join "`n") -notmatch "$classInvalid.xps:(3|6|7):") { throw "Class diagnostic source span lost: $classInvalid" }
