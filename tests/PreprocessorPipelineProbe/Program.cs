@@ -316,8 +316,8 @@ void VerifyArchiveDependencyInjection()
         var extendedProps = File.ReadAllText(Path.Combine(extendedRoot, "Directory.Build.props"));
         if (zipProps.Contains("SharpCompress", StringComparison.Ordinal))
             throw new Exception("ZIP-only Archive unexpectedly injected SharpCompress.");
-        if (!extendedProps.Contains("PackageReference Include=\"SharpCompress\" Version=\"0.50.4\"", StringComparison.Ordinal))
-            throw new Exception("Extended Archive did not inject SharpCompress 0.50.4.");
+        if (!extendedProps.Contains("PackageReference Include=\"SharpCompress\" Version=\"0.50.7\"", StringComparison.Ordinal))
+            throw new Exception("Extended Archive did not inject SharpCompress 0.50.7.");
     }
     finally
     {

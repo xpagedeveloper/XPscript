@@ -14,7 +14,7 @@ public static class ApplicationDependencyCatalog
     public const string NpgsqlVersion = "10.0.3";
     public const string MimeKitVersion = "4.18.2";
     public const string MagickNetVersion = "14.17.1";
-    public const string SharpCompressVersion = "0.50.4";
+    public const string SharpCompressVersion = "0.50.7";
 
     public static IReadOnlyList<ApplicationPackageReference> Defaults { get; } =
     [
