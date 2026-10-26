@@ -54,9 +54,6 @@ internal static class AstObjectSupportRegistry
         "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement",
         "XPSpreadsheet", "XPWorksheet", "XPCell", "XPRange",
         "UIForm", "UIListView",
-        "XPCsvDocument", "XPCsvHeaderCollection", "XPCsvRowCollection", "XPCsvRow", "XPCsvColumnCollection", "XPCsvColumn"
-        ,"XPXmlDocument", "XPXmlElement", "XPXmlNode", "XPXmlNodeCollection", "XPXmlAttribute", "XPXmlAttributeCollection",
-        "XPXmlValidationResult", "XPXmlValidationError", "XPXmlValidationErrorCollection"
     };
 
     public static readonly IReadOnlyList<ObjectDefinition> Objects = BuildObjectDefinitions();
