@@ -19,7 +19,11 @@ internal static class XPCrossPlatformRuntime
 
     public static bool FileExists(object? path) => File.Exists(XPScriptFileSystemRuntime.ResolvePath(path));
 
-    public static bool DirExists(object? path) => Directory.Exists(XPScriptFileSystemRuntime.ResolvePath(path));
+    public static bool DirExists(object? path)
+    {
+        var value = NormalizeDirectoryProbe(XPScriptFileSystemRuntime.ResolvePath(path));
+        return Directory.Exists(value);
+    }
 
     public static bool IsFile(object? path)
     {
