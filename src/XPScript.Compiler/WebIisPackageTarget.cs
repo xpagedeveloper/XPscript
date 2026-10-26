@@ -5,6 +5,8 @@ namespace XPScript.Compiler;
 
 internal static class WebIisPackageTarget
 {
+    private static readonly TimeSpan HostPublishTimeout = TimeSpan.FromMinutes(5);
+
     public static async Task<CompileResult> BuildAsync(string sourcePath, string? outputPath, bool selfContained, string resultFormat)
     {
         if (!File.Exists(sourcePath))
@@ -87,7 +89,15 @@ internal static class WebIisPackageTarget
                 ?? throw new CompilerException("Unable to start dotnet publish for webiis target.");
             var stdout = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
             var stderr = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
-            await process.WaitForExitAsync().ConfigureAwait(false);
+            var waitTask = process.WaitForExitAsync();
+            var completed = await Task.WhenAny(waitTask, Task.Delay(HostPublishTimeout)).ConfigureAwait(false);
+            if (completed != waitTask)
+            {
+                try { process.Kill(entireProcessTree: true); } catch { }
+                await process.WaitForExitAsync().ConfigureAwait(false);
+                throw new CompilerException($"Unable to publish IIS host: dotnet publish exceeded the {HostPublishTimeout.TotalMinutes:0} minute timeout.");
+            }
+            await waitTask.ConfigureAwait(false);
             if (process.ExitCode != 0)
                 throw new CompilerException("Unable to publish IIS host: " + (stderr.Length > 0 ? stderr : stdout));
         }
