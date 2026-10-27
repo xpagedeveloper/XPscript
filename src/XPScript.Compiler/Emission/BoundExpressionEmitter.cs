@@ -192,6 +192,15 @@ public sealed class BoundExpressionEmitter
         "NOTESAGENT" => "XPScriptNotesAgent",
         "NOTESSTREAM" => "XPScriptNotesStream",
         "NOTESMAIL" => "XPScriptNotesMail",
+        "NOTESRICHTEXTITEM" => "XPScriptNotesRichTextItem",
+        "NOTESRICHTEXTNAVIGATOR" => "XPScriptNotesRichTextNavigator",
+        "NOTESRICHTEXTPARAGRAPHSTYLE" => "XPScriptNotesRichTextParagraphStyle",
+        "NOTESRICHTEXTRANGE" => "XPScriptNotesRichTextRange",
+        "NOTESRICHTEXTSECTION" => "XPScriptNotesRichTextSection",
+        "NOTESRICHTEXTSTYLE" => "XPScriptNotesRichTextStyle",
+        "NOTESRICHTEXTTAB" => "XPScriptNotesRichTextTab",
+        "NOTESRICHTEXTTABLE" => "XPScriptNotesRichTextTable",
+        "NOTESRICHTEXTDOCLINK" => "XPScriptNotesRichTextDocLink",
         "PATH" => "XpPath",
         _ => null
     });

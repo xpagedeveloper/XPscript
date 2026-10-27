@@ -77,7 +77,9 @@ internal static class AstObjectSupportRegistry
         "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall",
         "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "NotesHTTPRequest",
         "NotesSession", "NotesDatabase", "NotesDocument", "NotesDocumentCollection",
-        "NotesName", "NotesItem", "NotesDateTime", "NotesView", "NotesAgent", "NotesStream", "NotesMail"
+        "NotesName", "NotesItem", "NotesDateTime", "NotesView", "NotesAgent", "NotesStream", "NotesMail",
+        "NotesRichTextItem", "NotesRichTextNavigator", "NotesRichTextParagraphStyle", "NotesRichTextRange",
+        "NotesRichTextSection", "NotesRichTextStyle", "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink"
     };
 
     internal static bool SupportsClassMethodNativeType(string? name) =>
