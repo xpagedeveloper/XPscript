@@ -33,6 +33,21 @@ Sub Main()
 End Sub
 """, "module-level state", "Notes", "Module");
 
+            VerifyStructuredRejected(root, "class-method-notes.xps", """
+[Platform:browser-wasm]
+
+Class Customer
+    Public Function ReadServerName() As String
+        Dim session As New NotesSession
+        ReadServerName = session.ServerName
+    End Function
+End Class
+
+Sub Main()
+    Print "browser"
+End Sub
+""", "ReadServerName", "ClassMethod", "XPS3002", "execution-context");
+
             VerifyRejected(root, "invalid-spinner-delay.xps", """
 [Platform:browser-wasm]
 
