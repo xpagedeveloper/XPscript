@@ -602,6 +602,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [x] Compare observable runtime output for the deterministic corpus. The compatibility harness requires exact legacy/AST output equality for all 15 fixtures; broader repository/demo behavior remains a separate audit.
 - [x] Compare generated target behavior for console on the supported desktop RIDs. The AST target matrix compiles and executes `shared-runtime.xps` for `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64`; the GitHub workflow runs the same target-specific compilation on matching hosted runners.
 - [ ] Compare web target behavior.
+  - [x] Enforce the Notes object boundary for browser-WASM: native `Notes*` and `XPNotes*` objects are rejected unless the source is explicitly marked `[ServerSide]`; server-side web compilation remains supported. The browser boundary regression passes with `NOTES_BOUNDARY_REJECTIONS_OK`, and permanent Platform FullTest coverage is configured for the browser-WASM target.
 - [ ] Compare desktop/Avalonia behavior.
   - [x] AST desktop-target compilation was verified with `demo/desktop-ui/customer-form.xps`; Avalonia 12.0.3 desktop dependencies were resolved locally and `Generated.exe` was produced. `DesktopUIFormLifecycleSmoke` also passes.
   - [x] The legacy desktop bridge baseline now passes `DesktopUIFormBridgeSmoke` and `DesktopUIFormLifecycleSmoke`; dialog-only sources no longer enter UIForm lifecycle rewriting when no UIForm runtime is generated.
