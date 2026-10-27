@@ -78,10 +78,18 @@ function Invoke-BoundedDotnetRun([string[]] $arguments, [int] $timeoutMillisecon
         }
         if (-not $process.HasExited) {
             $process.Kill($true)
-            $process.WaitForExit()
-            return @{ TimedOut = $true; ExitCode = $null; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
+            [void]$process.WaitForExit(5000)
+            $stdoutReady = $stdoutTask.Wait(5000)
+            $stderrReady = $stderrTask.Wait(5000)
+            $output = if ($stdoutReady) { $stdoutTask.Result } else { '' }
+            $output += if ($stderrReady) { $stderrTask.Result } else { '' }
+            return @{ TimedOut = $true; ExitCode = $null; Output = $output }
         }
-        return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
+        $stdoutReady = $stdoutTask.Wait(5000)
+        $stderrReady = $stderrTask.Wait(5000)
+        $output = if ($stdoutReady) { $stdoutTask.Result } else { '' }
+        $output += if ($stderrReady) { $stderrTask.Result } else { '' }
+        return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $output }
     } finally {
         $process.Dispose()
     }
