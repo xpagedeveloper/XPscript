@@ -152,6 +152,23 @@ Sub Main()
     Print ReadServerValue()
 End Sub
 """);
+
+            VerifyAccepted(root, "server-side-json-compatibility-constructors.xps", """
+[Platform:browser-wasm]
+
+[ServerSide]
+Function ReadServerValue() As String
+    Dim navigator As New XPJSONNavigator("{""name"":""server""}")
+    Dim jsonObject As New XPJSONObject
+    Dim jsonArray As New XPJSONArray
+    Dim jsonElement As New XPJSONElement("name", "server")
+    ReadServerValue = "server"
+End Function
+
+Sub Main()
+    Print ReadServerValue()
+End Sub
+""");
         }
         finally
         {
