@@ -73,8 +73,8 @@ internal sealed class ArchiveObjectPreprocessor
                 continue;
             }
 
-            var rewritten = Regex.Replace(line, @"\bNew\s+Archive\s*(?:\(\s*\))?", "XPScriptArchiveFactory.Create()", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+Archive\s*\((.*)\)", m => CreateArchiveExpression(m.Groups[1].Value, sourceName, lineIndex + 1, raw), RegexOptions.IgnoreCase);
+            var rewritten = Regex.Replace(line, @"\bNew\s+Archive\b\s*(?:\(\s*\))?", "XPScriptArchiveFactory.Create()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+Archive\b\s*\((.*)\)", m => CreateArchiveExpression(m.Groups[1].Value, sourceName, lineIndex + 1, raw), RegexOptions.IgnoreCase);
 
             foreach (var archiveName in archiveVariables.OrderByDescending(x => x.Length))
             {

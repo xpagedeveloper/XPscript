@@ -1,0 +1,23 @@
+Option Declare
+Class ArchiveMethods
+    Public Function Identity(ByVal value As Archive) As Archive
+        Call value.AddText("shared.txt", "shared archive")
+        Set Identity = value
+    End Function
+    Public Function Entry(ByVal value As ArchiveEntry) As ArchiveEntry
+        Set Entry = value
+    End Function
+End Class
+Sub Main()
+    Dim methods As New ArchiveMethods
+    Dim value As New Archive()
+    Call value.Create("zip")
+    Dim returned As Archive
+    Set returned = methods.Identity(value)
+    If Not (returned Is value) Then Error 4293
+    If value.ReadText("shared.txt") <> "shared archive" Then Error 4294
+    Dim entryValue As ArchiveEntry
+    Set entryValue = value.GetEntry("shared.txt")
+    If Not (methods.Entry(entryValue) Is entryValue) Then Error 4295
+    Print "AST_ARCHIVE_CLASS_METHOD_OK"
+End Sub

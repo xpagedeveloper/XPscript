@@ -1236,6 +1236,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST native class-method reference runtime comp
 $nativeReferenceResult = dotnet (Join-Path $nativeReferenceOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($nativeReferenceResult -join "`n") -ne 'AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK') { throw 'AST native class-method reference runtime execution failed.' }
 Write-Host 'AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK'
+$archiveMethodOutput = Join-Path $output 'class-method-archive-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-archive-next.xps') -o $archiveMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Archive class-method compilation failed.' }
+$archiveMethodResult = dotnet (Join-Path $archiveMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($archiveMethodResult -join "`n") -ne 'AST_ARCHIVE_CLASS_METHOD_OK') { throw 'AST Archive class-method execution failed.' }
+Write-Host 'AST_ARCHIVE_CLASS_METHOD_OK'
 $jsonArrayClassMethodOutput = Join-Path $output 'class-method-json-array-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-json-array-next.xps') -o $jsonArrayClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST JSON array class-method compilation failed.' }

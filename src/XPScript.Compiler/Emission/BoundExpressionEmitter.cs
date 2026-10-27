@@ -168,6 +168,9 @@ public sealed class BoundExpressionEmitter
     private static string? RuntimeObjectTypeCore(string name) => AstApplicationSupport.RuntimeType(name) ?? AstSpreadsheetSupport.RuntimeType(name) ?? AstHttpSupport.RuntimeType(name) ?? AstHttpDatabaseSupport.RuntimeType(name) ?? AstJsonValidationSupport.RuntimeType(name) ?? XpsShellResultAstSupport.RuntimeType(name) ?? AstPathValueSupport.RuntimeType(name) ?? AstNotesJsonSupport.RuntimeType(name) ?? AstSystemInventorySupport.RuntimeType(name) ?? AstNetworkToolsSupport.RuntimeType(name) ?? AstSqliteSupport.RuntimeType(name) ?? AstMySqlSupport.RuntimeType(name) ?? AstMsSqlSupport.RuntimeType(name) ?? AstSupabaseSupport.RuntimeType(name) ?? AstAttachmentSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
     {
         "XPIMAGE" => "XPImage",
+        // Archive factories return file, memory or extended implementations.
+        "ARCHIVE" => "dynamic",
+        "ARCHIVEENTRY" => "XPScriptArchiveEntry",
         "XPJSONDOCUMENT" => "XPScriptJsonDocument",
         "XPJSONOBJECT" => "XPScriptJsonObject",
         "XPJSONARRAY" => "XPScriptJsonArray",

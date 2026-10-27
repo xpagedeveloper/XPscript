@@ -104,6 +104,7 @@ internal static class AstObjectSupportRegistry
     /// </summary>
     public static readonly IReadOnlySet<string> ClassMethodNativeTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
+        "Archive", "ArchiveEntry",
         "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
         "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
         "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo",

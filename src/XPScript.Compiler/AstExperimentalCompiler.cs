@@ -438,6 +438,7 @@ public static class AstExperimentalCompiler
         DeclareNativeStatic(symbols, "XPJsonSchema.FromJson", [typeof(object)], "XPScriptJsonSchema.FromJson");
         if (usesArchive)
         {
+            AstArchiveSupport.Import(symbols);
             symbols.Declare(new TypeSymbol("XPScriptArchiveFactory", typeof(object), XpTypeSymbol.User("XPScriptArchiveFactory")));
             DeclareNativeStatic(symbols, "XPScriptArchiveFactory.Create", [], "XPScriptArchiveFactory.Create");
             DeclareNativeStatic(symbols, "XPScriptArchiveFactory.Create", [typeof(object)], "XPScriptArchiveFactory.Create");
