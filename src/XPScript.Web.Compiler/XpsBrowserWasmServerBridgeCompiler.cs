@@ -216,6 +216,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
+    <PublishTrimmed>false</PublishTrimmed>
     <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
     <OutputType>Exe</OutputType>
     <StartupObject>Program</StartupObject>
@@ -349,7 +350,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     {
         var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
         var baseRoot = string.IsNullOrWhiteSpace(configuredRoot)
-            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XPScript")
             : Path.GetFullPath(configuredRoot);
         var path = Path.Combine(baseRoot, "wasm-build", "server-bridge", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);

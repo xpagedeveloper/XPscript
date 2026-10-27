@@ -92,7 +92,7 @@ public sealed class XpsBrowserWasmCompiler
     {
         var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
         var baseRoot = string.IsNullOrWhiteSpace(configuredRoot)
-            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XPScript")
             : Path.GetFullPath(configuredRoot);
         var path = Path.Combine(baseRoot, "wasm-build", "browser", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
@@ -142,7 +142,7 @@ public sealed class XpsBrowserWasmCompiler
         var archiveItems = usesExtendedArchive
             ? "<PackageReference Include=\"SharpCompress\" Version=\"" + ApplicationDependencyCatalog.ResolveVersion("SharpCompress", ApplicationDependencyCatalog.SharpCompressVersion) + "\" /><TrimmerRootAssembly Include=\"SharpCompress\" />"
             : string.Empty;
-        return "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework><RuntimeIdentifier>browser-wasm</RuntimeIdentifier><SelfContained>true</SelfContained><GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles><OutputType>Exe</OutputType><StartupObject>Program</StartupObject><AllowUnsafeBlocks>true</AllowUnsafeBlocks><WasmMainJSPath>main.js</WasmMainJSPath><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><NoWarn>CA1416;CS8600;CS8601;CS8603;CS8618;$(NoWarn)</NoWarn><AssemblyName>XPScript.BrowserApp</AssemblyName></PropertyGroup><ItemGroup><Reference Include=\"XPScript.UI.Browser\"><HintPath>" + escaped + "</HintPath><Private>true</Private></Reference><TrimmerRootAssembly Include=\"XPScript.UI.Browser\" />" + archiveItems + "<Content Include=\"index.html\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /><Content Include=\"xpscript-browser.js\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /></ItemGroup></Project>";
+        return "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework><RuntimeIdentifier>browser-wasm</RuntimeIdentifier><SelfContained>true</SelfContained><PublishTrimmed>false</PublishTrimmed><GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles><OutputType>Exe</OutputType><StartupObject>Program</StartupObject><AllowUnsafeBlocks>true</AllowUnsafeBlocks><WasmMainJSPath>main.js</WasmMainJSPath><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><NoWarn>CA1416;CS8600;CS8601;CS8603;CS8618;$(NoWarn)</NoWarn><AssemblyName>XPScript.BrowserApp</AssemblyName></PropertyGroup><ItemGroup><Reference Include=\"XPScript.UI.Browser\"><HintPath>" + escaped + "</HintPath><Private>true</Private></Reference><TrimmerRootAssembly Include=\"XPScript.UI.Browser\" />" + archiveItems + "<Content Include=\"index.html\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /><Content Include=\"xpscript-browser.js\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /></ItemGroup></Project>";
     }
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
