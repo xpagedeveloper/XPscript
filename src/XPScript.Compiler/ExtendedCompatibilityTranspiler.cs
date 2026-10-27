@@ -256,6 +256,22 @@ internal sealed class ExtendedCompatibilityTranspiler
     private static string CanonicalizeCompatibilityMembers(string line, Dictionary<string, string> variables) => line;
     private static string RewriteNoArgCompatibilityCalls(string line, Dictionary<string, string> variables) => line;
     private static string? RewriteCompatibilityStatement(string line, Dictionary<string, string> variables) => null;
-    private static string BuildCompatibilityConstructor(string type, string args) => $"New {type}({args})";
+    private static string BuildCompatibilityConstructor(string type, string args)
+    {
+        var supplied = args.Trim();
+        return type switch
+        {
+            "NotesHTTPRequest" => "LSJsonHttpRuntime.CreateHTTPRequest()",
+            "XPJSONNavigator" => supplied.Length == 0
+                ? "LSJsonHttpRuntime.CreateJSONNavigator()"
+                : $"LSJsonHttpRuntime.CreateJSONNavigator({supplied})",
+            "XPJSONObject" => "LSJsonHttpRuntime.CreateJSONObject()",
+            "XPJSONArray" => "LSJsonHttpRuntime.CreateJSONArray()",
+            "XPJSONElement" => supplied.Length == 0
+                ? "LSJsonHttpRuntime.CreateJSONElement()"
+                : $"LSJsonHttpRuntime.CreateJSONElement({supplied})",
+            _ => throw new CompilerException($"Unsupported compatibility constructor '{type}'.")
+        };
+    }
     private static string FillOmittedArguments(string args) => args;
 }

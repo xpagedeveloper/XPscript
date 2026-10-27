@@ -138,6 +138,20 @@ Sub Main()
     Print ReadServerName()
 End Sub
 """);
+
+            VerifyAccepted(root, "server-side-xpnotes-http.xps", """
+[Platform:browser-wasm]
+
+[ServerSide]
+Function ReadServerValue() As String
+    Dim request As New XPNotesHTTPRequest
+    ReadServerValue = "server"
+End Function
+
+Sub Main()
+    Print ReadServerValue()
+End Sub
+""");
         }
         finally
         {
