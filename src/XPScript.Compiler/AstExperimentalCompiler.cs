@@ -162,6 +162,12 @@ public static class AstExperimentalCompiler
         ValidateAstAiCallbacks(fullSource);
         var runtimeFeatures = RuntimeFeatures.Detect(fullSource);
         var usesAi = runtimeFeatures.Ai;
+        if (Regex.IsMatch(source, @"(?i)\bXPJSON(?:Navigator|Object|Array|Element)\b"))
+            RejectUnsupported(
+                sourcePath,
+                source,
+                @"(?i)\bXPJSON(?:Navigator|Object|Array|Element)\b",
+                "The all-caps XPJSON compatibility objects are legacy-only. Use the AST-supported XPJsonNavigator/XPJsonObject/XPJsonArray/XPJsonElement surface instead.");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
             if (definition!.Route == AstObjectSupportRegistry.CompilationRoute.LegacyFallback)
