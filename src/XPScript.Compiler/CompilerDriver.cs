@@ -202,6 +202,12 @@ public sealed class CompilerDriver
         string generatedSource;
         using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
             generatedSource = transpiler.Transpile(source, sourcePath, rid);
+        // Native database providers expose the shared attachment collection
+        // surface even when the source does not call Attachments directly.
+        // Keep the legacy compiler's generated source self-contained just as
+        // the AST path is; otherwise a database-only legacy build references
+        // XPScriptAttachmentCollectionV3 without emitting its runtime.
+        generatedSource = AstExperimentalCompiler.EnsureAttachmentRuntime(generatedSource);
 
         var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
         var tempBase = string.IsNullOrWhiteSpace(configuredTempRoot)
@@ -329,6 +335,7 @@ public sealed class CompilerDriver
         string generatedSource;
         using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
             generatedSource = transpiler.Transpile(source, sourcePath, rid);
+        generatedSource = AstExperimentalCompiler.EnsureAttachmentRuntime(generatedSource);
 
         var runOutputDirectory = Path.GetFullPath(outputDirectory);
         if (!Directory.Exists(runOutputDirectory))
