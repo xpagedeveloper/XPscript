@@ -123,8 +123,11 @@ jobs:
       - name: Install Android workload
         shell: bash
         run: dotnet workload install android
-      - name: Build Android compiler probe
+      - name: Build compiler, verify Android metadata and compile AST target
         shell: bash
         run: |
+          dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
           dotnet run --project tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/android-debug-print.xps --output "$RUNNER_TEMP/ast-android-arm64" --runtime=false --platform android-arm64 --debug
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-debug-print.xps --output "$RUNNER_TEMP/ast-android-arm64" --runtime=false --platform android-arm64 --debug
+          test -f "$RUNNER_TEMP/ast-android-arm64/Generated.dll"
+          echo 'AST_ANDROID_TARGET_BUILD=OK'
