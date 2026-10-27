@@ -141,6 +141,7 @@ if (Should-Run 'language') {
   if ($astLexer.ExitCode -ne 0) { exit $astLexer.ExitCode }
   $astBinding = Invoke-Bounded 'dotnet' @('run','--project','./tests/ast-binding/AstBindingProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'AST semantic binder regression'
   if ($astBinding.ExitCode -ne 0) { exit $astBinding.ExitCode }
+  if ($astBinding.Output -notmatch 'AST_BINDING_NOTES_NATIVE_ROUTES_OK') { throw 'AST native Notes routing regression missing.' }
   foreach ($marker in @('AST_BINDING_APPLICATION_NATIVE_OK','AST_BINDING_SPREADSHEET_NATIVE_OK','AST_BINDING_HTTP_NATIVE_OK','AST_BINDING_XML_NATIVE_OK','AST_BINDING_CSV_NATIVE_OK','AST_BINDING_RECEIVER_DIAGNOSTICS_OK','AST_BINDING_DECLARED_CALL_DIAGNOSTICS_OK','AST_BINDING_TYPE_DIAGNOSTICS_OK','AST_BINDING_COLLECTION_TYPES_OK','AST_BINDING_VARIANT_SEMANTICS_OK','AST_BINDING_OBJECT_SEMANTICS_OK','AST_BINDING_NULL_EMPTY_NOTHING_SEMANTICS_OK')) {
     if ($astBinding.Output -notmatch $marker) { throw "AST semantic binder regression missing: $marker" }
   }

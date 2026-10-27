@@ -199,6 +199,21 @@ object?[] networkArguments = ["Dim tools As New NetworkTools\nPrint tools.IsPriv
 if ((bool)networkRoute.Invoke(null, networkArguments)!)
     throw new InvalidOperationException("NetworkTools unexpectedly routes through the legacy compiler.");
 Console.WriteLine("AST_BINDING_NETWORKTOOLS_NATIVE_OK");
+var objectRegistry = typeof(CompilerSymbolCatalog).Assembly.GetType("XPScript.Compiler.AstObjectSupportRegistry")!;
+var nativeClassTypes = (IReadOnlySet<string>)objectRegistry.GetField("ClassMethodNativeTypeNames")!.GetValue(null)!;
+var objectDefinitions = ((System.Collections.IEnumerable)objectRegistry.GetField("Objects")!.GetValue(null)!).Cast<object>().ToArray();
+foreach (var name in nativeClassTypes.Where(name => name.StartsWith("Notes", StringComparison.OrdinalIgnoreCase) &&
+    !name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase)))
+{
+    var definition = objectDefinitions.SingleOrDefault(value =>
+        string.Equals((string)value.GetType().GetProperty("Name")!.GetValue(value)!, name, StringComparison.OrdinalIgnoreCase));
+    if (definition is null || definition.GetType().GetProperty("Route")!.GetValue(definition)!.ToString() != "Ast")
+        throw new InvalidOperationException("Native Notes class-method type is missing its AST route: " + name);
+    object?[] arguments = [$"Dim value As {name}", null];
+    if ((bool)networkRoute.Invoke(null, arguments)!)
+        throw new InvalidOperationException("Native Notes type unexpectedly selects legacy compilation: " + name);
+}
+Console.WriteLine("AST_BINDING_NOTES_NATIVE_ROUTES_OK");
 var imageSymbols = SymbolTable.CreateWithCompilerCatalog();
 imageSymbols.Declare(new LocalSymbol("image", typeof(object), XpTypeSymbol.User("XPImage")));
 foreach (var text in new[] { "New XPImage(2, 3)", "New XPImage(2, 3, \"#123456\")", "image.width", "image.Resize(2)",

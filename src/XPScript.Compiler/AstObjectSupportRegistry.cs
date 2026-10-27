@@ -138,12 +138,13 @@ internal static class AstObjectSupportRegistry
             .Where(symbol => symbol.Kind.Equals("class", StringComparison.OrdinalIgnoreCase))
             .Select(symbol => symbol.Name)
             .Concat(LegacyObjectNames)
+            .Concat(NotesRuntimeTypes.Keys)
             .Concat(["XPImage"])
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
 
         return names
-            .Select(name => AstObjectNames.Contains(name)
+            .Select(name => AstObjectNames.Contains(name) || NotesRuntimeTypes.ContainsKey(name)
                 ? new ObjectDefinition(name, CompilationRoute.Ast, null)
                 : new ObjectDefinition(name, CompilationRoute.LegacyFallback, null))
             .ToArray();
