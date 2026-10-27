@@ -14,6 +14,26 @@ Class DatabaseStore
     End Sub
 End Class
 
+Class DerivedDatabaseStore Extend DatabaseStore
+    Public reads As Long
+    Public writes As Long
+    Public Property Get Current As XPDBSQLite
+        reads = reads + 1
+        Set Current = Parent.Current
+    End Property
+    Public Property Set Current(ByRef incoming As XPDBSQLite)
+        writes = writes + 1
+        Set Parent.Current = incoming
+    End Property
+End Class
+
+Sub VerifyVirtualDatabase(ByVal store As DatabaseStore, ByVal value As XPDBSQLite)
+    Set store.Current = value
+    If Not (store.Current Is value) Then Error 4290
+    Call store.Current.Execute("CREATE TABLE virtual_entries (name TEXT)")
+    Set store.Current = Nothing
+End Sub
+
 Sub Main()
     Dim store As New DatabaseStore
     Dim original As New XPDBSQLite(":memory:")
@@ -41,5 +61,11 @@ Sub Main()
     Call original.Close()
     If aliasValue.IsOpen Then Error 4289
     Call current.Close()
+    Dim derived As New DerivedDatabaseStore
+    Dim virtualDatabase As New XPDBSQLite(":memory:")
+    Call VerifyVirtualDatabase(derived, virtualDatabase)
+    If derived.reads <> 2 Or derived.writes <> 2 Then Error 4291
+    If Not virtualDatabase.IsOpen Then Error 4292
+    Call virtualDatabase.Close()
     Print "AST_DATABASE_REFERENCE_PROPERTY_OK"
 End Sub

@@ -17,6 +17,16 @@ Generated dependency builds are shared by AST and normal compilation. Declare ea
 New XP objects must be added through the existing compiler pipeline. Do not
 add a second parser or a second machine-interface implementation.
 
+Changes to shared binding, conversions, native type mappings or emission must
+also verify other affected object families. Run the focused regression for the
+changed object first, then existing regressions covering shared reference identity,
+ByRef replacement and relevant ownership differences (including XPImage when
+ownership code changes). Check JSON, XML/CSV, HTTP and database behavior where
+they consume the changed path. Keep family-specific adaptations scoped to their
+semantic type; never infer an object's behavior from a variable name or a shared
+CLR representation. Record which families were executed and retain the permanent
+FullTest coverage; one object's passing test does not establish cross-object safety.
+
 1. Register the object in `AstObjectSupportRegistry`. If the object is not
    ready for AST lowering, return the documented legacy fallback decision.
 2. If the object is allowed as a class-method parameter or result, add its
