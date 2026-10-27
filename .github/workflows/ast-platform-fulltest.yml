@@ -31,6 +31,11 @@ jobs:
             rid: osx-x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
+    env:
+      # CStr is culture-sensitive. Keep CLI fixture output deterministic across
+      # hosted runners until the fixture itself is made culture-independent.
+      LANG: sv_SE.UTF-8
+      LC_ALL: sv_SE.UTF-8
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
