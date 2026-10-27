@@ -1326,6 +1326,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Notes rich-text class-method return compil
 $notesRichTextReturnResult = dotnet (Join-Path $notesRichTextReturnOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($notesRichTextReturnResult -join "`n") -ne 'AST_NOTES_RICHTEXT_CLASS_METHOD_RETURN_OK') { throw 'AST Notes rich-text class-method return execution failed.' }
 Write-Host 'AST_NOTES_RICHTEXT_CLASS_METHOD_RETURN_OK'
+$notesExtendedClassMethodOutput = Join-Path $output 'class-method-notes-extended-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-extended-next.xps') -o $notesExtendedClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST extended Notes class-method compilation failed.' }
+$notesExtendedClassMethodResult = dotnet (Join-Path $notesExtendedClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($notesExtendedClassMethodResult -join "`n") -ne 'AST_NOTES_EXTENDED_CLASS_METHOD_OK') { throw 'AST extended Notes class-method execution failed.' }
+Write-Host 'AST_NOTES_EXTENDED_CLASS_METHOD_OK'
 $notesJsonClassMethodOutput = Join-Path $output 'class-method-notes-json-next'
 $notesJsonClassMethodDiagnostic = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-json-next.xps') -o $notesJsonClassMethodOutput --runtime=false --debug 2>&1 | Out-String
 if ($LASTEXITCODE -eq 0 -or $notesJsonClassMethodDiagnostic -notmatch '(?i)XPJSONNavigator|unsupported type|legacy') {

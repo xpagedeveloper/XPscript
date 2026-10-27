@@ -1,0 +1,13 @@
+Option Declare
+
+Class NotesExtendedMethods
+    Public Function Accept(ByVal entity As NotesMIMEEntity, ByVal header As NotesMIMEHeader, ByVal embedded As NotesEmbeddedObject, ByVal access As NotesDatabaseAccess, ByVal collection As NotesNoteCollection, ByVal importer As NotesDXLImporter, ByVal exporter As NotesDXLExporter, ByVal entry As NotesViewEntry, ByVal entries As NotesViewEntryCollection, ByVal navigator As NotesViewNavigator) As Boolean
+        Accept = (entity Is Nothing) And (header Is Nothing) And (embedded Is Nothing) And (access Is Nothing) And (collection Is Nothing) And (importer Is Nothing) And (exporter Is Nothing) And (entry Is Nothing) And (entries Is Nothing) And (navigator Is Nothing)
+    End Function
+End Class
+
+Sub Main()
+    Dim methods As New NotesExtendedMethods
+    If Not methods.Accept(Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing) Then Error 4266
+    Print "AST_NOTES_EXTENDED_CLASS_METHOD_OK"
+End Sub

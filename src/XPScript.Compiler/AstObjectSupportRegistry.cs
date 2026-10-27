@@ -80,6 +80,9 @@ internal static class AstObjectSupportRegistry
         "NotesName", "NotesItem", "NotesDateTime", "NotesView", "NotesAgent", "NotesStream", "NotesMail",
         "NotesRichTextItem", "NotesRichTextNavigator", "NotesRichTextParagraphStyle", "NotesRichTextRange",
         "NotesRichTextSection", "NotesRichTextStyle", "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink"
+        ,"NotesMIMEEntity", "NotesMIMEHeader", "NotesEmbeddedObject", "NotesDatabaseAccess",
+        "NotesNoteCollection", "NotesDXLImporter", "NotesDXLExporter", "NotesViewEntry", "NotesViewEntryCollection",
+        "NotesViewNavigator"
     };
 
     internal static bool SupportsClassMethodNativeType(string? name) =>
