@@ -115,10 +115,20 @@ function Invoke-BoundedExecutable([string] $path, [int] $timeoutMilliseconds = 1
         }
         if (-not $process.HasExited) {
             $process.Kill($true)
-            $process.WaitForExit()
-            return @{ TimedOut = $true; ExitCode = $null; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
+            [void]$process.WaitForExit(5000)
+            $stdoutReady = $stdoutTask.Wait(5000)
+            $stderrReady = $stderrTask.Wait(5000)
+            $captured = if ($stdoutReady) { $stdoutTask.Result } else { '' }
+            $captured += if ($stderrReady) { $stderrTask.Result } else { '' }
+            return @{ TimedOut = $true; ExitCode = $null; Output = $captured }
         }
-        return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
+        # Descendants can retain redirected handles after the executable exits.
+        # A successful exit must not leave the regression runner waiting forever.
+        $stdoutReady = $stdoutTask.Wait(5000)
+        $stderrReady = $stderrTask.Wait(5000)
+        $captured = if ($stdoutReady) { $stdoutTask.Result } else { '' }
+        $captured += if ($stderrReady) { $stderrTask.Result } else { '' }
+        return @{ TimedOut = -not ($stdoutReady -and $stderrReady); ExitCode = $process.ExitCode; Output = $captured }
     } finally {
         $process.Dispose()
     }
@@ -141,6 +151,26 @@ function Assert-HttpAccessorProbe {
         Write-Host 'AST_HTTP_ACCESSORS_OK'
     }
 }
+# Run the previously stalled parity boundary before the expensive object matrix.
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o (Join-Path $output 'class-methods-native')
+if ($LASTEXITCODE -ne 0) { throw 'AST instance class method compilation failed.' }
+$classMethodsResult = dotnet (Join-Path $output 'class-methods-native/Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($classMethodsResult -join "`n") -ne 'CLASS_METHODS_NATIVE_OK') { throw 'AST instance class method execution failed.' }
+$classNormalPath = Join-Path $output $(if ($IsWindows) { 'class-methods-normal.exe' } else { 'class-methods-normal' })
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o $classNormalPath --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal instance class method compilation failed.' }
+$classNormalResult = Invoke-BoundedExecutable $classNormalPath
+if ($classNormalResult.TimedOut) { throw 'Normal instance class method execution or output capture timed out.' }
+if ($classNormalResult.ExitCode -ne 0 -or $classNormalResult.Output.Trim() -ne ($classMethodsResult -join "`n").Trim()) { throw 'Normal/AST class method parity failed.' }
+Write-Host 'AST_CLASS_METHOD_LEGACY_PARITY_OK'
+$typedSiblingOutput = Join-Path $output 'class-method-typed-sibling-return-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-typed-sibling-return-next.xps') -o $typedSiblingOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST typed sibling method result compilation failed.' }
+$typedSiblingResult = Invoke-BoundedDotnetRun @((Join-Path $typedSiblingOutput 'Generated.dll'))
+if ($typedSiblingResult.TimedOut -or $typedSiblingResult.ExitCode -ne 0 -or $typedSiblingResult.Output.Trim() -ne 'AST_TYPED_SIBLING_RETURN_OK') { throw "AST typed sibling/inherited method result execution failed.`n$($typedSiblingResult.Output)" }
+Write-Host 'AST_TYPED_SIBLING_RETURN_OK'
+$typedSiblingFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-typed-sibling-member-error.xps') -o (Join-Path $output 'class-method-typed-sibling-member-error') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($typedSiblingFailure -join "`n") -notmatch "class-method-typed-sibling-member-error\.xps:11:\d+: XPS2009: Undefined member 'Missing' on 'SiblingValue'") { throw 'AST sibling method result member diagnostic lost its declared type or source span.' }
 Assert-HttpAccessorProbe
 $compileHelp = dotnet $compiler compile --help 2>&1
 if ($LASTEXITCODE -ne 0 -or ($compileHelp -join "`n") -notmatch 'Usage:' -or ($compileHelp -join "`n") -notmatch '--target desktop\|console\|webiis' -or ($compileHelp -join "`n") -notmatch 'desktop\s+Create a desktop executable') { throw 'AST compile command help regression failed.' }
@@ -202,8 +232,13 @@ $webIisOutput = Join-Path $output 'cli-webiis'
 if (Test-Path -LiteralPath $webIisOutput) { Remove-Item -LiteralPath $webIisOutput -Recurse -Force }
 $webIisArchive = Join-Path $output 'cli-webiis.zip'
 if (Test-Path -LiteralPath $webIisArchive) { Remove-Item -LiteralPath $webIisArchive -Force }
-dotnet $compiler ast-compile (Join-Path $webIisRoot 'main.xps') -o $webIisOutput --target webiis --runtime false
+$webIisSharedAssets = Join-Path $root 'src/XPScript.Cli/obj/project.assets.json'
+$webIisAssetsBefore = if (Test-Path -LiteralPath $webIisSharedAssets) { (Get-FileHash -LiteralPath $webIisSharedAssets).Hash } else { $null }
+dotnet $compiler ast-compile (Join-Path $webIisRoot 'main.xps') -o $webIisOutput --target webiis --runtime false --debug
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $webIisArchive)) { throw 'AST --target webiis regression failed.' }
+$webIisAssetsAfter = if (Test-Path -LiteralPath $webIisSharedAssets) { (Get-FileHash -LiteralPath $webIisSharedAssets).Hash } else { $null }
+if ($webIisAssetsBefore -ne $webIisAssetsAfter) { throw 'WebIIS publish changed shared CLI restore assets instead of using its isolated workspace.' }
+Write-Host 'AST_WEBIIS_ISOLATED_RESTORE_OK'
 Write-Host 'AST_DEBUG_AND_WEBIIS_TARGET_OK'
 $platformAliasOutput = Join-Path $output 'cli-platform-alias'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $platformAliasOutput --platform win-x64 --singlefile false --runtime false
@@ -1823,16 +1858,6 @@ foreach ($propertyInvalid in @('class-property-readonly-error', 'class-property-
     $propertyFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$propertyInvalid.xps") -o (Join-Path $output $propertyInvalid) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($propertyFailure -join "`n") -notmatch "$propertyInvalid.xps:(2|3|5|8|9):") { throw "Property diagnostic source mapping lost: $propertyInvalid" }
 }
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o (Join-Path $output 'class-methods-native')
-if ($LASTEXITCODE -ne 0) { throw 'AST instance class method compilation failed.' }
-$classMethodsResult = dotnet (Join-Path $output 'class-methods-native/Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($classMethodsResult -join "`n") -ne 'CLASS_METHODS_NATIVE_OK') { throw 'AST instance class method execution failed.' }
-$classNormalPath = Join-Path $output $(if ($IsWindows) { 'class-methods-normal.exe' } else { 'class-methods-normal' })
-dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o $classNormalPath --single-file=false --runtime=false
-if ($LASTEXITCODE -ne 0) { throw 'Normal instance class method compilation failed.' }
-$classNormalResult = Invoke-BoundedExecutable $classNormalPath
-if ($classNormalResult.TimedOut) { throw 'Normal instance class method execution timed out.' }
-if ($classNormalResult.ExitCode -ne 0 -or $classNormalResult.Output.Trim() -ne ($classMethodsResult -join "`n").Trim()) { throw 'Normal/AST class method parity failed.' }
 foreach ($classInvalid in @('class-method-scope-error', 'class-method-private-error', 'class-field-private-error', 'class-method-body-error')) {
     $classFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$classInvalid.xps") -o (Join-Path $output $classInvalid) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($classFailure -join "`n") -notmatch "$classInvalid.xps:(3|6|7):") { throw "Class diagnostic source span lost: $classInvalid" }
