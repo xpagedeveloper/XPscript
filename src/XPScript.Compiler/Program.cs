@@ -1,5 +1,11 @@
+using System.Globalization;
 using System.Reflection;
 using XPScript.Compiler;
+
+// Compiler syntax and generated C# must be culture-invariant. Runtime programs
+// execute in their own process and retain the caller's locale semantics.
+CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var buildDate = Assembly.GetExecutingAssembly()
     .GetCustomAttributes<AssemblyMetadataAttribute>()
