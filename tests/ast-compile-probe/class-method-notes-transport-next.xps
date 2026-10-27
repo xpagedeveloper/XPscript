@@ -1,0 +1,13 @@
+Option Declare
+
+Class NotesTransportMethods
+    Public Function Accept(ByVal stream As NotesStream, ByVal mail As NotesMail) As Boolean
+        Accept = (stream Is Nothing) And (mail Is Nothing)
+    End Function
+End Class
+
+Sub Main()
+    Dim methods As New NotesTransportMethods
+    If Not methods.Accept(Nothing, Nothing) Then Error 4266
+    Print "AST_NOTES_TRANSPORT_CLASS_METHOD_OK"
+End Sub
