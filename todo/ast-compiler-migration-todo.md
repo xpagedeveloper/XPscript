@@ -834,6 +834,13 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
   - [x] Re-ran the Notes object surface audit and the AST extended-sample compilation suite on 2026-10-25. All audited Notes surfaces passed with no missing or placeholder-like members, and `notes-note-collection-runtime-test.xps`, `notes-note-collection-dxl-runtime-test.xps`, `notes-stream-runtime-test.xps`, `notes-agent-runtime-test.xps`, and `notes-extended-surface.xps` compiled successfully. Native lifecycle execution remains gated by the local Notes ID file.
 - [ ] Complete the Definition of Done audit before changing the package version to `0.9.4 Beta`.
 
+## Automated verification checkpoint — 2026-10-27
+
+- [x] Re-run the complete `tests/ast-compile-probe/run-ast-cli.ps1` suite on Windows after commit `2b970a04`. The original process completed with exit code 0 and `AST CLI compilation probe passed`; no restart was needed after observation was interrupted.
+- [x] Verify the new Notes document/database/value/navigation/transport/rich-text and extended native class-method fixtures within that complete run, including rich-text and extended typed Function returns. These checks cover signatures and Nothing conversion, not live Notes API member execution.
+- [x] Reconfirm the existing constructor/destructor, image ownership, virtual dispatch, indexed properties, native interop, filesystem, database, HTTP, spreadsheet, XML, CSV and JSON probes in the same run.
+- Next: inspect remaining native accessor and lifecycle coverage against the open class/property items above; exercise real object identity, mutation and ByRef behavior before closing any broad migration item. Linux/macOS FullTest evidence and the final manual gates remain outstanding.
+
 ## Final phase: manual local-environment and hardware verification
 
 Run this phase only after all preceding implementation work, permanent FullTest suites, compatibility checks, and GitHub workflow gates are green. These checks depend on machine-specific software, licenses, credentials, hardware, emulators, or host configuration and must not block the earlier automated migration steps.
