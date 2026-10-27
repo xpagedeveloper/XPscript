@@ -72,7 +72,6 @@ public static class AstExperimentalCompiler
         IReadOnlyList<string>? sourceRoots, IReadOnlyList<string>? sourcePreprocessors,
         bool embedAssets, CancellationToken cancellationToken)
     {
-        using var outputLock = CompilerDirectoryLock.Acquire(outputDirectory);
         if (runtimeIdentifier is not null)
             TargetPrerequisiteValidator.Validate(runtimeIdentifier.Trim().ToLowerInvariant());
         using var securityScope = ApplicationSecurityModeContext.Push(securityMode);
@@ -177,6 +176,11 @@ public static class AstExperimentalCompiler
 
             RejectUnsupported(sourcePath, source, $@"(?i)\b{Regex.Escape(definition.Name)}\b", definition.Message ?? "The XP object is not implemented by the AST compiler.");
         }
+        // Acquire the AST output lock only after legacy-fallback routing. The
+        // legacy compiler acquires the same directory lock for its own build;
+        // holding it here would make an intentional fallback fail as a false
+        // concurrent compilation.
+        using var outputLock = CompilerDirectoryLock.Acquire(outputDirectory);
         var optionBase = 0;
         var optionBaseMatch = Regex.Match(source, @"(?im)^\s*Option\s+Base\s+(?<base>[01])\s*(?:\r?$)");
         if (optionBaseMatch.Success)

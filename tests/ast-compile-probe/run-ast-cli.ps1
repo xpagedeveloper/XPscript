@@ -1989,6 +1989,13 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'object-name-text.xps') -o
 if ($LASTEXITCODE -ne 0) { throw 'Object names inside strings/comments must not trigger legacy fallback.' }
 $textObjectResult = dotnet (Join-Path $textObjectOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($textObjectResult -join "`n") -ne 'XPImage') { throw 'AST object-name text regression failed.' }
+$saxAstOutput = Join-Path $output 'sax-legacy-fallback-ast'
+$saxAstFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot '..\..\samples\runtime-sax.xps') -o $saxAstOutput --debug 2>&1
+if ($LASTEXITCODE -ne 2 -or ($saxAstFailure -join "`n") -notmatch 'runtime-sax\.xps:4:1: XPS1012: Unsupported type: NotesSAXParser') { throw 'AST NotesSAXParser fallback routing changed.' }
+$saxLegacyOutput = Join-Path $output 'sax-legacy-fallback-legacy'
+$saxLegacyFailure = dotnet $compiler legacy-compile (Join-Path $PSScriptRoot '..\..\samples\runtime-sax.xps') -o $saxLegacyOutput --single-file=false --runtime=false --debug 2>&1
+if ($LASTEXITCODE -ne 2 -or ($saxLegacyFailure -join "`n") -notmatch 'description:\s+Unsupported type: NotesSAXParser' -or ($saxLegacyFailure -join "`n") -notmatch 'diagnosticCode:\s+XPS1012') { throw 'Legacy NotesSAXParser diagnostic baseline changed.' }
+Write-Host 'AST_NOTES_SAX_LEGACY_FALLBACK_OK'
 $continuationOutput = Join-Path $output 'line-continuation'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'line-continuation.xps') -o $continuationOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST line continuation compilation failed.' }

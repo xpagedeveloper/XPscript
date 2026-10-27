@@ -9,6 +9,10 @@ silent changes to XPscript semantics.
 - XPImage uses the shared native runtime through AST-bound nodes and no longer
   causes legacy fallback. Other registry entries not yet migrated still route
   the complete source file through the legacy compiler.
+- The legacy `NotesSAXParser`/`On Event` compatibility surface remains an
+  explicit legacy fallback. AST code must use the existing secure `XPXml`
+  document/node API for XML processing; the AST compiler must not add a second
+  SAX parser or partially lower event bindings.
 - The fallback is owned by `AstObjectSupportRegistry` and is exercised by the
   AST CLI and MCP probes.
 
