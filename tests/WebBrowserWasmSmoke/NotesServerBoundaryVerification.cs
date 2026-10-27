@@ -23,6 +23,19 @@ Sub Main()
 End Sub
 """, "Notes runtime state", "ReadServerName", "Client");
 
+            VerifyRejected(root, "unannotated-xpnotes-http.xps", """
+[Platform:browser-wasm]
+
+Function ReadServerValue() As String
+    Dim request As New XPNotesHTTPRequest
+    ReadServerValue = "server"
+End Function
+
+Sub Main()
+    Print ReadServerValue()
+End Sub
+""", "Notes runtime state", "ReadServerValue", "Client");
+
             VerifyRejected(root, "module-notes.xps", """
 [Platform:browser-wasm]
 

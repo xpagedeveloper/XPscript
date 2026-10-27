@@ -27,7 +27,7 @@ internal static class BrowserWasmServerSideMetadata
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex NotesRuntimeType = new(
-        @"\bNotes(?!Const\b)[A-Za-z_]\w*\b",
+        @"\b(?:Notes(?!Const\b)|XPNotes)[A-Za-z_]\w*\b",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex XPImageRuntimeType = new(
