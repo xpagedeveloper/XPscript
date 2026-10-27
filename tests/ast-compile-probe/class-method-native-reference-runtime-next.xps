@@ -1,0 +1,44 @@
+Option Declare
+
+Class NativeReferenceMethods
+    Public Function Identity(ByVal value As XPJsonObject) As XPJsonObject
+        Call value.Set("mutation", 7)
+        Set Identity = value
+    End Function
+
+    Public Sub Replace(ByRef value As XPJsonObject)
+        Set value = New XPJsonObject
+        Call value.Set("replacement", 9)
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPJsonObject)
+        Call Replace(value)
+        Error 4266, "replacement must survive failure"
+    End Sub
+End Class
+
+Sub Main()
+    Dim methods As New NativeReferenceMethods
+    Dim original As New XPJsonObject
+    Dim current As XPJsonObject
+    Dim returned As XPJsonObject
+    Set current = original
+    Set returned = methods.Identity(current)
+    If Not (returned Is original) Then Error 4267
+    If CLng(original.Get("mutation")) <> 7 Then Error 4268
+    Call methods.Replace(current)
+    If current Is original Then Error 4269
+    If CLng(current.Get("replacement")) <> 9 Then Error 4270
+    If Not (returned Is original) Then Error 4271
+    Set current = original
+    On Error GoTo ExpectedFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4272, "expected error missing"
+    Exit Sub
+ExpectedFailure:
+    If Err <> 4266 Then Error 4273
+    If current Is original Then Error 4274
+    If CLng(current.Get("replacement")) <> 9 Then Error 4275
+    If CLng(original.Get("mutation")) <> 7 Then Error 4276
+    Print "AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK"
+End Sub

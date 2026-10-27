@@ -1224,6 +1224,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST JSON class-method compilation failed.' }
 $jsonClassMethodResult = dotnet (Join-Path $jsonClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($jsonClassMethodResult -join "`n") -ne '5') { throw 'AST JSON class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_JSON_OK'
+$nativeReferenceOutput = Join-Path $output 'class-method-native-reference-runtime-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-native-reference-runtime-next.xps') -o $nativeReferenceOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST native class-method reference runtime compilation failed.' }
+$nativeReferenceResult = dotnet (Join-Path $nativeReferenceOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($nativeReferenceResult -join "`n") -ne 'AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK') { throw 'AST native class-method reference runtime execution failed.' }
+Write-Host 'AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK'
 $jsonArrayClassMethodOutput = Join-Path $output 'class-method-json-array-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-json-array-next.xps') -o $jsonArrayClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST JSON array class-method compilation failed.' }
