@@ -19,3 +19,15 @@ docs-site/dist/
 *.tmp
 ast-file-text-next.txt
 tmp*
+
+# Generated test/compiler artifacts
+**/ast-output/
+**/wasm-prereq-output/
+tests/notes-dxl-diagnostic-temp/
+csv-parity.csv
+example.zip
+tests/ast-compile-probe/roundtrip.xlsx
+tests/ast-compile-probe/ast-image-parity.png
+samples/xpimage-format-*.png
+samples/xpscript-xpimage-*.png
+samples/xpscript-full-runtime-stream-test.txt

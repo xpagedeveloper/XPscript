@@ -52,8 +52,14 @@ public static class XpsWebResponseRestExtensions
     public static void Problem(this XPScript.Web.Runtime.XpsWebResponse response, int status, string title, string detail)
         => Problem(response, status, title, detail, null);
 
+    public static void Problem(this XPScript.Web.Runtime.XpsWebResponse response, long status, string title, string detail)
+        => Problem(response, checked((int)status), title, detail, null);
+
     public static void problem(this XPScript.Web.Runtime.XpsWebResponse response, int status, string title, string detail)
         => Problem(response, status, title, detail, null);
+
+    public static void problem(this XPScript.Web.Runtime.XpsWebResponse response, long status, string title, string detail)
+        => Problem(response, checked((int)status), title, detail, null);
 
     public static void Problem(
         this XPScript.Web.Runtime.XpsWebResponse response,

@@ -310,6 +310,8 @@ REST response helpers currently implemented:
 
 `Response.OK` and `Response.Json(data)` return HTTP 200 with JSON. `Response.Json(status, data)` returns JSON with the specified HTTP status from 100 through 599. `Created` returns HTTP 201 and sets `Location`. `NoContent` returns HTTP 204. Problem helpers return `application/problem+json` and require a status from 400 through 599.
 
+`Response.Problem` and `Response.problem` accept status literals and `Integer` or `Long` variables. Conversion from `Long` is checked, and invalid or overflowing statuses are rejected before the response is changed.
+
 ## CORS
 
 CORS is configured per route.

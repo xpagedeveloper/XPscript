@@ -456,7 +456,7 @@ See [REST API development](rest-api.md). The complete runnable demo is [`demo/re
 | `Unauthorized` | `Response.Unauthorized([detail])` | optional problem detail. | Returns HTTP 401. | [web-rest-api.xps](../samples/web-rest-api.xps) |
 | `Forbidden` | `Response.Forbidden([detail])` | optional problem detail. | Returns HTTP 403. | [web-rest-api.xps](../samples/web-rest-api.xps) |
 | `Conflict` | `Response.Conflict(detail)` | problem detail. | Returns HTTP 409. | [web-rest-api.xps](../samples/web-rest-api.xps) |
-| `Problem` | `Response.Problem(status, title, detail)` | HTTP error status, title, detail. | Returns RFC Problem Details. | [web-rest-api.xps](../samples/web-rest-api.xps) |
+| `Problem` | `Response.Problem(status, title, detail)` | Integer/Long HTTP error status (400–599), title, detail. | Returns RFC Problem Details; lowercase `problem` is also supported. | [web-rest-api.xps](../samples/web-rest-api.xps) |
 
 ## Session
 

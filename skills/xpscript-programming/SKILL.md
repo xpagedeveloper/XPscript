@@ -645,3 +645,5 @@ Initialized `XPImage` and native JSON module variables are typed ByRef storage i
 Derived public methods and properties dispatch virtually through base-typed references in the experimental AST compiler, including scalar and indexed getter/setter accessors. Keep base and derived accessor signatures compatible.
 
 Class methods may call a sibling or inherited Function returning a declared user class and access the returned object's members directly, for example `MakeValue().Value` or `Me.MakeValue().Value`. The declared return type is preserved. See `class-method-typed-sibling-return-next.xps`.
+
+For REST error responses, use `Response.Problem(status, title, detail)` or `Response.problem(status, title, detail)`. The status can be a literal, Integer or Long variable and must be 400–599. Invalid or overflowing status values are rejected before the response is changed. Response helpers write to the active response and are called as statements. See `docs/rest-api.md` and `samples/web-rest-api.xps`.

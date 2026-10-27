@@ -12,12 +12,12 @@ End Class
 [Anonymous]
 [Get]
 [Route:/api/users/{id}]
-Function GetUser(ByVal id As Integer) As Variant
+Sub GetUser(ByVal id As Integer)
     Dim data As New XPJsonObject
     Call data.Set("id", id)
     Call data.Set("name", "Ada")
-    Set GetUser = Response.OK(data)
-End Function
+    Response.OK(data)
+End Sub
 
 [Anonymous]
 [Post]
@@ -37,6 +37,7 @@ End Sub
 [Get]
 [Route:/api/problem/{kind}]
 Sub ProblemDemo(ByVal kind As String)
+    Dim status As Long
     Select Case kind
     Case "bad-request"
         Response.BadRequest("Invalid request")
@@ -47,6 +48,7 @@ Sub ProblemDemo(ByVal kind As String)
     Case "conflict"
         Response.Conflict("Resource conflict")
     Case Else
-        Response.Problem(500, "Demo problem", "Example Problem Details response")
+        status = 500
+        Response.Problem(status, "Demo problem", "Example Problem Details response")
     End Select
 End Sub
