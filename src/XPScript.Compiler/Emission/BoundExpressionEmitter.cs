@@ -181,6 +181,8 @@ public sealed class BoundExpressionEmitter
         "NOTESMIMEENTITY" => "XPScriptNotesMIMEEntity",
         "NOTESMIMEHEADER" => "XPScriptNotesMIMEHeader",
         "NOTESEMBEDDEDOBJECT" => "XPScriptNotesEmbeddedObject",
+        "NOTESSESSION" => "XPScriptNotesSession",
+        "NOTESDATABASE" => "XPScriptNotesDatabase",
         "NOTESDOCUMENT" => "XPScriptNotesDocument",
         "NOTESDOCUMENTCOLLECTION" => "XPScriptNotesDocumentCollection",
         "PATH" => "XpPath",
