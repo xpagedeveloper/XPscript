@@ -55,6 +55,36 @@ jobs:
         shell: bash
         run: bash tests/OpenApiGeneratorSmoke/run-rest-host-ci.sh
 
+  ast-cli-targets:
+    name: AST CLI target (${{ matrix.rid }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: ubuntu-latest
+            rid: linux-arm64
+          - os: macos-latest
+            rid: osx-x64
+          - os: macos-latest
+            rid: osx-arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build AST compiler and compile target
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP ('ast-' + '${{ matrix.rid }}')
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile ./tests/ast-compile-probe/shared-runtime.xps --output $output --rid '${{ matrix.rid }}' --runtime=false --debug
+          if (-not (Test-Path (Join-Path $output 'Generated.dll'))) { throw 'AST target compilation did not produce Generated.dll.' }
+
   browser-wasm:
     name: Browser WASM and server-side Notes boundary (${{ matrix.os }})
     strategy:
