@@ -455,6 +455,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [x] Extend native class-method parameter binding to `XPHttpResponse`; the executable `class-method-http-response-next.xps` regression verifies typed method emission and `Nothing` argument conversion.
   - [x] Extend the same binding to `XPHttpPart` and `XPHttpFile`; `class-method-http-parts-next.xps` verifies both typed parameters and `Nothing` conversion.
   - [x] Extend native class-method binding to `XPHttpPartCollection` and `XPHttpFileCollection`; `class-method-http-collections-next.xps` verifies both collection parameters and `Nothing` conversion.
+  - [x] Extend native class-method binding to Notes rich-text parameters and results; `class-method-notes-richtext-next.xps` and `class-method-notes-richtext-return-next.xps` verify every supported rich-text type and `Nothing` conversion/assignment.
   - [x] Cover `XPHttpResponse` as a class-method result; `class-method-http-response-return-next.xps` verifies typed return emission and `Nothing` assignment.
   - [x] Cover `XPHttpPart` and `XPHttpFile` as class-method results; `class-method-http-parts-return-next.xps` verifies typed returns and `Nothing` assignment.
   - [x] Cover `XPHttpPartCollection` and `XPHttpFileCollection` as class-method results; `class-method-http-collections-return-next.xps` verifies typed returns and `Nothing` assignment.

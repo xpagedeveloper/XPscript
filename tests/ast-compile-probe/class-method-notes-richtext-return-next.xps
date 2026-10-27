@@ -1,0 +1,71 @@
+Option Declare
+
+Class NotesRichTextReturns
+    Public Function ItemValue() As NotesRichTextItem
+        ItemValue = Nothing
+    End Function
+
+    Public Function NavigatorValue() As NotesRichTextNavigator
+        NavigatorValue = Nothing
+    End Function
+
+    Public Function StyleValue() As NotesRichTextStyle
+        StyleValue = Nothing
+    End Function
+
+    Public Function ParagraphValue() As NotesRichTextParagraphStyle
+        ParagraphValue = Nothing
+    End Function
+
+    Public Function RangeValue() As NotesRichTextRange
+        RangeValue = Nothing
+    End Function
+
+    Public Function SectionValue() As NotesRichTextSection
+        SectionValue = Nothing
+    End Function
+
+    Public Function TabValue() As NotesRichTextTab
+        TabValue = Nothing
+    End Function
+
+    Public Function TableValue() As NotesRichTextTable
+        TableValue = Nothing
+    End Function
+
+    Public Function DocLinkValue() As NotesRichTextDocLink
+        DocLinkValue = Nothing
+    End Function
+End Class
+
+Sub Main()
+    Dim values As New NotesRichTextReturns
+    Dim item As NotesRichTextItem
+    Dim navigator As NotesRichTextNavigator
+    Dim style As NotesRichTextStyle
+    Dim paragraph As NotesRichTextParagraphStyle
+    Dim range As NotesRichTextRange
+    Dim section As NotesRichTextSection
+    Dim tab As NotesRichTextTab
+    Dim table As NotesRichTextTable
+    Dim docLink As NotesRichTextDocLink
+    Set item = values.ItemValue()
+    Set navigator = values.NavigatorValue()
+    Set style = values.StyleValue()
+    Set paragraph = values.ParagraphValue()
+    Set range = values.RangeValue()
+    Set section = values.SectionValue()
+    Set tab = values.TabValue()
+    Set table = values.TableValue()
+    Set docLink = values.DocLinkValue()
+    If Not (item Is Nothing) Then Error 4266
+    If Not (navigator Is Nothing) Then Error 4266
+    If Not (style Is Nothing) Then Error 4266
+    If Not (paragraph Is Nothing) Then Error 4266
+    If Not (range Is Nothing) Then Error 4266
+    If Not (section Is Nothing) Then Error 4266
+    If Not (tab Is Nothing) Then Error 4266
+    If Not (table Is Nothing) Then Error 4266
+    If Not (docLink Is Nothing) Then Error 4266
+    Print "AST_NOTES_RICHTEXT_CLASS_METHOD_RETURN_OK"
+End Sub
