@@ -856,16 +856,12 @@ public static class AstExperimentalCompiler
                 : $"protected new void __xps_cleanup_failed_construction() {{ try {{ {imageCleanup} }} finally {{ base.__xps_cleanup_failed_construction(); }} }}";
             return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} {gcCleanup} {constructorBody} {constructionCleanup} {delete} {memberBodies} }}";
         }));
-        if (userClassSupport.Length == 0)
-        {
-            userClassSupport = string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?is)\bClass\s+(?<name>[A-Za-z_]\w*)\b(?<body>.*?)\bEnd\s+Class\b")
-                .Cast<Match>().Select(match =>
-                {
-                    var fields = string.Join(" ", Regex.Matches(match.Groups["body"].Value, @"(?im)^\s*(?:Public|Private)?\s*(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)")
-                        .Cast<Match>().Select(field => $"public object? {field.Groups["name"].Value} {{ get; set; }}"));
-                    return $"public sealed class Xp{match.Groups["name"].Value} {{ {fields} }}";
-                }));
-        }
+        // A class must be represented by the AST declaration model. A regex
+        // fallback would silently emit an incomplete type and bypass binding,
+        // inheritance validation, lifecycle handling and source diagnostics.
+        if (userClassSupport.Length == 0 && Regex.IsMatch(fullSource, @"(?im)^\s*(?:Public\s+|Private\s+)?Class\s+[A-Za-z_]\w*\b"))
+            throw MappedDiagnostic(new TextSpan(0, 0), sourcePath, fullSource,
+                "Class declarations must be represented by the AST compiler.", "XPS3001", "ast");
         var classSupport = "namespace __xps_user_classes { using static global::Program; " + userClassSupport + " }" + Environment.NewLine;
         classSupport += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?ims)^\s*Type\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Type\b")
             .Cast<Match>().Select(match =>
