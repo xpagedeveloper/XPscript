@@ -57,6 +57,30 @@ internal static class AstObjectSupportRegistry
 
     public static readonly IReadOnlyList<ObjectDefinition> Objects = BuildObjectDefinitions();
 
+    /// <summary>
+    /// Native object types whose values may cross an AST class-method
+    /// parameter/result boundary. Keep this capability beside the object
+    /// registry so adding a supported object does not require editing the
+    /// compiler's class-method binder.
+    /// </summary>
+    public static readonly IReadOnlySet<string> ClassMethodNativeTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
+        "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
+        "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo",
+        "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult",
+        "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo",
+        "NetworkHostResult", "NetworkSubnetInfo", "NetworkTlsVersionResult", "NetworkCertificateResult",
+        "NetworkHttpHeadersResult", "NetworkHttpSecurityHeadersResult", "NetworkRedirectResult", "NetworkBannerResult",
+        "NetworkPortExposureInfo", "XPAttachmentCollection", "XPShellResult", "XPPathValue", "XPFileInfoValue",
+        "XPHttpDbSupabase", "XPHttpDbDominoRest", "XPJsonSchema", "XPJsonValidationResult",
+        "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall",
+        "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "NotesHTTPRequest"
+    };
+
+    internal static bool SupportsClassMethodNativeType(string? name) =>
+        name is not null && ClassMethodNativeTypeNames.Contains(name);
+
     public static readonly IReadOnlySet<string> VariantTypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "XPJson", "XPJsonDocument", "XPJsonSchema", "XPJsonArray", "XPJsonObject"

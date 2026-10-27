@@ -22,26 +22,7 @@ internal static class AstClassMethodSupport
         AstSpreadsheetSupport.IsSpreadsheet(name) || AstHttpSupport.IsHttp(name) ||
         new[] { "XPDBSQLite", "XPDbMySql", "XPDbMsSql", "XPDbSupabase", "XPSupabaseDB" }
             .Contains(name, StringComparer.OrdinalIgnoreCase) ||
-        new[] { "SystemInventory", "SystemInventorySnapshot", "SystemInventorySystemInfo", "SystemInventoryCpuInfo",
-            "SystemInventoryMemoryInfo", "SystemInventoryPhysicalDiskInfo", "SystemInventoryVolumeInfo",
-            "SystemInventoryGraphicsAdapterInfo", "SystemInventoryNetworkAdapterInfo", "InstalledSoftwareInfo" }
-            .Contains(name, StringComparer.OrdinalIgnoreCase) ||
-        new[] { "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult",
-            "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo",
-            "NetworkHostResult", "NetworkSubnetInfo", "NetworkTlsVersionResult", "NetworkCertificateResult",
-            "NetworkHttpHeadersResult", "NetworkHttpSecurityHeadersResult", "NetworkRedirectResult", "NetworkBannerResult",
-            "NetworkPortExposureInfo" }.Contains(name, StringComparer.OrdinalIgnoreCase) ||
-        string.Equals(name, "XPAttachmentCollection", StringComparison.OrdinalIgnoreCase) ||
-        new[] { "XPShellResult", "XPPathValue", "XPFileInfoValue" }.Contains(name, StringComparer.OrdinalIgnoreCase) ||
-        new[] { "XPHttpDbSupabase", "XPHttpDbDominoRest" }.Contains(name, StringComparer.OrdinalIgnoreCase) ||
-        string.Equals(name, "XPJsonSchema", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(name, "XPJsonValidationResult", StringComparison.OrdinalIgnoreCase) ||
-        new[] { "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall" }
-            .Contains(name, StringComparer.OrdinalIgnoreCase) ||
-        new[] { "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement" }
-            .Contains(name, StringComparer.OrdinalIgnoreCase) ||
-        new[] { "NotesHTTPRequest" }
-            .Contains(name, StringComparer.OrdinalIgnoreCase);
+        AstObjectSupportRegistry.SupportsClassMethodNativeType(name);
 
     internal static XpTypeSymbol DeclaredType(TypeSyntax? syntax, SymbolTable symbols)
     {
