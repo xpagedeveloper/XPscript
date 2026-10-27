@@ -2,6 +2,12 @@
 
 XPscript exposes a native HCL Notes/Domino object model backed by the Notes/Domino C API. The implementation does not use the Domino Java APIs, JNI, JNA, or JNX.
 
+Notes objects require the native Notes runtime and are server-side capabilities. They
+must not be executed directly in browser WebAssembly. Use them only in procedures
+marked `[ServerSide]`; the server companion executes those procedures. A core-only
+`NotesSession` declaration can compile without activating MIME or rich-text
+dependencies, but it does not make Notes execution available in the browser.
+
 The supported XPscript Notes classes are:
 
 - `NotesSession`

@@ -144,6 +144,7 @@ internal sealed class XPScriptNotesSession : IDisposable
     public string NotesVersion { get; }
     public long NotesBuildVersion { get; }
     public string Platform { get; }
+    public bool ConvertMIME { get; set; } = true;
     public bool IsRecycled => _recycled;
 
     private static void RecycleActiveSessionAtProcessExit()

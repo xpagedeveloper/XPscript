@@ -203,6 +203,12 @@ Normal XML parsing prohibits DTD processing and external entity resolution. Do n
 
 For native Notes/Domino code, use `docs/notes-c-api.md` as the primary object-model reference and `docs/notes-mime-entity.md` for MIME. Do not infer undocumented LotusScript compatibility merely because a method has the same name.
 
+Notes objects require the native Notes runtime and are server-side capabilities. Do
+not execute them directly in browser WebAssembly; place Notes operations in
+`[ServerSide]` procedures so the generated server companion executes them. A
+core-only Notes declaration may compile without MIME dependencies, but that does
+not make native Notes execution available in the browser.
+
 Only `NotesSession` is constructed with `New`. Obtain databases, views, documents, items, names, date/time values, MIME entities, collections and agent results from their owning Notes objects.
 
 Use `New NotesSession()` for platform autodetection. On Windows it resolves the HCL Notes/Domino installer registry entries for the program directory, then the shared runtime resolves `notes.ini` and its `Directory=` data path. Pass an explicit program directory only when the documented installation is intentionally outside that configuration.

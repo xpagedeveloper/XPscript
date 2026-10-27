@@ -197,6 +197,15 @@ if (Should-Run 'language') {
 
 if (Should-Run 'notes') {
   Write-Host '=== NOTES FULLTEST ==='
+  # A core-only Notes program must compile without activating MIME dependencies
+  # or initializing an installed Notes client. This also covers server companions.
+  $notesCore = Run-Xps ./tests/ast-compile-probe/notes-session-core-next.xps notes-session-core
+  if ($notesCore.Output.Trim() -ne 'NOTES_SESSION_CORE_OK') { throw 'Core-only Notes legacy regression failed.' }
+  $notesCoreAstPath = './out/fulltest/notes-session-core-ast'
+  $notesCoreAst = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./tests/ast-compile-probe/notes-session-core-next.xps','-o',$notesCoreAstPath) $compileTimeoutMilliseconds 'Core-only Notes AST compile'
+  if ($notesCoreAst.ExitCode -ne 0) { exit $notesCoreAst.ExitCode }
+  $notesCoreAstRun = Invoke-Bounded 'dotnet' @("$notesCoreAstPath/Generated.dll") $runtimeTimeoutMilliseconds 'Core-only Notes AST run'
+  if ($notesCoreAstRun.ExitCode -ne 0 -or $notesCoreAstRun.Output.Trim() -ne 'NOTES_SESSION_CORE_OK') { throw 'Core-only Notes AST regression failed.' }
   foreach ($sample in @('notes-dxl-import-export-surface','notes-stream-runtime-test','notes-view-key-runtime-test','notes-richtext-numeric-setters-runtime-test','notes-item-array-runtime-test','notes-dxl-log-runtime-test','notes-modified-documents-runtime-test','notes-computewithform-byref-runtime-test','notes-full-domino-runtime-test','notes-mail-surface','notes-mail-no-mime-surface')) { Compile-Xps "./samples/$sample.xps" $sample }
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/notes-document-send-surface.xps','-o','./out/fulltest/notes-send','--runtime=false') $compileTimeoutMilliseconds 'NotesDocument.Send diagnostics'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   if ($r.Output -notmatch 'warning: NotesDocument\.Send attachForm=True is not supported') { throw 'Expected NotesDocument.Send attachForm compiler warning was not emitted.' }

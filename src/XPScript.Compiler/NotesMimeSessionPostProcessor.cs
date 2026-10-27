@@ -6,11 +6,6 @@ internal static class NotesMimeSessionPostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        source = ReplaceRequired(source,
-            "    public string Platform { get; }\n    public bool IsRecycled => _recycled;",
-            "    public string Platform { get; }\n    public bool ConvertMIME { get; set; } = true;\n    public bool IsRecycled => _recycled;",
-            "session-convert-mime");
-
         // JNX does not open a note normally and then convert MIME afterwards.
         // It controls conversion at NSFNoteOpen time: when MIME should remain MIME,
         // OPEN_RAW_MIME_PART (0x02000000) is passed to NSFNoteOpenExt / the UNID
