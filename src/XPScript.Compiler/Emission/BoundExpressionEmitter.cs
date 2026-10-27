@@ -185,6 +185,9 @@ public sealed class BoundExpressionEmitter
         "NOTESDATABASE" => "XPScriptNotesDatabase",
         "NOTESDOCUMENT" => "XPScriptNotesDocument",
         "NOTESDOCUMENTCOLLECTION" => "XPScriptNotesDocumentCollection",
+        "NOTESNAME" => "XPScriptNotesName",
+        "NOTESITEM" => "XPScriptNotesItem",
+        "NOTESDATETIME" => "XPScriptNotesDateTime",
         "PATH" => "XpPath",
         _ => null
     });

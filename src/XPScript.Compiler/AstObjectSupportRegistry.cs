@@ -76,7 +76,8 @@ internal static class AstObjectSupportRegistry
         "XPHttpDbSupabase", "XPHttpDbDominoRest", "XPJsonSchema", "XPJsonValidationResult",
         "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall",
         "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "NotesHTTPRequest",
-        "NotesSession", "NotesDatabase", "NotesDocument", "NotesDocumentCollection"
+        "NotesSession", "NotesDatabase", "NotesDocument", "NotesDocumentCollection",
+        "NotesName", "NotesItem", "NotesDateTime"
     };
 
     internal static bool SupportsClassMethodNativeType(string? name) =>
