@@ -130,6 +130,10 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             var browserModule = BrowserWasmServerBridgeTransportInstaller.TransformBrowserModule(BrowserRuntimeConstant("BrowserModuleJs"));
 
             await File.WriteAllTextAsync(Path.Combine(workspace, "Generated.cs"), browserGenerated, cancellationToken).ConfigureAwait(false);
+            // Generated #line directives retain the original XPScript filename.
+            // Stage that source beside the generated file for the browser and
+            // server companion builds.
+            File.Copy(sourcePath, Path.Combine(workspace, Path.GetFileName(sourcePath)), overwrite: true);
             await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildBrowserProject(typeof(BrowserFormHost).Assembly.Location), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "main.js"), BrowserRuntimeConstant("MainJs"), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
@@ -211,12 +215,15 @@ internal static class XpsBrowserWasmServerBridgeCompiler
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <OutputType>Exe</OutputType>
     <StartupObject>Program</StartupObject>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WasmMainJSPath>main.js</WasmMainJSPath>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <NoWarn>CA1416;CS8600;CS8601;CS8603;CS8618;$(NoWarn)</NoWarn>
     <AssemblyName>XPScript.BrowserApp</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
@@ -340,7 +347,11 @@ internal static class XpsBrowserWasmServerBridgeCompiler
 
     private static string CreateBuildWorkspace()
     {
-        var path = Path.Combine(Path.GetTempPath(), "xwb" + Guid.NewGuid().ToString("N")[..10]);
+        var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var baseRoot = string.IsNullOrWhiteSpace(configuredRoot)
+            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            : Path.GetFullPath(configuredRoot);
+        var path = Path.Combine(baseRoot, "wasm-build", "server-bridge", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         return path;
     }

@@ -64,6 +64,10 @@ public sealed class XpsBrowserWasmCompiler
             // already present. Ensure the generated browser module is complete.
             generated = AstExperimentalCompiler.EnsureAttachmentRuntime(generated, includeNativeDatabaseProviders: false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "Generated.cs"), generated, cancellationToken).ConfigureAwait(false);
+            // Generated #line directives retain the original XPScript filename.
+            // Stage that source beside the generated file so Roslyn can resolve
+            // diagnostics during the isolated browser build.
+            File.Copy(sourcePath, Path.Combine(workspace, Path.GetFileName(sourcePath)), overwrite: true);
             var usesExtendedArchive = generated.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
             await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildProject(typeof(BrowserFormHost).Assembly.Location, usesExtendedArchive), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "main.js"), MainJs, cancellationToken).ConfigureAwait(false);
@@ -84,7 +88,16 @@ public sealed class XpsBrowserWasmCompiler
         finally { if (workspace is not null) TryDelete(workspace); _buildGate.Release(); }
     }
 
-    private static string CreateBuildWorkspace() { var path = Path.Combine(Path.GetTempPath(), "xw" + Guid.NewGuid().ToString("N")[..10]); Directory.CreateDirectory(path); return path; }
+    private static string CreateBuildWorkspace()
+    {
+        var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var baseRoot = string.IsNullOrWhiteSpace(configuredRoot)
+            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            : Path.GetFullPath(configuredRoot);
+        var path = Path.Combine(baseRoot, "wasm-build", "browser", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        return path;
+    }
     private static bool IsValidAppRoot(string appRoot) => Directory.Exists(appRoot) && File.Exists(Path.Combine(appRoot, "main.js")) && File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js"));
     private static string ResolveBuiltAppRoot(params string[] searchRoots)
     {
@@ -129,7 +142,7 @@ public sealed class XpsBrowserWasmCompiler
         var archiveItems = usesExtendedArchive
             ? "<PackageReference Include=\"SharpCompress\" Version=\"" + ApplicationDependencyCatalog.ResolveVersion("SharpCompress", ApplicationDependencyCatalog.SharpCompressVersion) + "\" /><TrimmerRootAssembly Include=\"SharpCompress\" />"
             : string.Empty;
-        return "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework><RuntimeIdentifier>browser-wasm</RuntimeIdentifier><OutputType>Exe</OutputType><StartupObject>Program</StartupObject><AllowUnsafeBlocks>true</AllowUnsafeBlocks><WasmMainJSPath>main.js</WasmMainJSPath><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><AssemblyName>XPScript.BrowserApp</AssemblyName></PropertyGroup><ItemGroup><Reference Include=\"XPScript.UI.Browser\"><HintPath>" + escaped + "</HintPath><Private>true</Private></Reference><TrimmerRootAssembly Include=\"XPScript.UI.Browser\" />" + archiveItems + "<Content Include=\"index.html\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /><Content Include=\"xpscript-browser.js\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /></ItemGroup></Project>";
+        return "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework><RuntimeIdentifier>browser-wasm</RuntimeIdentifier><SelfContained>true</SelfContained><GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles><OutputType>Exe</OutputType><StartupObject>Program</StartupObject><AllowUnsafeBlocks>true</AllowUnsafeBlocks><WasmMainJSPath>main.js</WasmMainJSPath><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><NoWarn>CA1416;CS8600;CS8601;CS8603;CS8618;$(NoWarn)</NoWarn><AssemblyName>XPScript.BrowserApp</AssemblyName></PropertyGroup><ItemGroup><Reference Include=\"XPScript.UI.Browser\"><HintPath>" + escaped + "</HintPath><Private>true</Private></Reference><TrimmerRootAssembly Include=\"XPScript.UI.Browser\" />" + archiveItems + "<Content Include=\"index.html\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /><Content Include=\"xpscript-browser.js\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /></ItemGroup></Project>";
     }
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
