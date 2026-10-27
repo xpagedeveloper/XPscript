@@ -177,6 +177,27 @@ End Sub
     if (!capturedError.ToString().Contains("Unsupported web route attribute '[Unknown]'", StringComparison.Ordinal))
         throw new Exception("Unknown web route attribute did not produce a console error.");
 
+    capturedError.GetStringBuilder().Clear();
+    try
+    {
+        Console.SetError(capturedError);
+        var serverSide = parser.Parse("""
+[Platform:browser-wasm]
+[ServerSide]
+Function ReadServerValue()
+    ReadServerValue = "server"
+End Function
+""");
+        if (!serverSide.Routes.ContainsKey("ReadServerValue"))
+            throw new Exception("[ServerSide] metadata prevented route parsing.");
+    }
+    finally
+    {
+        Console.SetError(originalError);
+    }
+    if (capturedError.ToString().Contains("Unsupported web route attribute '[ServerSide]'", StringComparison.Ordinal))
+        throw new Exception("[ServerSide] was incorrectly treated as a web route attribute.");
+
     await using var unit = await new XpsWebCompiler().CompileAsync(sourcePath);
     if (!unit.Routes.ContainsKey("WebMain") || !unit.Routes.ContainsKey("Save") || !unit.Routes.ContainsKey("Sqlite") || !unit.Routes.ContainsKey("MsSqlCompileOnly") || !unit.Routes.ContainsKey("AiCompileOnly"))
         throw new Exception("Compiled route table is incomplete.");
