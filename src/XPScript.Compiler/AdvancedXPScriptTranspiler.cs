@@ -1188,11 +1188,20 @@ internal static class Script
         return TransformFluentClassChains(result.ToString()).Trim();
     }
 
-    private static string RewriteClassReferences(string expression)
+    private string RewriteClassReferences(string expression)
     {
         var code = PreprocessorFeatureGate.CodeOnly(expression);
         return Regex.Replace(expression, @"\b(?:Me|Parent)\b", match =>
         {
+            // Parent is a language keyword, but it is also a legal variable name
+            // in existing legacy Notes code. Once the binder has registered a
+            // local/module variable with that name, preserve the identifier.
+            if (match.Value.Equals("Parent", StringComparison.OrdinalIgnoreCase) &&
+                (_variableTypes.ContainsKey(match.Value) ||
+                 _objectVariables.ContainsKey(match.Value) ||
+                 _moduleObjectVariables.ContainsKey(match.Value)))
+                return match.Value;
+
             if (match.Index + match.Length > code.Length ||
                 !code.AsSpan(match.Index, match.Length).Equals(match.Value.AsSpan(), StringComparison.OrdinalIgnoreCase))
                 return match.Value; // Strings/comments must retain their text.
@@ -1368,7 +1377,10 @@ internal static class Script
     private string TransformCallableTarget(string target)
     {
         var text = Regex.Replace(target, @"^Me\.", "this.", RegexOptions.IgnoreCase);
-        text = Regex.Replace(text, @"^Parent\.", "base.", RegexOptions.IgnoreCase);
+        if (!_variableTypes.ContainsKey("Parent") &&
+            !_objectVariables.ContainsKey("Parent") &&
+            !_moduleObjectVariables.ContainsKey("Parent"))
+            text = Regex.Replace(text, @"^Parent\.", "base.", RegexOptions.IgnoreCase);
         foreach (var objectVariable in _objectVariables)
             if (text.StartsWith(objectVariable.Key + ".", StringComparison.OrdinalIgnoreCase)) return objectVariable.Key + ".Value!." + text[(objectVariable.Key.Length + 1)..];
         if (_currentClass is not null && _classes.TryGetValue(_currentClass, out var classInfo))
