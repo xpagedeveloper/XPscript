@@ -15,14 +15,20 @@ concurrency:
 
 jobs:
   ast-compiler-regression:
-    name: AST compiler regression
+    name: AST compiler regression ${{ matrix.locale }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - locale: sv-SE
+            lang: sv_SE.UTF-8
+          - locale: en-US
+            lang: en_US.UTF-8
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      # CStr is culture-sensitive. Keep CLI fixture output deterministic across
-      # hosted runners until the fixture itself is made culture-independent.
-      LANG: sv_SE.UTF-8
-      LC_ALL: sv_SE.UTF-8
+      LANG: ${{ matrix.lang }}
+      LC_ALL: ${{ matrix.lang }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
