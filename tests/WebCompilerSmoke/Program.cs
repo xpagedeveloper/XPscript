@@ -184,6 +184,7 @@ End Sub
         var serverSide = parser.Parse("""
 [Platform:browser-wasm]
 [ServerSide]
+[Get]
 Function ReadServerValue()
     ReadServerValue = "server"
 End Function
