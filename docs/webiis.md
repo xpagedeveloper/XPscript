@@ -26,6 +26,8 @@ xpscript compile main.xps --target webiis --runtime=false -o C:\deploy\myapp
 
 The output directory must be outside the XPscript source directory.
 
+Host publishing restores its NuGet dependencies on the first build. Restore and build files use a separate workspace for each publish under `XPSCRIPT_TEMP_ROOT` (or the system temporary directory), and that workspace is cleaned afterwards. Publishing does not require a previous CLI-project restore or change its shared `obj/project.assets.json`; deployment files remain in the selected output directory.
+
 `main.xps` is the build entry. It is not the HTTP default document.
 
 The HTTP default document is `index.xps`.
