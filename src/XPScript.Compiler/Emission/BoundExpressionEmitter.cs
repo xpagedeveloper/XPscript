@@ -188,6 +188,8 @@ public sealed class BoundExpressionEmitter
         "NOTESNAME" => "XPScriptNotesName",
         "NOTESITEM" => "XPScriptNotesItem",
         "NOTESDATETIME" => "XPScriptNotesDateTime",
+        "NOTESVIEW" => "XPScriptNotesView",
+        "NOTESAGENT" => "XPScriptNotesAgent",
         "PATH" => "XpPath",
         _ => null
     });

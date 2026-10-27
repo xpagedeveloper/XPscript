@@ -1302,6 +1302,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Notes value class-method compilation faile
 $notesValuesClassMethodResult = dotnet (Join-Path $notesValuesClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($notesValuesClassMethodResult -join "`n") -ne 'AST_NOTES_VALUES_CLASS_METHOD_OK') { throw 'AST Notes value class-method execution failed.' }
 Write-Host 'AST_NOTES_VALUES_CLASS_METHOD_OK'
+$notesViewClassMethodOutput = Join-Path $output 'class-method-notes-view-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-view-next.xps') -o $notesViewClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Notes view class-method compilation failed.' }
+$notesViewClassMethodResult = dotnet (Join-Path $notesViewClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($notesViewClassMethodResult -join "`n") -ne 'AST_NOTES_VIEW_CLASS_METHOD_OK') { throw 'AST Notes view class-method execution failed.' }
+Write-Host 'AST_NOTES_VIEW_CLASS_METHOD_OK'
 $notesJsonClassMethodOutput = Join-Path $output 'class-method-notes-json-next'
 $notesJsonClassMethodDiagnostic = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-json-next.xps') -o $notesJsonClassMethodOutput --runtime=false --debug 2>&1 | Out-String
 if ($LASTEXITCODE -eq 0 -or $notesJsonClassMethodDiagnostic -notmatch '(?i)XPJSONNavigator|unsupported type|legacy') {
