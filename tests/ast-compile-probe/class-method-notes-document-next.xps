@@ -1,0 +1,13 @@
+Option Declare
+
+Class NotesDocumentMethods
+    Public Function Accept(ByVal document As NotesDocument, ByVal documents As NotesDocumentCollection) As Boolean
+        Accept = (document Is Nothing) And (documents Is Nothing)
+    End Function
+End Class
+
+Sub Main()
+    Dim methods As New NotesDocumentMethods
+    If Not methods.Accept(Nothing, Nothing) Then Error 4266
+    Print "AST_NOTES_DOCUMENT_CLASS_METHOD_OK"
+End Sub

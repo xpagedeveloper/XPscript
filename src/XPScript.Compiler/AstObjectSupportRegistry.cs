@@ -75,7 +75,8 @@ internal static class AstObjectSupportRegistry
         "NetworkPortExposureInfo", "XPAttachmentCollection", "XPShellResult", "XPPathValue", "XPFileInfoValue",
         "XPHttpDbSupabase", "XPHttpDbDominoRest", "XPJsonSchema", "XPJsonValidationResult",
         "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall",
-        "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "NotesHTTPRequest"
+        "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "NotesHTTPRequest",
+        "NotesDocument", "NotesDocumentCollection"
     };
 
     internal static bool SupportsClassMethodNativeType(string? name) =>
