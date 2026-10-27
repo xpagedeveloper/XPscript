@@ -27,14 +27,27 @@ jobs:
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Build AST probe projects before concurrent execution
+        shell: pwsh
+        run: |
+          $projects = @(
+            './tests/ast-lexer/AstLexerProbe.csproj',
+            './tests/ast-emission/AstEmissionProbe.csproj',
+            './tests/ast-compile-probe/AstCompileProbe.csproj',
+            './tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj'
+          )
+          foreach ($project in $projects) {
+            dotnet build $project -c Release
+            if ($LASTEXITCODE -ne 0) { throw "Probe build failed: $project" }
+          }
       - name: Run AST lexer probe
-        run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
+        run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release --no-build
       - name: Run AST emission probe
-        run: dotnet run --project ./tests/ast-emission/AstEmissionProbe.csproj -c Release
+        run: dotnet run --project ./tests/ast-emission/AstEmissionProbe.csproj -c Release --no-build
       - name: Run AST compiler probe
-        run: dotnet run --project ./tests/ast-compile-probe/AstCompileProbe.csproj -c Release
+        run: dotnet run --project ./tests/ast-compile-probe/AstCompileProbe.csproj -c Release --no-build
       - name: Run Android compiler metadata probe
-        run: dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
+        run: dotnet run --project ./tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release --no-build
       - name: Install WebAssembly workload
         run: dotnet workload install wasm-tools
       - name: Verify browser WASM AST target
