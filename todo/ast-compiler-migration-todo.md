@@ -836,6 +836,7 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
 
 ## Automated verification checkpoint — 2026-10-27
 
+- [x] Centralize native Notes runtime mappings and class-method capabilities in `AstObjectSupportRegistry.NotesRuntimeTypes`, removing the emitter's duplicate mapping table. Release build passed with zero warnings/errors; extended Notes parameters/results, rich-text typed results and Notes database/session parameter regressions compiled and executed successfully after the refactor.
 - [x] Verify actual native reference behavior in class methods with `class-method-native-reference-runtime-next.xps`: XPJsonObject ByVal mutation, typed return identity, ByRef replacement, retained old aliases and replacement persistence across a handled method error. Focused AST compilation/execution passed with `AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK`; the fixture is included in the permanent CLI suite. This does not establish other native families' ownership contracts.
 - [x] Re-run the complete `tests/ast-compile-probe/run-ast-cli.ps1` suite on Windows after commit `2b970a04`. The original process completed with exit code 0 and `AST CLI compilation probe passed`; no restart was needed after observation was interrupted.
 - [x] Verify the new Notes document/database/value/navigation/transport/rich-text and extended native class-method fixtures within that complete run, including rich-text and extended typed Function returns. These checks cover signatures and Nothing conversion, not live Notes API member execution.

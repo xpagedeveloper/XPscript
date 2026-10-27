@@ -55,6 +55,45 @@ internal static class AstObjectSupportRegistry
         "UIForm", "UIListView",
     };
 
+    // Generated Notes runtime names deliberately retain the public type's spelling.
+    // One definition supplies class-method capability and native emission together.
+    private static readonly IReadOnlyDictionary<string, string> NotesRuntimeTypes = new[]
+    {
+        "NotesMIMEEntity",
+        "NotesMIMEHeader",
+        "NotesEmbeddedObject",
+        "NotesSession",
+        "NotesDatabase",
+        "NotesDocument",
+        "NotesDocumentCollection",
+        "NotesName",
+        "NotesItem",
+        "NotesDateTime",
+        "NotesView",
+        "NotesAgent",
+        "NotesStream",
+        "NotesMail",
+        "NotesRichTextItem",
+        "NotesRichTextNavigator",
+        "NotesRichTextParagraphStyle",
+        "NotesRichTextRange",
+        "NotesRichTextSection",
+        "NotesRichTextStyle",
+        "NotesRichTextTab",
+        "NotesRichTextTable",
+        "NotesRichTextDocLink",
+        "NotesDatabaseAccess",
+        "NotesNoteCollection",
+        "NotesDXLImporter",
+        "NotesDXLExporter",
+        "NotesViewEntry",
+        "NotesViewEntryCollection",
+        "NotesViewNavigator",
+    }.ToDictionary(name => name, name => "XPScript" + name, StringComparer.OrdinalIgnoreCase);
+
+    internal static string? NotesRuntimeType(string name) =>
+        NotesRuntimeTypes.TryGetValue(name.Trim(), out var runtimeType) ? runtimeType : null;
+
     public static readonly IReadOnlyList<ObjectDefinition> Objects = BuildObjectDefinitions();
 
     /// <summary>
@@ -76,14 +115,7 @@ internal static class AstObjectSupportRegistry
         "XPHttpDbSupabase", "XPHttpDbDominoRest", "XPJsonSchema", "XPJsonValidationResult",
         "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall",
         "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "NotesHTTPRequest",
-        "NotesSession", "NotesDatabase", "NotesDocument", "NotesDocumentCollection",
-        "NotesName", "NotesItem", "NotesDateTime", "NotesView", "NotesAgent", "NotesStream", "NotesMail",
-        "NotesRichTextItem", "NotesRichTextNavigator", "NotesRichTextParagraphStyle", "NotesRichTextRange",
-        "NotesRichTextSection", "NotesRichTextStyle", "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink"
-        ,"NotesMIMEEntity", "NotesMIMEHeader", "NotesEmbeddedObject", "NotesDatabaseAccess",
-        "NotesNoteCollection", "NotesDXLImporter", "NotesDXLExporter", "NotesViewEntry", "NotesViewEntryCollection",
-        "NotesViewNavigator"
-    };
+    }.Concat(NotesRuntimeTypes.Keys).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     internal static bool SupportsClassMethodNativeType(string? name) =>
         name is not null && ClassMethodNativeTypeNames.Contains(name);

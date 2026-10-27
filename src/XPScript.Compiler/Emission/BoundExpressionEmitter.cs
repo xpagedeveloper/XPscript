@@ -162,7 +162,7 @@ public sealed class BoundExpressionEmitter
         "BOOLEAN" => "bool",
         "STRING" => "string",
         "VARIANT" => "object",
-        _ => RuntimeObjectTypeCore(name)
+        _ => AstObjectSupportRegistry.NotesRuntimeType(name) ?? RuntimeObjectTypeCore(name)
     };
 
     private static string? RuntimeObjectTypeCore(string name) => AstApplicationSupport.RuntimeType(name) ?? AstSpreadsheetSupport.RuntimeType(name) ?? AstHttpSupport.RuntimeType(name) ?? AstHttpDatabaseSupport.RuntimeType(name) ?? AstJsonValidationSupport.RuntimeType(name) ?? XpsShellResultAstSupport.RuntimeType(name) ?? AstPathValueSupport.RuntimeType(name) ?? AstNotesJsonSupport.RuntimeType(name) ?? AstSystemInventorySupport.RuntimeType(name) ?? AstNetworkToolsSupport.RuntimeType(name) ?? AstSqliteSupport.RuntimeType(name) ?? AstMySqlSupport.RuntimeType(name) ?? AstMsSqlSupport.RuntimeType(name) ?? AstSupabaseSupport.RuntimeType(name) ?? AstAttachmentSupport.RuntimeType(name) ?? AstXmlSupport.RuntimeType(name) ?? AstCsvSupport.RuntimeType(name) ?? (name.ToUpperInvariant() switch
@@ -178,36 +178,6 @@ public sealed class BoundExpressionEmitter
         "XPAITOOL" => "XPScriptAiTool",
         "XPAITOOLFUNCTION" => "XPScriptAiToolFunction",
         "XPAITOOLCALL" => "XPScriptAiToolCall",
-        "NOTESMIMEENTITY" => "XPScriptNotesMIMEEntity",
-        "NOTESMIMEHEADER" => "XPScriptNotesMIMEHeader",
-        "NOTESEMBEDDEDOBJECT" => "XPScriptNotesEmbeddedObject",
-        "NOTESSESSION" => "XPScriptNotesSession",
-        "NOTESDATABASE" => "XPScriptNotesDatabase",
-        "NOTESDOCUMENT" => "XPScriptNotesDocument",
-        "NOTESDOCUMENTCOLLECTION" => "XPScriptNotesDocumentCollection",
-        "NOTESNAME" => "XPScriptNotesName",
-        "NOTESITEM" => "XPScriptNotesItem",
-        "NOTESDATETIME" => "XPScriptNotesDateTime",
-        "NOTESVIEW" => "XPScriptNotesView",
-        "NOTESAGENT" => "XPScriptNotesAgent",
-        "NOTESSTREAM" => "XPScriptNotesStream",
-        "NOTESMAIL" => "XPScriptNotesMail",
-        "NOTESRICHTEXTITEM" => "XPScriptNotesRichTextItem",
-        "NOTESRICHTEXTNAVIGATOR" => "XPScriptNotesRichTextNavigator",
-        "NOTESRICHTEXTPARAGRAPHSTYLE" => "XPScriptNotesRichTextParagraphStyle",
-        "NOTESRICHTEXTRANGE" => "XPScriptNotesRichTextRange",
-        "NOTESRICHTEXTSECTION" => "XPScriptNotesRichTextSection",
-        "NOTESRICHTEXTSTYLE" => "XPScriptNotesRichTextStyle",
-        "NOTESRICHTEXTTAB" => "XPScriptNotesRichTextTab",
-        "NOTESRICHTEXTTABLE" => "XPScriptNotesRichTextTable",
-        "NOTESRICHTEXTDOCLINK" => "XPScriptNotesRichTextDocLink",
-        "NOTESDATABASEACCESS" => "XPScriptNotesDatabaseAccess",
-        "NOTESNOTECOLLECTION" => "XPScriptNotesNoteCollection",
-        "NOTESDXLIMPORTER" => "XPScriptNotesDXLImporter",
-        "NOTESDXLEXPORTER" => "XPScriptNotesDXLExporter",
-        "NOTESVIEWENTRY" => "XPScriptNotesViewEntry",
-        "NOTESVIEWENTRYCOLLECTION" => "XPScriptNotesViewEntryCollection",
-        "NOTESVIEWNAVIGATOR" => "XPScriptNotesViewNavigator",
         "PATH" => "XpPath",
         _ => null
     });

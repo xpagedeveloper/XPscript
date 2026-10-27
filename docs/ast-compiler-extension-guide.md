@@ -24,6 +24,9 @@ add a second parser or a second machine-interface implementation.
    not add a second type list inside `AstClassMethodSupport`; that binder
    should keep only family-specific rules (for example XML upcasts or image
    ownership).
+   Native Notes types belong in the registry's `NotesRuntimeTypes` definition:
+   its keys also populate class-method capabilities, and the shared emitter
+   reads its runtime mappings. Do not duplicate Notes mappings in the emitter.
 3. Add or reuse syntax nodes and bind them to typed `BoundNode` values. Keep
    XPscript names, source spans and diagnostics in the bound model.
 4. Emit through the shared bound emitters and existing runtime APIs. Generated
