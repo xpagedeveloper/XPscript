@@ -4,10 +4,80 @@ Class NotesExtendedMethods
     Public Function Accept(ByVal entity As NotesMIMEEntity, ByVal header As NotesMIMEHeader, ByVal embedded As NotesEmbeddedObject, ByVal access As NotesDatabaseAccess, ByVal collection As NotesNoteCollection, ByVal importer As NotesDXLImporter, ByVal exporter As NotesDXLExporter, ByVal entry As NotesViewEntry, ByVal entries As NotesViewEntryCollection, ByVal navigator As NotesViewNavigator) As Boolean
         Accept = (entity Is Nothing) And (header Is Nothing) And (embedded Is Nothing) And (access Is Nothing) And (collection Is Nothing) And (importer Is Nothing) And (exporter Is Nothing) And (entry Is Nothing) And (entries Is Nothing) And (navigator Is Nothing)
     End Function
+
+    Public Function EntityValue() As NotesMIMEEntity
+        EntityValue = Nothing
+    End Function
+
+    Public Function HeaderValue() As NotesMIMEHeader
+        HeaderValue = Nothing
+    End Function
+
+    Public Function EmbeddedValue() As NotesEmbeddedObject
+        EmbeddedValue = Nothing
+    End Function
+
+    Public Function AccessValue() As NotesDatabaseAccess
+        AccessValue = Nothing
+    End Function
+
+    Public Function CollectionValue() As NotesNoteCollection
+        CollectionValue = Nothing
+    End Function
+
+    Public Function ImporterValue() As NotesDXLImporter
+        ImporterValue = Nothing
+    End Function
+
+    Public Function ExporterValue() As NotesDXLExporter
+        ExporterValue = Nothing
+    End Function
+
+    Public Function EntryValue() As NotesViewEntry
+        EntryValue = Nothing
+    End Function
+
+    Public Function EntriesValue() As NotesViewEntryCollection
+        EntriesValue = Nothing
+    End Function
+
+    Public Function NavigatorValue() As NotesViewNavigator
+        NavigatorValue = Nothing
+    End Function
 End Class
 
 Sub Main()
     Dim methods As New NotesExtendedMethods
     If Not methods.Accept(Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing) Then Error 4266
+    Dim entity As NotesMIMEEntity
+    Dim header As NotesMIMEHeader
+    Dim embedded As NotesEmbeddedObject
+    Dim access As NotesDatabaseAccess
+    Dim collection As NotesNoteCollection
+    Dim importer As NotesDXLImporter
+    Dim exporter As NotesDXLExporter
+    Dim entry As NotesViewEntry
+    Dim entries As NotesViewEntryCollection
+    Dim navigator As NotesViewNavigator
+    Set entity = methods.EntityValue()
+    Set header = methods.HeaderValue()
+    Set embedded = methods.EmbeddedValue()
+    Set access = methods.AccessValue()
+    Set collection = methods.CollectionValue()
+    Set importer = methods.ImporterValue()
+    Set exporter = methods.ExporterValue()
+    Set entry = methods.EntryValue()
+    Set entries = methods.EntriesValue()
+    Set navigator = methods.NavigatorValue()
+    If Not (entity Is Nothing) Then Error 4266
+    If Not (header Is Nothing) Then Error 4266
+    If Not (embedded Is Nothing) Then Error 4266
+    If Not (access Is Nothing) Then Error 4266
+    If Not (collection Is Nothing) Then Error 4266
+    If Not (importer Is Nothing) Then Error 4266
+    If Not (exporter Is Nothing) Then Error 4266
+    If Not (entry Is Nothing) Then Error 4266
+    If Not (entries Is Nothing) Then Error 4266
+    If Not (navigator Is Nothing) Then Error 4266
     Print "AST_NOTES_EXTENDED_CLASS_METHOD_OK"
 End Sub
