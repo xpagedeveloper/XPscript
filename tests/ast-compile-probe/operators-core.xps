@@ -8,5 +8,9 @@ Sub Main()
     Print "ANDBITS=" & CStr(10 And 5)
     Print "ORBITS=" & CStr(10 Or 5)
     Print "XORBITS=" & CStr(15 Xor 240)
-    Print "NOTBITS=" & CStr(Not 3)
+    If (Not 3) = -4 Then
+        Print "NOTBITS=-4"
+    Else
+        Print "NOTBITS=FAIL"
+    End If
 End Sub
