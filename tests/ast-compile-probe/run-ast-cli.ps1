@@ -843,6 +843,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST database class-method parameter compilatio
 $databaseClassMethodResult = dotnet (Join-Path $databaseClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($databaseClassMethodResult -join "`n") -ne "True`nTrue`nTrue`nTrue`nTrue") { throw 'AST database class-method parameter execution failed.' }
 Write-Host 'AST_DATABASE_CLASS_METHOD_PARAMETERS_OK'
+$databaseReferenceOutput = Join-Path $output 'database-reference-property-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'database-reference-property-next.xps') -o $databaseReferenceOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST database reference property compilation failed.' }
+$databaseReferenceResult = dotnet (Join-Path $databaseReferenceOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($databaseReferenceResult -join "`n") -ne 'AST_DATABASE_REFERENCE_PROPERTY_OK') { throw 'AST database reference property execution failed.' }
+Write-Host 'AST_DATABASE_REFERENCE_PROPERTY_OK'
 $databaseDisposeOutput = Join-Path $output 'database-dispose-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'database-dispose-next.xps') -o $databaseDisposeOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST database Dispose compilation failed.' }

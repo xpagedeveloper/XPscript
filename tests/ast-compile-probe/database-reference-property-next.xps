@@ -1,0 +1,45 @@
+Option Declare
+
+Class DatabaseStore
+    Private database As XPDBSQLite
+    Public Property Get Current As XPDBSQLite
+        Set Current = database
+    End Property
+    Public Property Set Current(ByRef incoming As XPDBSQLite)
+        Set database = incoming
+        Set incoming = Nothing
+    End Property
+    Public Sub Replace(ByRef target As XPDBSQLite)
+        Set target = New XPDBSQLite(":memory:")
+    End Sub
+End Class
+
+Sub Main()
+    Dim store As New DatabaseStore
+    Dim original As New XPDBSQLite(":memory:")
+    Dim current As XPDBSQLite
+    Dim aliasValue As XPDBSQLite
+    If Not (store.Current Is Nothing) Then Error 4280
+    Set store.Current = original
+    If original Is Nothing Then Error 4281
+    Set aliasValue = store.Current
+    If Not (aliasValue Is original) Then Error 4282
+    Call store.Current.Execute("CREATE TABLE entries (name TEXT)")
+    Call aliasValue.Execute("INSERT INTO entries VALUES ('shared')")
+    Dim rows As XPJsonDocument
+    Set rows = original.Query("SELECT name FROM entries")
+    If InStr(rows.Stringify(), "shared") = 0 Then Error 4283
+    Set current = original
+    Call store.Replace(current)
+    If current Is original Then Error 4284
+    Set store.Current = current
+    If Not (store.Current Is current) Then Error 4285
+    If Not original.IsOpen Then Error 4286
+    Set store.Current = Nothing
+    If Not (store.Current Is Nothing) Then Error 4287
+    If Not current.IsOpen Then Error 4288
+    Call original.Close()
+    If aliasValue.IsOpen Then Error 4289
+    Call current.Close()
+    Print "AST_DATABASE_REFERENCE_PROPERTY_OK"
+End Sub
