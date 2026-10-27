@@ -241,9 +241,12 @@ internal static class AstClassMethodSupport
                         }))
                         continue;
                     var rt = ownFunction is null ? typeof(void) : AstExperimentalCompiler.ResolveRuntimeType(ownFunction.ReturnType?.Identifier.Text);
+                    var semanticReturnType = ownFunction is null
+                        ? XpTypeSymbol.FromClr(typeof(void))
+                        : DeclaredType(ownFunction.ReturnType, globals);
                     var parameterTypes = ps.Select(p => AstExperimentalCompiler.ResolveParameterType(p, globals)).ToArray();
                     var symbol = new FunctionSymbol(methodName, rt, parameterTypes.Select((p, i) => ps[i].IsArray ? typeof(Array) : p.RuntimeType).ToArray(),
-                        XpTypeSymbol.FromClr(rt), parameterTypes, ps.Select(p => p.IsByRef).ToArray());
+                        semanticReturnType, parameterTypes, ps.Select(p => p.IsByRef).ToArray());
                     classScope.Declare(symbol);
                     classScope.Declare(symbol with { Name = declaration.Identifier.Text + "." + methodName });
                 }

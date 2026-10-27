@@ -5,7 +5,9 @@ var repo = Path.GetFullPath(args.Length > 0 ? args[0] : ".");
 var probeRoot = Path.Combine(repo, "out", "mcp-probe-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(probeRoot);
 var probeOutput = Path.Combine(probeRoot, "published-output");
-var compiler = Path.Combine(repo, "src", "XPScript.Compiler", "bin", "Release", "net10.0", "xpscriptc.dll");
+// Optional compiler path lets independent verification runs use isolated builds.
+var compiler = args.Length > 1 ? Path.GetFullPath(args[1])
+    : Path.Combine(repo, "src", "XPScript.Compiler", "bin", "Release", "net10.0", "xpscriptc.dll");
 if (!File.Exists(compiler)) throw new Exception("Release compiler artifact was not found: " + compiler);
 var psi = new ProcessStartInfo("dotnet") { RedirectStandardInput=true, RedirectStandardOutput=true, RedirectStandardError=true, UseShellExecute=false, WorkingDirectory=repo };
 psi.Environment["XPSCRIPT_TEMP_ROOT"] = probeRoot;
@@ -134,7 +136,7 @@ foreach (var derivedClassMethodFixture in new[] { "class-method-derived-next" })
     var result = await CallAsync(new { jsonrpc="2.0",id=derivedClassMethodFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=derivedClassMethodFixture+".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Derived class-method validation failed: " + result);
 }
-foreach (var referenceClassMethodFixture in new[] { "class-method-reference-next" })
+foreach (var referenceClassMethodFixture in new[] { "class-method-reference-next", "class-method-typed-sibling-return-next" })
 {
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", referenceClassMethodFixture + ".xps"));
     var result = await CallAsync(new { jsonrpc="2.0",id=referenceClassMethodFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=referenceClassMethodFixture+".xps" } } });
@@ -542,7 +544,7 @@ foreach (var classTool in new[] { "xpscript_ast_validate", "xpscript_validate" }
     var result = await CallAsync(new { jsonrpc="2.0",id="class-methods-"+classTool,method="tools/call",@params=new { name=classTool,arguments=new { source=classMethodsSource,filename="class-methods-native.xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("MCP class method compilation failed: " + result);
 }
-foreach (var (fixture, code, line) in new[] { ("class-method-scope-error", "XPS2008", 6), ("class-method-private-error", "XPS2009", 7), ("class-field-private-error", "XPS2009", 6), ("class-method-body-error", "XPS2008", 3) })
+foreach (var (fixture, code, line) in new[] { ("class-method-scope-error", "XPS2008", 6), ("class-method-private-error", "XPS2009", 7), ("class-field-private-error", "XPS2009", 6), ("class-method-body-error", "XPS2008", 3), ("class-method-typed-sibling-member-error", "XPS2009", 11) })
 {
     var classSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture+".xps"));
     var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=classSource,filename=fixture+".xps" } } });

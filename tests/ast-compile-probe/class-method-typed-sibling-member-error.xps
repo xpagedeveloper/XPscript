@@ -1,0 +1,16 @@
+Class SiblingValue
+    Public Value As Long
+End Class
+
+Class SiblingFactory
+    Public Function MakeValue() As SiblingValue
+        Set MakeValue = New SiblingValue
+    End Function
+
+    Public Function ReadValue() As Long
+        ReadValue = MakeValue().Missing
+    End Function
+End Class
+
+Sub Main()
+End Sub

@@ -643,3 +643,5 @@ Use `XPImage` for cross-platform raster creation and processing. Construct image
 Initialized `XPImage` and native JSON module variables are typed ByRef storage in the experimental AST compiler. Other initialized compatibility-module forms and array parameter signatures remain deferred.
 
 Derived public methods and properties dispatch virtually through base-typed references in the experimental AST compiler, including scalar and indexed getter/setter accessors. Keep base and derived accessor signatures compatible.
+
+Class methods may call a sibling or inherited Function returning a declared user class and access the returned object's members directly, for example `MakeValue().Value` or `Me.MakeValue().Value`. The declared return type is preserved. See `class-method-typed-sibling-return-next.xps`.
