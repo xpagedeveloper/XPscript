@@ -74,6 +74,6 @@ If the server operation fails, the continuation after the call must not run as t
 
 ## Boundary rules
 
-`[ServerSide]` is an execution boundary, not a way to move live runtime objects into the browser. Arguments and return values must be bridge-serializable. Notes objects, database handles, credentials, streams and other server-only state remain on the server. Return scalar values or serializable `Variant` data instead.
+`[ServerSide]` is an execution boundary, not a way to move live runtime objects into the browser. Arguments and return values must be bridge-serializable. Notes objects, `XPNotes*` compatibility objects, database handles, credentials, streams and other server-only state remain on the server. Return scalar values or serializable `Variant` data instead.
 
 For Notes-specific restrictions, see [Notes runtime in Browser WebAssembly](browser-wasm-notes.md). For the general browser runtime and callback model, see [Browser WebAssembly](browser-wasm.md).
