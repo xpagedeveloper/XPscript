@@ -247,7 +247,10 @@ End Sub
     {
         var path = Path.Combine(root, fileName);
         File.WriteAllText(path, source);
-        var unit = new XpsWebCompiler().CompileAsync(path, root).GetAwaiter().GetResult();
-        unit.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        var options = BrowserWasmServerSideMetadata.ReadAnnotatedProcedureOptions(source);
+        var annotated = BrowserWasmServerSideMetadata.ReadAnnotatedProcedures(source);
+        var planningSource = BrowserWasmServerSideMetadata.InjectPlanningMarkers(source, annotated);
+        var plan = BrowserWasmServerBridgePlan.Create(planningSource, path, options);
+        BrowserWasmServerSideMetadata.ValidateExplicitBoundary(plan, annotated);
     }
 }
