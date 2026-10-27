@@ -89,11 +89,15 @@ function Invoke-BoundedDotnetRun([string[]] $arguments, [int] $timeoutMillisecon
 function Invoke-BoundedExecutable([string] $path, [int] $timeoutMilliseconds = 120000) {
     $info = [System.Diagnostics.ProcessStartInfo]::new($path)
     $info.UseShellExecute = $false
+    $info.CreateNoWindow = $true
+    $info.WorkingDirectory = Split-Path -Parent $path
+    $info.RedirectStandardInput = $true
     $info.RedirectStandardOutput = $true
     $info.RedirectStandardError = $true
     $process = [System.Diagnostics.Process]::new()
     $process.StartInfo = $info
     [void]$process.Start()
+    $process.StandardInput.Close()
     $stdoutTask = $process.StandardOutput.ReadToEndAsync()
     $stderrTask = $process.StandardError.ReadToEndAsync()
     try {
