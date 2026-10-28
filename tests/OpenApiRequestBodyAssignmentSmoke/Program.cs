@@ -193,9 +193,16 @@ foreach (var forbidden in new[] { "Public Class default", "Public operator As", 
     if (keywordGenerated.Source.Contains(forbidden, StringComparison.OrdinalIgnoreCase))
         throw new Exception("OpenAPI identifiers that are C# keywords must be renamed before XPScript-to-C# compilation: " + forbidden);
 
-var keywordPath = Path.Combine(Path.GetTempPath(), "openapi-csharp-keywords-server.xps");
-await File.WriteAllTextAsync(keywordPath, keywordGenerated.Source);
-await using (var keywordUnit = await new XpsWebCompiler().CompileAsync(keywordPath, Path.GetTempPath()))
+var keywordRoot = Path.Combine(Path.GetTempPath(), "openapi-csharp-keywords-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(keywordRoot);
+try
 {
+    var keywordPath = Path.Combine(keywordRoot, "server.xps");
+    await File.WriteAllTextAsync(keywordPath, keywordGenerated.Source);
+    await using var keywordUnit = await new XpsWebCompiler().CompileAsync(keywordPath, keywordRoot);
+}
+finally
+{
+    Directory.Delete(keywordRoot, recursive: true);
 }
 Console.WriteLine("OPENAPI-SERVER-CSHARP-KEYWORDS=OK");
