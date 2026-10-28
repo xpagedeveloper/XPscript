@@ -84,6 +84,8 @@ jobs:
         run: dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
       - name: Restore native Application runtime probe
         run: dotnet restore ./tests/AstApplicationRuntimeProbe/AstApplicationRuntimeProbe.csproj
+      - name: Restore native Spreadsheet runtime probe
+        run: dotnet restore ./tests/AstSpreadsheetRuntimeProbe/AstSpreadsheetRuntimeProbe.csproj
       - name: Run AST lexer and emission probes
         timeout-minutes: 10
         run: |
