@@ -1,7 +1,7 @@
 Sub Main()
-    Dim drive As String
-    drive = Left(CurDir(), 1) & ":"
-    If Not IsDir(drive) Then Error 6341, "IsDir did not recognize the current Windows drive designator"
-    If Not DirExists(drive) Then Error 6342, "DirExists did not recognize the current Windows drive designator"
+    Dim currentDirectory As String
+    currentDirectory = CurDir()
+    If Not IsDir(currentDirectory) Then Error 6341, "IsDir did not recognize the current directory"
+    If Not DirExists(currentDirectory) Then Error 6342, "DirExists did not recognize the current directory"
     Print "ISDIR_DRIVE_OK"
 End Sub
