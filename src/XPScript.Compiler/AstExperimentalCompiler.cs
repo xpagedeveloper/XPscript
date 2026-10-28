@@ -1271,9 +1271,9 @@ internal static class Program
             }) ?? throw new XPScriptRuntimeException(5, "Shell could not start the program.");
             return process.Id;
         }
-        catch (System.ComponentModel.Win32Exception ex)
+        catch (System.ComponentModel.Win32Exception)
         {
-            throw new XPScriptRuntimeException(53, ex.Message);
+            return 0L;
         }
     }
     public static long Shell(object? command, object? windowStyle = null, object? unused = null)
@@ -1328,7 +1328,10 @@ internal static class Program
             if (!completed) { try { process.Kill(true); } catch { } return new XpShellResult { ExitCode = -1, Output = output.Result, Error = error.Result, TimedOut = true }; }
             return new XpShellResult { ExitCode = process.ExitCode, Output = output.Result, Error = error.Result, TimedOut = false };
         }
-        catch (System.ComponentModel.Win32Exception ex) { throw new XPScriptRuntimeException(53, ex.Message); }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            return 0L;
+        }
     }
     public static string[] Split(object? value, object? delimiter = null, object? count = null, object? compare = null)
     {
