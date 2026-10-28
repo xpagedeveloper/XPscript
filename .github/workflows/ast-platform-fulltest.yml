@@ -82,6 +82,8 @@ jobs:
       - name: Restore CLI for AST WebIIS regression
         timeout-minutes: 15
         run: dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
+      - name: Restore native Application runtime probe
+        run: dotnet restore ./tests/AstApplicationRuntimeProbe/AstApplicationRuntimeProbe.csproj
       - name: Run AST lexer and emission probes
         timeout-minutes: 10
         run: |
