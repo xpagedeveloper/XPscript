@@ -51,7 +51,8 @@ jobs:
             './tests/ast-emission/AstEmissionProbe.csproj',
             './tests/ast-compile-probe/AstCompileProbe.csproj',
             './tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj',
-            './tests/AstApplicationRuntimeProbe/AstApplicationRuntimeProbe.csproj'
+            './tests/AstApplicationRuntimeProbe/AstApplicationRuntimeProbe.csproj',
+            './tests/AstSpreadsheetRuntimeProbe/AstSpreadsheetRuntimeProbe.csproj'
           )
           foreach ($project in $projects) {
             dotnet build $project -c Release
