@@ -22,21 +22,11 @@ jobs:
         run: |
           $path = 'src/XPScript.Compiler/AstExperimentalCompiler.cs'
           $text = [System.IO.File]::ReadAllText($path)
-          $old = @'
-        catch (System.ComponentModel.Win32Exception ex)
-        {
-            throw new XPScriptRuntimeException(53, ex.Message);
-        }
-'@
-          $new = @'
-        catch (System.ComponentModel.Win32Exception)
-        {
-            return 0L;
-        }
-'@
-          if (-not $text.Contains($old)) { throw 'Expected ShellId startup-failure block not found.' }
-          $text = $text.Replace($old, $new)
-          [System.IO.File]::WriteAllText($path, $text, [System.Text.UTF8Encoding]::new($false))
+          $pattern = 'catch \(System\.ComponentModel\.Win32Exception ex\)\s*\{\s*throw new XPScriptRuntimeException\(53, ex\.Message\);\s*\}'
+          $replacement = "catch (System.ComponentModel.Win32Exception)`n        {`n            return 0L;`n        }"
+          $patched = [regex]::Replace($text, $pattern, $replacement, 1)
+          if ($patched -eq $text) { throw 'Expected ShellId startup-failure block not found.' }
+          [System.IO.File]::WriteAllText($path, $patched, [System.Text.UTF8Encoding]::new($false))
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- $path
