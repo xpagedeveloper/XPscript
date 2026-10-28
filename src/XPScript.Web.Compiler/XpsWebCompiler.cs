@@ -21,6 +21,7 @@ public sealed class XpsWebCompiler
     private static readonly Regex MainOrInitialize = new(@"(?im)^\s*(?:Public\s+|Private\s+)?Sub\s+(?:Main|Initialize)\b", RegexOptions.CultureInvariant);
     private static readonly Regex ScriptClassMarker = new(@"internal\s+static\s+class\s+Script\s*\{", RegexOptions.CultureInvariant);
     private static readonly Regex VariantDeclaration = new(@"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+As\s+Variant\s*$", RegexOptions.CultureInvariant);
+    private static readonly Regex LegacyWebObject = new(@"(?i)\b(?:UIForm|UIListView)\b", RegexOptions.CultureInvariant);
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, long> PersistentCacheSweeps = new(StringComparer.OrdinalIgnoreCase);
 
     public Task<XpsCompiledWebUnit> CompileAsync(string sourcePath, CancellationToken cancellationToken = default)
@@ -115,10 +116,11 @@ public sealed class XpsWebCompiler
         if (compilerSource.Contains(".Attachments", StringComparison.OrdinalIgnoreCase))
             compilerSource += "\n' XPScript compiler runtime feature: XPDBSQLite Attachments\n";
         compilerSource = EnsureCompilerEntryPoint(compilerSource);
-        // AST is the normal web compiler path. Keep an explicit legacy escape hatch
-        // for compatibility diagnostics while the remaining migration corpus is
-        // completed; production callers do not need an opt-in flag.
-        if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_LEGACY"), "1", StringComparison.Ordinal))
+        // AST is the normal web compiler path. UIForm/UIListView are deliberately
+        // legacy-backed objects and must use the web-aware legacy transpilation
+        // path so Request/Response injection is preserved.
+        if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_LEGACY"), "1", StringComparison.Ordinal)
+            && !LegacyWebObject.IsMatch(compilerSource))
         {
             compilerSource += Environment.NewLine + "Reference \"XPScript.Web.Runtime.dll\"" + Environment.NewLine;
             return await CompileAstWebAsync(fullSourcePath, fullSourceRoot, compilerSource, parsed, snapshotIdentity, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
@@ -747,7 +749,6 @@ internal static class Script
 </Project>
 """;
     }
-
     private static void DebugStep(string step, string sourcePath)
     {
         if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal)) return;
