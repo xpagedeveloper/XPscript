@@ -1,6 +1,9 @@
 Sub Main()
     Dim processId As Long
-    processId = ShellId("dotnet")
+    On Error Resume Next
+    processId = ShellId("/bin/true")
+    On Error GoTo 0
+    If processId <= 0 Then processId = ShellId("rundll32.exe")
     If processId <= 0 Then Error 6340, "ShellId did not return a process identifier"
     Dim failure As Long
     On Error Resume Next
