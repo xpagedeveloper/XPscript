@@ -164,7 +164,7 @@ if ($LASTEXITCODE -ne 0 -or $platformAliasText -notlike '*AST compilation succee
     throw "AST --platform alias regression: $platformAliasText"
 }
 
-$astRunText = dotnet $compiler ast-run $astSource --platform win-x64 --Args 'ast-run-check' | Out-String
+$astRunText = dotnet $compiler ast-run $astSource --platform $hostRid --Args 'ast-run-check' | Out-String
 if ($LASTEXITCODE -ne 0 -or $astRunText -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $astRunText -notlike '*APPLICATION_NEWLINE_END*') {
     throw "AST run regression: $astRunText"
 }
@@ -179,17 +179,17 @@ if ($LASTEXITCODE -ne 0 -or $daemonDependencyText -notlike '*MySqlConnector 2.6.
     throw "Default daemon run dependency-info regression: $daemonDependencyText"
 }
 
-$defaultRunText = dotnet $compiler run $astSource --platform win-x64 --Args 'default-run-check' | Out-String
+$defaultRunText = dotnet $compiler run $astSource --platform $hostRid --Args 'default-run-check' | Out-String
 if ($LASTEXITCODE -ne 0 -or $defaultRunText -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $defaultRunText -notlike '*APPLICATION_NEWLINE_END*') {
     throw "Default AST run regression: $defaultRunText"
 }
 
-$legacyRunText = dotnet $compiler legacy-run $astSource --platform win-x64 --no-daemon --Args 'legacy-run-check' | Out-String
+$legacyRunText = dotnet $compiler legacy-run $astSource --platform $hostRid --no-daemon --Args 'legacy-run-check' | Out-String
 if ($LASTEXITCODE -ne 0 -or $legacyRunText -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $legacyRunText -notlike '*APPLICATION_NEWLINE_END*') {
     throw "Legacy run alias regression: $legacyRunText"
 }
 
-$runV1Text = dotnet $compiler runv1 $astSource --platform win-x64 --no-daemon --Args 'runv1-check' | Out-String
+$runV1Text = dotnet $compiler runv1 $astSource --platform $hostRid --no-daemon --Args 'runv1-check' | Out-String
 if ($LASTEXITCODE -ne 0 -or $runV1Text -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $runV1Text -notlike '*APPLICATION_NEWLINE_END*') {
     throw "runv1 legacy alias regression: $runV1Text"
 }
