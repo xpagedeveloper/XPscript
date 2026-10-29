@@ -1245,7 +1245,7 @@ $arrayClassMethodOutput = Join-Path $output 'method-array-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'method-array-runtime-next.xps') -o $arrayClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST array class-method compilation failed.' }
 $arrayClassMethodResult = dotnet (Join-Path $arrayClassMethodOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($arrayClassMethodResult -join "`n") -ne '43:-3:-1') { throw 'AST array class-method execution failed.' }
+if ($LASTEXITCODE -ne 0 -or (($arrayClassMethodResult -join "`n").Replace([char]0x2212, '-')) -ne '43:-3:-1') { throw "AST array class-method execution failed. Actual: $($arrayClassMethodResult -join ', ')" }
 Write-Host 'AST_ARRAY_CLASS_METHOD_OK'
 $objectClassMethodOutput = Join-Path $output 'class-method-object-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-object-next.xps') -o $objectClassMethodOutput
