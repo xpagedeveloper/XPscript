@@ -1154,7 +1154,7 @@ foreach ($arrayConstructorFixture in $arrayConstructorCoverage.GetEnumerator()) 
     if ($LASTEXITCODE -ne 0) { throw "AST array constructor compilation failed for $($arrayConstructorFixture.Key)." }
     $arrayConstructorResult = dotnet (Join-Path $arrayConstructorOutput 'Generated.dll')
     if ($LASTEXITCODE -ne 0 -or ($arrayConstructorResult -join "`n") -notmatch [regex]::Escape($arrayConstructorFixture.Value)) {
-        throw "AST array constructor regression failed for $($arrayConstructorFixture.Key)."
+        throw "AST array constructor regression failed for $($arrayConstructorFixture.Key). Expected: $($arrayConstructorFixture.Value). Exit code: $LASTEXITCODE. Actual: $($arrayConstructorResult -join ', ')"
     }
 }
 Write-Host 'AST_ARRAY_CONSTRUCTOR_COVERAGE_OK'
