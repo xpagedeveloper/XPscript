@@ -144,13 +144,16 @@ if ($LASTEXITCODE -ne 0 -or $singleFileText -notlike '*AST compilation succeeded
     throw "AST single-file output regression: $singleFileText"
 }
 
+$hostArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+$hostRid = if ($IsWindows) { "win-$hostArchitecture" } elseif ($IsMacOS) { "osx-$hostArchitecture" } else { "linux-$hostArchitecture" }
+$hostExecutableName = if ($IsWindows) { 'Generated.exe' } else { 'Generated' }
 $frameworkSingleFileOutput = Join-Path $resultRoot 'framework-single-file'
-$frameworkSingleFileText = dotnet $compiler ast-compile $astSource -o $frameworkSingleFileOutput --runtime=false --single-file=true --rid win-x64 | Out-String
+$frameworkSingleFileText = dotnet $compiler ast-compile $astSource -o $frameworkSingleFileOutput --runtime=false --single-file=true --rid $hostRid | Out-String
 if ($LASTEXITCODE -ne 0 -or $frameworkSingleFileText -notlike '*AST compilation succeeded*' -or
-    -not (Test-Path (Join-Path $frameworkSingleFileOutput 'Generated.exe'))) {
+    -not (Test-Path (Join-Path $frameworkSingleFileOutput $hostExecutableName))) {
     throw "AST framework-dependent single-file regression: $frameworkSingleFileText"
 }
-$singleFileRunOutput = & (Join-Path $frameworkSingleFileOutput 'Generated.exe') | Out-String
+$singleFileRunOutput = & (Join-Path $frameworkSingleFileOutput $hostExecutableName) | Out-String
 if ($LASTEXITCODE -ne 0 -or $singleFileRunOutput -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $singleFileRunOutput -notlike '*APPLICATION_NEWLINE_END*') {
     throw "AST framework-dependent single-file execution regression: $singleFileRunOutput"
 }
