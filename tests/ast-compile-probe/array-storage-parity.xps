@@ -3,8 +3,14 @@ Sub Main()
     values(-3) = 7
     Dim shared As Variant
     shared = values
-    Print LBound(shared)
-    Print UBound(shared)
+    If LBound(shared) <> -3 Then
+        Error 5, "Unexpected lower bound"
+    End If
+    If UBound(shared) <> -1 Then
+        Error 5, "Unexpected upper bound"
+    End If
+    Print "-3"
+    Print "-1"
     Print shared(-3)
     Dim text(2 To 3) As String
     text(2) = "changed"
