@@ -175,7 +175,7 @@ internal static class RunCompiler
             }
 
             var assemblyPath = CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile
-                ? Path.Combine(outputRoot, OperatingSystem.IsWindows() ? "Generated.exe" : "Generated")
+                ? Path.Combine(outputRoot, IsWindowsRuntime(runtimeIdentifier) ? "Generated.exe" : "Generated")
                 : Path.Combine(outputRoot, "Generated.dll");
             if (!File.Exists(assemblyPath))
                 throw new CompilerException("Run compilation succeeded, but the requested generated artifact was not produced.");
@@ -331,6 +331,11 @@ internal static class RunCompiler
 
     private static bool IsAndroidRuntime(string? runtimeIdentifier) =>
         runtimeIdentifier is "android-arm64" or "android-x64";
+
+    private static bool IsWindowsRuntime(string? runtimeIdentifier) =>
+        string.IsNullOrWhiteSpace(runtimeIdentifier)
+            ? OperatingSystem.IsWindows()
+            : runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase);
 
     private static string BuildProject(
         IReadOnlyList<(string Name, string Path)> references,
