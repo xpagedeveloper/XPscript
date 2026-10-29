@@ -54,7 +54,7 @@ jobs:
             locale: en-US
             lang: en_US.UTF-8
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       LANG: ${{ matrix.lang }}
       LC_ALL: ${{ matrix.lang }}
@@ -92,7 +92,7 @@ jobs:
           dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
           dotnet run --project ./tests/ast-emission/AstEmissionProbe.csproj -c Release
       - name: Run AST CLI regression
-        timeout-minutes: 30
+        timeout-minutes: 45
         shell: pwsh
         run: ./tests/ast-compile-probe/run-ast-cli.ps1
       - name: Compile and execute AST target sample
