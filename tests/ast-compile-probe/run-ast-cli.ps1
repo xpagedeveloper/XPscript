@@ -1870,6 +1870,12 @@ $classCaseProbe = Invoke-BoundedDotnetRun @((Join-Path $output 'class-method-cas
 if ($classCaseProbe.TimedOut) { throw 'AST case-insensitive class member execution timed out.' }
 if ($classCaseProbe.ExitCode -ne 0 -or $classCaseProbe.Output.Trim() -ne '3') { throw "AST case-insensitive class member execution failed.`n$($classCaseProbe.Output)" }
 $spreadsheetProject = Join-Path $root 'tests/AstSpreadsheetRuntimeProbe/AstSpreadsheetRuntimeProbe.csproj'
+$spreadsheetFixturesProject = Join-Path $root 'tests/SpreadsheetSecurityFixtures/SpreadsheetSecurityFixtures.csproj'
+foreach ($restoreProject in @($spreadsheetProject, $spreadsheetFixturesProject)) {
+    $spreadsheetRestore = Invoke-BoundedDotnetRun @('restore', $restoreProject, '-p:UseSharedCompilation=false', '-m:1')
+    if ($spreadsheetRestore.TimedOut) { throw "AST spreadsheet project restore timed out: $restoreProject" }
+    if ($spreadsheetRestore.ExitCode -ne 0) { throw "AST spreadsheet project restore failed: $restoreProject`n$($spreadsheetRestore.Output)" }
+}
 $spreadsheetBuild = Invoke-BoundedDotnetRun @('build', $spreadsheetProject, '-c', 'Release', '--no-restore', '-p:UseSharedCompilation=false', '-p:UseAppHost=false', '-m:1')
 if ($spreadsheetBuild.TimedOut) { throw 'AST native spreadsheet runtime probe build timed out.' }
 if ($spreadsheetBuild.ExitCode -ne 0) { throw "AST native spreadsheet runtime probe build failed.`n$($spreadsheetBuild.Output)" }
