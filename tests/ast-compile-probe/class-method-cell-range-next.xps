@@ -1,0 +1,17 @@
+Class Reader
+    Public Function ReadArea(ByVal cell As XPCell, ByVal area As XPRange) As String
+        ReadArea = cell.Address + "|" + area.Address
+    End Function
+End Class
+
+Sub Main()
+    Dim book As New XPSpreadsheet
+    Dim sheet As XPWorksheet
+    Set sheet = book.AddWorksheet("Data")
+    Dim cell As XPCell
+    Set cell = sheet.Cell("A1")
+    Dim area As XPRange
+    Set area = sheet.Range("A1:B2")
+    Dim reader As New Reader
+    Print reader.ReadArea(cell, area)
+End Sub

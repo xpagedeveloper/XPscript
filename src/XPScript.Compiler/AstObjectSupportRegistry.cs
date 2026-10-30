@@ -117,7 +117,7 @@ internal static class AstObjectSupportRegistry
         "XPHttpDbSupabase", "XPHttpDbDominoRest", "XPJsonSchema", "XPJsonValidationResult",
         "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall",
         "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "NotesHTTPRequest",
-        "XPWorksheet",
+        "XPWorksheet", "XPCell", "XPRange",
     }.Concat(NotesRuntimeTypes.Keys).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     internal static bool SupportsClassMethodNativeType(string? name) =>

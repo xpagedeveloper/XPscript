@@ -1331,6 +1331,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST worksheet class-method compilation failed.
 $worksheetClassMethodResult = dotnet (Join-Path $worksheetClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($worksheetClassMethodResult -join "`n") -ne 'Data') { throw 'AST worksheet class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_WORKSHEET_OK'
+$cellRangeClassMethodOutput = Join-Path $output 'class-method-cell-range-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-cell-range-next.xps') -o $cellRangeClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST cell/range class-method compilation failed.' }
+$cellRangeClassMethodResult = dotnet (Join-Path $cellRangeClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($cellRangeClassMethodResult -join "`n") -ne 'A1|A1:B2') { throw 'AST cell/range class-method execution failed.' }
+Write-Host 'AST_CLASS_METHOD_CELL_RANGE_OK'
 $httpClientClassMethodOutput = Join-Path $output 'class-method-http-client-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-client-next.xps') -o $httpClientClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST HTTP client class-method compilation failed.' }
