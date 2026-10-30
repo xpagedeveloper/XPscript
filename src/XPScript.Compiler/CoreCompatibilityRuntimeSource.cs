@@ -262,8 +262,6 @@ internal static class LSArrayRuntime
         else Array.Clear(array);
     }
 
-    // Obtain a managed reference only after exact element-type and complete bounds checks.
-    // This also supports non-zero-based arrays without a snapshot/copy-back wrapper.
     public static ref T Reference<T>(object? value, params object?[] indices)
     {
         if (value is not Array array || array.GetType().GetElementType() != typeof(T))
@@ -630,6 +628,16 @@ internal static class LSFileRuntime
 
     private static readonly Dictionary<int, State> Files = new();
     private static readonly object Sync = new();
+    private const int DarwinUnlockFunction = 0;
+    private const int DarwinTryLockFunction = 2;
+    private const int DarwinSeekSet = 0;
+    private const int DarwinSeekCurrent = 1;
+
+    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "lockf", SetLastError = true)]
+    private static extern int DarwinLockf(int fd, int function, long size);
+
+    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "lseek", SetLastError = true)]
+    private static extern long DarwinSeek(int fd, long offset, int whence);
 
     public static int FreeFile()
     {
@@ -794,13 +802,79 @@ internal static class LSFileRuntime
     public static void LockBytes(int number, long start, long end)
     {
         if (start < 1 || end < start) throw new IOException("Lock range must be a valid one-based interval.");
-        Get(number).Stream.Lock(checked(start - 1), checked(end - start + 1));
+        var stream = Get(number).Stream;
+        var offset = checked(start - 1);
+        var length = checked(end - start + 1);
+        if (OperatingSystem.IsMacOS())
+        {
+            DarwinSetRegionLock(stream, offset, length, DarwinTryLockFunction, "lock");
+            return;
+        }
+        stream.Lock(offset, length);
     }
 
     public static void UnlockBytes(int number, long start, long end)
     {
         if (start < 1 || end < start) throw new IOException("Unlock range must be a valid one-based interval.");
-        Get(number).Stream.Unlock(checked(start - 1), checked(end - start + 1));
+        var stream = Get(number).Stream;
+        var offset = checked(start - 1);
+        var length = checked(end - start + 1);
+        if (OperatingSystem.IsMacOS())
+        {
+            DarwinSetRegionLock(stream, offset, length, DarwinUnlockFunction, "unlock");
+            return;
+        }
+        stream.Unlock(offset, length);
+    }
+
+    private static void DarwinSetRegionLock(FileStream stream, long offset, long length, int function, string operation)
+    {
+        var handle = stream.SafeFileHandle;
+        var addedRef = false;
+        long nativePosition = -1;
+        try
+        {
+            handle.DangerousAddRef(ref addedRef);
+            var rawValue = handle.DangerousGetHandle().ToInt64();
+            if (rawValue < int.MinValue || rawValue > int.MaxValue)
+                throw new IOException("macOS file descriptor is outside the supported integer range.");
+
+            var fd = (int)rawValue;
+            nativePosition = DarwinSeek(fd, 0, DarwinSeekCurrent);
+            if (nativePosition < 0)
+            {
+                var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+                throw new IOException("Unable to read macOS file descriptor position before " + operation + ". errno=" + error.ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (DarwinSeek(fd, offset, DarwinSeekSet) < 0)
+            {
+                var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+                throw new IOException("Unable to position macOS file descriptor for " + operation + " at offset " + offset.ToString(CultureInfo.InvariantCulture) + ". errno=" + error.ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (DarwinLockf(fd, function, length) != 0)
+            {
+                var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+                throw new IOException("Unable to " + operation + " macOS file region offset " + offset.ToString(CultureInfo.InvariantCulture) + " length " + length.ToString(CultureInfo.InvariantCulture) + ". errno=" + error.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (addedRef && nativePosition >= 0)
+                {
+                    var rawValue = handle.DangerousGetHandle().ToInt64();
+                    if (rawValue >= int.MinValue && rawValue <= int.MaxValue)
+                        DarwinSeek((int)rawValue, nativePosition, DarwinSeekSet);
+                }
+            }
+            finally
+            {
+                if (addedRef) handle.DangerousRelease();
+            }
+        }
     }
 
     public static void ChDrive(object? driveValue)
@@ -932,8 +1006,6 @@ internal static class LSFileRuntime
 
     private static State BinaryState(string path, string mode, int recordLength)
     {
-        // Binary files are created on first Open, matching LotusScript/legacy
-        // behavior for a new output file.
         var fileMode = FileMode.OpenOrCreate;
         var stream = new FileStream(path, fileMode, FileAccess.ReadWrite, FileShare.ReadWrite);
         return new State { Stream = stream, Mode = mode, RecordLength = recordLength };
