@@ -270,6 +270,9 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Include/Use compilation failed.' }
 $includeUseResult = dotnet (Join-Path $includeUseOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($includeUseResult -join "`n") -ne 'AST_INCLUDE_USE_OK') { throw 'AST Include/Use deduplication or relative resolution failed.' }
 Write-Host 'AST_INCLUDE_USE_OK'
+$includeSpanOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-span-error-next.xps') -o (Join-Path $output 'include-span-error-next') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($includeSpanOutput -join "`n") -notmatch 'helper\.xps:2:') { throw 'AST included-source span mapping regression failed.' }
+Write-Host 'AST_INCLUDED_SOURCE_SPAN_MAPPING_OK'
 $inlineAssignmentOutput = Join-Path $output 'if-inline-assignment'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'if-inline-assignment.xps') -o $inlineAssignmentOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST inline If assignment compilation failed.' }

@@ -575,6 +575,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [x] Add missing AST Variant-to-Byte conversion through the existing runtime `CByte` helper; the executable regression now matches published scalar conversion behavior.
 - [x] Preserve uninitialized Variant Nothing semantics for `Is Nothing`; AST now emits null storage instead of an ExpandoObject and matches published output.
 - [ ] Preserve original source spans through all preprocessing and map parser/binder errors through the shared diagnostic contract.
+  - [x] Verify semantic errors from an included source retain the physical helper path and line through `include-span-error-next.xps`.
   - [x] Investigate `Option Base` removal and route-attribute removal for source-span shifts; both preserve line structure and have focused regressions.
   - [x] Audit every length-changing AST preprocessor rewrite in the current AST pipeline for the same span and declaration-preservation risk; declaration removals preserve line structure and transformed diagnostics use the shared span mapper.
   - [x] Add column-mapping regressions for rewrites that insert or remove characters on a line (`Sleep`, `MkDir`, file statements, `ReDim`, and related lowering).

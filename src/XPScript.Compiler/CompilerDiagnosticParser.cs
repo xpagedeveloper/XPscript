@@ -122,6 +122,17 @@ internal static class CompilerDiagnosticParser
         var map = sourceMap ?? context?.Map;
         if (map is null) return null;
 
+        // Most parser/binder diagnostics retain the expanded line number. Prefer
+        // that direct source-map entry before using the text-based recovery below;
+        // included files commonly contain several lines, so a description-only
+        // search cannot uniquely identify the failing line.
+        if (reportedLine > 0 && reportedLine <= map.Count)
+        {
+            var direct = map.Resolve(reportedLine, rootSourcePath);
+            if (direct.IncludeTrace is { Count: > 0 })
+                return new RecoveredIncludeLocation(direct.SourcePath, direct.Line, 1);
+        }
+
         // Fallback for generated diagnostics whose #line mapping was lost: match the
         // diagnostic's source expression against physical included source lines.
         var quoted = Regex.Matches(description, @"'(?<value>[^']+)'")

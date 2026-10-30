@@ -1,0 +1,5 @@
+Include "include-span-error-lib/helper.xps"
+
+Sub Main()
+    Call IncludedSpanFailure()
+End Sub

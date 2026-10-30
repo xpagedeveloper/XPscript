@@ -63,8 +63,34 @@ public static class AstExperimentalCompiler
         IReadOnlyList<string>? sourceRoots = null, IReadOnlyList<string>? sourcePreprocessors = null,
         bool embedAssets = false,
         CancellationToken cancellationToken = default)
-        => await CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, null, securityMode, restricted,
-            sourceRoots, sourcePreprocessors, embedAssets, cancellationToken).ConfigureAwait(false);
+    {
+        try
+        {
+            return await CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, null, securityMode, restricted,
+                sourceRoots, sourcePreprocessors, embedAssets, cancellationToken).ConfigureAwait(false);
+        }
+        catch (CompilerException ex)
+        {
+            // The AST binder reports expanded-source coordinates. Recover the
+            // physical Include location at the public boundary as well as in the
+            // early preprocessor validators, which keeps CLI diagnostics stable
+            // for errors raised later during binding/emission.
+            var rootSource = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+            var includeResult = new IncludeSourcePreprocessor().Transform(rootSource, sourcePath);
+            var remapped = SourceMapDiagnostics.Remap(ex.Message, sourcePath, includeResult.Map);
+            var mappedDiagnostics = ex.GeneratedDiagnostics.Select(diagnostic =>
+            {
+                if (diagnostic.Line <= 0 || diagnostic.Line > includeResult.Map.Count) return diagnostic;
+                var location = includeResult.Map.Resolve(diagnostic.Line, sourcePath);
+                if (location.IncludeTrace is not { Count: > 0 }) return diagnostic;
+                diagnostic.File = Path.GetFileName(location.SourcePath);
+                diagnostic.Line = location.Line;
+                return diagnostic;
+            }).ToArray();
+            if (string.Equals(remapped, ex.Message, StringComparison.Ordinal) && mappedDiagnostics.SequenceEqual(ex.GeneratedDiagnostics)) throw;
+            throw new CompilerException(remapped, ex.DiagnosticCode, ex.Category, mappedDiagnostics);
+        }
+    }
 
     private static async Task<string> CompileAsync(string sourcePath, string outputDirectory, string? runtimeIdentifier,
         Func<string, string>? generatedSourceTransform,
