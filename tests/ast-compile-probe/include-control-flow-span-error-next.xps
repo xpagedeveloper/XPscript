@@ -1,0 +1,4 @@
+Include "include-control-flow-span-error-lib/helper.xps"
+
+Sub Main()
+End Sub

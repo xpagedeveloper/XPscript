@@ -2186,6 +2186,9 @@ if ($LASTEXITCODE -ne 0) { throw 'AST XPAi overload compilation failed.' }
 Write-Host 'AST_XPAI_OVERLOADS_OK'
 $crossProcedure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-cross-procedure-error.xps') -o (Join-Path $output 'cross-procedure') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($crossProcedure -join "`n") -notmatch "goto-cross-procedure-error\.xps:7:5: XPS1012: Unknown label 'outside'") { throw 'AST GoTo source mapping or cross-procedure label validation failed.' }
+$includedControlFlowSpan = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-control-flow-span-error-next.xps') -o (Join-Path $output 'include-control-flow-span-error-next') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($includedControlFlowSpan -join "`n") -notmatch "helper\.xps:2:5: XPS1012: Unknown label 'missing'") { throw 'AST included control-flow source mapping failed.' }
+Write-Host 'AST_INCLUDED_CONTROL_FLOW_SPAN_OK'
 $gotoOutput = Join-Path $output 'goto-scope'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-procedure-scope.xps') -o $gotoOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST procedure-scoped GoTo compilation failed.' }
