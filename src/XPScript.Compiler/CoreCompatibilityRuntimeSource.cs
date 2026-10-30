@@ -350,7 +350,7 @@ internal static class LSArrayRuntime
     public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5)
         => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4, lower5], [upper1, upper2, upper3, upper4, upper5]);
     public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5, int upper6, int lower6)
-        => ReDimManaged(value, preserve, [lower1, lower2,lower3, lower4, lower5, lower6], [upper1, upper2, upper3, upper4, upper5, upper6]);
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4, lower5, lower6], [upper1, upper2, upper3, upper4, upper5, upper6]);
     public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5, int upper6, int lower6, int upper7, int lower7)
         => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4, lower5, lower6, lower7], [upper1, upper2, upper3, upper4, upper5, upper6, upper7]);
     public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5, int upper6, int lower6, int upper7, int lower7, int upper8, int lower8)
@@ -897,6 +897,7 @@ internal static class LSFileRuntime
         WriteTyped(writer, state, value, xpscriptType);
         FinishRecord(state);
     }
+
     public static object? GetValue(int number, object? recordNumber, string xpscriptType, object? currentValue)
     {
         var state = Get(number);
