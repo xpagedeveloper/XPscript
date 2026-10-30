@@ -32,3 +32,4 @@ samples/xpimage-format-*.png
 samples/xpscript-xpimage-*.png
 samples/xpscript-full-runtime-stream-test.txt
 .context-engine.yaml
+.ccindex/
