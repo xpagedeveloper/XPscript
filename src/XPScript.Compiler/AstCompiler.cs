@@ -1021,7 +1021,17 @@ internal static class Program
     public static bool False = false;
     public static LSConsoleRuntime Console = new();
     public static string AstPrintText(object? value) => XPScriptNullRuntime.IsNull(value) ? "Variable is null" : value is ILSObjectReference reference && reference.IsNothing ? "Variable is Nothing" : value is DateTime date ? date.ToString(CultureInfo.InvariantCulture) : Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
-    public static dynamic RequestScope = new ExpandoObject();
+    public sealed class XpsAstRequestScope
+    {
+        private readonly Dictionary<string, object?> _values = new(StringComparer.OrdinalIgnoreCase);
+        public void Set(object? key, object? value) => _values[Convert.ToString(key, CultureInfo.InvariantCulture) ?? string.Empty] = value;
+        public void Add(object? key, object? value) => Set(key, value);
+        public object? Get(object? key) => _values.TryGetValue(Convert.ToString(key, CultureInfo.InvariantCulture) ?? string.Empty, out var value) ? value : null;
+        public bool Exists(object? key) => _values.ContainsKey(Convert.ToString(key, CultureInfo.InvariantCulture) ?? string.Empty);
+        public bool Remove(object? key) => _values.Remove(Convert.ToString(key, CultureInfo.InvariantCulture) ?? string.Empty);
+        public void Clear() => _values.Clear();
+    }
+    public static XpsAstRequestScope RequestScope = new();
     public static dynamic Err => XPScriptErrorRuntime.Err;
     public static dynamic Erl => XPScriptErrorRuntime.Erl;
     public static dynamic SEARCH_BREADTH = 1723L;

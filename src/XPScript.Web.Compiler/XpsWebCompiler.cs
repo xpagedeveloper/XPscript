@@ -673,6 +673,7 @@ internal static class Script
             transformed = transformed.Replace($"Response.{method}(", $"XpsWebResponseRestExtensions.{method}({receiver}", StringComparison.Ordinal);
             transformed = transformed.Replace($"((dynamic)(Response)).{method}(", $"XpsWebResponseRestExtensions.{method}({receiver}", StringComparison.Ordinal);
         }
+        transformed = Regex.Replace(transformed, @"(?s)\s*public sealed class XpsAstRequestScope\s*\{.*?\n\s*\}\s*\r?\n\s*public static XpsAstRequestScope RequestScope = new\(\);\s*\r?\n", Environment.NewLine, RegexOptions.CultureInvariant);
         return Regex.Replace(transformed, @"(?im)^\s*public static dynamic RequestScope = new ExpandoObject\(\);\s*\r?\n", string.Empty, RegexOptions.CultureInvariant);
     }
 
