@@ -1,0 +1,3 @@
+Sub Main()
+    Print "TARGET_SPECIFIC_SOURCE_OK"
+End Sub

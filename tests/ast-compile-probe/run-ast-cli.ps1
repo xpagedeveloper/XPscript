@@ -2367,4 +2367,12 @@ if (($result -join "`n") -notmatch 'AST_OPTIONAL_CALL_OK') { throw 'AST omitted 
 if (($result -join "`n") -notmatch 'AST_FUNCTION_RESULT_OK') { throw 'AST stored function result, fall-through or Exit Function failed.' }
 if (($result -join "`n") -notmatch '(?m)^43\s*$') { throw 'AST procedure bodies or ByRef copy-back failed.' }
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -notmatch 'AST_XPS_COMPILE_OK' -or ($result -join "`n") -notmatch 'AST_XPS_PRINT_OK' -or ($result -join "`n") -notmatch 'AST_XPS_IF_OK' -or ($result -join "`n") -notmatch '(?m)^1$' -or ($result -join "`n") -notmatch '(?m)^2$' -or ($result -join "`n") -notmatch '(?m)^3$' -or ($result -join "`n") -notmatch '(?m)^4$' -or ($result -join "`n") -notmatch 'AST_XPS_SELECT_OK' -or ($result -join "`n") -notmatch '(?m)^7$' -or ($result -join "`n") -notmatch '(?m)^8$') { throw 'AST CLI generated assembly did not run successfully.' }
+
+$targetSourceProbe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $root 'tests/ast-compile-probe/AstCompileProbe.csproj'), '-c', 'Release', '--no-build')
+if ($targetSourceProbe.ExitCode -ne 0 -or $targetSourceProbe.Output -notmatch 'AST_TARGET_GENERATED_DESKTOP_OK' -or
+    $targetSourceProbe.Output -notmatch 'AST_TARGET_GENERATED_ANDROID_SKIPPED=ANDROID_PREREQUISITES_NOT_REQUESTED' -or
+    $targetSourceProbe.Output -notmatch 'AST_TARGET_GENERATED_BROWSER_SKIPPED=WASM_WORKLOAD_NOT_REQUESTED') {
+    throw 'Target-specific generated-source regression failed.'
+}
+Write-Host 'AST_TARGET_GENERATED_SOURCE_OK'
 Write-Host 'AST CLI compilation probe passed.'

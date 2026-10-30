@@ -162,3 +162,37 @@ var guardEmit = guardCompilation.Emit(guardStream);
 if (!guardEmit.Success) throw new InvalidOperationException(string.Join("\n", guardEmit.Diagnostics));
 Assembly.Load(guardStream.ToArray()).GetType("Guard")!.GetMethod("Main")!.Invoke(null, null);
 Console.WriteLine("AST_BYREF_STORAGE_GUARDS_OK");
+
+var targetFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "target-specific-generated-code-next.xps");
+targetFixture = Path.GetFullPath(targetFixture);
+var targetOutput = Path.Combine(Path.GetTempPath(), "xpscript-target-source-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(targetOutput);
+try
+{
+    foreach (var rid in new[] { "win-x64", "linux-x64", "osx-x64" })
+    {
+        var captured = string.Empty;
+        try
+        {
+            await XPScript.Compiler.AstCompiler.CompileWithGeneratedSourceTransformAsync(
+                targetFixture, Path.Combine(targetOutput, rid), rid,
+                generated =>
+                {
+                    captured = generated;
+                    throw new InvalidOperationException("TARGET_SOURCE_CAPTURED");
+                });
+        }
+        catch (InvalidOperationException ex) when (ex.Message == "TARGET_SOURCE_CAPTURED") { }
+        if (captured.Length == 0 || !captured.Contains("public static void Main()", StringComparison.Ordinal))
+            throw new InvalidOperationException($"Desktop target {rid} lost its generated Main entry point.");
+        if (captured.Contains("__xps_android_entry", StringComparison.Ordinal))
+            throw new InvalidOperationException($"Desktop target {rid} received the Android entry point.");
+    }
+    Console.WriteLine("AST_TARGET_GENERATED_DESKTOP_OK");
+    Console.WriteLine("AST_TARGET_GENERATED_ANDROID_SKIPPED=ANDROID_PREREQUISITES_NOT_REQUESTED");
+    Console.WriteLine("AST_TARGET_GENERATED_BROWSER_SKIPPED=WASM_WORKLOAD_NOT_REQUESTED");
+}
+finally
+{
+    try { Directory.Delete(targetOutput, recursive: true); } catch { }
+}
