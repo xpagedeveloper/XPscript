@@ -87,7 +87,7 @@ jobs:
       - name: Restore native Spreadsheet runtime probe
         run: dotnet restore ./tests/AstSpreadsheetRuntimeProbe/AstSpreadsheetRuntimeProbe.csproj
       - name: Build AST CLI probe before no-build execution
-        run: dotnet build ./tests/ast-compile-probe/AstCompileProbe.csproj -c Release --no-restore
+        run: dotnet build ./tests/ast-compile-probe/AstCompileProbe.csproj -c Release
       - name: Run AST lexer and emission probes
         timeout-minutes: 10
         run: |
