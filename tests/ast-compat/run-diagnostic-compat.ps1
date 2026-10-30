@@ -49,6 +49,18 @@ if ($legacyIdentity.Code -ne $astIdentity.Code -or $legacyIdentity.Line -ne $ast
 
 Write-Host "AST_DIAGNOSTIC_COMPAT=OK code=$($astIdentity.Code) line=$($astIdentity.Line) legacyColumn=$($legacyIdentity.Column) astColumn=$($astIdentity.Column)"
 
+$legacyJsonText = (& dotnet $compiler legacy-compile $source -o (Join-Path $root 'out/diagnostic-compat-legacy-json') --runtime=false --result-format json 2>&1 | Out-String)
+$astJsonText = (& dotnet $compiler ast-compile $source -o (Join-Path $root 'out/diagnostic-compat-ast-json') --result-format json 2>&1 | Out-String)
+$legacyJson = $legacyJsonText.Substring($legacyJsonText.IndexOf('{')) | ConvertFrom-Json
+$astJson = $astJsonText.Substring($astJsonText.IndexOf('{')) | ConvertFrom-Json
+$legacyError = $legacyJson.errors[0]
+$astError = $astJson.errors[0]
+if ($legacyError.file -ne $astError.file -or $legacyError.line -ne $astError.line -or
+    $legacyError.diagnosticCode -ne $astError.diagnosticCode -or $legacyError.category -ne $astError.category) {
+    throw "Structured legacy/AST diagnostic mismatch: legacy=$($legacyError.file):$($legacyError.line):$($legacyError.diagnosticCode):$($legacyError.category) AST=$($astError.file):$($astError.line):$($astError.diagnosticCode):$($astError.category)"
+}
+Write-Host "AST_DIAGNOSTIC_STRUCTURED_COMPAT=OK category=$($astError.category) columnDelta=$([int]$astError.position - [int]$legacyError.position)"
+
 # AST capability improvements are allowed when the published legacy compiler
 # rejects the same source. The reverse direction is not allowed and is covered
 # by the legacy/AST compile-and-runtime parity harness.
