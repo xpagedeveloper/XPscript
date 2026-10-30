@@ -15,10 +15,10 @@ internal static class AstClassConstructorSupport
             foreach (var constructor in constructors.Length == 0 ? [null] : constructors.Cast<ConstructorDeclarationSyntax?>())
             {
                 var parameters = constructor?.Parameters ?? Array.Empty<ParameterSyntax>();
-                AstExperimentalCompiler.ValidateOptionalDeclarations(parameters, path, source);
+                AstCompiler.ValidateOptionalDeclarations(parameters, path, source);
                 var duplicate = parameters.GroupBy(p => p.Identifier.Text, StringComparer.OrdinalIgnoreCase).FirstOrDefault(group => group.Count() > 1)?.Skip(1).FirstOrDefault();
                 if (duplicate is not null)
-                    throw AstExperimentalCompiler.MappedDiagnostic(duplicate.Span, path, source,
+                    throw AstCompiler.MappedDiagnostic(duplicate.Span, path, source,
                         "A constructor parameter name must be unique.", CompilerDiagnosticCodes.DuplicateOverload, "semantic");
                 foreach (var parameter in parameters)
                 {
@@ -29,13 +29,13 @@ internal static class AstClassConstructorSupport
                         BoundExpressionEmitter.RuntimeObjectType(type.Name) is not null;
                     if (type.RuntimeType == typeof(object) &&
                         !sharedReference)
-                        throw AstExperimentalCompiler.MappedDiagnostic(parameter.Span, path, source,
+                        throw AstCompiler.MappedDiagnostic(parameter.Span, path, source,
                             "AST constructors support scalar, Variant, XPImage, shared reference and typed List parameters; unknown reference signatures are not implemented yet.", "XPS3001", "ast");
                 }
-                var types = parameters.Select(p => AstExperimentalCompiler.ResolveParameterType(p, symbols)).ToArray();
+                var types = parameters.Select(p => AstCompiler.ResolveParameterType(p, symbols)).ToArray();
                 var signature = string.Join(";", types.Select((type, i) => $"{type.Shape}:{type.Name}:{type.ArrayRank}:{parameters[i].IsByRef}"));
                 if (!signatures.Add(signature))
-                    throw AstExperimentalCompiler.MappedDiagnostic(constructor!.Span, path, source,
+                    throw AstCompiler.MappedDiagnostic(constructor!.Span, path, source,
                         "Duplicate constructor parameter signature.", CompilerDiagnosticCodes.DuplicateOverload, "semantic");
                 symbols.Declare(new FunctionSymbol(declaration.Identifier.Text + ".New", typeof(object), types.Select((t, i) => parameters[i].IsArray ? typeof(Array) : t.RuntimeType).ToArray(),
                     XpTypeSymbol.User(declaration.Identifier.Text), types, parameters.Select(parameter => parameter.IsByRef).ToArray())
@@ -82,10 +82,10 @@ internal static class AstClassConstructorSupport
     internal static IReadOnlyList<StatementSyntax> Body(ClassDeclarationSyntax declaration, ConstructorDeclarationSyntax constructor,
         string path, string source)
     {
-        var calls = AstExperimentalCompiler.FlattenStatements(constructor.Statements).Where(s => ParentCall(s) is not null).ToArray();
+        var calls = AstCompiler.FlattenStatements(constructor.Statements).Where(s => ParentCall(s) is not null).ToArray();
         if (calls.Length > 0 && (declaration.BaseType is null || calls.Length != 1 ||
             constructor.Statements.Count == 0 || !ReferenceEquals(calls[0], constructor.Statements[0])))
-            throw AstExperimentalCompiler.MappedDiagnostic(calls[^1].Span, path, source,
+            throw AstCompiler.MappedDiagnostic(calls[^1].Span, path, source,
                 "Parent.New must occur exactly once as the first statement of a derived constructor.", "XPS1012", "semantic");
         return calls.Length == 0 ? constructor.Statements : constructor.Statements.Skip(1).ToArray();
     }
@@ -110,7 +110,7 @@ internal static class AstClassConstructorSupport
             var scope = symbols.CreateChildScope();
             foreach (var parameter in constructor?.Parameters ?? Array.Empty<ParameterSyntax>())
             {
-                var semanticType = AstExperimentalCompiler.ResolveParameterType(parameter, symbols);
+                var semanticType = AstCompiler.ResolveParameterType(parameter, symbols);
                 scope.Declare(new ParameterSymbol(parameter.Identifier.Text,
                     parameter.IsArray ? typeof(Array) : semanticType.RuntimeType, parameter.IsByRef, semanticType));
             }
@@ -119,14 +119,14 @@ internal static class AstClassConstructorSupport
                 parent.Identifier, call?.OpenParenToken, call?.Arguments ?? [], call?.CommaTokens ?? [], call?.CloseParenToken);
             var expression = binder.Bind(syntax);
             if (binder.Diagnostics.Count > 0)
-                throw AstExperimentalCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], path, source);
+                throw AstCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], path, source);
             var bound = (BoundNewExpression)expression;
             initializer = " : base(" + Arguments(bound.Constructor!, bound.Arguments, new BoundExpressionEmitter()) + ")";
         }
         if (constructor is null) return $"public {name}(){initializer} {{ }}";
         var parameters = string.Join(", ", constructor.Parameters.Select(p =>
         {
-            var semanticType = AstExperimentalCompiler.ResolveParameterType(p, symbols);
+            var semanticType = AstCompiler.ResolveParameterType(p, symbols);
             var type = p.IsArray ? "System.Array" : BoundMethodEmitter.CSharpType(semanticType);
             return (p.IsByRef ? "ref " : "") + type + " " + p.Identifier.Text;
         }));
@@ -146,8 +146,8 @@ internal static class AstClassConstructorSupport
     {
         if (!constructor.Parameters.Any(parameter => parameter.IsOptional)) return string.Empty;
         var parameters = constructor.Parameters.Select(parameter => new ParameterSymbol(parameter.Identifier.Text,
-            AstExperimentalCompiler.ResolveParameterType(parameter, symbols).RuntimeType, parameter.IsByRef,
-            AstExperimentalCompiler.ResolveParameterType(parameter, symbols))).ToArray();
+            AstCompiler.ResolveParameterType(parameter, symbols).RuntimeType, parameter.IsByRef,
+            AstCompiler.ResolveParameterType(parameter, symbols))).ToArray();
         var scope = symbols.CreateChildScope();
         var defaults = new BoundExpression?[parameters.Length];
         for (var i = 0; i < parameters.Length; i++)
@@ -165,10 +165,10 @@ internal static class AstClassConstructorSupport
                         ? new BoundLiteralExpression(null, typeof(object), XpTypeSymbol.Nothing)
                         : new BoundLiteralExpression(type.RuntimeType == typeof(string) ? "" : Activator.CreateInstance(type.RuntimeType), type.RuntimeType, type);
                 if (binder.Diagnostics.Count > 0)
-                    throw AstExperimentalCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], path, source);
+                    throw AstCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], path, source);
                 var conversion = scope.ClassifyConversion(value.SemanticType, type);
                 if (!conversion.IsImplicit)
-                    throw AstExperimentalCompiler.MappedDiagnostic(constructor.Parameters[i].Span, path, source,
+                    throw AstCompiler.MappedDiagnostic(constructor.Parameters[i].Span, path, source,
                         $"Default value for Optional parameter '{parameters[i].Name}' is incompatible with its type.", "XPS2001", "semantic");
                 defaults[i] = conversion.IsIdentity ? value : new BoundConversionExpression(value, type, conversion) { Span = value.Span };
             }

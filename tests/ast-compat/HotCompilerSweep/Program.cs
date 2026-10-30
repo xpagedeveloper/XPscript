@@ -50,7 +50,7 @@ for (var index = 0; index < positive.Length; index++)
 
     try
     {
-        await AstExperimentalCompiler.CompileAsync(file, output);
+        await AstCompiler.CompileAsync(file, output);
     }
     catch (Exception ex)
     {

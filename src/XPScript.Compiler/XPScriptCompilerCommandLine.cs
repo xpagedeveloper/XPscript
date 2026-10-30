@@ -439,7 +439,7 @@ public static class XPScriptCompilerCommandLine
                     WriteResult(webResult, resultFormat);
                 return package.Success ? 0 : 2;
             }
-            var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier,
+            var assemblyPath = await AstCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier,
                 securityMode ?? ApplicationSecurityMode.Off, restricted, sourceRoots, sourcePreprocessors, embedAssets).ConfigureAwait(false);
             var result = CompileResult.Ok(assemblyPath)
                 .WithOperation("ast-compile")
@@ -589,7 +589,7 @@ public static class XPScriptCompilerCommandLine
                 using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
                 using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
                 if (info) WriteProgress($"Started to compile {Path.GetFileName(sourcePath)}");
-                var assemblyPath = await AstExperimentalCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier,
+                var assemblyPath = await AstCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier,
                     securityMode ?? ApplicationSecurityMode.Off, restricted, sourceRoots, sourcePreprocessors).ConfigureAwait(false);
                 if (info) WriteProgressLine($"Compiled {Path.GetFileName(sourcePath)}");
                 var startInfo = new ProcessStartInfo

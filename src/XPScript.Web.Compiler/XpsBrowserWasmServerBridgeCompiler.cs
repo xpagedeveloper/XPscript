@@ -126,7 +126,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             // Keep database attachment calls self-contained in this generated
             // module as well; otherwise the preprocessor emits calls to
             // XPScriptDatabaseAttachmentApi without its implementation.
-            browserGenerated = AstExperimentalCompiler.EnsureAttachmentRuntime(browserGenerated, includeNativeDatabaseProviders: false);
+            browserGenerated = AstCompiler.EnsureAttachmentRuntime(browserGenerated, includeNativeDatabaseProviders: false);
             var browserModule = BrowserWasmServerBridgeTransportInstaller.TransformBrowserModule(BrowserRuntimeConstant("BrowserModuleJs"));
 
             await File.WriteAllTextAsync(Path.Combine(workspace, "Generated.cs"), browserGenerated, cancellationToken).ConfigureAwait(false);

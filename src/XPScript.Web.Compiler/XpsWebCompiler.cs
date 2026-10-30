@@ -131,7 +131,7 @@ public sealed class XpsWebCompiler
             DebugStep("transpile:start", fullSourcePath);
             generated = new XPScriptTranspiler().TranspileRestricted(compilerSource, fullSourcePath, CompilerDriver.CurrentRuntimeIdentifier(), [fullSourceRoot]);
             generated = InjectWebObjects(generated);
-            generated = AstExperimentalCompiler.EnsureAttachmentRuntime(generated);
+            generated = AstCompiler.EnsureAttachmentRuntime(generated);
             DebugStep("transpile:done", fullSourcePath);
         }
         catch (CompilerException ex)
@@ -595,7 +595,7 @@ internal static class Script
         await File.WriteAllTextAsync(stagedSourcePath, compilerSource, cancellationToken).ConfigureAwait(false);
         try
         {
-            var assemblyPath = await AstExperimentalCompiler.CompileWithGeneratedSourceTransformAsync(
+            var assemblyPath = await AstCompiler.CompileWithGeneratedSourceTransformAsync(
                 stagedSourcePath,
                 output,
                 CompilerDriver.CurrentRuntimeIdentifier(),

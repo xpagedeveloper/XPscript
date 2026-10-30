@@ -8,7 +8,7 @@ NuGet dependency to the generated application.
 
 ## Runtime selection
 
-`AstExperimentalCompiler` composes the generated program from the following
+`AstCompiler` composes the generated program from the following
 feature-specific runtime sources when the corresponding syntax or object is
 used:
 

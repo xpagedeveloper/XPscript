@@ -2,7 +2,7 @@
 
 The experimental AST path currently processes a source file in this order:
 
-1. `AstExperimentalCompiler.CompileAsync` reads the source and applies the compatibility preprocessor.
+1. `AstCompiler.CompileAsync` reads the source and applies the compatibility preprocessor.
 2. `DeclarationParser` builds declarations and procedure syntax nodes.
 3. `StatementParser` and the expression parser build syntax nodes for the selected procedure.
 4. `StatementBinder` resolves names, overloads, conversions and control-flow bound nodes.
@@ -11,7 +11,7 @@ The experimental AST path currently processes a source file in this order:
 
 The compatibility preprocessor is deliberately treated as a migration boundary, not as semantic lowering. Current rewrites for GoTo/GoSub, Resume/On Error, implicit member statements and XPImage are tracked in `todo/ast-compiler-migration-todo.md` because they can discard observable behavior. A feature is complete only after its syntax is represented in the bound tree, emitted structurally and compared with the published compiler.
 
-The experimental machine path now exposes `xpscript_ast_validate`. It invokes the same `AstExperimentalCompiler` entry point as the `ast-compile` CLI command and returns a non-executing validation result, keeping lexer/parser/binder/emitter behavior in one implementation.
+The experimental machine path now exposes `xpscript_ast_validate`. It invokes the same `AstCompiler` entry point as the `ast-compile` CLI command and returns a non-executing validation result, keeping lexer/parser/binder/emitter behavior in one implementation.
 
 `tests/CompilerMcpProtocolProbe` pairs this path with the `Static` lifetime fixture. The normal AST CLI executes the fixture and expects `1`, `2`; AST-MCP validates the identical source through the same compiler entry point. New AST features must add an equivalent paired regression before machine exposure.
 
@@ -23,7 +23,7 @@ Target-specific entry points use the same AST unit: `Sub Main` is preferred for 
 
 Block parsing is structural at the statement level. `If`, `For`, `ForAll`, `While`, `Do` and `Select` parsers consume their matching terminator tokens and emit a diagnostic when the terminator is missing or mismatched; the focused AST probe includes an unterminated-block regression.
 
-The compilation-unit emitter is connected to both the `ast-compile` CLI and AST-MCP validation through `AstExperimentalCompiler`. It binds real procedure bodies, emits the shared runtime and compiles an executable `Generated.dll`; the CLI regression executes the result while MCP validates the same source through the same entry point.
+The compilation-unit emitter is connected to both the `ast-compile` CLI and AST-MCP validation through `AstCompiler`. It binds real procedure bodies, emits the shared runtime and compiles an executable `Generated.dll`; the CLI regression executes the result while MCP validates the same source through the same entry point.
 
 ## Comments and trivia
 

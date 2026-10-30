@@ -8,7 +8,7 @@ using XPScript.Compiler.Syntax;
 namespace XPScript.Compiler;
 
 /// <summary>Experimental CLI bridge for the currently supported AST compilation slice.</summary>
-public static class AstExperimentalCompiler
+public static class AstCompiler
 {
     public static string EnsureAttachmentRuntime(string generated, bool includeNativeDatabaseProviders = true)
     {

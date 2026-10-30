@@ -52,7 +52,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 - [x] Never mark a syntax feature migrated until old and new paths have been compared against representative fixtures.
 - [x] Preserve the current public compiler diagnostic contract where compatibility is required. Focused AST CLI regressions retain stable parser, entry-point and Optional validation messages; binder and MCP probes retain stable codes, source locations and structured properties. Feature-specific diagnostic migration remains tracked by the later source-mapping items.
 - [x] Keep normal compiler and machine/MCP compiler behavior synchronized for the current diagnostic surface. The protocol probe compares normal/debug MCP identities with normal/debug CLI identities and rejects drift; broader migrated-feature exposure remains tracked separately.
-- [x] CLI compilation and MCP/AI machine compilation consume the same experimental AST compiler entry point; `xpscript ast-compile` and `xpscript_ast_validate` both call `AstExperimentalCompiler`, so machine validation does not create a second language implementation.
+- [x] CLI compilation and MCP/AI machine compilation consume the same experimental AST compiler entry point; `xpscript ast-compile` and `xpscript_ast_validate` both call `AstCompiler`, so machine validation does not create a second language implementation.
 - [x] Every currently migrated AST syntax/semantic feature exposed through the machine interface is verified through both normal AST compilation and AST-MCP validation. The Static lifetime parity fixture is the first permanent paired regression; additional migrated features must extend the same pattern before being exposed.
 - [x] AST diagnostic changes are verified in both human-readable CLI output and the structured machine/MCP diagnostic contract. AST-MCP now preserves diagnostic code, source filename, positions, severity and category; the protocol probe covers both successful AST validation and a source-mapped AST error.
 - [x] Every AST diagnostic preserves the original XPscript source filename, mapped line/column and end span in structured MCP output and human-readable AST CLI output. The parser-error regression verifies the same source location contract in both surfaces.
@@ -278,10 +278,10 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [x] Verify the latest RunCommand conversion fix with exact emission and executable true/false coverage.
 - [x] Introduce a bound-method console compilation-unit emitter and execute a cross-procedure call regression.
 - [x] Add these probes to the existing Language FullTest runner and pass the complete Windows Language FullTest.
-- [x] Connect compilation-unit emission to the shared experimental CLI/machine compilation path with real procedure bodies and runtime integration. `AstExperimentalCompiler` binds the parsed unit, emits real method bodies and produces executable `Generated.dll`; the AST CLI/MCP parity probes and `.wps` application-declaration fixture cover the path.
+- [x] Connect compilation-unit emission to the shared experimental CLI/machine compilation path with real procedure bodies and runtime integration. `AstCompiler` binds the parsed unit, emits real method bodies and produces executable `Generated.dll`; the AST CLI/MCP parity probes and `.wps` application-declaration fixture cover the path.
 
 - [x] Emit actual top-level Sub/Function bodies in the experimental CLI, with procedure-local scopes, forward calls and declared ByRef modes; remove fabricated reduced-arity procedure overloads.
-- [x] Expose the same experimental program compilation through the machine/MCP interface and verify paired diagnostics. `xpscript_ast_validate` calls `AstExperimentalCompiler`, and `CompilerMcpProtocolProbe` compares CLI/MCP success and parser diagnostics.
+- [x] Expose the same experimental program compilation through the machine/MCP interface and verify paired diagnostics. `xpscript_ast_validate` calls `AstCompiler`, and `CompilerMcpProtocolProbe` compares CLI/MCP success and parser diagnostics.
 - [x] Model Optional defaults in syntax/binding/emission instead of generating no-op overloads. Defaults are retained in `ParameterSyntax`, bound in declaration scope and lowered to executable forwarding bodies with writable omitted ByRef storage.
 - [x] Preserve Optional flags, parameter modes and default-expression syntax with absolute spans; handle nested default-expression commas in declaration parsing.
 - [x] Validate Optional ordering, default types/expression rules and supplied/omitted arguments in the binder; lower omitted ByRef defaults through temporary locals. The AST CLI regressions cover invalid ordering/default types plus executable supplied and omitted argument paths.
@@ -724,7 +724,7 @@ The first AST proof of concept is complete when:
 - [x] Both forms can be bound to boolean semantics without relying on C# parsing to determine XPscript meaning.
 - [x] The proof of concept can emit valid C# for those expressions.
 - [x] The supported CLI now routes normal `compile`/`run` through the AST compiler, while the published legacy implementation remains available through explicit `legacy-compile`/`compilev1` and `legacy-run`/`runv1` compatibility commands. The AST path is still not considered fully migrated until the remaining compatibility and target gates below are complete.
-- [x] The proof of concept demonstrates that both CLI compilation and MCP/AI machine compilation can call the same AST front-end without duplicating parsing or semantic logic. Both surfaces call `AstExperimentalCompiler`.
+- [x] The proof of concept demonstrates that both CLI compilation and MCP/AI machine compilation can call the same AST front-end without duplicating parsing or semantic logic. Both surfaces call `AstCompiler`.
 
 ## Definition of done for full migration
 

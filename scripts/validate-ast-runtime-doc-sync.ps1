@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $language = Join-Path $root 'docs/language-reference.md'
-$compiler = Join-Path $root 'src/XPScript.Compiler/AstExperimentalCompiler.cs'
+$compiler = Join-Path $root 'src/XPScript.Compiler/AstCompiler.cs'
 $intellisense = Join-Path $root 'docs/intellisense-api-reference.md'
 
 if (-not (Test-Path $language) -or -not (Test-Path $compiler) -or -not (Test-Path $intellisense)) {

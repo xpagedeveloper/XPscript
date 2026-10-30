@@ -32,7 +32,7 @@ internal static class AstClassMethodSupport
         if (AstNotesJsonSupport.IsCompatibilityType(name)) return XpTypeSymbol.User(name);
         if (AstClassConstructorSupport.Find(symbols, name)?.SemanticReturnType is { } userType) return userType;
         if (symbols.TryLookup(name, out var symbol) && symbol is TypeSymbol { SemanticType: not null } type) return type.SemanticType;
-        var runtime = AstExperimentalCompiler.ResolveRuntimeType(name);
+        var runtime = AstCompiler.ResolveRuntimeType(name);
         return runtime == typeof(object) && !name.Equals("Object", StringComparison.OrdinalIgnoreCase)
             ? XpTypeSymbol.User(name) : XpTypeSymbol.FromClr(runtime);
     }
@@ -54,7 +54,7 @@ internal static class AstClassMethodSupport
             var indexes = getter?.Parameters ?? setter!.Parameters.Take(Math.Max(0, setter.Parameters.Count - 1)).ToArray();
             if (indexes.Count > 0)
                 yield return new IndexedPropertySymbol(declaration.Identifier.Text + "." + name, type,
-                    indexes.Select(p => AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
+                    indexes.Select(p => AstCompiler.ResolveRuntimeType(p.Type?.Identifier.Text)).ToArray(),
                     semanticType, indexes.Select(p => DeclaredType(p.Type, symbols)).ToArray(), readable, writable,
                     "__xps_index_get_" + name, "__xps_index_let_" + name,
                     indexes.Select(p => p.IsExplicitByRef).ToArray())
@@ -130,22 +130,22 @@ internal static class AstClassMethodSupport
             var getter = group.FirstOrDefault(p => p.IsGetter);
             var setter = group.FirstOrDefault(p => p.IsSetter);
             if (group.Count(p => p.IsGetter) > 1 || group.Count(p => p.IsSetter) > 1)
-                throw AstExperimentalCompiler.MappedDiagnostic(group.Last().Span, sourcePath, source,
+                throw AstCompiler.MappedDiagnostic(group.Last().Span, sourcePath, source,
                     $"Property '{group.Key}' has duplicate accessors.", "XPS1012", "semantic");
             if (getter is not null && setter is not null && getter.Parameters.Count != Math.Max(0, setter.Parameters.Count - 1))
-                throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
+                throw AstCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
                     $"Property '{group.Key}' accessors must use compatible index parameter signatures.", "XPS1012", "semantic");
             if (getter is not null && setter is not null && getter.Parameters.Where((p, i) => p.IsExplicitByRef != setter.Parameters[i].IsExplicitByRef).Any())
-                throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
+                throw AstCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
                     $"Property '{group.Key}' accessors must use compatible index passing modes.", "XPS1012", "semantic");
             if (getter is not null && setter is not null && getter.Parameters.Where((p, i) =>
-                    AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) != AstExperimentalCompiler.ResolveRuntimeType(setter.Parameters[i].Type?.Identifier.Text) ||
+                    AstCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) != AstCompiler.ResolveRuntimeType(setter.Parameters[i].Type?.Identifier.Text) ||
                     p.IsOptional != setter.Parameters[i].IsOptional).Any())
-                throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
+                throw AstCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
                     $"Property '{group.Key}' accessors must use compatible index types and Optional signatures.", "XPS1012", "semantic");
             if (getter is not null && setter is not null &&
                 !string.Equals(getter.Type?.Identifier.Text, setter.Type?.Identifier.Text ?? setter.Parameters.LastOrDefault()?.Type?.Identifier.Text, StringComparison.OrdinalIgnoreCase))
-                throw AstExperimentalCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
+                throw AstCompiler.MappedDiagnostic(setter.Span, sourcePath, source,
                     $"Property '{group.Key}' accessors must use compatible value types.", "XPS1012", "semantic");
         }
         foreach (var member in declaration.Members.Where(m => m is SubDeclarationSyntax or FunctionDeclarationSyntax or PropertyDeclarationSyntax or DestructorDeclarationSyntax or ConstructorDeclarationSyntax))
@@ -160,7 +160,7 @@ internal static class AstClassMethodSupport
             if (isDestructor)
             {
                 if (destructor is null || destructorSeen)
-                    throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
+                    throw AstCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                         "A class destructor must be a single parameterless Sub Delete.", "XPS1012", "semantic");
                 destructorSeen = true;
             }
@@ -174,25 +174,25 @@ internal static class AstClassMethodSupport
                     property.Identifier, property.AsKeyword, property.Type) };
             var resultTypeName = function?.ReturnType?.Identifier.Text ?? (property?.IsGetter == true ? property.Type?.Identifier.Text : null);
             if (isObjectSetter && DeclaredType(property!.Type ?? syntaxParameters.Last().Type, globals).RuntimeType != typeof(object))
-                throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
+                throw AstCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "Property Set requires an object/reference value type.", "XPS2001", "semantic");
             var hasUnsupportedObjectParameter = constructor is null && syntaxParameters.Where((p, i) => !isObjectSetter || i < syntaxParameters.Count - 1)
-                .Any(p => !p.IsArray && AstExperimentalCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object) &&
+                .Any(p => !p.IsArray && AstCompiler.ResolveRuntimeType(p.Type?.Identifier.Text) == typeof(object) &&
                     !SupportedNativeClassMethodType(p.Type?.Identifier.Text) &&
                     !classes.ContainsKey(p.Type?.Identifier.Text ?? ""));
-            var hasUnsupportedObjectResult = function is not null && AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) &&
+            var hasUnsupportedObjectResult = function is not null && AstCompiler.ResolveRuntimeType(resultTypeName) == typeof(object) &&
                 !SupportedNativeClassMethodType(resultTypeName) && !classes.ContainsKey(resultTypeName ?? "");
             if (hasUnsupportedObjectParameter || hasUnsupportedObjectResult ||
                 property is not null && (UnsupportedNativeAccessorType(resultTypeName) ||
                     isObjectSetter && UnsupportedNativeAccessorType(syntaxParameters.Last().Type?.Identifier.Text)))
-                throw AstExperimentalCompiler.MappedDiagnostic(member.Span, sourcePath, source,
+                throw AstCompiler.MappedDiagnostic(member.Span, sourcePath, source,
                     "This AST class-method increment supports scalar, Object/Variant, concrete user-class and XPImage parameters/results; other object/array signatures are not implemented yet.", "XPS3001", "ast");
             if (property is not null)
             {
                 var indexParameters = property.IsGetter ? syntaxParameters : syntaxParameters.Take(syntaxParameters.Count - 1).ToArray();
-                AstExperimentalCompiler.ValidateOptionalDeclarations(indexParameters, sourcePath, source);
+                AstCompiler.ValidateOptionalDeclarations(indexParameters, sourcePath, source);
                 if (property.IsSetter && (syntaxParameters[^1].IsOptional || syntaxParameters[^1].DefaultValue is not null))
-                    throw AstExperimentalCompiler.MappedDiagnostic(syntaxParameters[^1].Span, sourcePath, source,
+                    throw AstCompiler.MappedDiagnostic(syntaxParameters[^1].Span, sourcePath, source,
                         "A Property Let value parameter must be required and cannot have a default value.", "XPS1012", "semantic");
             }
             var classScope = globals.CreateChildScope();
@@ -240,11 +240,11 @@ internal static class AstClassMethodSupport
                                     string.Equals(left.Type?.Identifier.Text, right.Type?.Identifier.Text, StringComparison.OrdinalIgnoreCase)).All(match => match);
                         }))
                         continue;
-                    var rt = ownFunction is null ? typeof(void) : AstExperimentalCompiler.ResolveRuntimeType(ownFunction.ReturnType?.Identifier.Text);
+                    var rt = ownFunction is null ? typeof(void) : AstCompiler.ResolveRuntimeType(ownFunction.ReturnType?.Identifier.Text);
                     var semanticReturnType = ownFunction is null
                         ? XpTypeSymbol.FromClr(typeof(void))
                         : DeclaredType(ownFunction.ReturnType, globals);
-                    var parameterTypes = ps.Select(p => AstExperimentalCompiler.ResolveParameterType(p, globals)).ToArray();
+                    var parameterTypes = ps.Select(p => AstCompiler.ResolveParameterType(p, globals)).ToArray();
                     var symbol = new FunctionSymbol(methodName, rt, parameterTypes.Select((p, i) => ps[i].IsArray ? typeof(Array) : p.RuntimeType).ToArray(),
                         semanticReturnType, parameterTypes, ps.Select(p => p.IsByRef).ToArray());
                     classScope.Declare(symbol);
@@ -254,7 +254,7 @@ internal static class AstClassMethodSupport
             var scope = classScope.CreateChildScope();
             var parameters = syntaxParameters.Select((p, i) =>
             {
-                var semanticType = AstExperimentalCompiler.ResolveParameterType(p, globals);
+                var semanticType = AstCompiler.ResolveParameterType(p, globals);
                 return new ParameterSymbol(p.Identifier.Text, p.IsArray ? typeof(Array) : semanticType.RuntimeType, p.IsByRef, semanticType)
             {
                 IsBorrowedImageSnapshot = isObjectSetter && i == syntaxParameters.Count - 1 && p.IsByRef && AstImageSupport.IsImage(p.Type?.Identifier.Text)
@@ -273,10 +273,10 @@ internal static class AstClassMethodSupport
                     var value = syntaxParameters[i].DefaultValue is { } syntax ? binder.Bind(syntax)
                         : new BoundLiteralExpression(type.IsArray || type.IsList ? null : parameters[i].Type == typeof(string) ? "" : Activator.CreateInstance(parameters[i].Type), parameters[i].Type, type);
                     if (binder.Diagnostics.Count > 0)
-                        throw AstExperimentalCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, source);
+                        throw AstCompiler.SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, source);
                     var conversion = defaultScope.ClassifyConversion(value.SemanticType, type);
                     if (!conversion.IsImplicit)
-                        throw AstExperimentalCompiler.MappedDiagnostic(syntaxParameters[i].Span, sourcePath, source,
+                        throw AstCompiler.MappedDiagnostic(syntaxParameters[i].Span, sourcePath, source,
                             $"Default value for Optional parameter '{parameters[i].Name}' is incompatible with its type.", "XPS2001", "semantic");
                     defaults[i] = conversion.IsIdentity ? value : new BoundConversionExpression(value, type, conversion) { Span = value.Span };
                 }
@@ -284,18 +284,18 @@ internal static class AstClassMethodSupport
             }
             foreach (var parameter in parameters) scope.Declare(parameter);
             var hasResult = function is not null || property?.IsGetter == true;
-            var returnType = hasResult ? AstExperimentalCompiler.ResolveRuntimeType(resultTypeName) : typeof(void);
+            var returnType = hasResult ? AstCompiler.ResolveRuntimeType(resultTypeName) : typeof(void);
             var semanticResult = property?.IsGetter == true ? DeclaredType(property.Type, globals) :
                 resultTypeName is not null && globals.LookupAll(resultTypeName).OfType<TypeSymbol>().Any()
                     ? XpTypeSymbol.User(resultTypeName) : XpTypeSymbol.FromClr(returnType);
             var result = hasResult ? new LocalSymbol("__xps_class_result", returnType, semanticResult) : null;
-            var bound = AstExperimentalCompiler.BindProcedure(statements, scope, parameters,
+            var bound = AstCompiler.BindProcedure(statements, scope, parameters,
                 hasResult ? semanticResult : null, hasResult ? name : null, result,
                 declaration.Identifier.Text + "." + name, sourcePath, source, source, allowDynamicConversions: false);
             var emittedName = constructor is not null ? "__xps_constructor_body" + AstClassConstructorSupport.Suffix(declaration, constructor) : isDestructor ? "__xps_destructor_body" : property is null ? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
             string body;
             try { body = new BoundMethodEmitter().Emit(emittedName, returnType, parameters, bound, false, source, sourcePath, semanticResult); }
-            catch (BoundEmissionException ex) { throw AstExperimentalCompiler.MappedDiagnostic(ex.Span ?? member.Span, sourcePath, source, ex.Message); }
+            catch (BoundEmissionException ex) { throw AstCompiler.MappedDiagnostic(ex.Span ?? member.Span, sourcePath, source, ex.Message); }
             foreach (var staticDeclaration in BoundStatementTraversal.Descendants(bound).OfType<BoundVariableDeclarationStatement>()
                          .Where(item => item.Local.StaticStorageName is not null))
             {

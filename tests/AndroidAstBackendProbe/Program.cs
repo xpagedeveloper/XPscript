@@ -10,7 +10,7 @@ try
     foreach (var rid in new[] { "android-x64", "android-arm64" })
     {
         var output = Path.Combine(root, rid);
-        var assembly = await AstExperimentalCompiler.CompileAsync(source, output, rid);
+        var assembly = await AstCompiler.CompileAsync(source, output, rid);
         if (!File.Exists(assembly))
             throw new Exception($"AST {rid} compilation did not produce Generated.dll.");
         if (!Directory.EnumerateFiles(output, "*.apk", SearchOption.TopDirectoryOnly).Any())

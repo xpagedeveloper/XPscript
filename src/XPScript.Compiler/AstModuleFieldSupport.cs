@@ -32,7 +32,7 @@ internal static class AstModuleFieldSupport
         return Regex.Matches(DeclarationSource(source), @"^[ \t]*(?:Private|Public)\s+(?<name>[A-Za-z_]\w*)\s+As\s+(?<type>[A-Za-z_]\w*)(?<tail>[^\r\n]*)", RegexOptions.IgnoreCase | RegexOptions.Multiline)
             .Cast<Match>().Select(match =>
             {
-                var type = AstExperimentalCompiler.ResolveRuntimeType(match.Groups["type"].Value);
+                var type = AstCompiler.ResolveRuntimeType(match.Groups["type"].Value);
                 var semantic = match.Groups["type"].Value.Equals("Object", StringComparison.OrdinalIgnoreCase)
                     ? XpTypeSymbol.Object
                     : symbols.LookupAll(match.Groups["type"].Value).OfType<TypeSymbol>().FirstOrDefault()?.SemanticType

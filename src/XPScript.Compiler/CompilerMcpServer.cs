@@ -140,7 +140,7 @@ public static class CompilerMcpServer
             var outputPath = Path.Combine(root, "output");
             await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
             using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
-            await AstExperimentalCompiler.CompileAsync(sourcePath, outputPath).ConfigureAwait(false);
+            await AstCompiler.CompileAsync(sourcePath, outputPath).ConfigureAwait(false);
             return new { result = "ok", source = new { entryPoint = filename }, compiler = "ast" };
         }
         catch (CompilerException exception)
@@ -182,7 +182,7 @@ public static class CompilerMcpServer
             using var securityMode = ApplicationSecurityModeContext.Push(ParseSecurityMode(arguments));
             using var preprocessors = SourcePreprocessorConfigurationContext.Push(GetOptionalStringArray(arguments, "sourcePreprocessors"));
             using var restricted = PushIncludePolicy(arguments, root);
-            var result = await AstExperimentalCompiler.CompileAsync(sourcePath, Path.Combine(root, "output")).ConfigureAwait(false);
+            var result = await AstCompiler.CompileAsync(sourcePath, Path.Combine(root, "output")).ConfigureAwait(false);
             return new { result = "ok", source = new { entryPoint = filename }, compiler = "ast", info = BuildInfo("virtual-compile", filename, GetOptionalString(arguments, "runtimeIdentifier"), null, true) };
         }
         catch (CompilerException ex) { return AstError(filename, ex); }
@@ -210,7 +210,7 @@ public static class CompilerMcpServer
             var security = ParseSecurityMode(arguments);
             var roots = GetOptionalStringArray(arguments, "sourceRoots");
             var preprocessors = GetOptionalStringArray(arguments, "sourcePreprocessors");
-            var outputPath = await AstExperimentalCompiler.CompileAsync(
+            var outputPath = await AstCompiler.CompileAsync(
                 sourcePath,
                 outputDirectory,
                 GetOptionalString(arguments, "runtimeIdentifier"),

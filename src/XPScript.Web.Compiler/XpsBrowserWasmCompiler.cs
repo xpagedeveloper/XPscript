@@ -62,7 +62,7 @@ public sealed class XpsBrowserWasmCompiler
             // The restricted browser transpiler can emit attachment API calls
             // without the companion API class when the V3 collection runtime is
             // already present. Ensure the generated browser module is complete.
-            generated = AstExperimentalCompiler.EnsureAttachmentRuntime(generated, includeNativeDatabaseProviders: false);
+            generated = AstCompiler.EnsureAttachmentRuntime(generated, includeNativeDatabaseProviders: false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "Generated.cs"), generated, cancellationToken).ConfigureAwait(false);
             // Generated #line directives retain the original XPScript filename.
             // Stage that source beside the generated file so Roslyn can resolve

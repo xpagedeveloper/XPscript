@@ -1,6 +1,6 @@
 # AST preprocessor inventory
 
-`AstExperimentalCompiler.CompileAsync` currently applies these source-level steps before parsing:
+`AstCompiler.CompileAsync` currently applies these source-level steps before parsing:
 
 - removes request-binding attributes and normalizes `Static` declarations;
 - rewrites selected file, binary-I/O and utility commands to AST helper calls;
