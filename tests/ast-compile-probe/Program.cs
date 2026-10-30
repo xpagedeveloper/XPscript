@@ -163,6 +163,15 @@ if (!guardEmit.Success) throw new InvalidOperationException(string.Join("\n", gu
 Assembly.Load(guardStream.ToArray()).GetType("Guard")!.GetMethod("Main")!.Invoke(null, null);
 Console.WriteLine("AST_BYREF_STORAGE_GUARDS_OK");
 
+var toolingFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "go-to-definition-next.xps");
+toolingFixture = Path.GetFullPath(toolingFixture);
+var toolingSource = await File.ReadAllTextAsync(toolingFixture);
+var definition = XPScript.Compiler.AstTooling.GoToDefinition(toolingSource, toolingFixture, 6, 10)
+    ?? throw new InvalidOperationException("Go-to-definition did not resolve Helper.");
+if (definition.Name != "Helper" || definition.Kind != "Sub" || definition.Line != 1 || definition.Column != 5)
+    throw new InvalidOperationException($"Go-to-definition returned {definition.File}:{definition.Line}:{definition.Column}.");
+Console.WriteLine("AST_GOTO_DEFINITION_OK");
+
 var targetFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "target-specific-generated-code-next.xps");
 targetFixture = Path.GetFullPath(targetFixture);
 var targetOutput = Path.Combine(Path.GetTempPath(), "xpscript-target-source-" + Guid.NewGuid().ToString("N"));

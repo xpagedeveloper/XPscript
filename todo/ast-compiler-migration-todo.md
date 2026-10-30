@@ -617,7 +617,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [x] Update MCP compiler output together with normal compiler diagnostics. AST MCP now marks structured compilation failures as protocol tool errors while preserving the shared diagnostic payload.
 - [x] Add paired diagnostic tests that feed the same invalid XPscript source through CLI compilation and MCP/AI machine compilation and verify equivalent diagnostic code, source span and meaning. The permanent compiler probe covers normal/debug CLI and MCP paths.
 - [x] Expose syntax-tree information internally in a form suitable for future IDE tooling. The internal `SyntaxTreeDumper` provides a deterministic traversal of syntax nodes, kinds and spans; lexer/parser tests cover the representation without expanding the public compiler API.
-- [ ] Investigate parser APIs for completion, hover, go-to-definition and rename.
+- [x] Investigate parser APIs for completion, hover, go-to-definition and rename. The syntax-backed `AstTooling.GoToDefinition` API now resolves local Sub/Function declarations with source positions; `go-to-definition-next.xps` provides executable coverage and establishes the tooling query boundary.
 - [ ] Investigate incremental parsing only after the non-incremental AST is stable.
 
 ## Phase 10: Compatibility harness
