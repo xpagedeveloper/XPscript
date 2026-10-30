@@ -36,18 +36,8 @@ jobs:
           - name: Windows
             os: windows-latest
             rid: win-x64
-            locale: sv-SE
-            lang: sv_SE.UTF-8
-          - name: Windows
-            os: windows-latest
-            rid: win-x64
             locale: en-US
             lang: en_US.UTF-8
-          - name: macOS
-            os: macos-13
-            rid: osx-x64
-            locale: sv-SE
-            lang: sv_SE.UTF-8
           - name: macOS
             os: macos-13
             rid: osx-x64
