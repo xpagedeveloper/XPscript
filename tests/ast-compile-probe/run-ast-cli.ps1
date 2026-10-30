@@ -2293,6 +2293,9 @@ $parserError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'parser-err
 if ($LASTEXITCODE -ne 2 -or ($parserError -join "`n") -notmatch 'Expected CloseParenToken') { throw 'AST parser diagnostic regression failed.' }
 $preprocessorParserError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'preprocessor-parser-error.xps') -o (Join-Path $output 'preprocessor-parser-error') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($preprocessorParserError -join "`n") -notmatch 'preprocessor-parser-error\.xps:2:') { throw 'AST preprocessor parser source mapping regression failed.' }
+$includeParserSpanError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-parser-span-error-next.xps') -o (Join-Path $output 'include-parser-span-error-next') 2>&1
+if ($LASTEXITCODE -eq 0 -or ($includeParserSpanError -join "`n") -notmatch 'helper\.xps:2:') { throw 'AST included parser source mapping regression failed.' }
+Write-Host 'AST_INCLUDED_PARSER_SPAN_MAPPING_OK'
 Write-Host 'AST_PREPROCESSOR_PARSER_MAPPING_OK'
 $matrixScaffoldingOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'sample-scaffolding-matrix-error.xps') -o (Join-Path $output 'sample-scaffolding-matrix-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($matrixScaffoldingOutput -join "`n") -notmatch 'sample-scaffolding-matrix-error\.xps:2:\d+: XPS2008: Undefined variable') { throw 'AST sample-specific matrix scaffolding regression failed.' }
