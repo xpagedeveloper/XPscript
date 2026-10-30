@@ -1585,7 +1585,7 @@ internal static class Program
         public override bool Equals(object? obj) => obj is XpDate other && Value == other.Value;
         public override int GetHashCode() => Value.GetHashCode();
     }
-    public static object DateNumber(long year, long month, long day) => new XpDate(new DateTime((int)year, (int)month, (int)day));
+    public static object DateNumber(long year, long month, long day) => new XpDate(XPScriptRuntime.DateNumber((int)year, (int)month, (int)day));
     public static object DateValue(object? value) => new XpDate(XPScriptRuntime.DateValue(value));
     public static object TimeValue(object? value) => new XpDate(XPScriptRuntime.TimeValue(value));
     private static DateTime ToDateTime(object? value) => value is XpDate date ? date.Value : Convert.ToDateTime(value);

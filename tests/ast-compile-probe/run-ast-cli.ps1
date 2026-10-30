@@ -663,6 +663,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST date values compilation failed.' }
 $dateValuesResult = dotnet (Join-Path $dateValuesOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($dateValuesResult -join "`n") -ne 'DATE_VALUES_OK') { throw 'AST date values regression failed.' }
 Write-Host 'AST_DATE_VALUES_OK'
+$dateRuntimeApiOutput = Join-Path $output 'date-runtime-api-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'date-runtime-api-next.xps') -o $dateRuntimeApiOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST date runtime API compilation failed.' }
+$dateRuntimeApiResult = dotnet (Join-Path $dateRuntimeApiOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($dateRuntimeApiResult -join "`n") -ne 'DATE_RUNTIME_API_OK') { throw 'AST date runtime API regression failed.' }
+Write-Host 'AST_DATE_RUNTIME_API_OK'
 $timePartsOutput = Join-Path $output 'time-parts-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'time-parts-next.xps') -o $timePartsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST time parts compilation failed.' }

@@ -598,7 +598,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 
 - [x] Implement C# generation from bound nodes. `tests/ast-emission` passes its exact generated-C# golden checks and executes the Roslyn-compiled output.
 - [x] Keep emitter free of XPscript parsing logic. Parsing and binding are completed before `BoundStatementEmitter`/`BoundExpressionEmitter`; the emitters consume bound nodes only.
-- [ ] Reuse existing runtime APIs rather than reimplementing runtime behavior.
+- [x] Reuse existing runtime APIs rather than reimplementing runtime behavior. AST `DateNumber` now delegates month/day normalization to `XPScriptRuntime.DateNumber`; `date-runtime-api-next.xps` covers the overflow behavior.
 - [x] Preserve generated source mapping for AST control-flow and emitter diagnostics. Bound emission failures now retain the originating statement span and are mapped through the shared CLI/MCP diagnostic contract; generated `#line` mappings remain deterministic for emitted control flow.
 - [ ] Preserve target-specific generated code requirements.
 - [x] Preserve generated runtime integration. AST output includes the shared compatibility/runtime fragments required by the bound emitter and preserves the existing third-party notice generation path.
