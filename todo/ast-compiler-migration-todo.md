@@ -574,7 +574,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   AST now emits class fields, scalar instance methods and Get/Let bodies, inherited fields, root scalar ByVal construction and virtual/overridden `Delete` cleanup, and `Delete object` clears the caller reference; `class-lifecycle.xps` verifies the lifecycle scaffolding. Advanced method signatures, derived-class bodies, indexed/object accessors, advanced constructor signatures still need bound-tree lowering before this parent item can close.
 - [x] Add missing AST Variant-to-Byte conversion through the existing runtime `CByte` helper; the executable regression now matches published scalar conversion behavior.
 - [x] Preserve uninitialized Variant Nothing semantics for `Is Nothing`; AST now emits null storage instead of an ExpandoObject and matches published output.
-- [ ] Preserve original source spans through all preprocessing and map parser/binder errors through the shared diagnostic contract.
+- [x] Preserve original source spans through all preprocessing and map parser/binder errors through the shared diagnostic contract. Included semantic, parser/preprocessor and control-flow diagnostics now retain their physical source path/line, while generated C# diagnostics retain `#line` source spans.
   - [x] Verify semantic errors from an included source retain the physical helper path and line through `include-span-error-next.xps`.
   - [x] Verify parser/preprocessor errors from an included source retain the physical helper path and line through `include-parser-span-error-next.xps`.
   - [x] Verify included control-flow binder errors retain the physical helper path and line through `include-control-flow-span-error-next.xps`.
@@ -590,7 +590,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [x] Reviewed `p.`/`Print p.` rewrites; they are deliberate no-op compatibility lowerings for unsupported legacy property statements, so they suppress the statement by design and do not introduce a diagnostic span to remap.
   Optional declaration validation, explicit unsupported-feature guards and binder/default-expression errors now emit source-mapped CompileDiagnostic values. Bound emitter failures are wrapped with the originating bound statement span and mapped to the emission diagnostic category; generated control-flow mappings retain the original file/line. Roslyn backend diagnostics now consume the same generated-source mapping contract.
   - [x] Map Roslyn code-generation diagnostics through generated `#line` directives, including original file, start position and end position; `GeneratedDependencyProbe` covers the mapped backend failure path.
-  Parser diagnostics now use the same mapped path; control-flow and generated-source diagnostics remain open.
+  Parser diagnostics now use the same mapped path; included-source control-flow and generated-source diagnostics are covered by focused CLI/backend regressions.
   Label, duplicate-label and forbidden loop-entry diagnostics now also carry source spans.
   - [x] Parser diagnostics from transformed source now map through the shared transformed-span mapper; `preprocessor-parser-error.xps` covers a malformed `Open` statement.
 
