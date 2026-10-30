@@ -44,12 +44,12 @@ jobs:
             locale: en-US
             lang: en_US.UTF-8
           - name: macOS
-            os: macos-latest
+            os: macos-13
             rid: osx-x64
             locale: sv-SE
             lang: sv_SE.UTF-8
           - name: macOS
-            os: macos-latest
+            os: macos-13
             rid: osx-x64
             locale: en-US
             lang: en_US.UTF-8
