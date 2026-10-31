@@ -849,6 +849,7 @@ public static class AstCompiler
             : string.Empty;
         var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
         var finalizerTestMode = string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_AST_FINALIZER_TEST"), "1", StringComparison.Ordinal);
+        var finalizerStartup = finalizerTestMode ? "AstFinalizerTestHook.Enable();" : string.Empty;
         var userClassSupport = string.Join(Environment.NewLine, unit.Declarations.OfType<ClassDeclarationSyntax>().Select(classDeclaration =>
         {
             var fields = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>().Select(field =>
@@ -898,7 +899,7 @@ public static class AstCompiler
                 "Class declarations must be represented by the AST compiler.", "XPS3001", "ast");
         var classSupport = "namespace __xps_user_classes { using static global::Program; " + userClassSupport + " }" + Environment.NewLine;
         if (finalizerTestMode)
-            classSupport = "internal static class AstFinalizerTestHook { public static void Record(string className) { if (string.Equals(System.Environment.GetEnvironmentVariable(\"XPSCRIPT_AST_FINALIZER_TEST\"), \"1\", System.StringComparison.Ordinal)) System.Console.WriteLine(\"AST_FINALIZER_TEST_MARKER=\" + className); } }" + Environment.NewLine + classSupport;
+            classSupport = "internal static class AstFinalizerTestHook { public static void Enable() { System.Console.WriteLine(\"AST_FINALIZER_SEAM_ENABLED\"); } public static void Record(string className) { if (string.Equals(System.Environment.GetEnvironmentVariable(\"XPSCRIPT_AST_FINALIZER_TEST\"), \"1\", System.StringComparison.Ordinal)) System.Console.WriteLine(\"AST_FINALIZER_TEST_MARKER=\" + className); } }" + Environment.NewLine + classSupport;
         classSupport += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?ims)^\s*Type\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Type\b")
             .Cast<Match>().Select(match =>
             {
@@ -1020,7 +1021,7 @@ internal sealed class LSConsoleRuntime
 }
 internal static class Program
 {
-    {{(AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") || AstSpreadsheetSupport.UsesSpreadsheet(fullSource) ? "static Program() { XPScriptFileSystemRuntime.SetScriptDirectory(" + Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, true) + "); }" : "")}}
+    {{(AstObjectSupportRegistry.UsesObject(fullSource, "XPImage") || AstSpreadsheetSupport.UsesSpreadsheet(fullSource) ? "static Program() { XPScriptFileSystemRuntime.SetScriptDirectory(" + Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(Path.GetDirectoryName(Path.GetFullPath(sourcePath))!, true) + "); }" : "") + finalizerStartup}}
     private static readonly bool OptionCompareNoCase = {{optionCompareNoCase.ToString().ToLowerInvariant()}};
     public static bool True = true;
     public static bool False = false;
