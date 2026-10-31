@@ -656,6 +656,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [x] Investigate parser APIs for completion, hover, go-to-definition and rename. The syntax-backed `AstTooling.GoToDefinition` API now resolves local Sub/Function declarations with source positions; `go-to-definition-next.xps` provides executable coverage and establishes the tooling query boundary.
 - [ ] Investigate incremental parsing only after the non-incremental AST is stable.
   - [ ] Define a baseline parse benchmark and correctness corpus for clean non-incremental parses.
+    - Blocked pending an agreed corpus and measurement contract; the existing `AstLexerProbe` is a correctness probe, not a performance baseline. Do not add timing thresholds without controlling runner, SDK and workload variance.
   - [ ] Define edit invalidation boundaries for lexer/parser state, includes, referenced symbols and compiler options.
   - [ ] Prototype incremental syntax reuse behind an opt-in test seam and compare diagnostics/tree output with clean parses.
 
