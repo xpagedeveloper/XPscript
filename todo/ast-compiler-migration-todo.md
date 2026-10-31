@@ -727,6 +727,7 @@ Only start this after the full AST front-end, binder, bound tree, diagnostics, e
   - [ ] Add a correctness-only opt-in comparison between cached and clean binding/emission before measuring performance.
 - [x] Define cache invalidation for changed files, referenced symbols, imports/includes and compiler options: source changes invalidate syntax; Include/Use closure changes invalidate consumers; declaration/signature changes invalidate dependent binding/emission; target, security, platform, preprocessor, runtime and output changes invalidate generated artifacts. Caching remains opt-in and unimplemented pending correctness experiments.
 - [ ] Regenerate generated C# only for files or units whose syntax or bound semantics changed.
+  - Blocked pending the opt-in parsed/bound cache correctness experiments and an explicit dependency/build graph; selective emission without those guarantees could produce stale generated units.
 - [ ] Investigate compiling only changed generated units instead of rebuilding all generated C# when the backend architecture allows it.
 - [ ] Preserve correct cross-file symbol binding when only a subset of files changes.
 - [ ] Add correctness tests that compare clean builds with incremental/cache-enabled builds.
