@@ -722,6 +722,9 @@ Only start this after the full AST front-end, binder, bound tree, diagnostics, e
   - [ ] Define invalidation and memory/ownership behavior for syntax trees, diagnostics and source spans.
   - [ ] Add a correctness-only opt-in cache experiment comparing cached and clean parse trees before enabling performance behavior.
 - [ ] Investigate caching the bound tree / semantic result per source file.
+  - [ ] Define semantic cache inputs for parsed syntax, referenced declarations, include/use closure, target/platform/security options and compiler version.
+  - [ ] Define diagnostic, symbol and source-map invalidation when dependencies or declarations change.
+  - [ ] Add a correctness-only opt-in comparison between cached and clean binding/emission before measuring performance.
 - [ ] Define cache invalidation for changed files, referenced symbols, imports/includes and compiler options.
 - [ ] Regenerate generated C# only for files or units whose syntax or bound semantics changed.
 - [ ] Investigate compiling only changed generated units instead of rebuilding all generated C# when the backend architecture allows it.
