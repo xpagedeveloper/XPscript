@@ -729,6 +729,7 @@ Only start this after the full AST front-end, binder, bound tree, diagnostics, e
 - [ ] Regenerate generated C# only for files or units whose syntax or bound semantics changed.
   - Blocked pending the opt-in parsed/bound cache correctness experiments and an explicit dependency/build graph; selective emission without those guarantees could produce stale generated units.
 - [ ] Investigate compiling only changed generated units instead of rebuilding all generated C# when the backend architecture allows it.
+  - Blocked pending selective C# regeneration and a dependency-aware build graph; compiling a subset before those are correct could omit cross-unit symbol or runtime changes.
 - [ ] Preserve correct cross-file symbol binding when only a subset of files changes.
 - [ ] Add correctness tests that compare clean builds with incremental/cache-enabled builds.
 - [ ] Add performance benchmarks for edit-compile cycles in small and large XPscript projects.
