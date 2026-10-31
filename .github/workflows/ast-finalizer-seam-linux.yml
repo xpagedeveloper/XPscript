@@ -37,3 +37,12 @@ jobs:
             exit 1
           fi
           echo 'AST_FINALIZER_SEAM_GENERATION_OK'
+      - name: Run Linux GC finalizer harness
+        shell: bash
+        env:
+          XPSCRIPT_AST_FINALIZER_TEST: '1'
+        run: |
+          set -euo pipefail
+          pwsh ./tests/ast-compile-probe/run-ast-finalizer-gc.ps1 | tee "$RUNNER_TEMP/finalizer-gc.log"
+          grep -F 'AST_FINALIZER_TEST_MARKER=GcProbe;count=1;duplicate=0' "$RUNNER_TEMP/finalizer-gc.log" >/dev/null
+          echo 'AST_FINALIZER_GC_OK'

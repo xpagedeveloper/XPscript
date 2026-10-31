@@ -1,0 +1,9 @@
+Class GcProbe
+End Class
+
+Sub Main()
+    Dim item As GcProbe
+    Set item = New GcProbe()
+    Set item = Nothing
+    Print "GC_PROBE_MAIN_OK"
+End Sub
