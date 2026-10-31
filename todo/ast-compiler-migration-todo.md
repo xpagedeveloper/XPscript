@@ -713,6 +713,7 @@ Only start this after the full AST front-end, binder, bound tree, diagnostics, e
 - [ ] Benchmark compile time before and after the AST production path is enabled.
   - [x] Define the benchmark contract: run on pinned GitHub-hosted Ubuntu/Windows runners with the repository’s .NET SDK, use the deterministic `tests/ast-compat` corpus plus representative `samples/` fixtures, separate cold processes/empty build outputs from warm repeated runs, and report median plus spread for at least five repetitions. This defines measurement only; it makes no performance claim.
   - [ ] Measure legacy versus AST phases with separate preprocessing, lexing/parsing, binding, emission and Roslyn/build timings.
+    - Blocked pending phase instrumentation or a supported diagnostic timing interface; end-to-end wall-clock timings cannot identify the requested phases reliably.
   - [ ] Record results and variance without making a performance claim until the benchmark contract is stable.
 - [ ] Measure where compile time is spent across preprocessing, lexing, parsing, binding, C# generation and Roslyn.
 - [ ] Investigate caching the parsed AST per source file.
