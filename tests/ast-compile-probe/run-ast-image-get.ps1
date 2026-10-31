@@ -72,3 +72,7 @@ Write-Host 'AST_IMAGE_REFERENCE_CONSTRUCTORS_OK'
 Write-Host 'AST_IMAGE_BYREF_REFERENCE_CONSTRUCTORS_OK'
 Write-Host 'AST_IMAGE_OPTIONAL_REFERENCE_CONSTRUCTORS_OK'
 Write-Host 'AST_IMAGE_OPTIONAL_REFREF_CONSTRUCTORS_OK'
+# The final cases above intentionally expect compiler exit code 2. Clear the
+# native exit status so the successful diagnostic assertions do not make the
+# overall lifecycle probe fail during PowerShell cleanup/return.
+$global:LASTEXITCODE = 0
