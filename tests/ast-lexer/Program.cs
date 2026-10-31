@@ -32,6 +32,20 @@ Equal(false, ReferenceEquals(cachedFirst, changed), "parsed cache source invalid
 var changedVersion = ParsedSyntaxCache.Parse(cacheSource, "ast-lexer-cache-v2");
 Equal(false, ReferenceEquals(cachedFirst, changedVersion), "parsed cache version invalidation");
 
+// Opt-in reuse must be observationally identical to a clean parse, including
+// tree shape/spans and diagnostics, for both the original text and an edit.
+static void AssertCleanParseEquivalent(string source, ParsedSyntaxResult reused, string label)
+{
+    var cleanParser = new DeclarationParser(source);
+    var cleanTree = cleanParser.ParseCompilationUnit();
+    Equal(SyntaxTreeDumper.Dump(cleanTree), SyntaxTreeDumper.Dump(reused.Tree), $"{label} tree dump");
+    Equal(string.Join("\n", cleanParser.Diagnostics.Select(d => $"{d.Code}:{d.Message}:{d.Span.Start}:{d.Span.Length}")),
+        string.Join("\n", reused.Diagnostics.Select(d => $"{d.Code}:{d.Message}:{d.Span.Start}:{d.Span.Length}")), $"{label} diagnostics");
+}
+
+AssertCleanParseEquivalent(cacheSource, cachedFirst, "cached clean source");
+AssertCleanParseEquivalent(cacheSource + "\n", changed, "cached edited source");
+
 // Keep the most recently failing regression first so CI fails fast on this area.
 for (var rank = 1; rank <= 8; rank++)
 {
