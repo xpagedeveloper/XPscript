@@ -657,7 +657,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Investigate incremental parsing only after the non-incremental AST is stable.
   - [ ] Define a baseline parse benchmark and correctness corpus for clean non-incremental parses.
     - Blocked pending an agreed corpus and measurement contract; the existing `AstLexerProbe` is a correctness probe, not a performance baseline. Do not add timing thresholds without controlling runner, SDK and workload variance.
-  - [ ] Define edit invalidation boundaries for lexer/parser state, includes, referenced symbols and compiler options.
+  - [x] Define edit invalidation boundaries for future incremental parsing: source edits invalidate the file's lexer/parser tree; `Include`/`Use` changes invalidate the consuming unit and dependency closure; referenced declaration/signature changes invalidate dependent binding/emission; compiler target, security, platform, preprocessor, runtime and output options invalidate binding/emission outputs. No cache is enabled until the baseline contract is agreed.
   - [ ] Prototype incremental syntax reuse behind an opt-in test seam and compare diagnostics/tree output with clean parses.
 
 ## Phase 10: Compatibility harness
