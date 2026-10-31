@@ -849,7 +849,7 @@ public static class AstCompiler
             : string.Empty;
         var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
         var finalizerTestMode = string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_AST_FINALIZER_TEST"), "1", StringComparison.Ordinal);
-        var finalizerStartup = finalizerTestMode ? "AstFinalizerTestHook.Enable();" : string.Empty;
+        var finalizerStartup = finalizerTestMode ? "static Program() { AstFinalizerTestHook.Enable(); }" : string.Empty;
         var userClassSupport = string.Join(Environment.NewLine, unit.Declarations.OfType<ClassDeclarationSyntax>().Select(classDeclaration =>
         {
             var fields = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>().Select(field =>
