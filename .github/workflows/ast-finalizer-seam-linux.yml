@@ -28,9 +28,9 @@ jobs:
           test_output="$RUNNER_TEMP/ast-finalizer-seam"
           normal_output="$RUNNER_TEMP/ast-finalizer-normal"
           XPSCRIPT_AST_FINALIZER_TEST=1 dotnet "$compiler" ast-compile "$fixture" -o "$test_output"
-          strings "$test_output/Generated.dll" | grep -F 'AST_FINALIZER_TEST_MARKER=' >/dev/null
+          grep -a -F 'AST_FINALIZER_TEST_MARKER=' "$test_output/Generated.dll" >/dev/null
           dotnet "$compiler" ast-compile "$fixture" -o "$normal_output"
-          if strings "$normal_output/Generated.dll" | grep -F 'AST_FINALIZER_TEST_MARKER=' >/dev/null; then
+          if grep -a -F 'AST_FINALIZER_TEST_MARKER=' "$normal_output/Generated.dll" >/dev/null; then
             echo 'Finalizer test seam leaked into a normal compile.' >&2
             exit 1
           fi
