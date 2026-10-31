@@ -33,6 +33,7 @@ XPscript also uses the following open source NuGet packages. The versions below 
 The following packages are distributed under the MIT License:
 
 - [Avalonia](https://github.com/AvaloniaUI/Avalonia), including `Avalonia.Desktop`, `Avalonia.FreeDesktop`, `Avalonia.FreeDesktop.AtSpi`, `Avalonia.HarfBuzz`, `Avalonia.Native`, `Avalonia.Remote.Protocol`, `Avalonia.Skia`, `Avalonia.Themes.Fluent`, `Avalonia.Win32`, and `Avalonia.X11` (`12.1.4`)
+- `Avalonia.Android` (`12.1.4`), distributed under the MIT License as part of Avalonia.
 - [Avalonia.Controls.WebView](https://github.com/AvaloniaUI/Avalonia.Controls.WebView) (`12.1.1`)
 - [BouncyCastle.Cryptography](https://github.com/bcgit/bc-csharp) (`2.6.2`)
 - [HarfBuzzSharp](https://github.com/mono/SkiaSharp), including its platform native asset packages (`8.3.1.3`)
@@ -58,6 +59,8 @@ The MIT license text is available at [opensource.org/licenses/MIT](https://opens
 - [Npgsql](https://github.com/npgsql/npgsql) (`10.0.3`) is distributed under the PostgreSQL License. The copyright and permission notice supplied with Npgsql must be retained when required by that license.
 
 ### Apache License 2.0
+
+- `Xamarin.AndroidX.Camera.Camera2`, `Xamarin.AndroidX.Camera.Core`, `Xamarin.AndroidX.Camera.View`, `Xamarin.AndroidX.Lifecycle.LiveData.Core`, `Xamarin.AndroidX.Media3.ExoPlayer`, and `Xamarin.AndroidX.Media3.Ui` are AndroidX binding packages distributed under the Apache License 2.0. Release packages must preserve their NuGet-generated license and notice files.
 
 - `Magick.NET-Q16-AnyCPU` — [Magick.NET](https://github.com/dlemstra/Magick.NET) (`14.17.1`) is the XPImage runtime backend and is distributed under the Apache License 2.0. Magick.NET packages include the ImageMagick native runtime used for image decoding, encoding, metadata, drawing and image processing. Applications that use XPImage include the applicable Magick.NET/ImageMagick package license and notice material in the compiler-generated `Third-party-license.txt`.
   AST-generated code that includes the XPImage runtime uses the same generated-project dependency configuration. The SDK resolves Magick.NET and its transitive packages, selects native assets for the build runtime identifier, and stages them with the application. The accompanying `Third-party-license.txt` is generated from the exact restored package graph, including when the build uses the persistent restore cache. Programs without XPImage do not acquire this dependency.
