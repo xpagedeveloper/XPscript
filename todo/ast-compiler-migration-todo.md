@@ -715,6 +715,7 @@ Only start this after the full AST front-end, binder, bound tree, diagnostics, e
   - [ ] Measure legacy versus AST phases with separate preprocessing, lexing/parsing, binding, emission and Roslyn/build timings.
     - Blocked pending phase instrumentation or a supported diagnostic timing interface; end-to-end wall-clock timings cannot identify the requested phases reliably.
   - [ ] Record results and variance without making a performance claim until the benchmark contract is stable.
+    - Blocked by the missing phase instrumentation above; no benchmark result or performance claim is recorded until legacy/AST phase timings are available under the defined runner/corpus protocol.
 - [ ] Measure where compile time is spent across preprocessing, lexing, parsing, binding, C# generation and Roslyn.
 - [ ] Investigate caching the parsed AST per source file.
 - [ ] Investigate caching the bound tree / semantic result per source file.
