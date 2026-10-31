@@ -1,0 +1,35 @@
+name: AST Finalizer Seam (Linux)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ast-finalizer-seam:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: Verify test-only finalizer seam generation
+        shell: bash
+        run: |
+          set -euo pipefail
+          compiler=./src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll
+          fixture=./tests/ast-compile-probe/class-lifecycle.xps
+          test_output="$RUNNER_TEMP/ast-finalizer-seam"
+          normal_output="$RUNNER_TEMP/ast-finalizer-normal"
+          XPSCRIPT_AST_FINALIZER_TEST=1 dotnet "$compiler" ast-compile "$fixture" -o "$test_output"
+          strings "$test_output/Generated.dll" | grep -F 'AST_FINALIZER_TEST_MARKER=' >/dev/null
+          dotnet "$compiler" ast-compile "$fixture" -o "$normal_output"
+          if strings "$normal_output/Generated.dll" | grep -F 'AST_FINALIZER_TEST_MARKER=' >/dev/null; then
+            echo 'Finalizer test seam leaked into a normal compile.' >&2
+            exit 1
+          fi
+          echo 'AST_FINALIZER_SEAM_GENERATION_OK'
