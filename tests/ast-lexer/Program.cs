@@ -18,6 +18,20 @@ static void Equal<T>(T expected, T actual, string message)
 
 static SyntaxToken[] Lex(string text) => new Lexer(text).Lex().ToArray();
 
+ParsedSyntaxCache.Clear();
+const string cacheSource = "Sub Main()\nPrint 42\nEnd Sub";
+var uncachedParser = new DeclarationParser(cacheSource);
+var uncachedTree = uncachedParser.ParseCompilationUnit();
+var cachedFirst = ParsedSyntaxCache.Parse(cacheSource, "ast-lexer-cache-v1");
+var cachedSecond = ParsedSyntaxCache.Parse(cacheSource, "ast-lexer-cache-v1");
+Equal(uncachedParser.Diagnostics.Count, cachedFirst.Diagnostics.Count, "parsed cache diagnostics");
+Equal(uncachedTree.Declarations.Count, cachedFirst.Tree.Declarations.Count, "parsed cache declaration count");
+Equal(true, ReferenceEquals(cachedFirst, cachedSecond), "parsed cache identity");
+var changed = ParsedSyntaxCache.Parse(cacheSource + "\n", "ast-lexer-cache-v1");
+Equal(false, ReferenceEquals(cachedFirst, changed), "parsed cache source invalidation");
+var changedVersion = ParsedSyntaxCache.Parse(cacheSource, "ast-lexer-cache-v2");
+Equal(false, ReferenceEquals(cachedFirst, changedVersion), "parsed cache version invalidation");
+
 // Keep the most recently failing regression first so CI fails fast on this area.
 for (var rank = 1; rank <= 8; rank++)
 {

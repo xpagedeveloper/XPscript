@@ -22,6 +22,11 @@ on:
         required: false
         default: false
         type: boolean
+      ast_lexer_only:
+        description: 'Run the focused AST lexer and parsed-cache probe'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -45,7 +50,7 @@ jobs:
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_macos && matrix.os == 'macos-latest') }}
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
       - name: Restore focused language probe projects
-        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.skip_language_fulltest || inputs.webiis_only)) }}
+        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.skip_language_fulltest || inputs.webiis_only || inputs.ast_lexer_only)) }}
         shell: pwsh
         run: |
           Get-ChildItem ./tests -Recurse -Filter *.csproj | ForEach-Object {
@@ -53,19 +58,23 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Restore failed: $($_.FullName)" }
           }
       - name: Run Language FullTest, platform file roots, typed reference cells, Parent.New and XPImage cleanup
-        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.skip_language_fulltest || inputs.webiis_only)) }}
+        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.skip_language_fulltest || inputs.webiis_only || inputs.ast_lexer_only)) }}
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1 -Suite language
+      - name: Verify AST lexer and parsed syntax cache
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.ast_lexer_only && matrix.os == 'ubuntu-latest' }}
+        shell: pwsh
+        run: dotnet run --project ./tests/ast-lexer/AstLexerProbe.csproj -c Release
       - name: Verify WebIIS package isolation
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.webiis_only && matrix.os == 'windows-latest' }}
         shell: pwsh
         run: dotnet run --project ./tests/WebIisPackageProbe/WebIisPackageProbe.csproj -c Release
       - name: Verify CLI command-line compatibility
-        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.webiis_only)) }}
+        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.webiis_only || inputs.ast_lexer_only)) }}
         shell: pwsh
         run: ./tests/cli-compatibility/run-cli-compatibility.ps1
       - name: Verify MCP protocol, concurrent requests and AST compilation
-        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.webiis_only)) }}
+        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.webiis_only || inputs.ast_lexer_only)) }}
         timeout-minutes: 10
         shell: pwsh
         run: |
