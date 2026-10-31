@@ -38,11 +38,6 @@ jobs:
             rid: win-x64
             locale: en-US
             lang: en_US.UTF-8
-          - name: macOS
-            os: macos-13
-            rid: osx-x64
-            locale: en-US
-            lang: en_US.UTF-8
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
