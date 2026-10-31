@@ -731,7 +731,9 @@ Only start this after the full AST front-end, binder, bound tree, diagnostics, e
 - [ ] Investigate compiling only changed generated units instead of rebuilding all generated C# when the backend architecture allows it.
   - Blocked pending selective C# regeneration and a dependency-aware build graph; compiling a subset before those are correct could omit cross-unit symbol or runtime changes.
 - [ ] Preserve correct cross-file symbol binding when only a subset of files changes.
+  - Blocked pending a dependency-aware incremental workspace model; the current compiler binds a complete compilation context, so partial-file binding would require a new symbol snapshot and invalidation contract.
 - [ ] Add correctness tests that compare clean builds with incremental/cache-enabled builds.
+  - Blocked pending an opt-in incremental/cache implementation; no cache-enabled path currently exists to compare against the established clean AST/legacy corpus.
 - [ ] Add performance benchmarks for edit-compile cycles in small and large XPscript projects.
 - [ ] Evaluate whether persistent AST + bound-tree caching materially improves edit-compile latency before making it the default.
 
