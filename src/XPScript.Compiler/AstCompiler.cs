@@ -1585,7 +1585,7 @@ internal static class Program
         public string OSDateFormatting => "yyyy-MM-dd";
         public string OSTimeFormatting => "HH:mm:ss";
         public int CompareTo(XpDate? other) => other is null ? 1 : Value.CompareTo(other.Value);
-        public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        public override string ToString() => Value.ToString(System.Globalization.CultureInfo.CurrentCulture);
         public static bool operator >(XpDate a, XpDate b) => a.Value > b.Value;
         public static bool operator >=(XpDate a, XpDate b) => a.Value >= b.Value;
         public static bool operator <(XpDate a, XpDate b) => a.Value < b.Value;
