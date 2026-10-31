@@ -1,6 +1,11 @@
 Sub Main()
     If Len(CStr(Platform)) = 0 Then Error 6102, "Platform runtime value is empty"
     If Len(CStr(CurDir)) = 0 Then Error 6103, "CurDir runtime value is empty"
+    If Environ("XPSCRIPT_RUNTIME_IDENTITY") <> "identity-ok" Then Error 6104, "Environ runtime value is incorrect"
+    If GetTickCount() < 0 Then Error 6105, "GetTickCount returned a negative value"
+    Print "PLATFORM=" & CStr(Platform)
     Print "COMMAND_READ=" & CStr(Command = "")
+    Print "ENVIRON_READ=True"
+    Print "TICKCOUNT_READ=True"
     Print "RUNTIME_GLOBALS_OK"
 End Sub

@@ -547,10 +547,12 @@ $moduleConstResult = dotnet (Join-Path $moduleConstOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($moduleConstResult -join "`n") -ne "42`nhello`n7") { throw 'AST module/procedure Const syntax regression failed.' }
 Write-Host 'AST_MODULE_CONST_SYNTAX_OK'
 $runtimeGlobalsOutput = Join-Path $output 'runtime-globals-next'
+$env:XPSCRIPT_RUNTIME_IDENTITY = 'identity-ok'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'runtime-globals-next.xps') -o $runtimeGlobalsOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST runtime globals compilation failed.' }
 $runtimeGlobalsResult = dotnet (Join-Path $runtimeGlobalsOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($runtimeGlobalsResult -join "`n") -ne "COMMAND_READ=True`nRUNTIME_GLOBALS_OK") { throw 'AST runtime globals regression failed.' }
+$expectedPlatform = if ($IsWindows) { 'PLATFORM=Windows' } elseif ($IsMacOS) { 'PLATFORM=MacOS' } else { 'PLATFORM=Linux' }
+if ($LASTEXITCODE -ne 0 -or ($runtimeGlobalsResult -notcontains $expectedPlatform) -or ($runtimeGlobalsResult -notcontains 'COMMAND_READ=True') -or ($runtimeGlobalsResult -notcontains 'ENVIRON_READ=True') -or ($runtimeGlobalsResult -notcontains 'TICKCOUNT_READ=True') -or ($runtimeGlobalsResult -notcontains 'RUNTIME_GLOBALS_OK')) { throw 'AST runtime globals regression failed.' }
 Write-Host 'AST_RUNTIME_GLOBALS_OK'
 $moduleArraysOutput = Join-Path $output 'module-arrays'
 dotnet $compiler ast-compile (Join-Path $root 'samples/module-arrays.xps') -o $moduleArraysOutput
