@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - ai-kestrel-nuclei-hardening
-      - investigate-ast-compiler
   workflow_dispatch:
   schedule:
     - cron: "17 6 1 * *"
@@ -18,7 +17,7 @@ concurrency:
 
 jobs:
   hardening:
-    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening' || github.ref == 'refs/heads/investigate-ast-compiler'
+    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

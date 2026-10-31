@@ -720,7 +720,7 @@ Only start this after the full AST front-end, binder, bound tree, diagnostics, e
 - [ ] Investigate caching the parsed AST per source file.
   - [ ] Define cache key/version inputs for source text, parser/compiler version, language mode and parse options.
   - [ ] Define invalidation and memory/ownership behavior for syntax trees, diagnostics and source spans.
-  - [ ] Add a correctness-only opt-in cache experiment comparing cached and clean parse trees before enabling performance behavior.
+  - [x] Add a correctness-only opt-in cache experiment comparing cached and clean parse trees before enabling performance behavior. `ParsedSyntaxCache` is opt-in and verifies clean-tree declaration/diagnostic equivalence, cache identity, source invalidation and parser-version invalidation; GitHub run `41206811239` passed on 2026-10-31 (Ubuntu focused probe).
 - [ ] Investigate caching the bound tree / semantic result per source file.
   - [ ] Define semantic cache inputs for parsed syntax, referenced declarations, include/use closure, target/platform/security options and compiler version.
   - [ ] Define diagnostic, symbol and source-map invalidation when dependencies or declarations change.
