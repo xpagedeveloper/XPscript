@@ -711,6 +711,9 @@ Initial implementation: expression conversions and a method-body emitter for ass
 Only start this after the full AST front-end, binder, bound tree, diagnostics, emitter integration and compatibility verification are working reliably.
 
 - [ ] Benchmark compile time before and after the AST production path is enabled.
+  - [ ] Define a reproducible benchmark environment, representative source corpus and warm/cold-run protocol.
+  - [ ] Measure legacy versus AST phases with separate preprocessing, lexing/parsing, binding, emission and Roslyn/build timings.
+  - [ ] Record results and variance without making a performance claim until the benchmark contract is stable.
 - [ ] Measure where compile time is spent across preprocessing, lexing, parsing, binding, C# generation and Roslyn.
 - [ ] Investigate caching the parsed AST per source file.
 - [ ] Investigate caching the bound tree / semantic result per source file.
