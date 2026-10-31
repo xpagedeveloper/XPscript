@@ -1,0 +1,13 @@
+Class TimeBox
+    Public value As Date
+
+    Public Sub New(ByVal incoming As Date)
+        value = incoming
+    End Sub
+End Class
+
+Public boxed As TimeBox = New TimeBox(TimeValue("12:34:56"))
+
+Sub Main()
+    Print CStr(boxed.value)
+End Sub

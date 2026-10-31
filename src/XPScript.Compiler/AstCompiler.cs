@@ -1597,7 +1597,7 @@ internal static class Program
     }
     public static object DateNumber(long year, long month, long day) => new XpDate(XPScriptRuntime.DateNumber((int)year, (int)month, (int)day));
     public static XpDate DateValue(object? value) => new XpDate(XPScriptRuntime.DateValue(value));
-    public static object TimeValue(object? value) => new XpDate(XPScriptRuntime.TimeValue(value));
+    public static XpDate TimeValue(object? value) => new XpDate(XPScriptRuntime.TimeValue(value));
     private static DateTime ToDateTime(object? value) => value is XpDate date ? date.Value : Convert.ToDateTime(value);
     public static object Date() => new XpDate(DateTime.Today);
     public static object Format(object? value, object? pattern = null) => pattern is null ? CStr(value) : (value is XpDate date ? date.Value : Convert.ToDateTime(value)).ToString(CStr(pattern), System.Globalization.CultureInfo.InvariantCulture);

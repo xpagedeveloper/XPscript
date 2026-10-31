@@ -1628,6 +1628,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized user-reference DateValue compi
 $initializedReferenceDateValueResult = dotnet (Join-Path $initializedReferenceDateValueOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedReferenceDateValueResult -join "`n") -notmatch '2026') { throw 'AST initialized user-reference DateValue failed.' }
 Write-Host 'AST_INITIALIZED_REFERENCE_DATEVALUE_OK'
+$initializedReferenceTimeValueOutput = Join-Path $output 'initialized-module-reference-timevalue-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-timevalue-next.xps') -o $initializedReferenceTimeValueOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized user-reference TimeValue compilation failed.' }
+$initializedReferenceTimeValueResult = dotnet (Join-Path $initializedReferenceTimeValueOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedReferenceTimeValueResult -join "`n") -notmatch '12:34:56') { throw 'AST initialized user-reference TimeValue failed.' }
+Write-Host 'AST_INITIALIZED_REFERENCE_TIMEVALUE_OK'
 $initializedXpImageOutput = Join-Path $output 'initialized-module-xpimage-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-xpimage-byref-next.xps') -o $initializedXpImageOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized XPImage module ByRef storage compilation failed.' }
