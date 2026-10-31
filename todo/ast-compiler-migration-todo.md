@@ -725,7 +725,7 @@ Only start this after the full AST front-end, binder, bound tree, diagnostics, e
   - [ ] Define semantic cache inputs for parsed syntax, referenced declarations, include/use closure, target/platform/security options and compiler version.
   - [ ] Define diagnostic, symbol and source-map invalidation when dependencies or declarations change.
   - [ ] Add a correctness-only opt-in comparison between cached and clean binding/emission before measuring performance.
-- [ ] Define cache invalidation for changed files, referenced symbols, imports/includes and compiler options.
+- [x] Define cache invalidation for changed files, referenced symbols, imports/includes and compiler options: source changes invalidate syntax; Include/Use closure changes invalidate consumers; declaration/signature changes invalidate dependent binding/emission; target, security, platform, preprocessor, runtime and output changes invalidate generated artifacts. Caching remains opt-in and unimplemented pending correctness experiments.
 - [ ] Regenerate generated C# only for files or units whose syntax or bound semantics changed.
 - [ ] Investigate compiling only changed generated units instead of rebuilding all generated C# when the backend architecture allows it.
 - [ ] Preserve correct cross-file symbol binding when only a subset of files changes.
