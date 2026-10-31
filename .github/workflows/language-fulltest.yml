@@ -6,6 +6,17 @@ on:
   push:
     branches: [main, investigate-ast-compiler]
   workflow_dispatch:
+    inputs:
+      skip_macos:
+        description: 'Skip the macOS language job for focused parity verification'
+        required: false
+        default: false
+        type: boolean
+      skip_language_fulltest:
+        description: 'Skip the long language corpus for focused CLI/MCP parity verification'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -20,18 +31,32 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_macos && matrix.os == 'macos-latest') }}
       - uses: actions/setup-dotnet@v5
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_macos && matrix.os == 'macos-latest') }}
         with:
           dotnet-version: '10.0.x'
       - name: Build compiler
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_macos && matrix.os == 'macos-latest') }}
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+      - name: Restore focused language probe projects
+        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.skip_language_fulltest)) }}
+        shell: pwsh
+        run: |
+          Get-ChildItem ./tests -Recurse -Filter *.csproj | ForEach-Object {
+            dotnet restore $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Restore failed: $($_.FullName)" }
+          }
       - name: Run Language FullTest, platform file roots, typed reference cells, Parent.New and XPImage cleanup
+        if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.skip_language_fulltest)) }}
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1 -Suite language
       - name: Verify CLI command-line compatibility
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_macos && matrix.os == 'macos-latest') }}
         shell: pwsh
         run: ./tests/cli-compatibility/run-cli-compatibility.ps1
       - name: Verify MCP protocol, concurrent requests and AST compilation
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_macos && matrix.os == 'macos-latest') }}
         timeout-minutes: 10
         shell: pwsh
         run: |
