@@ -883,7 +883,7 @@ public static class AstCompiler
             // Non-virtual cleanup is bound to the constructor's completed ancestry;
             // never dispatch Delete or a not-yet-initialized derived override here.
             var constructionCleanup = classDeclaration.BaseType is null
-                ? $"protected void __xps_cleanup_failed_construction() {{ {imageCleanup} }}"
+                ? $"protected void __xps_cleanup_failed_construction() {{ {imageCleanup} System.GC.SuppressFinalize(this); }}"
                 : $"protected new void __xps_cleanup_failed_construction() {{ try {{ {imageCleanup} }} finally {{ base.__xps_cleanup_failed_construction(); }} }}";
             return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} {gcCleanup} {constructorBody} {constructionCleanup} {delete} {memberBodies} }}";
         }));
