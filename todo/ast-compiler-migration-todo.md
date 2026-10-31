@@ -735,7 +735,9 @@ Only start this after the full AST front-end, binder, bound tree, diagnostics, e
 - [ ] Add correctness tests that compare clean builds with incremental/cache-enabled builds.
   - Blocked pending an opt-in incremental/cache implementation; no cache-enabled path currently exists to compare against the established clean AST/legacy corpus.
 - [ ] Add performance benchmarks for edit-compile cycles in small and large XPscript projects.
+  - Blocked pending an opt-in incremental/cache implementation and the benchmark contract above; no edit-compile performance result exists yet.
 - [ ] Evaluate whether persistent AST + bound-tree caching materially improves edit-compile latency before making it the default.
+  - Blocked pending measured clean-vs-cached edit-compile runs; do not make a default-change claim without dated benchmark evidence.
 
 Target outcome: unchanged files should be able to reuse their AST and bound semantic state so that edit-compile cycles only redo the work invalidated by the user's changes, while producing results identical to a clean build.
 
