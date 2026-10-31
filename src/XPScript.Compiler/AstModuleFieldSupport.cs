@@ -63,7 +63,7 @@ internal static class AstModuleFieldSupport
                         ? $"\"{stringInitializer.Groups["value"].Value.Replace("\"\"", "\\\"")}\""
                         : typed && nothingInitializer ? "null"
                         : typed && newInitializer.Success ? InitializerExpression(newInitializer)
-                        : typed && dateInitializer.Success ? $"new XpDate(new System.DateTime({dateInitializer.Groups["year"].Value}, {dateInitializer.Groups["month"].Value}, {dateInitializer.Groups["day"].Value}))"
+                        : typed && dateInitializer.Success ? $"new XpDate(XPScriptRuntime.DateNumber({dateInitializer.Groups["year"].Value}, {dateInitializer.Groups["month"].Value}, {dateInitializer.Groups["day"].Value}))"
                         : null
                 });
             }).ToArray();

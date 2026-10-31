@@ -1,0 +1,5 @@
+Public normalized As Date = DateNumber(2026, 13, 1)
+
+Sub Main()
+    Print CStr(normalized)
+End Sub

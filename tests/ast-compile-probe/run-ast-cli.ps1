@@ -1598,6 +1598,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST initialized Date module storage compilatio
 $initializedDateResult = dotnet (Join-Path $initializedDateOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($initializedDateResult -join "`n") -notmatch '2026') { throw 'AST initialized Date module ByRef storage failed.' }
 Write-Host 'AST_INITIALIZED_DATE_MODULE_STORAGE_OK'
+$initializedDateNormalizationOutput = Join-Path $output 'initialized-module-date-normalization-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-date-normalization-next.xps') -o $initializedDateNormalizationOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized Date normalization compilation failed.' }
+$initializedDateNormalizationResult = dotnet (Join-Path $initializedDateNormalizationOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($initializedDateNormalizationResult -join "`n") -notmatch '2027') { throw 'AST initialized DateNumber normalization failed.' }
+Write-Host 'AST_INITIALIZED_DATE_NORMALIZATION_OK'
 $initializedXpImageOutput = Join-Path $output 'initialized-module-xpimage-byref-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-xpimage-byref-next.xps') -o $initializedXpImageOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST initialized XPImage module ByRef storage compilation failed.' }
