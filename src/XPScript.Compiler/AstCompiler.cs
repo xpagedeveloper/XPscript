@@ -861,8 +861,9 @@ public static class AstCompiler
             var imageCleanup = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>()
                 .Where(field => AstImageSupport.IsImage(field.Type.Identifier.Text))
                 .Select(field => $"AstImageScope.StoreField(ref this.{field.Identifier.Text}, null);"));
+            var finalizerIdField = finalizerTestMode ? "private readonly string __xps_finalizer_id = System.Guid.NewGuid().ToString(\"N\");" : string.Empty;
             var gcCleanup = finalizerTestMode
-                ? $"~Xp{classDeclaration.Identifier.Text}() {{ AstFinalizerTestHook.Record(\"{classDeclaration.Identifier.Text}\"); {imageCleanup} }}"
+                ? $"~Xp{classDeclaration.Identifier.Text}() {{ AstFinalizerTestHook.Record(\"{classDeclaration.Identifier.Text}\", __xps_finalizer_id); {imageCleanup} }}"
                 : imageCleanup.Length == 0
                     ? string.Empty
                     : $"~Xp{classDeclaration.Identifier.Text}() {{ {imageCleanup} }}";
@@ -889,7 +890,7 @@ public static class AstCompiler
             var constructionCleanup = classDeclaration.BaseType is null
                 ? $"protected void __xps_cleanup_failed_construction() {{ {imageCleanup} System.GC.SuppressFinalize(this); }}"
                 : $"protected new void __xps_cleanup_failed_construction() {{ try {{ {imageCleanup} }} finally {{ base.__xps_cleanup_failed_construction(); }} }}";
-            return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {fields} {properties} {gcCleanup} {constructorBody} {constructionCleanup} {delete} {memberBodies} }}";
+            return $"internal class Xp{classDeclaration.Identifier.Text}{baseClause} {{ {finalizerIdField} {fields} {properties} {gcCleanup} {constructorBody} {constructionCleanup} {delete} {memberBodies} }}";
         }));
         // A class must be represented by the AST declaration model. A regex
         // fallback would silently emit an incomplete type and bypass binding,
@@ -899,7 +900,7 @@ public static class AstCompiler
                 "Class declarations must be represented by the AST compiler.", "XPS3001", "ast");
         var classSupport = "namespace __xps_user_classes { using static global::Program; " + userClassSupport + " }" + Environment.NewLine;
         if (finalizerTestMode)
-            classSupport = "internal static class AstFinalizerTestHook { public static void Enable() { System.Console.WriteLine(\"AST_FINALIZER_SEAM_ENABLED\"); } public static void Record(string className) { if (string.Equals(System.Environment.GetEnvironmentVariable(\"XPSCRIPT_AST_FINALIZER_TEST\"), \"1\", System.StringComparison.Ordinal)) System.Console.WriteLine(\"AST_FINALIZER_TEST_MARKER=\" + className); } }" + Environment.NewLine + classSupport;
+            classSupport = "internal static class AstFinalizerTestHook { private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> Counts = new(); private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> Seen = new(); public static void Enable() { System.Console.WriteLine(\"AST_FINALIZER_SEAM_ENABLED\"); } public static void Record(string className, string instanceId) { var count = Counts.AddOrUpdate(className, 1, (_, current) => current + 1); var duplicate = !Seen.TryAdd(instanceId, 0); System.Console.WriteLine(\"AST_FINALIZER_TEST_MARKER=\" + className + \";count=\" + count + \";duplicate=\" + (duplicate ? 1 : 0)); } }" + Environment.NewLine + classSupport;
         classSupport += Environment.NewLine + string.Join(Environment.NewLine, Regex.Matches(fullSource, @"(?ims)^\s*Type\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Type\b")
             .Cast<Match>().Select(match =>
             {
