@@ -564,7 +564,8 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [ ] Verify broader constructor/destructor GC ownership and derived-method migration boundaries that are not covered by the supported lifecycle subset.
       - Bounded execution order for this umbrella item:
         - [x] Define the XPImage Optional/ByRef constructor ownership contract: supplied values are cloned, omitted Optional values are `Nothing`, replacement preserves the old field until cloning succeeds, and failed initialization clears the new object/assignment target to `Nothing` without taking ownership of the caller's original image. Documented in `docs/classes.md`; positive execution fixtures remain separate.
-        - [ ] Add paired CLI/MCP positive and negative regressions for XPImage Optional constructor parameters. Blocked: the minimal `Optional ByVal value As XPImage = Nothing` fixture currently hangs the AST compiler before producing diagnostics or output; add a bounded unsupported-feature guard or implement the contract first.
+        - [ ] Add paired CLI/MCP positive and negative regressions for XPImage Optional constructor parameters. The negative guard is complete; positive execution remains blocked until Optional XPImage ownership is implemented.
+          - [x] Add and verify the bounded XPS3001 negative guard in CLI and MCP; Linux run `41313901864` passed the constructor guard regression. Positive execution remains blocked until Optional XPImage ownership is implemented.
         - [ ] Add paired CLI/MCP positive and negative regressions for XPImage ByRef constructor parameters.
         - [ ] Verify XPImage expiration/recycling markers for those parameter modes in the Linux ownership harness.
         - [ ] Define whole-array constructor ownership for scalar and reference elements, including alias, replacement, failure and cleanup behavior.
