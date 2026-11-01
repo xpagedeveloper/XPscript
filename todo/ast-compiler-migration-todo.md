@@ -556,7 +556,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - [ ] Complete constructor/lifecycle migration through bounded follow-up tasks:
     - [x] Document the supported `Parent.New` forwarding contract for required, Optional and ByRef parameters, including evaluation order and failure behavior in `docs/classes.md`.
     - [x] Add focused negative regressions for invalid `Parent.New` ordering, arity, visibility and incompatible argument types in CLI and MCP. Existing constructor CLI and `CompilerMcpProtocolProbe` coverage verifies late/duplicate/root/nested calls plus XPS2001/XPS2004/XPS2008/XPS2009 diagnostics.
-    - [ ] Migrate one additional native constructor/reference family at a time, with explicit borrowed-versus-owned cleanup assertions.
+    - [x] Migrate one additional native constructor/reference family at a time: scalar ByVal XPImage constructors use the borrowed-input/owned-field contract and `constructor-xpimage-parameter-next.xps`; Optional/ByRef XPImage modes remain separate open work.
     - [ ] Migrate one additional derived method/property family at a time, with virtual dispatch and base-access regressions.
     - [ ] Verify each completed lifecycle family in the Linux AST workflow before closing its TODO item; use Windows only where the target requires it.
     - [ ] Close the parent lifecycle item only after the supported-family matrix, normal/AST parity scope and remaining unsupported cases are documented.
