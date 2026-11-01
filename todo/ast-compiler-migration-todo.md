@@ -472,6 +472,10 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
   - Blocked for final closure only by the documented GC/finalizer stress-test seam; the supported class-method, property, constructor, destructor and native/reference families have bounded AST regressions and evidence recorded below.
   - [ ] Inventory and implement any remaining class declaration/inheritance syntax or binding gaps that are required by the supported XPscript contract.
     - [ ] Migrate XPImage parameters on ordinary procedures and class methods, replacing the current XPS3001 guard with an explicit lifetime/ownership contract and regressions.
+      - [ ] Define ByVal borrowing/cloning and caller-recycling behavior separately for ordinary procedures and class methods.
+      - [ ] Define ByRef replacement/copy-back behavior, including failure persistence and caller-owned image cleanup.
+      - [ ] Define Optional omission behavior and failure cleanup for XPImage procedure/method parameters.
+      - [ ] Add focused CLI/MCP and Linux regressions for the supported XPImage procedure/method parameter matrix before removing XPS3001 guards.
     - [ ] Migrate ordinary class-method Object/user-reference signatures that remain outside constructor-specific binding, with typed alias/replacement and failure-cleanup coverage.
     - [ ] Audit remaining unknown/native accessor and compatibility-module signature guards, retaining explicit diagnostics where the contract is intentionally unsupported.
   - [ ] Define and verify the remaining normal/AST parity boundary for class construction, inheritance and lifecycle behavior; label AST-only capabilities explicitly.
