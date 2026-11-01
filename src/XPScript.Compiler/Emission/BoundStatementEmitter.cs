@@ -127,11 +127,8 @@ public sealed class BoundStatementEmitter
                 }
                 if (AstImageSupport.IsImage(assignment.Target.SemanticType.Name) && assignment.Target is BoundNameExpression imageTarget)
                 {
-                    if (imageTarget.Symbol is not ParameterSymbol { IsByRef: true, IsBorrowedImageSnapshot: false })
-                    {
-                        var owns = ImageScopeEnabled && imageTarget.Symbol is LocalSymbol { StaticStorageName: null } or ParameterSymbol { IsByRef: false } or ParameterSymbol { IsBorrowedImageSnapshot: true };
-                        expressionText = $"{(owns ? "__imageScope.Replace" : "AstImageScope.ReplaceBorrowed")}({targetText}, {expressionText})";
-                    }
+                    var owns = ImageScopeEnabled && imageTarget.Symbol is LocalSymbol { StaticStorageName: null } or ParameterSymbol { IsByRef: false } or ParameterSymbol { IsBorrowedImageSnapshot: true };
+                    expressionText = $"{(owns ? "__imageScope.Replace" : "AstImageScope.ReplaceBorrowed")}({targetText}, {expressionText})";
                 }
                 if (targetText is "http.TimeoutSec" or "http.MaxRedirects" or "http.ResponseCode") expressionText = $"Convert.ToInt64({expressionText})";
                 if (targetText.Equals("ai", StringComparison.OrdinalIgnoreCase)) expressionText = $"(XPScriptAi){expressionText}";

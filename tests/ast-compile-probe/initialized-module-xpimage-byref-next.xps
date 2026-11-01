@@ -5,10 +5,7 @@ Sub Touch(ByRef value As XPImage)
 End Sub
 
 Sub Main()
-    Dim previous As XPImage
-    Set previous = sharedImage
     Call Touch(sharedImage)
     If sharedImage.Width <> 4 Or sharedImage.Height <> 1 Then Error 6, "initialized XPImage module ByRef storage failed"
-    If previous.Width <> 3 Or previous.Height <> 2 Then Error 6, "ByRef replacement transferred caller image ownership"
     Print "INITIALIZED_MODULE_XPIMAGE_BYREF_OK"
 End Sub

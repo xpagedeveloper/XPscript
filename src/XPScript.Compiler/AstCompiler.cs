@@ -768,10 +768,7 @@ public static class AstCompiler
             {
                 var semanticType = ResolveParameterType(parameter, symbols);
                 var runtimeType = parameter.IsArray ? typeof(Array) : semanticType.RuntimeType;
-                return new ParameterSymbol(parameter.Identifier.Text, runtimeType, parameter.IsByRef, semanticType)
-                {
-                    IsBorrowedImageSnapshot = parameter.IsByRef && !parameter.IsList && !parameter.IsArray && AstImageSupport.IsImage(parameter.Type?.Identifier.Text)
-                };
+                return new ParameterSymbol(parameter.Identifier.Text, runtimeType, parameter.IsByRef, semanticType);
             }).ToArray();
             foreach (var parameter in parameters) scope.Declare(parameter);
             var semanticReturnType = procedureFunction is null ? null : AstClassMethodSupport.DeclaredType(procedureFunction.ReturnType, symbols);
