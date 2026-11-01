@@ -562,6 +562,13 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [x] Document the supported-family matrix, normal/AST parity scope and remaining unsupported lifecycle cases in `docs/classes.md`; the broader parent lifecycle item remains open until its separate GC/derived-method boundaries are verified.
     - [x] Verify the remaining native/Variant/List/array constructor signature matrix through `class-constructor-native.xps`, `class-constructor-variant.xps`, `class-constructor-list.xps`, the array constructor fixtures and the image constructor harness. Coverage includes typed arguments/results, `Nothing`, Optional defaults, ByRef replacement and failure cleanup; AST CLI/MCP and Language/Runtime markers are already wired.
     - [ ] Verify broader constructor/destructor GC ownership and derived-method migration boundaries that are not covered by the supported lifecycle subset.
+      - Bounded execution order for this umbrella item:
+        - [ ] Add paired CLI/MCP positive and negative regressions for XPImage Optional constructor parameters.
+        - [ ] Add paired CLI/MCP positive and negative regressions for XPImage ByRef constructor parameters.
+        - [ ] Verify XPImage expiration/recycling markers for those parameter modes in the Linux ownership harness.
+        - [ ] Define whole-array constructor ownership for scalar and reference elements, including alias, replacement, failure and cleanup behavior.
+        - [ ] Add paired CLI/MCP diagnostics for supported whole-array ranks, bounds, Optional omission and incompatible element/rank cases.
+        - [ ] Re-run the Linux lifecycle workflow and document the remaining unsupported platform-specific boundaries.
       - [x] Define one reproducible GC/finalizer stress regression with explicit ownership markers and no platform-specific UI dependencies. Linux workflow `41251817650` verifies `GcProbe` finalization with one marker and no duplicate cleanup.
         - [x] Define a test-only finalizer observation seam that is disabled by default and cannot change production ownership behavior.
         - [x] Add explicit ownership/finalizer counters or markers for generated AST classes, including duplicate-cleanup detection.
