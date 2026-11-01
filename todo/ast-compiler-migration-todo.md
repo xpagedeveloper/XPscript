@@ -738,3 +738,18 @@ Run this phase only after all preceding implementation work, permanent FullTest 
 - [x] Add the platform-independent fixture `tests/ast-compile-probe/finalizer-gc-next.xps` and Linux harness `run-ast-finalizer-gc.ps1`.
 - [x] Verify the bounded Linux GC/finalizer workflow. Run `41251817650` passed with `AST_FINALIZER_TEST_MARKER=GcProbe;count=1;duplicate=0` and `AST_FINALIZER_GC_OK`.
 - [x] Document the seam and timeout policy in `docs/ast-csharp-emitter.md`.
+
+## Local TODO synchronization — 2026-11-01
+
+The following bounded follow-ups are synchronized from the local branch and remain open unless marked complete:
+
+- [x] GC/finalizer observation seam, ownership counters, platform-independent fixture, Linux harness and documentation. Verified by workflow 41251817650 with AST_FINALIZER_TEST_MARKER=GcProbe;count=1;duplicate=0 and AST_FINALIZER_GC_OK.
+- [x] Document the supported Parent.New contract and existing negative CLI/MCP coverage for ordering, duplicate/root/nested calls, arity, access, type and ByRef diagnostics.
+- [x] Reconcile scalar ByVal XPImage constructor coverage; constructor-xpimage-parameter-next.xps is the existing regression.
+- [ ] Add paired CLI/MCP positive and negative regressions for XPImage Optional/ByRef parameter modes and ownership diagnostics.
+- [ ] Verify image expiration/recycling markers for remaining XPImage parameter modes in the Linux ownership harness.
+- [ ] Migrate whole-array constructor parameter ownership separately from array storage, including alias, replacement, failure and cleanup behavior.
+- [ ] Add paired CLI/MCP regressions for supported array ranks, bounds, Optional omission and incompatible element/rank diagnostics.
+- [ ] Migrate one additional native constructor/reference family at a time, with explicit borrowed-versus-owned cleanup assertions.
+- [ ] Migrate one additional derived method/property family at a time, with virtual dispatch and base-access regressions.
+- [ ] Verify each completed lifecycle family in the Linux AST workflow before closing its TODO item.
