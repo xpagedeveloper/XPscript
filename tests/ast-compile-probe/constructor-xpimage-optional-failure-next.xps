@@ -16,13 +16,15 @@ Sub Main()
     If item.Picture Is Nothing Or item.Picture.Width <> 5 Then Error 6, "initial Optional XPImage setup failed"
 
     fail = True
+    Dim replacement As Holder
     Dim failure As Long
     On Error Resume Next
-    Set item = New Holder(source)
+    Set replacement = New Holder(source)
     failure = Err
     On Error GoTo 0
     If failure <> 4981 Then Error 6, "Optional XPImage failure was not raised"
-    If Not (item Is Nothing) Then Error 6, "failed Optional XPImage assignment retained an object"
+    If Not (replacement Is Nothing) Then Error 6, "failed Optional XPImage assignment retained an object"
+    If item Is Nothing Or item.Picture Is Nothing Then Error 6, "failed construction changed the existing assignment target"
     Call source.Recycle()
     Print "XPIMAGE_OPTIONAL_CONSTRUCTOR_FAILURE_OK"
 End Sub
