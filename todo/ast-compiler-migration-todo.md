@@ -567,7 +567,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
         - [ ] Add paired CLI/MCP positive and negative regressions for XPImage Optional constructor parameters. The negative guard is complete; positive execution remains blocked until Optional XPImage ownership is implemented.
           - [x] Add and verify the bounded XPS3001 negative guard in CLI and MCP; Linux run `41313901864` passed the constructor guard regression. Positive execution remains blocked until Optional XPImage ownership is implemented.
           - [x] Bind Optional XPImage constructor parameters to an explicit omitted-value (`Nothing`) and supplied-value representation. Linux lifecycle run `41316419574` passed the Optional XPImage constructor regression on commit `7ec546d36`.
-          - [x] Clone supplied Optional XPImage values when storing them in object-owned fields. The Optional XPImage fixture recycles the caller's source after construction and confirms the object-owned field remains valid; the Linux verification is tracked with the binding run.
+          - [x] Clone supplied Optional XPImage values when storing them in object-owned fields. The Optional XPImage fixture recycles the caller's source after construction and confirms the object-owned field remains valid; Linux run `41319385060` passed the regression.
           - [ ] Clear the new object and failed assignment target on constructor failure without recycling the caller-owned source.
           - [ ] Add the positive CLI/MCP execution regression after the ownership path is implemented.
         - [ ] Add paired CLI/MCP positive and negative regressions for XPImage ByRef constructor parameters.
