@@ -60,8 +60,12 @@ $optionalArrayResult = dotnet (Join-Path $optionalArrayTarget 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($optionalArrayResult -join "`n") -ne 'OPTIONAL_ARRAY_OMISSION_NOTHING_OK') { throw 'Optional array omission regression failed.' }
 Write-Host 'AST_OPTIONAL_ARRAY_OMISSION_OK'
 $imageArrayTarget = Join-Path $output 'constructor-xpimage-array-next'
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-field-xpimage-array-next.xps') -o $imageArrayTarget
-if ($LASTEXITCODE -ne 0) { throw 'XPImage array constructor compilation failed.' }
+$imageArraySource = Join-Path $PSScriptRoot 'class-field-xpimage-array-next.xps'
+$imageArrayCompile = dotnet $compiler ast-compile $imageArraySource -o $imageArrayTarget 2>&1
+if ($LASTEXITCODE -ne 0) {
+    $imageArrayDebug = dotnet $compiler ast-compile $imageArraySource -o $imageArrayTarget --debug 2>&1
+    throw "XPImage array constructor compilation failed: $($imageArrayDebug -join "`n")"
+}
 $imageArrayResult = dotnet (Join-Path $imageArrayTarget 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($imageArrayResult -join "`n") -ne 'XPIMAGE_ARRAY_CLONE_OK') { throw 'XPImage array constructor clone regression failed.' }
 Write-Host 'AST_XPIMAGE_ARRAY_CLONE_OK'
