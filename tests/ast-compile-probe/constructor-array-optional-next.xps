@@ -1,12 +1,11 @@
 Class ArrayOwner
     Sub New(Optional ByVal values() As Long)
-        If values Is Nothing Then
-            Print "nothing"
-        End If
+        If Not (values Is Nothing) Then Error 6, "omitted Optional array was allocated"
     End Sub
 End Class
 
 Sub Main()
     Dim owner As ArrayOwner
     Set owner = New ArrayOwner()
+    Print "OPTIONAL_ARRAY_OMISSION_NOTHING_OK"
 End Sub

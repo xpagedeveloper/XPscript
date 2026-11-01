@@ -53,6 +53,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Scalar array constructor compilation failed.' 
 $scalarArrayResult = dotnet (Join-Path $scalarArrayTarget 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($scalarArrayResult -join "`n") -ne 'SCALAR_ARRAY_CONSTRUCTOR_BOUNDS_OK') { throw 'Scalar array constructor bounds regression failed.' }
 Write-Host 'AST_SCALAR_ARRAY_CONSTRUCTOR_BOUNDS_OK'
+$optionalArrayTarget = Join-Path $output 'constructor-array-optional-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-array-optional-next.xps') -o $optionalArrayTarget
+if ($LASTEXITCODE -ne 0) { throw 'Optional array constructor compilation failed.' }
+$optionalArrayResult = dotnet (Join-Path $optionalArrayTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($optionalArrayResult -join "`n") -ne 'OPTIONAL_ARRAY_OMISSION_NOTHING_OK') { throw 'Optional array omission regression failed.' }
+Write-Host 'AST_OPTIONAL_ARRAY_OMISSION_OK'
 $listMethodDeferredTarget = Join-Path $output 'constructor-list-method-deferred'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodDeferredTarget
 if ($LASTEXITCODE -ne 0) { throw 'AST List class-method constructor fixture compilation failed.' }
