@@ -475,6 +475,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
       - [x] Define ByVal borrowing/cloning and caller-recycling behavior separately for ordinary procedures and class methods. The procedure and class-method fixture mutates each ByVal parameter and confirms the caller image remains `6x4`; Linux run `41351130586` passed on commit `78424b425`.
       - [ ] Define ByRef replacement/copy-back behavior, including failure persistence and caller-owned image cleanup.
         - [ ] Verify successful ByRef replacement for ordinary procedures without transferring ownership of the caller's original XPImage.
+          Blocked: Linux run `41352825070` still observed `ObjectDisposedException` on the caller image after replacement, even after the initial borrowed-parameter guard; isolate the remaining scope/assignment ownership path before claiming this item.
         - [ ] Verify successful ByRef replacement for class methods, including alias visibility and copy-back ordering.
         - [ ] Verify failed procedure/method calls preserve the caller's prior reference and clean only newly owned images.
       - [ ] Define Optional omission behavior and failure cleanup for XPImage procedure/method parameters.
