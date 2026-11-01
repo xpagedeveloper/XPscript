@@ -20,6 +20,9 @@ if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage constructor parameter compi
 $imageParameterResult = dotnet (Join-Path $imageParameterTarget 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -notmatch '^5$') { throw 'AST scalar XPImage constructor parameter regression failed.' }
 Write-Host 'AST_XPIMAGE_PARAMETER_OK'
+$optionalImageFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-optional-error-next.xps') -o (Join-Path $output 'constructor-xpimage-optional-error-next') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($optionalImageFailure -join "`n") -notmatch 'constructor-xpimage-optional-error-next\.xps:2:\d+: XPS3001:') { throw 'Optional XPImage constructor guard regression failed.' }
+Write-Host 'AST_XPIMAGE_OPTIONAL_CONSTRUCTOR_GUARD_OK'
 $listMethodDeferredTarget = Join-Path $output 'constructor-list-method-deferred'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodDeferredTarget
 if ($LASTEXITCODE -ne 0) { throw 'AST List class-method constructor fixture compilation failed.' }

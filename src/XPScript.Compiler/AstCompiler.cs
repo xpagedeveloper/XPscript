@@ -173,6 +173,11 @@ public static class AstCompiler
         if (usesNetworkTools)
             source = new NetworkToolsObjectPreprocessor().Transform(source);
         var fullSource = source;
+        var unsupportedOptionalImage = Regex.Match(fullSource,
+            @"(?im)\bOptional\s+(?:ByVal|ByRef)\s+[A-Za-z_]\w*\s+As\s+XPImage\b");
+        if (unsupportedOptionalImage.Success)
+            throw MappedDiagnostic(new TextSpan(unsupportedOptionalImage.Index, unsupportedOptionalImage.Length), sourcePath, fullSource,
+                "Optional XPImage parameters are not implemented yet.", CompilerDiagnosticCodes.TargetApiUnavailable, "ast");
         // Any Notes object can require the generated Notes runtime. In
         // particular, NotesMail is valid without an explicit NotesSession
         // variable, so gating runtime emission on NotesSession alone leaves

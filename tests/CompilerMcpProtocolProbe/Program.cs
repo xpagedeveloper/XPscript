@@ -776,6 +776,11 @@ foreach (var imageInvalid in new[] { ("xpimage-constructor-error", "XPS2004"), (
     if (invalidError.GetProperty("diagnosticCode").GetString() != imageInvalid.Item2 || invalidError.GetProperty("line").GetInt32() != 3)
         throw new Exception("MCP image diagnostic lost its code or source line: " + imageInvalid.Item1);
 }
+var optionalImageSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "constructor-xpimage-optional-error-next.xps"));
+var optionalImageValidation = await CallAsync(new {jsonrpc="2.0",id=3903,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=optionalImageSource,filename="constructor-xpimage-optional-error-next.xps"}}});
+var optionalImageError = optionalImageValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (optionalImageError.GetProperty("diagnosticCode").GetString() != "XPS3001" || optionalImageError.GetProperty("line").GetInt32() != 2)
+    throw new Exception("MCP Optional XPImage constructor guard lost its diagnostic contract.");
 var implicitMemberSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "implicit-member-error.xps"));
 var implicitMemberValidation = await CallAsync(new {jsonrpc="2.0",id=40,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=implicitMemberSource,filename="implicit-member-error.xps"}}});
 var implicitMemberError = implicitMemberValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];

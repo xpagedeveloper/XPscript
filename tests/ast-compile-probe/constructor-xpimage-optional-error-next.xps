@@ -1,0 +1,8 @@
+Class Holder
+    Public Sub New(Optional ByVal value As XPImage = Nothing)
+    End Sub
+End Class
+
+Sub Main()
+    Dim item As New Holder()
+End Sub
