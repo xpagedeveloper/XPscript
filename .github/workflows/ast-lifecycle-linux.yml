@@ -17,6 +17,12 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Build compiler
         run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
-      - name: Run isolated constructor/destructor ownership regressions
+      - name: Run AST image getter lifecycle regressions
         shell: pwsh
         run: ./tests/ast-compile-probe/run-ast-image-get.ps1
+      - name: Run AST constructor lifecycle regressions
+        shell: pwsh
+        run: ./tests/ast-compile-probe/run-ast-constructor.ps1
+      - name: Run AST destructor lifecycle regressions
+        shell: pwsh
+        run: ./tests/ast-compile-probe/run-ast-destructor.ps1
