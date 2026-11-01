@@ -60,6 +60,7 @@ public sealed partial class XPScriptTranspiler
 
     private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
+        var usesXpImage = source.Contains("XPImage", StringComparison.OrdinalIgnoreCase);
         var originalFeatures = RuntimeFeatures.Detect(source);
         var originalTargetRestriction = originalFeatures.UnavailableFor(runtimeIdentifier).FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(originalTargetRestriction.Symbol))
@@ -240,7 +241,7 @@ public sealed partial class XPScriptTranspiler
         }
         generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";
-        if (runtimeFeatures.Image)
+        if (usesXpImage)
             generated += "\n\n" + XPImageArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + ModuleObjectRuntimeSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
