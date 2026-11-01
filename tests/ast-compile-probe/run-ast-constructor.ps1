@@ -75,6 +75,12 @@ if ($LASTEXITCODE -ne 0) { throw 'XPImage array constructor failure fixture comp
 $imageArrayFailureResult = dotnet (Join-Path $imageArrayFailureTarget 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($imageArrayFailureResult -join "`n") -ne 'XPIMAGE_ARRAY_FAILURE_CLEANUP_OK') { throw 'XPImage array constructor failure cleanup regression failed.' }
 Write-Host 'AST_XPIMAGE_ARRAY_FAILURE_CLEANUP_OK'
+$imageByRefProcedureTarget = Join-Path $output 'initialized-module-xpimage-byref-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-xpimage-byref-next.xps') -o $imageByRefProcedureTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST XPImage ByRef procedure compilation failed.' }
+$imageByRefProcedureResult = dotnet (Join-Path $imageByRefProcedureTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageByRefProcedureResult -join "`n") -ne 'INITIALIZED_MODULE_XPIMAGE_BYREF_OK') { throw 'AST XPImage ByRef procedure replacement regression failed.' }
+Write-Host 'AST_XPIMAGE_BYREF_PROCEDURE_REPLACEMENT_OK'
 $listMethodDeferredTarget = Join-Path $output 'constructor-list-method-deferred'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodDeferredTarget
 if ($LASTEXITCODE -ne 0) { throw 'AST List class-method constructor fixture compilation failed.' }
