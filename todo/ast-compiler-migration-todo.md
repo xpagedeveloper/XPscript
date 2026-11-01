@@ -476,6 +476,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
       - [ ] Define ByRef replacement/copy-back behavior, including failure persistence and caller-owned image cleanup.
         - [ ] Verify successful ByRef replacement for ordinary procedures without transferring ownership of the caller's original XPImage.
           Blocked: Linux runs `41352825070` and `41353815417` observed `ObjectDisposedException` on the caller image after replacement. Parameter borrowed-marking and direct ByRef replacement fixes were insufficient; isolate the remaining local alias/scope lowering path before claiming this item.
+          - [ ] Resolve the ownership contract first: determine whether replacing a ByRef XPImage caller slot recycles the previous image (constructor fixtures currently allow this) or preserves aliases to the previous image (the proposed procedure fixture requires this).
         - [ ] Verify successful ByRef replacement for class methods, including alias visibility and copy-back ordering.
         - [ ] Verify failed procedure/method calls preserve the caller's prior reference and clean only newly owned images.
       - [ ] Define Optional omission behavior and failure cleanup for XPImage procedure/method parameters.
