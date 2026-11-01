@@ -69,6 +69,14 @@ types and non-writable ByRef arguments with mapped diagnostics. These rules are
 covered by the constructor-parent and constructor-optional fixtures; normal
 compiler parity is claimed only for the documented supported subset.
 
+### AST lifecycle migration scope
+
+The current AST lifecycle matrix covers root and derived `Sub New`/`Sub Delete`, scalar ByVal and ByRef parameters, trailing Optional parameters, Object/user-class references, Variant, List, array and the supported native/reference constructor families. It also covers `Parent.New`, derived virtual dispatch, failed-construction cleanup, repeated deletion and the test-only GC/finalizer observation seam.
+
+The supported normal/AST parity claim is intentionally narrower: parity is established for the documented scalar ByVal constructor/destructor fixtures and selected native/reference families. AST capability tests cover Optional and ByRef behavior where the legacy compiler requires different arity or has known runtime limitations; those tests are not presented as legacy parity.
+
+The following remain separate follow-up work and do not change production ownership semantics: Optional/ByRef `XPImage` constructor ownership, whole-array constructor ownership (distinct from array storage), broader GC/derived-method migration boundaries, and platform-specific desktop/mobile lifecycle behavior. The Linux lifecycle workflow verifies the completed image-get, constructor and destructor families as separate steps.
+
 
 ## Default visibility and Option Public
 
