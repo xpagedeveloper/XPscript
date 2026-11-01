@@ -1,0 +1,28 @@
+Public fail As Boolean
+
+Class Holder
+    Public Picture As XPImage
+
+    Public Sub New(Optional ByVal value As XPImage = Nothing)
+        If value Is Nothing Then Exit Sub
+        Set Picture = value
+        If fail Then Error 4981, "optional XPImage constructor failed"
+    End Sub
+End Class
+
+Sub Main()
+    Dim source As New XPImage(5, 4)
+    Dim item As New Holder(source)
+    If item.Picture Is Nothing Or item.Picture.Width <> 5 Then Error 6, "initial Optional XPImage setup failed"
+
+    fail = True
+    Dim failure As Long
+    On Error Resume Next
+    Set item = New Holder(source)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4981 Then Error 6, "Optional XPImage failure was not raised"
+    If Not (item Is Nothing) Then Error 6, "failed Optional XPImage assignment retained an object"
+    Call source.Recycle()
+    Print "XPIMAGE_OPTIONAL_CONSTRUCTOR_FAILURE_OK"
+End Sub
