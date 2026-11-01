@@ -875,7 +875,7 @@ $imageParameterOutput = Join-Path $output 'xpimage-parameter-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage procedure/method compilation failed.' }
 $imageParameterResult = dotnet (Join-Path $imageParameterOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -ne 'XPIMAGE_BYVAL_PARAMETER_CLONE_OK') { throw 'AST scalar XPImage procedure/method execution failed.' }
+if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -ne "6`n6") { throw 'AST scalar XPImage procedure/method execution failed.' }
 Write-Host 'AST_XPIMAGE_PROCEDURE_PARAMETER_OK'
 $sqliteClassMethodOutput = Join-Path $output 'class-method-sqlite-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-sqlite-next.xps') -o $sqliteClassMethodOutput
