@@ -770,7 +770,7 @@ public static class AstCompiler
                 var runtimeType = parameter.IsArray ? typeof(Array) : semanticType.RuntimeType;
                 return new ParameterSymbol(parameter.Identifier.Text, runtimeType, parameter.IsByRef, semanticType)
                 {
-                    IsBorrowedImageSnapshot = parameter.IsByRef && AstImageSupport.IsImage(parameter.Type?.Identifier.Text)
+                    IsBorrowedImageSnapshot = parameter.IsByRef && !parameter.IsList && !parameter.IsArray && AstImageSupport.IsImage(parameter.Type?.Identifier.Text)
                 };
             }).ToArray();
             foreach (var parameter in parameters) scope.Declare(parameter);
