@@ -40,6 +40,13 @@ if ($LASTEXITCODE -ne 0) { throw "Class-field array runtime compilation failed: 
 $fieldRuntimeRun = dotnet (Join-Path $fieldRuntimeOutput 'Generated.dll') 2>&1
 if ($LASTEXITCODE -ne 0 -or ($fieldRuntimeRun -join "`n") -ne 'CLASS_FIELD_ARRAY_RUNTIME_OK') { throw "Class-field array runtime regression failed: $fieldRuntimeRun" }
 Write-Host 'AST_CLASS_FIELD_ARRAY_RUNTIME_OK'
+$imageArrayOutput = Join-Path $root 'out/array-signature-xpimage-array'
+if (Test-Path $imageArrayOutput) { Remove-Item -Recurse -Force $imageArrayOutput }
+$imageArrayResult = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-field-xpimage-array-next.xps') -o $imageArrayOutput 2>&1
+if ($LASTEXITCODE -ne 0) { throw "XPImage array compilation failed: $imageArrayResult" }
+$imageArrayRun = dotnet (Join-Path $imageArrayOutput 'Generated.dll') 2>&1
+if ($LASTEXITCODE -ne 0 -or ($imageArrayRun -join "`n") -ne 'XPIMAGE_ARRAY_CLONE_OK') { throw "XPImage array clone regression failed: $imageArrayRun" }
+Write-Host 'AST_XPIMAGE_ARRAY_CLONE_OK'
 foreach ($case in @(
     @('procedure-array-deferred', '7'),
     @('constructor-array-deferred', '7')

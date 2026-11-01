@@ -1,0 +1,19 @@
+Public callerStillOwned As Boolean
+
+Class ImageArrayOwner
+    Public stored() As XPImage
+
+    Public Sub New(ByVal incoming() As XPImage)
+        Set stored = incoming
+        Set stored(0) = Nothing
+        callerStillOwned = Not (incoming(0) Is Nothing)
+    End Sub
+End Class
+
+Sub Main()
+    Dim incoming(2 To 2) As XPImage
+    Set incoming(2) = New XPImage()
+    Dim owner As New ImageArrayOwner(incoming)
+    If Not callerStillOwned Then Error 6, "XPImage array caller element was aliased"
+    Print "XPIMAGE_ARRAY_CLONE_OK"
+End Sub

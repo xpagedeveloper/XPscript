@@ -809,6 +809,10 @@ var classFieldArrayRuntimeSource = await File.ReadAllTextAsync(Path.Combine(repo
 var classFieldArrayRuntimeValidation = await CallAsync(new {jsonrpc="2.0",id=3911,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=classFieldArrayRuntimeSource,filename="class-field-array-runtime-next.xps"}}});
 if (classFieldArrayRuntimeValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
     throw new Exception("MCP class-field array runtime validation failed.");
+var imageArraySource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "class-field-xpimage-array-next.xps"));
+var imageArrayValidation = await CallAsync(new {jsonrpc="2.0",id=3912,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=imageArraySource,filename="class-field-xpimage-array-next.xps"}}});
+if (imageArrayValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+    throw new Exception("MCP XPImage array validation failed.");
 var implicitMemberSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "implicit-member-error.xps"));
 var implicitMemberValidation = await CallAsync(new {jsonrpc="2.0",id=40,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=implicitMemberSource,filename="implicit-member-error.xps"}}});
 var implicitMemberError = implicitMemberValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];

@@ -118,6 +118,13 @@ public sealed class BoundStatementEmitter
                     Line($"AstImageScope.StoreField(ref {targetText}, {expressionText});");
                     break;
                 }
+                if (assignment.Target.SemanticType.IsArray &&
+                    AstImageSupport.IsImage(assignment.Target.SemanticType.ElementType?.Name ?? string.Empty) &&
+                    assignment.Target is BoundNameExpression { Symbol: FieldSymbol } or BoundMemberAccessExpression { IsFieldStorage: true })
+                {
+                    Line($"{targetText} = XPImageArrayRuntime.Clone((System.Array?)({expressionText}));");
+                    break;
+                }
                 if (AstImageSupport.IsImage(assignment.Target.SemanticType.Name) && assignment.Target is BoundNameExpression imageTarget)
                 {
                     var owns = ImageScopeEnabled && imageTarget.Symbol is LocalSymbol { StaticStorageName: null } or ParameterSymbol { IsByRef: false } or ParameterSymbol { IsBorrowedImageSnapshot: true };
