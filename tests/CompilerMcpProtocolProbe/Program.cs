@@ -784,6 +784,10 @@ var optionalImageFailureSource = await File.ReadAllTextAsync(Path.Combine(repo, 
 var optionalImageFailureValidation = await CallAsync(new {jsonrpc="2.0",id=3904,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=optionalImageFailureSource,filename="constructor-xpimage-optional-failure-next.xps"}}});
 if (optionalImageFailureValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
     throw new Exception("MCP Optional XPImage constructor failure validation failed.");
+var imageByRefBindingSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "constructor-xpimage-byref-binding-next.xps"));
+var imageByRefBindingValidation = await CallAsync(new {jsonrpc="2.0",id=3905,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=imageByRefBindingSource,filename="constructor-xpimage-byref-binding-next.xps"}}});
+if (imageByRefBindingValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+    throw new Exception("MCP XPImage ByRef constructor binding validation failed.");
 var implicitMemberSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "implicit-member-error.xps"));
 var implicitMemberValidation = await CallAsync(new {jsonrpc="2.0",id=40,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=implicitMemberSource,filename="implicit-member-error.xps"}}});
 var implicitMemberError = implicitMemberValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];

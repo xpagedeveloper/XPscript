@@ -32,6 +32,12 @@ if ($LASTEXITCODE -ne 0) { throw 'Optional XPImage constructor failure fixture c
 $optionalImageFailureResult = dotnet (Join-Path $optionalImageFailureTarget 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($optionalImageFailureResult -join "`n") -ne 'XPIMAGE_OPTIONAL_CONSTRUCTOR_FAILURE_OK') { throw 'Optional XPImage constructor failure cleanup regression failed.' }
 Write-Host 'AST_XPIMAGE_OPTIONAL_CONSTRUCTOR_FAILURE_OK'
+$imageByRefBindingTarget = Join-Path $output 'constructor-xpimage-byref-binding-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-byref-binding-next.xps') -o $imageByRefBindingTarget
+if ($LASTEXITCODE -ne 0) { throw 'XPImage ByRef constructor binding compilation failed.' }
+$imageByRefBindingResult = dotnet (Join-Path $imageByRefBindingTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageByRefBindingResult -join "`n") -ne 'XPIMAGE_BYREF_CONSTRUCTOR_BINDING_OK') { throw 'XPImage ByRef constructor binding regression failed.' }
+Write-Host 'AST_XPIMAGE_BYREF_CONSTRUCTOR_BINDING_OK'
 $listMethodDeferredTarget = Join-Path $output 'constructor-list-method-deferred'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodDeferredTarget
 if ($LASTEXITCODE -ne 0) { throw 'AST List class-method constructor fixture compilation failed.' }
