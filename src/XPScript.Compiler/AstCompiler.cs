@@ -863,7 +863,7 @@ public static class AstCompiler
                 ? string.Empty
                 : $" : Xp{classes[classDeclaration.BaseType.Identifier.Text].Identifier.Text}";
             var imageCleanup = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>()
-                .Where(field => AstImageSupport.IsImage(field.Type.Identifier.Text))
+                .Where(field => !field.IsArray && AstImageSupport.IsImage(field.Type.Identifier.Text))
                 .Select(field => $"AstImageScope.StoreField(ref this.{field.Identifier.Text}, null);"));
             var finalizerIdField = finalizerTestMode ? "private readonly string __xps_finalizer_id = System.Guid.NewGuid().ToString(\"N\");" : string.Empty;
             var gcCleanup = finalizerTestMode
