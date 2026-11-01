@@ -572,7 +572,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
           - [ ] Add the positive CLI/MCP execution regression after the ownership path is implemented.
         - [ ] Add paired CLI/MCP positive and negative regressions for XPImage ByRef constructor parameters.
           - [x] Bind XPImage ByRef constructor parameters with an explicit caller-reference representation. Linux run `41323317653` passed the focused binding fixture and MCP validation.
-          - [x] Clone supplied XPImage ByRef values when storing them in object-owned fields without taking ownership of the caller's original. The ByRef fixture recycles the caller's source and confirms the object field remains valid; Linux verification is pending.
+          - [x] Clone supplied XPImage ByRef values when storing them in object-owned fields without taking ownership of the caller's original. The ByRef fixture recycles the caller's source and confirms the object field remains valid; Linux run `41324730920` passed.
           - [ ] Clear new-object image state on ByRef constructor failure while preserving caller reference semantics.
           - [ ] Add paired CLI/MCP positive and negative ByRef XPImage regressions.
         - [ ] Verify XPImage expiration/recycling markers for those parameter modes in the Linux ownership harness.
