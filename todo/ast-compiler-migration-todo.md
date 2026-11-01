@@ -553,7 +553,13 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
         - [x] Verify ordinary derived method, property and indexed-property virtual dispatch through the AST CLI/Language FullTest markers `AST_CLASS_METHOD_VIRTUAL_DISPATCH_OK`, `AST_CLASS_PROPERTY_VIRTUAL_DISPATCH_OK` and `AST_CLASS_INDEXED_PROPERTY_VIRTUAL_DISPATCH_OK`.
         - [x] Make generated classes without a user `Sub Delete` idempotent under repeated alias cleanup; the generated `Delete` path now guards repeated execution while preserving derived/base cleanup ordering. Derived constructor and destructor regressions remain green.
         - [x] Suppress generated class finalization after failed construction cleanup, preventing a later GC pass from repeating image ownership cleanup after the constructor failure path has already released it.
-  - [ ] Bind constructors/arguments and Parent.New forwarding; finish full lifecycle dispatch.
+  - [ ] Complete constructor/lifecycle migration through bounded follow-up tasks:
+    - [ ] Document the supported `Parent.New` forwarding contract for required, Optional and ByRef parameters, including evaluation order and failure behavior.
+    - [ ] Add focused negative regressions for invalid `Parent.New` ordering, arity, visibility and incompatible argument types in CLI and MCP.
+    - [ ] Migrate one additional native constructor/reference family at a time, with explicit borrowed-versus-owned cleanup assertions.
+    - [ ] Migrate one additional derived method/property family at a time, with virtual dispatch and base-access regressions.
+    - [ ] Verify each completed lifecycle family in the Linux AST workflow before closing its TODO item; use Windows only where the target requires it.
+    - [ ] Close the parent lifecycle item only after the supported-family matrix, normal/AST parity scope and remaining unsupported cases are documented.
     - [x] Verify the remaining native/Variant/List/array constructor signature matrix through `class-constructor-native.xps`, `class-constructor-variant.xps`, `class-constructor-list.xps`, the array constructor fixtures and the image constructor harness. Coverage includes typed arguments/results, `Nothing`, Optional defaults, ByRef replacement and failure cleanup; AST CLI/MCP and Language/Runtime markers are already wired.
     - [ ] Verify broader constructor/destructor GC ownership and derived-method migration boundaries that are not covered by the supported lifecycle subset.
       - [x] Define one reproducible GC/finalizer stress regression with explicit ownership markers and no platform-specific UI dependencies. Linux workflow `41251817650` verifies `GcProbe` finalization with one marker and no duplicate cleanup.
