@@ -471,6 +471,9 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
 - [ ] Migrate class declarations, inheritance and object lifecycle into the AST bound tree.
   - Blocked for final closure only by the documented GC/finalizer stress-test seam; the supported class-method, property, constructor, destructor and native/reference families have bounded AST regressions and evidence recorded below.
   - [ ] Inventory and implement any remaining class declaration/inheritance syntax or binding gaps that are required by the supported XPscript contract.
+    - [ ] Migrate XPImage parameters on ordinary procedures and class methods, replacing the current XPS3001 guard with an explicit lifetime/ownership contract and regressions.
+    - [ ] Migrate ordinary class-method Object/user-reference signatures that remain outside constructor-specific binding, with typed alias/replacement and failure-cleanup coverage.
+    - [ ] Audit remaining unknown/native accessor and compatibility-module signature guards, retaining explicit diagnostics where the contract is intentionally unsupported.
   - [ ] Define and verify the remaining normal/AST parity boundary for class construction, inheritance and lifecycle behavior; label AST-only capabilities explicitly.
   - [ ] Document the final platform boundary for class lifecycle behavior and close this parent only after the Linux/Windows evidence and GC/finalizer criteria are reconciled.
   - [x] Close verified CI failures from commit `711954a883e6d1284faa4f96368d154f96330e1f` before claiming cross-platform completion. The NETSDK1004 root cause was isolated to missing CLI restore assets; `WebIisPackageTarget` now restores and publishes with isolated `--artifacts-path` intermediates. Focused workflow `41202974022` passed `WebIisPackageProbe` on Windows with `WEBIIS-PACKAGE=OK`; Ubuntu completed successfully with the probe skipped, and macOS was intentionally left out of this Windows-only verification.
