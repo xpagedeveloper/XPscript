@@ -240,7 +240,7 @@ public sealed partial class XPScriptTranspiler
         }
         generated += "\n\n" + ModuleArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + UdtArrayRuntimeSource.Code + "\n";
-        if (source.Contains("XPImage", StringComparison.OrdinalIgnoreCase))
+        if (runtimeFeatures.Image)
             generated += "\n\n" + XPImageArrayRuntimeSource.Code + "\n";
         generated += "\n\n" + ModuleObjectRuntimeSource.Code + "\n";
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
