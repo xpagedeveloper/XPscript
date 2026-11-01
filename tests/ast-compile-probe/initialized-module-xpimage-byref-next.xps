@@ -5,7 +5,16 @@ Sub Touch(ByRef value As XPImage)
 End Sub
 
 Sub Main()
+    Dim previous As XPImage
+    Set previous = sharedImage
     Call Touch(sharedImage)
     If sharedImage.Width <> 4 Or sharedImage.Height <> 1 Then Error 6, "initialized XPImage module ByRef storage failed"
+    On Error Resume Next
+    Dim oldFailure As Long
+    oldFailure = previous.Width
+    oldFailure = Err
+    Err.Clear
+    On Error GoTo 0
+    If oldFailure = 0 Then Error 6, "ByRef replacement preserved a recycled caller image alias"
     Print "INITIALIZED_MODULE_XPIMAGE_BYREF_OK"
 End Sub
