@@ -625,7 +625,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
         - [x] Define whole-array alias/replacement semantics while preserving rank and physical bounds: scalar arrays borrow caller storage; reference arrays replace an object-owned clone atomically and preserve caller aliases, rank and physical bounds. Documented in `docs/ast-csharp-emitter.md`.
         - [x] Define failed-construction cleanup without recycling caller-owned array storage or elements: scalar arrays remain borrowed and unchanged; reference-array clones created by the new instance are released, while caller storage and elements remain untouched. Documented in `docs/ast-csharp-emitter.md`.
         - [ ] Add paired CLI/MCP regressions for supported ranks, bounds, Optional omission and incompatible array element/rank diagnostics.
-          - [ ] Add scalar-element constructor fixtures for supported ranks and physical bounds.
+          - [x] Add scalar-element constructor fixtures for supported ranks and physical bounds. `constructor-scalar-array-next.xps` verifies rank-one bounds, shared carrier identity and ByRef mutation; Linux verification is pending.
           - [ ] Add Optional whole-array omission fixtures with unallocated `Nothing` storage.
           - [ ] Add paired diagnostics for incompatible array element types and ranks.
           - [ ] Add reference-element/XPImage array fixtures after the ownership implementation exists.

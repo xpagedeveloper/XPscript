@@ -47,6 +47,12 @@ Write-Host 'AST_XPIMAGE_BYREF_CONSTRUCTOR_FAILURE_OK'
 $imageByRefTypeFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-byref-type-error-next.xps') -o (Join-Path $output 'constructor-xpimage-byref-type-error-next') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($imageByRefTypeFailure -join "`n") -notmatch 'constructor-xpimage-byref-type-error-next\.xps:8:\d+: XPS2003:') { throw 'XPImage ByRef constructor type diagnostic regression failed.' }
 Write-Host 'AST_XPIMAGE_BYREF_CONSTRUCTOR_TYPE_ERROR_OK'
+$scalarArrayTarget = Join-Path $output 'constructor-scalar-array-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-scalar-array-next.xps') -o $scalarArrayTarget
+if ($LASTEXITCODE -ne 0) { throw 'Scalar array constructor compilation failed.' }
+$scalarArrayResult = dotnet (Join-Path $scalarArrayTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($scalarArrayResult -join "`n") -ne 'SCALAR_ARRAY_CONSTRUCTOR_BOUNDS_OK') { throw 'Scalar array constructor bounds regression failed.' }
+Write-Host 'AST_SCALAR_ARRAY_CONSTRUCTOR_BOUNDS_OK'
 $listMethodDeferredTarget = Join-Path $output 'constructor-list-method-deferred'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodDeferredTarget
 if ($LASTEXITCODE -ne 0) { throw 'AST List class-method constructor fixture compilation failed.' }

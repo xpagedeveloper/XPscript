@@ -1,0 +1,21 @@
+Public observedLower As Long
+Public observedUpper As Long
+Public observedValue As Long
+
+Class ArrayHolder
+    Public Sub New(ByRef values() As Long)
+        observedLower = LBound(values)
+        observedUpper = UBound(values)
+        values(2) = values(2) + 5
+        observedValue = values(2)
+    End Sub
+End Class
+
+Sub Main()
+    Dim values(1 To 3) As Long
+    values(2) = 7
+    Dim item As New ArrayHolder(values)
+    If observedLower <> 1 Or observedUpper <> 3 Or observedValue <> 12 Then Error 6, "scalar array constructor bounds failed"
+    If values(2) <> 12 Then Error 6, "scalar array constructor did not preserve caller mutation"
+    Print "SCALAR_ARRAY_CONSTRUCTOR_BOUNDS_OK"
+End Sub
