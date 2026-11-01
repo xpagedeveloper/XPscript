@@ -289,3 +289,16 @@ XPImage expressions now emit calls to the existing image runtime. Native numeric
 Generated user classes with `XPImage` fields now emit a GC finalizer that recycles only their owned image fields; it never invokes user `Delete`. Explicit Delete remains the deterministic lifecycle path and suppresses the finalizer after cleanup.
 Class method and property emission preserves virtual dispatch through base-typed references. Public scalar methods/properties and generated indexed accessors are virtual on the base class and override-compatible in derived classes; focused regressions cover getter, setter, indexed getter and indexed setter dispatch.
 Native indexed accessors preserve semantic parameter types through binding and emit the corresponding runtime reference type (for example `XPHttpRequest`), rather than falling back to `object`.
+## Test-only GC/finalizer observation
+
+The AST compiler has a test-only finalizer seam enabled only when
+`XPSCRIPT_AST_FINALIZER_TEST=1` is present while compiling. It is disabled for
+normal production builds and does not alter explicit `Delete` or ownership
+behavior.
+
+The Linux regression `tests/ast-compile-probe/finalizer-gc-next.xps` is loaded
+through `run-ast-finalizer-gc.ps1`, which invokes the generated entry point and
+performs a bounded collection/finalizer wait loop. A successful run requires
+`AST_FINALIZER_TEST_MARKER=GcProbe;count=1;duplicate=0` and reports
+`AST_FINALIZER_GC_OK`. A missing marker is an inconclusive timing/test-seam
+failure, while a duplicate marker is an ownership regression.
