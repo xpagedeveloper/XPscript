@@ -215,6 +215,7 @@ internal static class AstClassMethodSupport
                 foreach (var field in owner.Members.OfType<FieldDeclarationSyntax>().Where(f => !inherited || f.Visibility?.Kind != SyntaxKind.PrivateKeyword))
                 {
                     var type = DeclaredType(field.Type, globals);
+                    if (field.IsArray) type = XpTypeSymbol.ArrayOf(type, field.ArrayRank);
                     classScope.Declare(new FieldSymbol(field.Identifier.Text, type.RuntimeType, type));
                     classScope.Declare(new PropertySymbol(declaration.Identifier.Text + "." + field.Identifier.Text, type.RuntimeType, type, IsFieldStorage: true));
                 }

@@ -357,7 +357,11 @@ public static class AstCompiler
             {
                 foreach (var field in current.Members.OfType<FieldDeclarationSyntax>())
                     if (field.Visibility?.Kind != SyntaxKind.PrivateKeyword)
-                    symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{field.Identifier.Text}", ResolveRuntimeType(field.Type.Identifier.Text), AstClassMethodSupport.DeclaredType(field.Type, symbols), IsFieldStorage: true));
+                    {
+                        var fieldType = AstClassMethodSupport.DeclaredType(field.Type, symbols);
+                        if (field.IsArray) fieldType = XpTypeSymbol.ArrayOf(fieldType, field.ArrayRank);
+                        symbols.Declare(new PropertySymbol($"{classDeclaration.Identifier.Text}.{field.Identifier.Text}", fieldType.RuntimeType, fieldType, IsFieldStorage: true));
+                    }
                 foreach (var property in AstClassMethodSupport.Properties(current, true, symbols))
                     symbols.Declare(property with { Name = classDeclaration.Identifier.Text + "." + property.Name.Split('.').Last() });
                 foreach (var method in current.Members.OfType<SubDeclarationSyntax>())
@@ -853,7 +857,7 @@ public static class AstCompiler
         var userClassSupport = string.Join(Environment.NewLine, unit.Declarations.OfType<ClassDeclarationSyntax>().Select(classDeclaration =>
         {
             var fields = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>().Select(field =>
-                $"{(field.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public")} {BoundMethodEmitter.CSharpType(AstClassMethodSupport.DeclaredType(field.Type, symbols))} {field.Identifier.Text} = {(field.Type.Identifier.Text.Equals("String", StringComparison.OrdinalIgnoreCase) ? "string.Empty" : "default!")};"));
+                $"{(field.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public")} {BoundMethodEmitter.CSharpType(field.IsArray ? XpTypeSymbol.ArrayOf(AstClassMethodSupport.DeclaredType(field.Type, symbols), field.ArrayRank) : AstClassMethodSupport.DeclaredType(field.Type, symbols))} {field.Identifier.Text} = default!;"));
             var properties = string.Empty; // Accessor bodies are emitted with class procedures, never fabricated auto-properties.
             var baseClause = classDeclaration.BaseType is null
                 ? string.Empty

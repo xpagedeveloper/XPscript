@@ -1,0 +1,7 @@
+Class Holder
+    Public values() As Long
+End Class
+
+Sub Main()
+    Dim item As New Holder
+End Sub

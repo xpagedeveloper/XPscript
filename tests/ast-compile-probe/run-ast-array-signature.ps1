@@ -28,6 +28,11 @@ foreach ($fixture in @('array-parameter-runtime-next', 'constructor-array-runtim
     $runtimePattern = "41:${negativeSignPattern}2:0|42:${negativeSignPattern}1:1|43:${negativeSignPattern}3:${negativeSignPattern}1|nothing"
     if ($LASTEXITCODE -ne 0 -or ($run -join "`n") -notmatch $runtimePattern) { throw "Array signature runtime mismatch: $run" }
 }
+$fieldOutput = Join-Path $root 'out/array-signature-class-field-array'
+if (Test-Path $fieldOutput) { Remove-Item -Recurse -Force $fieldOutput }
+$fieldResult = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-field-array-syntax-next.xps') -o $fieldOutput 2>&1
+if ($LASTEXITCODE -ne 0 -or ($fieldResult -join "`n") -notmatch 'AST compilation succeeded') { throw "Class-field array syntax compilation failed: $fieldResult" }
+Write-Host 'AST_CLASS_FIELD_ARRAY_SYNTAX_OK'
 foreach ($case in @(
     @('procedure-array-deferred', '7'),
     @('constructor-array-deferred', '7')
