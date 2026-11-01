@@ -621,7 +621,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
         - [ ] Verify image expiration/recycling markers for the remaining XPImage parameter modes in the Linux ownership harness before enabling them in the general constructor matrix.
       - [ ] Migrate whole-array constructor parameter ownership separately from array storage: define alias, replacement, failure and cleanup behavior for scalar and reference element arrays.
         - [x] Define ownership for scalar-element arrays: they borrow the caller's `System.Array` carrier, preserve identity/rank/physical bounds, expose mutation, and never clone, recycle or clear caller-owned storage on replacement or failed construction. Documented in `docs/ast-csharp-emitter.md`; reference-element arrays remain separate.
-        - [ ] Define ownership for reference-element arrays, including XPImage elements and caller aliases.
+        - [x] Define ownership for reference-element arrays, including XPImage elements and caller aliases: object-owned storage clones the array and each non-`Nothing` reference element atomically; caller storage remains unchanged and failed construction releases only new clones. Documented in `docs/ast-csharp-emitter.md`.
         - [ ] Define whole-array alias/replacement semantics while preserving rank and physical bounds.
         - [ ] Define failed-construction cleanup without recycling caller-owned array storage or elements.
         - [ ] Add paired CLI/MCP regressions for supported ranks, bounds, Optional omission and incompatible array element/rank diagnostics.
