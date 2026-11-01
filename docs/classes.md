@@ -77,6 +77,8 @@ The supported normal/AST parity claim is intentionally narrower: parity is estab
 
 The following remain separate follow-up work and do not change production ownership semantics: Optional/ByRef `XPImage` constructor ownership, whole-array constructor ownership (distinct from array storage), broader GC/derived-method migration boundaries, and platform-specific desktop/mobile lifecycle behavior. The Linux lifecycle workflow verifies the completed image-get, constructor and destructor families as separate steps.
 
+For the remaining XPImage Optional/ByRef constructor work, the ownership contract is explicit: a supplied XPImage value is cloned before it is stored in an object-owned field; an omitted Optional XPImage value is `Nothing`, not an owned temporary. If initialization fails, the new object's image field and failed assignment target are set to `Nothing` so a failed `Set` cannot appear successful. Replacement first creates the new clone, then releases the old owned field; a failed clone preserves the old field. ByRef copy-back may update the caller's reference, but it does not transfer ownership of the caller's original image and all object-owned clones are released on failed construction.
+
 
 ## Default visibility and Option Public
 

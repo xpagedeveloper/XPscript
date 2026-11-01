@@ -563,7 +563,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [x] Verify the remaining native/Variant/List/array constructor signature matrix through `class-constructor-native.xps`, `class-constructor-variant.xps`, `class-constructor-list.xps`, the array constructor fixtures and the image constructor harness. Coverage includes typed arguments/results, `Nothing`, Optional defaults, ByRef replacement and failure cleanup; AST CLI/MCP and Language/Runtime markers are already wired.
     - [ ] Verify broader constructor/destructor GC ownership and derived-method migration boundaries that are not covered by the supported lifecycle subset.
       - Bounded execution order for this umbrella item:
-        - [ ] Define the XPImage Optional/ByRef constructor ownership contract before adding positive execution fixtures: borrowed input, field snapshot, replacement, failure and cleanup behavior.
+        - [x] Define the XPImage Optional/ByRef constructor ownership contract: supplied values are cloned, omitted Optional values are `Nothing`, replacement preserves the old field until cloning succeeds, and failed initialization clears the new object/assignment target to `Nothing` without taking ownership of the caller's original image. Documented in `docs/classes.md`; positive execution fixtures remain separate.
         - [ ] Add paired CLI/MCP positive and negative regressions for XPImage Optional constructor parameters.
         - [ ] Add paired CLI/MCP positive and negative regressions for XPImage ByRef constructor parameters.
         - [ ] Verify XPImage expiration/recycling markers for those parameter modes in the Linux ownership harness.
