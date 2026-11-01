@@ -127,7 +127,7 @@ public sealed class BoundStatementEmitter
                 }
                 if (AstImageSupport.IsImage(assignment.Target.SemanticType.Name) && assignment.Target is BoundNameExpression imageTarget)
                 {
-                    if (imageTarget.Symbol is not ParameterSymbol { IsByRef: true })
+                    if (imageTarget.Symbol is not ParameterSymbol { IsByRef: true, IsBorrowedImageSnapshot: false })
                     {
                         var owns = ImageScopeEnabled && imageTarget.Symbol is LocalSymbol { StaticStorageName: null } or ParameterSymbol { IsByRef: false } or ParameterSymbol { IsBorrowedImageSnapshot: true };
                         expressionText = $"{(owns ? "__imageScope.Replace" : "AstImageScope.ReplaceBorrowed")}({targetText}, {expressionText})";
