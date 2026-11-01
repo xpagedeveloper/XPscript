@@ -575,7 +575,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
           - [x] Clone supplied XPImage ByRef values when storing them in object-owned fields without taking ownership of the caller's original. The ByRef fixture recycles the caller's source and confirms the object field remains valid; Linux run `41324730920` passed.
           - [x] Clear new-object image state on ByRef constructor failure while preserving caller reference semantics. Linux run `41325452033` passed the focused cleanup regression.
           - [x] Add paired CLI/MCP positive and negative ByRef XPImage regressions. Linux run `41330457432` passed the positive binding/ownership and negative XPS2003 diagnostic checks through the constructor workflow; MCP validation passed alongside them.
-        - [ ] Verify XPImage expiration/recycling markers for those parameter modes in the Linux ownership harness.
+        - [x] Verify XPImage expiration/recycling markers for Optional and ByRef parameter modes in the Linux ownership harness. The focused fixtures assert the caller source is recycled while the object-owned clone remains valid; the lifecycle workflow runs both markers.
         - [ ] Define whole-array constructor ownership for scalar and reference elements, including alias, replacement, failure and cleanup behavior.
         - [ ] Add paired CLI/MCP diagnostics for supported whole-array ranks, bounds, Optional omission and incompatible element/rank cases.
         - [ ] Re-run the Linux lifecycle workflow and document the remaining unsupported platform-specific boundaries.

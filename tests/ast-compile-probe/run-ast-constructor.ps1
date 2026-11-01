@@ -24,7 +24,7 @@ $optionalImageTarget = Join-Path $output 'constructor-xpimage-optional-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-optional-next.xps') -o $optionalImageTarget
 if ($LASTEXITCODE -ne 0) { throw 'Optional XPImage constructor compilation failed.' }
 $optionalImageResult = dotnet (Join-Path $optionalImageTarget 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($optionalImageResult -join "`n") -ne 'XPIMAGE_OPTIONAL_CONSTRUCTOR_OK') { throw 'Optional XPImage constructor regression failed.' }
+if ($LASTEXITCODE -ne 0 -or ($optionalImageResult -join "`n") -ne "XPIMAGE_OPTIONAL_CONSTRUCTOR_OK`nXPIMAGE_OPTIONAL_SOURCE_RECYCLED_OK") { throw 'Optional XPImage constructor regression failed.' }
 Write-Host 'AST_XPIMAGE_OPTIONAL_CONSTRUCTOR_OK'
 $optionalImageFailureTarget = Join-Path $output 'constructor-xpimage-optional-failure-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-optional-failure-next.xps') -o $optionalImageFailureTarget
@@ -36,7 +36,7 @@ $imageByRefBindingTarget = Join-Path $output 'constructor-xpimage-byref-binding-
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-byref-binding-next.xps') -o $imageByRefBindingTarget
 if ($LASTEXITCODE -ne 0) { throw 'XPImage ByRef constructor binding compilation failed.' }
 $imageByRefBindingResult = dotnet (Join-Path $imageByRefBindingTarget 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($imageByRefBindingResult -join "`n") -ne 'XPIMAGE_BYREF_CONSTRUCTOR_BINDING_OK') { throw 'XPImage ByRef constructor binding regression failed.' }
+if ($LASTEXITCODE -ne 0 -or ($imageByRefBindingResult -join "`n") -ne "XPIMAGE_BYREF_CONSTRUCTOR_BINDING_OK`nXPIMAGE_BYREF_SOURCE_RECYCLED_OK") { throw 'XPImage ByRef constructor binding regression failed.' }
 Write-Host 'AST_XPIMAGE_BYREF_CONSTRUCTOR_BINDING_OK'
 $imageByRefFailureTarget = Join-Path $output 'constructor-xpimage-byref-failure-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-byref-failure-next.xps') -o $imageByRefFailureTarget
