@@ -620,6 +620,10 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
         - [ ] Add paired CLI/MCP positive and negative regressions for XPImage Optional/ByRef parameter modes and ownership diagnostics.
         - [ ] Verify image expiration/recycling markers for the remaining XPImage parameter modes in the Linux ownership harness before enabling them in the general constructor matrix.
       - [ ] Migrate whole-array constructor parameter ownership separately from array storage: define alias, replacement, failure and cleanup behavior for scalar and reference element arrays.
+        - [ ] Define ownership for scalar-element arrays: borrowed input, replacement, failed construction and cleanup.
+        - [ ] Define ownership for reference-element arrays, including XPImage elements and caller aliases.
+        - [ ] Define whole-array alias/replacement semantics while preserving rank and physical bounds.
+        - [ ] Define failed-construction cleanup without recycling caller-owned array storage or elements.
         - [ ] Add paired CLI/MCP regressions for supported ranks, bounds, Optional omission and incompatible array element/rank diagnostics.
     Reference-cell/storage verification 2026-10-17: Release build, complete AST CLI (including constructor/image/normal-parity coverage), MCP protocol suite and all four compiler probes passed. Fresh StrongBox<T> defaults preserve exact user-class types, supplied aliases and nested/Parent.New forwarding. Executable storage coverage includes lower bounds, multidimensional/dynamic arrays, persistent Static array storage, Lists, List ForAll aliases, module references and replacement on errors; CLI/MCP pair incompatible element types. Focused failures exposed Object's shadowed type metadata and zero-sized fixed Static arrays; both are corrected through shared storage/allocation paths. Former storage/Optional deferrals are positive regressions, with the obsolete negative manifest entries removed. Native/Variant/List/array signatures and overloads remain open; broader GC and ordinary derived method migration are not closed by this increment.
 
