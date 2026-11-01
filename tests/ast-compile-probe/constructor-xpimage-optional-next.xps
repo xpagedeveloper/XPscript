@@ -1,0 +1,24 @@
+Public suppliedWidth As Long
+Public omittedIsNothing As Boolean
+
+Class Holder
+    Public Picture As XPImage
+
+    Public Sub New(Optional ByVal value As XPImage = Nothing)
+        If value Is Nothing Then
+            omittedIsNothing = True
+        Else
+            Set Picture = value
+            suppliedWidth = Picture.Width
+        End If
+    End Sub
+End Class
+
+Sub Main()
+    Dim omitted As New Holder()
+    If Not omittedIsNothing Or Not (omitted.Picture Is Nothing) Then Error 6, "omitted XPImage was not Nothing"
+    Dim source As New XPImage(5, 4)
+    Dim supplied As New Holder(source)
+    If suppliedWidth <> 5 Or supplied.Picture Is Nothing Then Error 6, "supplied XPImage constructor failed"
+    Print "XPIMAGE_OPTIONAL_CONSTRUCTOR_OK"
+End Sub

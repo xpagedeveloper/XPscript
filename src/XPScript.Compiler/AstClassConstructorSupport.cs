@@ -23,9 +23,6 @@ internal static class AstClassConstructorSupport
                 foreach (var parameter in parameters)
                 {
                     var type = AstClassMethodSupport.DeclaredType(parameter.Type, symbols);
-                    if (parameter.IsOptional && AstImageSupport.IsImage(type.Name))
-                        throw AstCompiler.MappedDiagnostic(parameter.Span, path, source,
-                            "Optional XPImage constructor parameters are not implemented yet.", CompilerDiagnosticCodes.TargetApiUnavailable, "ast");
                     var sharedReference = type.IsObject || type.IsVariant || type.Name.Equals("Date", StringComparison.OrdinalIgnoreCase) || classes.ContainsKey(type.Name) || AstImageSupport.IsImage(type.Name) ||
                         parameter.IsList && AstImageSupport.IsImage(type.Name) ||
                         !AstImageSupport.IsImage(type.Name) && !AstApplicationSupport.OwnsSymbol(type.Name) &&
