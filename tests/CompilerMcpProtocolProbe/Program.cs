@@ -792,6 +792,11 @@ var imageByRefFailureSource = await File.ReadAllTextAsync(Path.Combine(repo, "te
 var imageByRefFailureValidation = await CallAsync(new {jsonrpc="2.0",id=3906,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=imageByRefFailureSource,filename="constructor-xpimage-byref-failure-next.xps"}}});
 if (imageByRefFailureValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
     throw new Exception("MCP XPImage ByRef constructor failure validation failed.");
+var imageByRefTypeSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "constructor-xpimage-byref-type-error-next.xps"));
+var imageByRefTypeValidation = await CallAsync(new {jsonrpc="2.0",id=3907,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=imageByRefTypeSource,filename="constructor-xpimage-byref-type-error-next.xps"}}});
+var imageByRefTypeError = imageByRefTypeValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
+if (imageByRefTypeError.GetProperty("diagnosticCode").GetString() != "XPS2003" || imageByRefTypeError.GetProperty("line").GetInt32() != 8)
+    throw new Exception("MCP XPImage ByRef constructor type diagnostic lost its contract.");
 var implicitMemberSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "implicit-member-error.xps"));
 var implicitMemberValidation = await CallAsync(new {jsonrpc="2.0",id=40,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=implicitMemberSource,filename="implicit-member-error.xps"}}});
 var implicitMemberError = implicitMemberValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];

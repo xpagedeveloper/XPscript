@@ -44,6 +44,9 @@ if ($LASTEXITCODE -ne 0) { throw 'XPImage ByRef constructor failure compilation 
 $imageByRefFailureResult = dotnet (Join-Path $imageByRefFailureTarget 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($imageByRefFailureResult -join "`n") -ne 'XPIMAGE_BYREF_CONSTRUCTOR_FAILURE_OK') { throw 'XPImage ByRef constructor failure cleanup regression failed.' }
 Write-Host 'AST_XPIMAGE_BYREF_CONSTRUCTOR_FAILURE_OK'
+$imageByRefTypeFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-byref-type-error-next.xps') -o (Join-Path $output 'constructor-xpimage-byref-type-error-next') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($imageByRefTypeFailure -join "`n") -notmatch 'constructor-xpimage-byref-type-error-next\.xps:8:\d+: XPS2003:') { throw 'XPImage ByRef constructor type diagnostic regression failed.' }
+Write-Host 'AST_XPIMAGE_BYREF_CONSTRUCTOR_TYPE_ERROR_OK'
 $listMethodDeferredTarget = Join-Path $output 'constructor-list-method-deferred'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodDeferredTarget
 if ($LASTEXITCODE -ne 0) { throw 'AST List class-method constructor fixture compilation failed.' }
