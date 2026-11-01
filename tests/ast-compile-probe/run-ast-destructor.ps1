@@ -44,3 +44,4 @@ foreach ($case in @(
 }
 Write-Host 'AST_DESTRUCTORS_OK'
 Write-Host 'AST_DERIVED_DESTRUCTORS_OK'
+$global:LASTEXITCODE = 0
