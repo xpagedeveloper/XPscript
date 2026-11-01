@@ -554,7 +554,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
         - [x] Make generated classes without a user `Sub Delete` idempotent under repeated alias cleanup; the generated `Delete` path now guards repeated execution while preserving derived/base cleanup ordering. Derived constructor and destructor regressions remain green.
         - [x] Suppress generated class finalization after failed construction cleanup, preventing a later GC pass from repeating image ownership cleanup after the constructor failure path has already released it.
   - [ ] Complete constructor/lifecycle migration through bounded follow-up tasks:
-    - [ ] Document the supported `Parent.New` forwarding contract for required, Optional and ByRef parameters, including evaluation order and failure behavior.
+    - [x] Document the supported `Parent.New` forwarding contract for required, Optional and ByRef parameters, including evaluation order and failure behavior in `docs/classes.md`.
     - [x] Add focused negative regressions for invalid `Parent.New` ordering, arity, visibility and incompatible argument types in CLI and MCP. Existing constructor CLI and `CompilerMcpProtocolProbe` coverage verifies late/duplicate/root/nested calls plus XPS2001/XPS2004/XPS2008/XPS2009 diagnostics.
     - [ ] Migrate one additional native constructor/reference family at a time, with explicit borrowed-versus-owned cleanup assertions.
     - [ ] Migrate one additional derived method/property family at a time, with virtual dispatch and base-access regressions.
