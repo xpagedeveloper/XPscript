@@ -571,6 +571,10 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
           - [x] Clear the new object on constructor failure without recycling the caller-owned source; an existing assignment target remains unchanged. Linux run `41322160348` passed the focused Optional XPImage failure-cleanup regression.
           - [ ] Add the positive CLI/MCP execution regression after the ownership path is implemented.
         - [ ] Add paired CLI/MCP positive and negative regressions for XPImage ByRef constructor parameters.
+          - [ ] Bind XPImage ByRef constructor parameters with an explicit caller-reference representation.
+          - [ ] Clone supplied XPImage ByRef values when storing them in object-owned fields without taking ownership of the caller's original.
+          - [ ] Clear new-object image state on ByRef constructor failure while preserving caller reference semantics.
+          - [ ] Add paired CLI/MCP positive and negative ByRef XPImage regressions.
         - [ ] Verify XPImage expiration/recycling markers for those parameter modes in the Linux ownership harness.
         - [ ] Define whole-array constructor ownership for scalar and reference elements, including alias, replacement, failure and cleanup behavior.
         - [ ] Add paired CLI/MCP diagnostics for supported whole-array ranks, bounds, Optional omission and incompatible element/rank cases.
