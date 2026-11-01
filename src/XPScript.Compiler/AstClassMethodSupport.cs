@@ -258,7 +258,7 @@ internal static class AstClassMethodSupport
                 var semanticType = AstCompiler.ResolveParameterType(p, globals);
                 return new ParameterSymbol(p.Identifier.Text, p.IsArray ? typeof(Array) : semanticType.RuntimeType, p.IsByRef, semanticType)
             {
-                IsBorrowedImageSnapshot = isObjectSetter && i == syntaxParameters.Count - 1 && p.IsByRef && AstImageSupport.IsImage(p.Type?.Identifier.Text)
+                IsBorrowedImageSnapshot = p.IsByRef && AstImageSupport.IsImage(p.Type?.Identifier.Text)
             };
             }).ToArray();
             // Bind defaults in the instance declaration scope, exposing only earlier
