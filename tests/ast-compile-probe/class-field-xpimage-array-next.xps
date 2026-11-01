@@ -5,8 +5,8 @@ Class ImageArrayOwner
 
     Public Sub New(ByVal incoming() As XPImage)
         Set stored = incoming
-        Set stored(0) = Nothing
-        callerStillOwned = Not (incoming(0) Is Nothing)
+        Set stored(2) = Nothing
+        callerStillOwned = Not (incoming(2) Is Nothing)
     End Sub
 End Class
 
