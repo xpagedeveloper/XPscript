@@ -474,6 +474,9 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [ ] Migrate XPImage parameters on ordinary procedures and class methods, replacing the current XPS3001 guard with an explicit lifetime/ownership contract and regressions.
       - [x] Define ByVal borrowing/cloning and caller-recycling behavior separately for ordinary procedures and class methods. The procedure and class-method fixture mutates each ByVal parameter and confirms the caller image remains `6x4`; Linux run `41351130586` passed on commit `78424b425`.
       - [ ] Define ByRef replacement/copy-back behavior, including failure persistence and caller-owned image cleanup.
+        - [ ] Verify successful ByRef replacement for ordinary procedures without transferring ownership of the caller's original XPImage.
+        - [ ] Verify successful ByRef replacement for class methods, including alias visibility and copy-back ordering.
+        - [ ] Verify failed procedure/method calls preserve the caller's prior reference and clean only newly owned images.
       - [ ] Define Optional omission behavior and failure cleanup for XPImage procedure/method parameters.
       - [ ] Add focused CLI/MCP and Linux regressions for the supported XPImage procedure/method parameter matrix before removing XPS3001 guards.
     - [ ] Migrate ordinary class-method Object/user-reference signatures that remain outside constructor-specific binding, with typed alias/replacement and failure-cleanup coverage.
