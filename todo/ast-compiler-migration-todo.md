@@ -577,7 +577,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
           - [x] Add paired CLI/MCP positive and negative ByRef XPImage regressions. Linux run `41330457432` passed the positive binding/ownership and negative XPS2003 diagnostic checks through the constructor workflow; MCP validation passed alongside them.
         - [x] Verify XPImage expiration/recycling markers for Optional and ByRef parameter modes in the Linux ownership harness. The focused fixtures assert the caller source is recycled while the object-owned clone remains valid; Linux run `41338052626` passed both markers.
         - [ ] Define whole-array constructor ownership for scalar and reference elements, including alias, replacement, failure and cleanup behavior.
-          - [ ] Verify scalar-element constructor arrays borrow caller storage and preserve alias/replacement behavior without cleanup ownership.
+          - [x] Verify scalar-element constructor arrays borrow caller storage and preserve alias/replacement behavior without cleanup ownership. `constructor-scalar-array-next.xps` verifies shared carrier identity, physical bounds and caller-visible mutation; Linux run `41339433994` passed on commit `0f242895d`.
           - [ ] Verify successful reference-element constructor arrays clone the carrier and each owned element while preserving caller aliases and physical bounds.
           - [ ] Verify reference-element constructor failure releases only newly created clones and leaves caller storage and pre-existing targets unchanged.
           - [ ] Add one focused constructor-harness regression that exercises the scalar and reference ownership cases with explicit success markers.
