@@ -33,6 +33,13 @@ if (Test-Path $fieldOutput) { Remove-Item -Recurse -Force $fieldOutput }
 $fieldResult = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-field-array-syntax-next.xps') -o $fieldOutput 2>&1
 if ($LASTEXITCODE -ne 0 -or ($fieldResult -join "`n") -notmatch 'AST compilation succeeded') { throw "Class-field array syntax compilation failed: $fieldResult" }
 Write-Host 'AST_CLASS_FIELD_ARRAY_SYNTAX_OK'
+$fieldRuntimeOutput = Join-Path $root 'out/array-signature-class-field-array-runtime'
+if (Test-Path $fieldRuntimeOutput) { Remove-Item -Recurse -Force $fieldRuntimeOutput }
+$fieldRuntimeResult = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-field-array-runtime-next.xps') -o $fieldRuntimeOutput 2>&1
+if ($LASTEXITCODE -ne 0) { throw "Class-field array runtime compilation failed: $fieldRuntimeResult" }
+$fieldRuntimeRun = dotnet (Join-Path $fieldRuntimeOutput 'Generated.dll') 2>&1
+if ($LASTEXITCODE -ne 0 -or ($fieldRuntimeRun -join "`n") -ne 'CLASS_FIELD_ARRAY_RUNTIME_OK') { throw "Class-field array runtime regression failed: $fieldRuntimeRun" }
+Write-Host 'AST_CLASS_FIELD_ARRAY_RUNTIME_OK'
 foreach ($case in @(
     @('procedure-array-deferred', '7'),
     @('constructor-array-deferred', '7')

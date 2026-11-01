@@ -805,6 +805,10 @@ var classFieldArraySource = await File.ReadAllTextAsync(Path.Combine(repo, "test
 var classFieldArrayValidation = await CallAsync(new {jsonrpc="2.0",id=3910,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=classFieldArraySource,filename="class-field-array-syntax-next.xps"}}});
 if (classFieldArrayValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
     throw new Exception("MCP class-field array syntax validation failed.");
+var classFieldArrayRuntimeSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "class-field-array-runtime-next.xps"));
+var classFieldArrayRuntimeValidation = await CallAsync(new {jsonrpc="2.0",id=3911,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=classFieldArrayRuntimeSource,filename="class-field-array-runtime-next.xps"}}});
+if (classFieldArrayRuntimeValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
+    throw new Exception("MCP class-field array runtime validation failed.");
 var implicitMemberSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "implicit-member-error.xps"));
 var implicitMemberValidation = await CallAsync(new {jsonrpc="2.0",id=40,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=implicitMemberSource,filename="implicit-member-error.xps"}}});
 var implicitMemberError = implicitMemberValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
