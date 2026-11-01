@@ -49,6 +49,26 @@ End Class
 
 `Parent.New(...)` targets the direct base class. The base constructor completes before the remaining child-constructor statements execute. A derived constructor that does not use `Parent.New(...)` relies on the base class having a parameterless constructor.
 
+### AST constructor forwarding contract
+
+In the experimental AST path, `Parent.New(...)` must be the first statement in a
+derived `Sub New` and may occur exactly once. It targets only the direct base
+class; it does not dispatch virtually and it must not be used from a root class.
+
+Arguments are evaluated once, left to right. Required and trailing Optional
+parameters use the same type, ByVal/ByRef, default-value and writable-storage
+rules as a direct `New` call. Omitted Optional arguments are forwarded as fresh
+storage where the parameter is Optional ByRef; defaults run in declaration order
+and may observe earlier arguments. A failed base call preserves the caller's
+existing assignment target and cleans only ownership completed by the new
+instance's construction path.
+
+The AST compiler rejects late or duplicate `Parent.New` calls, root-class calls,
+private/inaccessible base constructors, invalid arity, incompatible argument
+types and non-writable ByRef arguments with mapped diagnostics. These rules are
+covered by the constructor-parent and constructor-optional fixtures; normal
+compiler parity is claimed only for the documented supported subset.
+
 
 ## Default visibility and Option Public
 
