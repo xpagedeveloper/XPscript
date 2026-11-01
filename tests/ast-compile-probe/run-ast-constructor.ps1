@@ -75,6 +75,12 @@ if ($LASTEXITCODE -ne 0) { throw 'XPImage array constructor failure fixture comp
 $imageArrayFailureResult = dotnet (Join-Path $imageArrayFailureTarget 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($imageArrayFailureResult -join "`n") -ne 'XPIMAGE_ARRAY_FAILURE_CLEANUP_OK') { throw 'XPImage array constructor failure cleanup regression failed.' }
 Write-Host 'AST_XPIMAGE_ARRAY_FAILURE_CLEANUP_OK'
+$imageParameterTarget = Join-Path $output 'xpimage-parameter-runtime-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST XPImage ByVal procedure/method compilation failed.' }
+$imageParameterResult = dotnet (Join-Path $imageParameterTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -ne 'XPIMAGE_BYVAL_PARAMETER_CLONE_OK') { throw 'AST XPImage ByVal procedure/method clone regression failed.' }
+Write-Host 'AST_XPIMAGE_BYVAL_PARAMETER_CLONE_OK'
 $listMethodDeferredTarget = Join-Path $output 'constructor-list-method-deferred'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodDeferredTarget
 if ($LASTEXITCODE -ne 0) { throw 'AST List class-method constructor fixture compilation failed.' }

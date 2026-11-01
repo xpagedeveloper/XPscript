@@ -1,16 +1,19 @@
 Class ImageOwner
     Public Sub Accept(ByVal value As XPImage)
-        Print CStr(value.Width)
+        value.Resize(1, 1)
     End Sub
 End Class
 
 Sub AcceptImage(ByVal value As XPImage)
-    Print CStr(value.Width)
+    value.Resize(2, 2)
 End Sub
 
 Sub Main()
     Dim image As New XPImage(6, 4)
     Call AcceptImage(image)
+    If image.Width <> 6 Or image.Height <> 4 Then Error 6, "XPImage procedure ByVal parameter aliased caller"
     Dim owner As New ImageOwner
     Call owner.Accept(image)
+    If image.Width <> 6 Or image.Height <> 4 Then Error 6, "XPImage class-method ByVal parameter aliased caller"
+    Print "XPIMAGE_BYVAL_PARAMETER_CLONE_OK"
 End Sub
