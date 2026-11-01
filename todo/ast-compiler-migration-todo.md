@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 46810)
-Total output lines: 954
-
 # XPscript AST Compiler Migration TODO
 
 ## Goal
@@ -732,3 +729,12 @@ Run this phase only after all preceding implementation work, permanent FullTest 
 - [ ] Run any remaining externally socketed Kestrel, CGI, and FastCGI checks that require local host permissions or machine-specific configuration.
 - [ ] Run manual WebAssembly/browser smoke checks on a configured browser when CI packaging/workload checks do not cover the local browser runtime.
 - [ ] Record the machine, OS, SDK/workload, emulator/device, Notes/Domino, IIS, and browser versions together with the exact commands and any environment-specific skips.
+
+
+## GC/finalizer verification checkpoint — 2026-11-01
+
+- [x] Add a test-only AST finalizer observation seam, disabled unless `XPSCRIPT_AST_FINALIZER_TEST=1` is set during compilation.
+- [x] Add per-class finalizer counters and instance markers that report duplicate cleanup.
+- [x] Add the platform-independent fixture `tests/ast-compile-probe/finalizer-gc-next.xps` and Linux harness `run-ast-finalizer-gc.ps1`.
+- [x] Verify the bounded Linux GC/finalizer workflow. Run `41251817650` passed with `AST_FINALIZER_TEST_MARKER=GcProbe;count=1;duplicate=0` and `AST_FINALIZER_GC_OK`.
+- [x] Document the seam and timeout policy in `docs/ast-csharp-emitter.md`.
