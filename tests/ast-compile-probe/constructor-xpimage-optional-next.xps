@@ -20,5 +20,7 @@ Sub Main()
     Dim source As New XPImage(5, 4)
     Dim supplied As New Holder(source)
     If suppliedWidth <> 5 Or supplied.Picture Is Nothing Then Error 6, "supplied XPImage constructor failed"
+    Call source.Recycle()
+    If supplied.Picture.Width <> 5 Then Error 6, "Optional XPImage constructor did not clone the supplied value"
     Print "XPIMAGE_OPTIONAL_CONSTRUCTOR_OK"
 End Sub
