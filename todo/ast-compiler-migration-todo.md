@@ -566,6 +566,10 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
         - [x] Define the XPImage Optional/ByRef constructor ownership contract: supplied values are cloned, omitted Optional values are `Nothing`, replacement preserves the old field until cloning succeeds, and failed initialization clears the new object/assignment target to `Nothing` without taking ownership of the caller's original image. Documented in `docs/classes.md`; positive execution fixtures remain separate.
         - [ ] Add paired CLI/MCP positive and negative regressions for XPImage Optional constructor parameters. The negative guard is complete; positive execution remains blocked until Optional XPImage ownership is implemented.
           - [x] Add and verify the bounded XPS3001 negative guard in CLI and MCP; Linux run `41313901864` passed the constructor guard regression. Positive execution remains blocked until Optional XPImage ownership is implemented.
+          - [ ] Bind Optional XPImage constructor parameters to an explicit omitted-value (`Nothing`) and supplied-value representation.
+          - [ ] Clone supplied Optional XPImage values when storing them in object-owned fields.
+          - [ ] Clear the new object and failed assignment target on constructor failure without recycling the caller-owned source.
+          - [ ] Add the positive CLI/MCP execution regression after the ownership path is implemented.
         - [ ] Add paired CLI/MCP positive and negative regressions for XPImage ByRef constructor parameters.
         - [ ] Verify XPImage expiration/recycling markers for those parameter modes in the Linux ownership harness.
         - [ ] Define whole-array constructor ownership for scalar and reference elements, including alias, replacement, failure and cleanup behavior.
