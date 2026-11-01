@@ -12,7 +12,7 @@ End Class
 
 Sub Main()
     Dim incoming(2 To 2) As XPImage
-    Set incoming(2) = New XPImage()
+    Set incoming(2) = New XPImage(2, 2)
     Dim owner As New ImageArrayOwner(incoming)
     If Not callerStillOwned Then Error 6, "XPImage array caller element was aliased"
     Print "XPIMAGE_ARRAY_CLONE_OK"
