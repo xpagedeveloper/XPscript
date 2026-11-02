@@ -1185,6 +1185,22 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-override-nex
 if ($LASTEXITCODE -ne 0) { throw 'AST class-method override compilation failed.' }
 $overrideClassMethodResult = dotnet (Join-Path $overrideClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($overrideClassMethodResult -join "`n") -ne '9') { throw 'AST class-method override execution failed.' }
+$overrideClassMethodNormal = Join-Path $output 'class-method-override-normal'
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'class-method-override-next.xps') -o $overrideClassMethodNormal --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal class-method override compilation failed.' }
+$overrideClassMethodNormalResult = Invoke-BoundedExecutable $overrideClassMethodNormal
+if ($overrideClassMethodNormalResult.ExitCode -ne 0 -or $overrideClassMethodNormalResult.Output.Trim() -ne ($overrideClassMethodResult -join "`n").Trim()) { throw 'Normal/AST class-method override parity failed.' }
+$parentClassMethodOutput = Join-Path $output 'class-method-parent-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-parent-next.xps') -o $parentClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST Parent class-method compilation failed.' }
+$parentClassMethodResult = dotnet (Join-Path $parentClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($parentClassMethodResult -join "`n") -ne '7') { throw 'AST Parent class-method execution failed.' }
+$parentClassMethodNormal = Join-Path $output 'class-method-parent-normal'
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'class-method-parent-next.xps') -o $parentClassMethodNormal --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal Parent class-method compilation failed.' }
+$parentClassMethodNormalResult = Invoke-BoundedExecutable $parentClassMethodNormal
+if ($parentClassMethodNormalResult.ExitCode -ne 0 -or $parentClassMethodNormalResult.Output.Trim() -ne ($parentClassMethodResult -join "`n").Trim()) { throw 'Normal/AST Parent class-method parity failed.' }
+Write-Host 'AST_CLASS_INHERITANCE_LEGACY_PARITY_OK'
 Write-Host 'AST_CLASS_METHOD_OVERRIDE_OK'
 $referenceClassMethodOutput = Join-Path $output 'class-method-reference-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-reference-next.xps') -o $referenceClassMethodOutput
