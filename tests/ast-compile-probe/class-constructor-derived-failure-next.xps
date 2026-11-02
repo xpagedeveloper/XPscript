@@ -19,7 +19,8 @@ Class Child Extend Root
 End Class
 
 Sub Main()
-    Dim target As New Root
+    Dim target As Object
+    Set target = New Root
     trace = ""
     Dim failure As Long
     On Error Resume Next
