@@ -508,7 +508,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
       - [x] Normal/AST constructor invocation and argument binding are verified by `run-ast-constructor.ps1` for scalar, derived and concrete-reference parity fixtures.
       - [ ] Compare constructor-failure cleanup specifically; current AST failure-cleanup fixtures exercise AST-only ownership behavior and the legacy compiler does not provide an equivalent contract yet.
     - [x] Compare normal versus AST inheritance, `Parent` dispatch and override behavior with focused `class-method-parent-next.xps` and `class-method-override-next.xps` fixtures; the CLI harness now requires `AST_CLASS_INHERITANCE_LEGACY_PARITY_OK`.
-    - [ ] Compare normal versus AST explicit delete/destructor ordering and alias clearing with one focused fixture.
+    - [x] Compare normal versus AST explicit delete/destructor ordering and alias clearing with focused `class-destructor-parity.xps` and `class-destructor-derived-parity.xps`; `run-ast-destructor.ps1` executes both compiler routes and compares the exact output.
     - [ ] Record any intentional AST-only behavior and its diagnostic/compatibility boundary.
   - [ ] Document the final platform boundary for class lifecycle behavior and close this parent only after the Linux/Windows evidence and GC/finalizer criteria are reconciled.
     - [ ] Record Linux workflow evidence for the focused lifecycle fixtures.
