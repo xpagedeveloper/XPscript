@@ -1,0 +1,34 @@
+Option Declare
+
+Class JsonObjectByRefMethods
+    Public Sub Replace(ByRef value As XPJSONObject)
+        Set value = New XPJSONObject
+        Call value.Set("replacement", 9)
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPJSONObject)
+        Call Replace(value)
+        Error 4330, "replacement must survive failure"
+    End Sub
+End Class
+
+Sub Main()
+    Dim methods As New JsonObjectByRefMethods
+    Dim original As New XPJSONObject
+    Dim current As XPJSONObject
+    Set current = original
+    Call methods.Replace(current)
+    If current Is original Then Error 4331
+    If CLng(current.Get("replacement")) <> 9 Then Error 4332
+
+    Set current = original
+    On Error GoTo ExpectedFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4333, "expected error missing"
+    Exit Sub
+ExpectedFailure:
+    If Err <> 4330 Then Error 4334
+    If current Is original Then Error 4335
+    If CLng(current.Get("replacement")) <> 9 Then Error 4336
+    Print "AST_JSON_OBJECT_ALIAS_BYREF_OK"
+End Sub
