@@ -27,7 +27,7 @@ jobs:
         run: dotnet build XPScriptCompiler.slnx -c Release --no-restore -m:1
 
       - name: Build compiler runtime artifacts
-        run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore -m:1
+        run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore -m:1 -p:GenerateRuntimeConfigurationFiles=true -p:UseAppHost=true
 
       - name: Benchmark run cache and debug fresh build
         run: dotnet run --project tests/CompilerRunWarmBenchmark/CompilerRunWarmBenchmark.csproj -c Release -- .
