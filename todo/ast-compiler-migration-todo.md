@@ -482,7 +482,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
           - [x] Resolve failure semantics first: a failed XPImage initialization clears the target to `Nothing`, preventing a false-positive assignment; newly created owned images are cleaned without transferring ownership of unrelated caller images. This follows the requested constructor-failure contract and must be covered by the next regression.
       - [ ] Define Optional omission behavior and failure cleanup for XPImage procedure/method parameters.
         - [x] Verify omitted Optional XPImage parameters arrive as `Nothing` in ordinary procedures and class methods. `xpimage-parameter-runtime-next.xps` covers both call forms; Linux run `41475005479` passed on commit `f651e7da6`.
-        - [ ] Verify supplied Optional XPImage values follow the established ByVal clone/borrowed-input ownership contract.
+        - [x] Verify supplied Optional XPImage values follow the established ByVal clone/borrowed-input ownership contract. `xpimage-parameter-runtime-next.xps` verifies procedure and class-method mutation isolation; Linux run `41478591018` passed on commit `3352387d8`.
         - [ ] Verify Optional XPImage procedure/method failure clears the target and cleans newly owned temporaries.
       - [ ] Add focused CLI/MCP and Linux regressions for the supported XPImage procedure/method parameter matrix before removing XPS3001 guards.
     - [ ] Migrate ordinary class-method Object/user-reference signatures that remain outside constructor-specific binding, with typed alias/replacement and failure-cleanup coverage.
