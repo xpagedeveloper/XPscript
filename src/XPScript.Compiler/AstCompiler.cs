@@ -857,7 +857,13 @@ public static class AstCompiler
         var userClassSupport = string.Join(Environment.NewLine, unit.Declarations.OfType<ClassDeclarationSyntax>().Select(classDeclaration =>
         {
             var fields = string.Join(" ", classDeclaration.Members.OfType<FieldDeclarationSyntax>().Select(field =>
-                $"{(field.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public")} {BoundMethodEmitter.CSharpType(field.IsArray ? XpTypeSymbol.ArrayOf(AstClassMethodSupport.DeclaredType(field.Type, symbols), field.ArrayRank) : AstClassMethodSupport.DeclaredType(field.Type, symbols))} {field.Identifier.Text} = default!;"));
+            {
+                var fieldType = field.IsArray
+                    ? XpTypeSymbol.ArrayOf(AstClassMethodSupport.DeclaredType(field.Type, symbols), field.ArrayRank)
+                    : AstClassMethodSupport.DeclaredType(field.Type, symbols);
+                var initializer = fieldType.RuntimeType == typeof(string) ? "string.Empty" : "default!";
+                return $"{(field.Visibility?.Kind == SyntaxKind.PrivateKeyword ? "private" : "public")} {BoundMethodEmitter.CSharpType(fieldType)} {field.Identifier.Text} = {initializer};";
+            }));
             var properties = string.Empty; // Accessor bodies are emitted with class procedures, never fabricated auto-properties.
             var baseClause = classDeclaration.BaseType is null
                 ? string.Empty
