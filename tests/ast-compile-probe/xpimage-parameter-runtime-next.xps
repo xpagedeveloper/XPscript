@@ -75,10 +75,11 @@ Sub Main()
     If methodFailure = 0 Or Not (image Is Nothing) Then Error 6, "XPImage class-method ByRef failure retained a target"
     Call AcceptOptionalImage()
     Call owner.AcceptOptional()
-    Call AcceptOptionalImageClone(image)
-    If image.Width <> 6 Or image.Height <> 4 Then Error 6, "supplied Optional procedure XPImage aliased caller"
-    Call owner.AcceptOptionalClone(image)
-    If image.Width <> 6 Or image.Height <> 4 Then Error 6, "supplied Optional class-method XPImage aliased caller"
+    Dim supplied As New XPImage(6, 4)
+    Call AcceptOptionalImageClone(supplied)
+    If supplied.Width <> 6 Or supplied.Height <> 4 Then Error 6, "supplied Optional procedure XPImage aliased caller"
+    Call owner.AcceptOptionalClone(supplied)
+    If supplied.Width <> 6 Or supplied.Height <> 4 Then Error 6, "supplied Optional class-method XPImage aliased caller"
     Print "XPIMAGE_BYVAL_PARAMETER_CLONE_OK"
     Print "XPIMAGE_BYREF_METHOD_REPLACEMENT_OK"
     Print "XPIMAGE_BYREF_FAILURE_CLEAR_OK"
