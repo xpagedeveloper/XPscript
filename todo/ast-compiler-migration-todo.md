@@ -490,7 +490,10 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [ ] Migrate ordinary class-method Object/user-reference signatures that remain outside constructor-specific binding, with typed alias/replacement and failure-cleanup coverage.
       - [x] Inventory ordinary class-method Object/user-reference signatures still blocked by XPS3001 and select one bounded signature family. Generic `Object`, concrete user classes and the registered `XPJson*` native family are already covered; the remaining explicit compatibility-family gap is legacy `XPJSONNavigator`/`XPJSONObject`/`XPJSONArray`/`XPJSONElement`, which is not in `ClassMethodNativeTypeNames` and remains a deliberate XPS3001 boundary.
       - [ ] Define and test ByVal ownership/alias behavior for the selected Object/user-reference family.
-        Blocked: the selected legacy `XPJSON*` family collides with the case-insensitive modern `XPJson*` symbol family and is currently covered by `class-method-notes-json-next.xps` as an intentional XPS3001 exclusion. Supporting it requires an explicit compatibility-name/precedence design decision before ownership semantics can be implemented safely.
+        Design resolved: legacy `XPJSON*` types migrate into the shared AST JSON object model; they must not retain a separate compatibility-only implementation. The modern AST model becomes canonical, and the legacy API surface is migrated onto it.
+        - [ ] Migrate `XPJSONObject`, `XPJSONArray` and `XPJSONElement` onto the canonical AST JSON object model.
+        - [ ] Build `XPJSONNavigator` as an AST-backed canonical navigator over the shared JSON model.
+        - [ ] Add class-method ByVal/ByRef ownership and failure-cleanup regressions for the migrated names.
       - [ ] Define and test ByRef replacement, failure cleanup and copy-back for the selected family.
     - [ ] Audit remaining unknown/native accessor and compatibility-module signature guards, retaining explicit diagnostics where the contract is intentionally unsupported.
   - [ ] Define and verify the remaining normal/AST parity boundary for class construction, inheritance and lifecycle behavior; label AST-only capabilities explicitly.
