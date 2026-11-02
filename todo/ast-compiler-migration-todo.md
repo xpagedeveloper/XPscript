@@ -479,6 +479,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
           - [x] Resolve the ownership contract first: a ByRef XPImage caller value is borrowed during the call; replacing the caller slot may recycle the previous value, while any object-owned snapshot must remain valid. This follows the existing constructor and property-setter ownership fixtures; aliases to a replaced caller value are not a preservation guarantee.
         - [x] Verify successful ByRef replacement for class methods, including alias visibility and copy-back ordering. `xpimage-parameter-runtime-next.xps` verifies the new `7x3` slot and recycled prior alias; Linux run `41424339088` passed.
         - [ ] Verify failed procedure/method calls preserve the caller's prior reference and clean only newly owned images.
+          - [ ] Resolve failure semantics first: decide whether a failed ByRef XPImage replacement preserves the prior caller slot, clears it to `Nothing`, or commits ByRef writes made before the failure; align this with the existing constructor/property-setter contracts before adding the regression.
       - [ ] Define Optional omission behavior and failure cleanup for XPImage procedure/method parameters.
       - [ ] Add focused CLI/MCP and Linux regressions for the supported XPImage procedure/method parameter matrix before removing XPS3001 guards.
     - [ ] Migrate ordinary class-method Object/user-reference signatures that remain outside constructor-specific binding, with typed alias/replacement and failure-cleanup coverage.
