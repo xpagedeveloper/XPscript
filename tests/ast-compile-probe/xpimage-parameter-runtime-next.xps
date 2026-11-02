@@ -2,6 +2,10 @@ Class ImageOwner
     Public Sub Accept(ByVal value As XPImage)
         value.Resize(1, 1)
     End Sub
+
+    Public Sub Replace(ByRef value As XPImage)
+        Set value = New XPImage(7, 3)
+    End Sub
 End Class
 
 Sub AcceptImage(ByVal value As XPImage)
@@ -15,5 +19,17 @@ Sub Main()
     Dim owner As New ImageOwner
     Call owner.Accept(image)
     If image.Width <> 6 Or image.Height <> 4 Then Error 6, "XPImage class-method ByVal parameter aliased caller"
+    Dim previous As XPImage
+    Set previous = image
+    Call owner.Replace(image)
+    If image.Width <> 7 Or image.Height <> 3 Then Error 6, "XPImage class-method ByRef replacement failed"
+    On Error Resume Next
+    Dim oldFailure As Long
+    oldFailure = previous.Width
+    oldFailure = Err
+    Err.Clear
+    On Error GoTo 0
+    If oldFailure = 0 Then Error 6, "XPImage class-method ByRef replacement preserved recycled alias"
     Print "XPIMAGE_BYVAL_PARAMETER_CLONE_OK"
+    Print "XPIMAGE_BYREF_METHOD_REPLACEMENT_OK"
 End Sub
