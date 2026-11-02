@@ -1462,6 +1462,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST JSON object alias ByRef compilation failed
 $jsonObjectByRefResult = dotnet (Join-Path $jsonObjectByRefOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($jsonObjectByRefResult -join "`n") -ne 'AST_JSON_OBJECT_ALIAS_BYREF_OK') { throw 'AST JSON object alias ByRef execution failed.' }
 Write-Host 'AST_JSON_OBJECT_ALIAS_BYREF_OK'
+$jsonAliasByRefOutput = Join-Path $output 'class-method-json-alias-byref-runtime-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-json-alias-byref-runtime-next.xps') -o $jsonAliasByRefOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST JSON array/element alias ByRef compilation failed.' }
+$jsonAliasByRefResult = dotnet (Join-Path $jsonAliasByRefOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($jsonAliasByRefResult -join "`n") -ne 'AST_JSON_ALIAS_BYREF_OK') { throw 'AST JSON array/element alias ByRef execution failed.' }
+Write-Host 'AST_JSON_ALIAS_BYREF_OK'
 $httpRequestClassMethodOutput = Join-Path $output 'class-method-http-request-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-request-next.xps') -o $httpRequestClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST HTTP request class-method compilation failed.' }

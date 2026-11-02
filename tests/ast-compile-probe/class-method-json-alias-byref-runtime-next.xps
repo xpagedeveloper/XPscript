@@ -1,0 +1,40 @@
+Option Declare
+
+Class JsonAliasByRefMethods
+    Public Sub ReplaceArray(ByRef value As XPJSONArray)
+        Set value = New XPJSONArray
+        Call value.Add("array-replacement")
+    End Sub
+
+    Public Sub ReplaceElement(ByRef value As XPJSONElement)
+        Set value = New XPJSONElement("name", "element-replacement")
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPJSONElement)
+        Call ReplaceElement(value)
+        Error 4340, "replacement must survive failure"
+    End Sub
+End Class
+
+Sub Main()
+    Dim methods As New JsonAliasByRefMethods
+    Dim originalArray As New XPJSONArray
+    Dim currentArray As XPJSONArray
+    Set currentArray = originalArray
+    Call methods.ReplaceArray(currentArray)
+    If currentArray Is originalArray Then Error 4341
+    If CStr(currentArray.Get(0)) <> "array-replacement" Then Error 4342
+
+    Dim originalElement As New XPJSONElement("name", "original")
+    Dim currentElement As XPJSONElement
+    Set currentElement = originalElement
+    On Error GoTo ExpectedFailure
+    Call methods.ReplaceAndFail(currentElement)
+    Error 4343, "expected error missing"
+    Exit Sub
+ExpectedFailure:
+    If Err <> 4340 Then Error 4344
+    If currentElement Is originalElement Then Error 4345
+    If CStr(currentElement.Value) <> "element-replacement" Then Error 4346
+    Print "AST_JSON_ALIAS_BYREF_OK"
+End Sub

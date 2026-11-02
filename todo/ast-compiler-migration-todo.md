@@ -500,7 +500,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
           - [x] Verify `ByVal XPJSONArray` and `ByVal XPJSONElement` alias identity and mutation through the canonical AST runtime; focused regression emits `AST_JSON_ALIAS_BYVAL_OK`.
           - [ ] Verify `ByRef` replacement and failure cleanup for all migrated JSON aliases.
             - [x] Verify `ByRef XPJSONObject` replacement and replacement persistence after a handled method error; focused regression emits `AST_JSON_OBJECT_ALIAS_BYREF_OK`.
-            - [ ] Verify `ByRef XPJSONArray` and `ByRef XPJSONElement` replacement and failure persistence.
+            - [x] Verify `ByRef XPJSONArray` and `ByRef XPJSONElement` replacement and failure persistence; focused regression emits `AST_JSON_ALIAS_BYREF_OK`.
       - [ ] Define and test ByRef replacement, failure cleanup and copy-back for the selected family.
     - [ ] Audit remaining unknown/native accessor and compatibility-module signature guards, retaining explicit diagnostics where the contract is intentionally unsupported.
   - [ ] Define and verify the remaining normal/AST parity boundary for class construction, inheritance and lifecycle behavior; label AST-only capabilities explicitly.
