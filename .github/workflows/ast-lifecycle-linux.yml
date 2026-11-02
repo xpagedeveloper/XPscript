@@ -1,6 +1,8 @@
 name: AST Lifecycle Isolation (Linux)
 
 on:
+  push:
+    branches: [investigate-ast-compiler]
   workflow_dispatch:
 
 permissions:
