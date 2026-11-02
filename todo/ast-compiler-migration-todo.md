@@ -505,6 +505,8 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
     - [x] Audit remaining unknown/native accessor and compatibility-module signature guards. The migrated JSON aliases, including `XPJSONNavigator`, are registered as canonical AST class-method types; legacy compatibility preprocessing remains isolated to legacy compilation. The focused class-method JSON fixture now executes through AST.
   - [ ] Define and verify the remaining normal/AST parity boundary for class construction, inheritance and lifecycle behavior; label AST-only capabilities explicitly.
     - [ ] Compare normal versus AST constructor invocation, argument binding and constructor-failure cleanup with one focused fixture.
+      - [x] Normal/AST constructor invocation and argument binding are verified by `run-ast-constructor.ps1` for scalar, derived and concrete-reference parity fixtures.
+      - [ ] Compare constructor-failure cleanup specifically; current AST failure-cleanup fixtures exercise AST-only ownership behavior and the legacy compiler does not provide an equivalent contract yet.
     - [ ] Compare normal versus AST inheritance, `Parent` dispatch and override behavior with one focused fixture.
     - [ ] Compare normal versus AST explicit delete/destructor ordering and alias clearing with one focused fixture.
     - [ ] Record any intentional AST-only behavior and its diagnostic/compatibility boundary.
