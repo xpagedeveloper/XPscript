@@ -1420,6 +1420,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST JSON legacy spelling class-method compilat
 $jsonLegacySpellingResult = dotnet (Join-Path $jsonLegacySpellingOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($jsonLegacySpellingResult -join "`n") -ne 'AST_JSON_LEGACY_SPELLINGS_OK') { throw 'AST JSON legacy spelling class-method execution failed.' }
 Write-Host 'AST_JSON_LEGACY_SPELLINGS_OK'
+$jsonElementLegacyOutput = Join-Path $output 'json-element-legacy-spelling-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'json-element-legacy-spelling-next.xps') -o $jsonElementLegacyOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST canonical JSON element compilation failed.' }
+$jsonElementLegacyResult = dotnet (Join-Path $jsonElementLegacyOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($jsonElementLegacyResult -join "`n") -ne 'AST_JSON_ELEMENT_CANONICAL_OK') { throw 'AST canonical JSON element execution failed.' }
+Write-Host 'AST_JSON_ELEMENT_CANONICAL_OK'
 $httpRequestClassMethodOutput = Join-Path $output 'class-method-http-request-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-request-next.xps') -o $httpRequestClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST HTTP request class-method compilation failed.' }

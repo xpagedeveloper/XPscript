@@ -98,7 +98,9 @@ public static class CompilerSymbolCatalog
             Define("XPJsonArray.Count", "method", "XPJsonArray.Count As Integer", [], "Integer", "api.XPJsonArray.Count"),
             Define("XPJsonElement", "class", "XPJsonElement", [], null, "api.XPJsonElement"),
             Define("XPJsonElement.Type", "method", "XPJsonElement.Type As String", [], "String", "api.XPJsonElement.Type"),
+            Define("XPJsonElement.Name", "method", "XPJsonElement.Name As String", [], "String", "api.XPJsonElement.Name"),
             Define("XPJsonElement.Value", "method", "XPJsonElement.Value As Variant", [], "Variant", "api.XPJsonElement.Value"),
+            Define("XPJsonElement.Copy", "method", "XPJsonElement.Copy(source As XPJsonElement)", [new("source", "XPJsonElement")], null, "api.XPJsonElement.Copy"),
             Define("XPImage", "class", "XPImage", [], null, "api.XPImage"),
             // Web-host globals are injected by XpsWebCompiler after AST binding.
             // Keep their documented members in the shared catalog so route
