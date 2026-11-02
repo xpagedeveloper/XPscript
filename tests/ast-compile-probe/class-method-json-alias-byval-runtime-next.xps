@@ -1,0 +1,29 @@
+Option Declare
+
+Class JsonAliasMethods
+    Public Function MutateArray(ByVal value As XPJSONArray) As XPJSONArray
+        Call value.Add("array-mutation")
+        Set MutateArray = value
+    End Function
+
+    Public Function MutateElement(ByVal value As XPJSONElement) As XPJSONElement
+        value.Value = "element-mutation"
+        Set MutateElement = value
+    End Function
+End Class
+
+Sub Main()
+    Dim methods As New JsonAliasMethods
+    Dim array As New XPJSONArray
+    Dim returnedArray As XPJSONArray
+    Set returnedArray = methods.MutateArray(array)
+    If Not (returnedArray Is array) Then Error 4320
+    If CLng(array.Count) <> 1 Or CStr(array.Get(0)) <> "array-mutation" Then Error 4321
+
+    Dim element As New XPJSONElement("name", "before")
+    Dim returnedElement As XPJSONElement
+    Set returnedElement = methods.MutateElement(element)
+    If Not (returnedElement Is element) Then Error 4322
+    If CStr(element.Value) <> "element-mutation" Then Error 4323
+    Print "AST_JSON_ALIAS_BYVAL_OK"
+End Sub

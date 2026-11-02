@@ -497,7 +497,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
         - [x] Build `XPJSONNavigator` as an AST-backed canonical navigator over the shared JSON model. Legacy compilation retains its existing navigator; AST uses `XPScriptJsonNavigator` with root parsing, JSON Pointer, cursor iteration, append and stringify regressions.
         - [ ] Add class-method ByVal/ByRef ownership and failure-cleanup regressions for the migrated names.
           - [x] Verify `ByVal XPJSONObject` alias identity and mutation through the canonical AST runtime; focused regression emits `AST_JSON_OBJECT_ALIAS_BYVAL_OK`.
-          - [ ] Verify `ByVal XPJSONArray` and `ByVal XPJSONElement` alias identity and mutation.
+          - [x] Verify `ByVal XPJSONArray` and `ByVal XPJSONElement` alias identity and mutation through the canonical AST runtime; focused regression emits `AST_JSON_ALIAS_BYVAL_OK`.
           - [ ] Verify `ByRef` replacement and failure cleanup for all migrated JSON aliases.
       - [ ] Define and test ByRef replacement, failure cleanup and copy-back for the selected family.
     - [ ] Audit remaining unknown/native accessor and compatibility-module signature guards, retaining explicit diagnostics where the contract is intentionally unsupported.
