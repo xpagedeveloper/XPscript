@@ -491,7 +491,9 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
       - [x] Inventory ordinary class-method Object/user-reference signatures still blocked by XPS3001 and select one bounded signature family. Generic `Object`, concrete user classes and the registered `XPJson*` native family are already covered; the remaining explicit compatibility-family gap is legacy `XPJSONNavigator`/`XPJSONObject`/`XPJSONArray`/`XPJSONElement`, which is not in `ClassMethodNativeTypeNames` and remains a deliberate XPS3001 boundary.
       - [ ] Define and test ByVal ownership/alias behavior for the selected Object/user-reference family.
         Design resolved: legacy `XPJSON*` types migrate into the shared AST JSON object model; they must not retain a separate compatibility-only implementation. The modern AST model becomes canonical, and the legacy API surface is migrated onto it.
-        - [ ] Migrate `XPJSONObject`, `XPJSONArray` and `XPJSONElement` onto the canonical AST JSON object model.
+        - [ ] Migrate `XPJSONElement` onto the canonical AST JSON object model (canonical node storage, mutable `Value`/`Copy`, and element metadata).
+        - [ ] Migrate `XPJSONObject` onto the canonical AST JSON object model (element lookup/append/copy and cursor semantics).
+        - [ ] Migrate `XPJSONArray` onto the canonical AST JSON object model (element lookup/append/copy and cursor semantics).
         - [ ] Build `XPJSONNavigator` as an AST-backed canonical navigator over the shared JSON model.
         - [ ] Add class-method ByVal/ByRef ownership and failure-cleanup regressions for the migrated names.
       - [ ] Define and test ByRef replacement, failure cleanup and copy-back for the selected family.
