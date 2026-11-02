@@ -485,7 +485,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
         - [x] Verify supplied Optional XPImage values follow the established ByVal clone/borrowed-input ownership contract. `xpimage-parameter-runtime-next.xps` verifies procedure and class-method mutation isolation; Linux run `41478591018` passed on commit `3352387d8`.
         - [x] Verify Optional XPImage procedure/method failure clears the target and cleans newly owned temporaries. `xpimage-parameter-runtime-next.xps` covers explicit Optional `ByRef` failures for procedures and class methods; Linux run `41483785779` passed on commit `e1bbd5a36`.
       - [ ] Add focused CLI/MCP and Linux regressions for the supported XPImage procedure/method parameter matrix before removing XPS3001 guards.
-        - [ ] Verify the CLI runner checks the complete XPImage Optional parameter matrix.
+        - [x] Verify the CLI runner checks the complete XPImage Optional parameter matrix. `run-ast-cli.ps1` now checks omission, ByVal cloning and failure cleanup; Linux run `41486010058` passed on commit `67c89e34b`.
     - [ ] Migrate ordinary class-method Object/user-reference signatures that remain outside constructor-specific binding, with typed alias/replacement and failure-cleanup coverage.
     - [ ] Audit remaining unknown/native accessor and compatibility-module signature guards, retaining explicit diagnostics where the contract is intentionally unsupported.
   - [ ] Define and verify the remaining normal/AST parity boundary for class construction, inheritance and lifecycle behavior; label AST-only capabilities explicitly.
