@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - ai-compiler-machine-interface
+      - investigate-ast-compiler
   workflow_dispatch:
 
 jobs:
