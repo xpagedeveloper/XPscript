@@ -117,6 +117,19 @@ foreach (var imageParameterFixture in new[] { "xpimage-parameter-runtime-next" }
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", imageParameterFixture + ".xps"));
     var result = await CallAsync(new { jsonrpc="2.0",id=imageParameterFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=imageParameterFixture+".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("XPImage parameter validation failed: " + result);
+    var imageOutput = Path.Combine(probeRoot, imageParameterFixture + "-runtime");
+    var compile = await CallAsync(new { jsonrpc="2.0",id=imageParameterFixture+"-compile",method="tools/call",@params=new { name="xpscript_compile",arguments=new { source,filename=imageParameterFixture+".xps",outputDirectory=imageOutput,runtimeIdentifier="linux-x64",debug=true,securityMode="warn" } } });
+    var compiledPath = compile.GetProperty("result").GetProperty("structuredContent").GetProperty("output").GetString();
+    if (compile.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok" || string.IsNullOrWhiteSpace(compiledPath) || !File.Exists(compiledPath))
+        throw new Exception("XPImage parameter MCP compile failed: " + compile);
+    var run = new ProcessStartInfo("dotnet", compiledPath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, WorkingDirectory = repo };
+    using var imageProcess = Process.Start(run) ?? throw new Exception("Could not start MCP XPImage parameter artifact.");
+    var imageOutputText = await imageProcess.StandardOutput.ReadToEndAsync();
+    var imageErrorText = await imageProcess.StandardError.ReadToEndAsync();
+    await imageProcess.WaitForExitAsync();
+    var expectedImageOutput = string.Join(Environment.NewLine, new[] { "XPIMAGE_BYVAL_PARAMETER_CLONE_OK", "XPIMAGE_BYREF_METHOD_REPLACEMENT_OK", "XPIMAGE_BYREF_FAILURE_CLEAR_OK", "XPIMAGE_OPTIONAL_PARAMETER_NOTHING_OK", "XPIMAGE_OPTIONAL_PARAMETER_CLONE_OK", "XPIMAGE_OPTIONAL_FAILURE_CLEAR_OK" }) + Environment.NewLine;
+    if (imageProcess.ExitCode != 0 || imageOutputText != expectedImageOutput)
+        throw new Exception($"MCP XPImage parameter runtime regression failed (exit {imageProcess.ExitCode}): {imageOutputText}{imageErrorText}");
 }
 foreach (var optionalClassMethodFixture in new[] { "class-method-optional-next" })
 {
