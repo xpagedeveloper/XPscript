@@ -85,7 +85,7 @@ $imageParameterTarget = Join-Path $output 'xpimage-parameter-runtime-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterTarget
 if ($LASTEXITCODE -ne 0) { throw 'AST XPImage parameter failure fixture compilation failed.' }
 $imageParameterResult = dotnet (Join-Path $imageParameterTarget 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -notmatch 'XPIMAGE_BYREF_FAILURE_CLEAR_OK') { throw 'AST XPImage ByRef failure cleanup regression failed.' }
+if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -notmatch 'XPIMAGE_OPTIONAL_PARAMETER_NOTHING_OK') { throw 'AST XPImage Optional omission regression failed.' }
 Write-Host 'AST_XPIMAGE_BYREF_FAILURE_CLEAR_OK'
 $listMethodDeferredTarget = Join-Path $output 'constructor-list-method-deferred'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodDeferredTarget

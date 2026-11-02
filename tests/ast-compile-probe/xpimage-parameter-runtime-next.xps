@@ -7,6 +7,10 @@ Class ImageOwner
         Set value = New XPImage(7, 3)
     End Sub
 
+    Public Sub AcceptOptional(Optional ByVal value As XPImage = Nothing)
+        If Not (value Is Nothing) Then Error 6, "omitted Optional class-method XPImage was not Nothing"
+    End Sub
+
     Public Sub Fail(ByRef value As XPImage)
         Set value = New XPImage(8, 2)
         Error 4987, "XPImage class-method ByRef failure"
@@ -15,6 +19,10 @@ End Class
 
 Sub AcceptImage(ByVal value As XPImage)
     value.Resize(2, 2)
+End Sub
+
+Sub AcceptOptionalImage(Optional ByVal value As XPImage = Nothing)
+    If Not (value Is Nothing) Then Error 6, "omitted Optional procedure XPImage was not Nothing"
 End Sub
 
 Sub FailImage(ByRef value As XPImage)
@@ -55,7 +63,10 @@ Sub Main()
     Err.Clear
     On Error GoTo 0
     If methodFailure = 0 Or Not (image Is Nothing) Then Error 6, "XPImage class-method ByRef failure retained a target"
+    Call AcceptOptionalImage()
+    Call owner.AcceptOptional()
     Print "XPIMAGE_BYVAL_PARAMETER_CLONE_OK"
     Print "XPIMAGE_BYREF_METHOD_REPLACEMENT_OK"
     Print "XPIMAGE_BYREF_FAILURE_CLEAR_OK"
+    Print "XPIMAGE_OPTIONAL_PARAMETER_NOTHING_OK"
 End Sub
