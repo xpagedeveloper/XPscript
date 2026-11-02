@@ -1444,6 +1444,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST canonical JSON navigator compilation faile
 $jsonNavigatorLegacyResult = dotnet (Join-Path $jsonNavigatorLegacyOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($jsonNavigatorLegacyResult -join "`n") -ne 'AST_JSON_NAVIGATOR_CANONICAL_OK') { throw 'AST canonical JSON navigator execution failed.' }
 Write-Host 'AST_JSON_NAVIGATOR_CANONICAL_OK'
+$jsonObjectAliasRuntimeOutput = Join-Path $output 'class-method-json-object-alias-runtime-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-json-object-alias-runtime-next.xps') -o $jsonObjectAliasRuntimeOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST JSON object alias class-method compilation failed.' }
+$jsonObjectAliasRuntimeResult = dotnet (Join-Path $jsonObjectAliasRuntimeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($jsonObjectAliasRuntimeResult -join "`n") -ne 'AST_JSON_OBJECT_ALIAS_BYVAL_OK') { throw 'AST JSON object alias class-method execution failed.' }
+Write-Host 'AST_JSON_OBJECT_ALIAS_BYVAL_OK'
 $httpRequestClassMethodOutput = Join-Path $output 'class-method-http-request-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-request-next.xps') -o $httpRequestClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST HTTP request class-method compilation failed.' }
