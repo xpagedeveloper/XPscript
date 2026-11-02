@@ -6,10 +6,20 @@ Class ImageOwner
     Public Sub Replace(ByRef value As XPImage)
         Set value = New XPImage(7, 3)
     End Sub
+
+    Public Sub Fail(ByRef value As XPImage)
+        Set value = New XPImage(8, 2)
+        Error 4987, "XPImage class-method ByRef failure"
+    End Sub
 End Class
 
 Sub AcceptImage(ByVal value As XPImage)
     value.Resize(2, 2)
+End Sub
+
+Sub FailImage(ByRef value As XPImage)
+    Set value = New XPImage(9, 1)
+    Error 4986, "XPImage procedure ByRef failure"
 End Sub
 
 Sub Main()
@@ -30,6 +40,22 @@ Sub Main()
     Err.Clear
     On Error GoTo 0
     If oldFailure = 0 Then Error 6, "XPImage class-method ByRef replacement preserved recycled alias"
+    On Error Resume Next
+    Call FailImage(image)
+    Dim procedureFailure As Long
+    procedureFailure = Err
+    Err.Clear
+    On Error GoTo 0
+    If procedureFailure = 0 Or Not (image Is Nothing) Then Error 6, "XPImage procedure ByRef failure retained a target"
+    Set image = New XPImage(6, 4)
+    On Error Resume Next
+    Call owner.Fail(image)
+    Dim methodFailure As Long
+    methodFailure = Err
+    Err.Clear
+    On Error GoTo 0
+    If methodFailure = 0 Or Not (image Is Nothing) Then Error 6, "XPImage class-method ByRef failure retained a target"
     Print "XPIMAGE_BYVAL_PARAMETER_CLONE_OK"
     Print "XPIMAGE_BYREF_METHOD_REPLACEMENT_OK"
+    Print "XPIMAGE_BYREF_FAILURE_CLEAR_OK"
 End Sub
