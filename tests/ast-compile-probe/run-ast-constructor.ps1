@@ -160,6 +160,13 @@ foreach ($fixture in @('class-constructor-list', 'constructor-reference-list', '
     }
     if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST constructor execution failed: $fixture" }
 }
+$failureFixture = 'class-constructor-derived-failure-next'
+$failureNormal = Join-Path $output ($failureFixture + $(if ($IsWindows) { '-normal.exe' } else { '-normal' }))
+dotnet $compiler legacy-compile (Join-Path $PSScriptRoot "$failureFixture.xps") -o $failureNormal --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal constructor-failure parity compilation failed.' }
+$failureNormalResult = & $failureNormal
+if ($LASTEXITCODE -ne 0 -or ($failureNormalResult -join "`n") -ne 'CLASS_DERIVED_CONSTRUCTOR_FAILURE_OK') { throw 'Normal/AST constructor-failure parity failed.' }
+Write-Host 'AST_CONSTRUCTOR_FAILURE_LEGACY_PARITY_OK'
 $normalList = Join-Path $output $(if ($IsWindows) { 'normal-list.exe' } else { 'normal-list' })
 dotnet $compiler legacy-compile (Join-Path $PSScriptRoot 'constructor-reference-list.xps') -o $normalList --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal List constructor compilation failed.' }
