@@ -68,7 +68,12 @@ jobs:
           if ($p2.ExitCode -ne 0) { throw "Second concurrent run failed: $out2 $err2" }
           if ($out1 -notmatch 'DEBUGGING=False' -or $out2 -notmatch 'DEBUGGING=False') { throw "Concurrent runs did not both execute successfully" }
 
-          $status1 = Invoke-XPScript @('daemon','status')
+          $status1 = ''
+          for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            $status1 = Invoke-XPScript @('daemon','status')
+            if ($status1 -match 'PID ([0-9]+)') { break }
+            Start-Sleep -Milliseconds 250
+          }
           if ($status1 -notmatch 'PID ([0-9]+)') { throw "Concurrent cold start did not leave a daemon running: $status1" }
           $pid1 = $Matches[1]
           Start-Sleep -Milliseconds 250
