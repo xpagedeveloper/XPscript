@@ -483,7 +483,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
       - [ ] Define Optional omission behavior and failure cleanup for XPImage procedure/method parameters.
         - [x] Verify omitted Optional XPImage parameters arrive as `Nothing` in ordinary procedures and class methods. `xpimage-parameter-runtime-next.xps` covers both call forms; Linux run `41475005479` passed on commit `f651e7da6`.
         - [x] Verify supplied Optional XPImage values follow the established ByVal clone/borrowed-input ownership contract. `xpimage-parameter-runtime-next.xps` verifies procedure and class-method mutation isolation; Linux run `41478591018` passed on commit `3352387d8`.
-        - [ ] Verify Optional XPImage procedure/method failure clears the target and cleans newly owned temporaries.
+        - [x] Verify Optional XPImage procedure/method failure clears the target and cleans newly owned temporaries. `xpimage-parameter-runtime-next.xps` covers explicit Optional `ByRef` failures for procedures and class methods; Linux run `41483785779` passed on commit `e1bbd5a36`.
       - [ ] Add focused CLI/MCP and Linux regressions for the supported XPImage procedure/method parameter matrix before removing XPS3001 guards.
     - [ ] Migrate ordinary class-method Object/user-reference signatures that remain outside constructor-specific binding, with typed alias/replacement and failure-cleanup coverage.
     - [ ] Audit remaining unknown/native accessor and compatibility-module signature guards, retaining explicit diagnostics where the contract is intentionally unsupported.
