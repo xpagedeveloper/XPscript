@@ -516,7 +516,9 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Restore MCP probe
-        run: dotnet restore tests/CompilerMcpProtocolProbe/CompilerMcpProtocolProbe.csproj
+        run: |
+          dotnet restore src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet restore tests/CompilerMcpProtocolProbe/CompilerMcpProtocolProbe.csproj
       - name: Build compiler and MCP probe
         run: |
           dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore -p:GenerateRuntimeConfigurationFiles=true -p:UseAppHost=true
