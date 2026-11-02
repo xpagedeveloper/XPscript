@@ -20,6 +20,11 @@ Class ImageOwner
         Set value = New XPImage(8, 2)
         Error 4987, "XPImage class-method ByRef failure"
     End Sub
+
+    Public Sub FailOptional(Optional ByRef value As XPImage = Nothing)
+        Set value = New XPImage(10, 2)
+        Error 4989, "Optional XPImage class-method failure"
+    End Sub
 End Class
 
 Sub AcceptImage(ByVal value As XPImage)
@@ -38,6 +43,11 @@ End Sub
 Sub FailImage(ByRef value As XPImage)
     Set value = New XPImage(9, 1)
     Error 4986, "XPImage procedure ByRef failure"
+End Sub
+
+Sub FailOptionalImage(Optional ByRef value As XPImage = Nothing)
+    Set value = New XPImage(11, 2)
+    Error 4988, "Optional XPImage procedure failure"
 End Sub
 
 Sub Main()
@@ -80,9 +90,26 @@ Sub Main()
     If supplied.Width <> 6 Or supplied.Height <> 4 Then Error 6, "supplied Optional procedure XPImage aliased caller"
     Call owner.AcceptOptionalClone(supplied)
     If supplied.Width <> 6 Or supplied.Height <> 4 Then Error 6, "supplied Optional class-method XPImage aliased caller"
+    Dim optionalFailure As New XPImage(6, 4)
+    On Error Resume Next
+    Call FailOptionalImage(optionalFailure)
+    Dim optionalProcedureFailure As Long
+    optionalProcedureFailure = Err
+    Err.Clear
+    On Error GoTo 0
+    If optionalProcedureFailure = 0 Or Not (optionalFailure Is Nothing) Then Error 6, "Optional XPImage procedure failure retained target"
+    Set optionalFailure = New XPImage(6, 4)
+    On Error Resume Next
+    Call owner.FailOptional(optionalFailure)
+    Dim optionalMethodFailure As Long
+    optionalMethodFailure = Err
+    Err.Clear
+    On Error GoTo 0
+    If optionalMethodFailure = 0 Or Not (optionalFailure Is Nothing) Then Error 6, "Optional XPImage class-method failure retained target"
     Print "XPIMAGE_BYVAL_PARAMETER_CLONE_OK"
     Print "XPIMAGE_BYREF_METHOD_REPLACEMENT_OK"
     Print "XPIMAGE_BYREF_FAILURE_CLEAR_OK"
     Print "XPIMAGE_OPTIONAL_PARAMETER_NOTHING_OK"
     Print "XPIMAGE_OPTIONAL_PARAMETER_CLONE_OK"
+    Print "XPIMAGE_OPTIONAL_FAILURE_CLEAR_OK"
 End Sub
