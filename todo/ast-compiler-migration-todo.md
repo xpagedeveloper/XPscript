@@ -488,7 +488,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
         - [x] Verify the CLI runner checks the complete XPImage Optional parameter matrix. `run-ast-cli.ps1` now checks omission, ByVal cloning and failure cleanup; Linux run `41486010058` passed on commit `67c89e34b`.
         - [x] Verify the MCP probe compiles and executes the complete XPImage Optional parameter matrix on Linux. `CompilerMcpProtocolProbe` checks all six runtime markers; Linux run `41497980829` passed on commit `02e3396c6`.
     - [ ] Migrate ordinary class-method Object/user-reference signatures that remain outside constructor-specific binding, with typed alias/replacement and failure-cleanup coverage.
-      - [ ] Inventory ordinary class-method Object/user-reference signatures still blocked by XPS3001 and select one bounded signature family.
+      - [x] Inventory ordinary class-method Object/user-reference signatures still blocked by XPS3001 and select one bounded signature family. Generic `Object`, concrete user classes and the registered `XPJson*` native family are already covered; the remaining explicit compatibility-family gap is legacy `XPJSONNavigator`/`XPJSONObject`/`XPJSONArray`/`XPJSONElement`, which is not in `ClassMethodNativeTypeNames` and remains a deliberate XPS3001 boundary.
       - [ ] Define and test ByVal ownership/alias behavior for the selected Object/user-reference family.
       - [ ] Define and test ByRef replacement, failure cleanup and copy-back for the selected family.
     - [ ] Audit remaining unknown/native accessor and compatibility-module signature guards, retaining explicit diagnostics where the contract is intentionally unsupported.
