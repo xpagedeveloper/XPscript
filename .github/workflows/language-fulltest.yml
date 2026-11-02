@@ -1,6 +1,8 @@
 name: Language FullTest
 
 on:
+  push:
+    branches: [investigate-ast-compiler]
   pull_request:
     branches: [main]
   push:
