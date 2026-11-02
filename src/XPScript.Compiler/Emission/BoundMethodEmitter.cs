@@ -53,11 +53,19 @@ public sealed class BoundMethodEmitter
                 output.Append("    ").Append(parameter.Name).Append(" = __imageScope.Own(").Append(parameter.Name).Append("?.Clone());\n");
                 output.Append("    __imageScope.Observe(() => ").Append(parameter.Name).Append(");\n");
             }
+            output.Append("    try\n    {\n");
         }
         foreach (var line in body.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-            output.Append("    ").Append(line).Append('\n');
+            output.Append(_statements.ImageScopeEnabled ? "        " : "    ").Append(line).Append('\n');
         if (returnType != typeof(void) && BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
-            output.Append("    return default!;\n");
+            output.Append(_statements.ImageScopeEnabled ? "        " : "    ").Append("return default!;\n");
+        if (_statements.ImageScopeEnabled)
+        {
+            output.Append("    }\n    catch\n    {\n");
+            foreach (var parameter in parameters.Where(p => p.IsByRef && AstImageSupport.IsImage(p.SemanticType?.Name)))
+                output.Append("        ").Append(parameter.Name).Append(" = null;\n");
+            output.Append("        throw;\n    }\n");
+        }
         output.Append("}\n");
         return output.ToString();
     }
