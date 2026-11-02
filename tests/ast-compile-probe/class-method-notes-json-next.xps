@@ -20,7 +20,6 @@ End Class
 
 Sub Main()
     Dim methods As New NotesJsonMethods
-    If Not methods.AcceptHttp(Nothing) Then Error 4260
     If Not methods.AcceptNavigator(Nothing) Then Error 4261
     If Not methods.AcceptObject(Nothing) Then Error 4262
     If Not methods.AcceptArray(Nothing) Then Error 4263

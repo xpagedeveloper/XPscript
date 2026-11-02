@@ -1409,11 +1409,11 @@ $notesExtendedClassMethodResult = dotnet (Join-Path $notesExtendedClassMethodOut
 if ($LASTEXITCODE -ne 0 -or ($notesExtendedClassMethodResult -join "`n") -ne 'AST_NOTES_EXTENDED_CLASS_METHOD_OK') { throw 'AST extended Notes class-method execution failed.' }
 Write-Host 'AST_NOTES_EXTENDED_CLASS_METHOD_OK'
 $notesJsonClassMethodOutput = Join-Path $output 'class-method-notes-json-next'
-$notesJsonClassMethodDiagnostic = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-json-next.xps') -o $notesJsonClassMethodOutput --runtime=false --debug 2>&1 | Out-String
-if ($LASTEXITCODE -eq 0 -or $notesJsonClassMethodDiagnostic -notmatch '(?i)XPJSONNavigator|unsupported type|legacy') {
-    throw 'AST Notes JSON compatibility types were incorrectly accepted as an AST surface.'
-}
-Write-Host 'AST_NOTES_JSON_EXCLUDED_OK'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-json-next.xps') -o $notesJsonClassMethodOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST JSON alias class-method compilation failed.' }
+$notesJsonClassMethodResult = dotnet (Join-Path $notesJsonClassMethodOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($notesJsonClassMethodResult -join "`n") -ne 'AST_NOTES_JSON_CLASS_METHODS_OK') { throw 'AST JSON alias class-method execution failed.' }
+Write-Host 'AST_NOTES_JSON_CLASS_METHODS_OK'
 $jsonLegacySpellingOutput = Join-Path $output 'class-method-json-legacy-spelling-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-json-legacy-spelling-next.xps') -o $jsonLegacySpellingOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST JSON legacy spelling class-method compilation failed.' }

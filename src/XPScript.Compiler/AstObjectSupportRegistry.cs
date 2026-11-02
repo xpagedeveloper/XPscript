@@ -115,7 +115,7 @@ internal static class AstObjectSupportRegistry
         "NetworkPortExposureInfo", "XPAttachmentCollection", "XPShellResult", "XPPathValue", "XPFileInfoValue",
         "XPHttpDbSupabase", "XPHttpDbDominoRest", "XPJsonSchema", "XPJsonValidationResult",
         "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall",
-        "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "NotesHTTPRequest",
+        "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJsonNavigator", "NotesHTTPRequest",
         "XPWorksheet", "XPCell", "XPRange",
     }.Concat(NotesRuntimeTypes.Keys).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
