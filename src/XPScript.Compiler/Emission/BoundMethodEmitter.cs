@@ -21,6 +21,9 @@ public sealed class BoundMethodEmitter
         ArgumentNullException.ThrowIfNull(returnType);
         ArgumentNullException.ThrowIfNull(statements);
         ArgumentNullException.ThrowIfNull(parameters);
+        var clearByRefImageOnFailure = !methodName.StartsWith("__xps_constructor", StringComparison.OrdinalIgnoreCase) &&
+            !methodName.StartsWith("__xps_destructor", StringComparison.OrdinalIgnoreCase) &&
+            !methodName.StartsWith("__xps_property_", StringComparison.OrdinalIgnoreCase);
 
         string body;
         _statements.ImageScopeEnabled = parameters.Any(p => AstImageSupport.IsImage(p.SemanticType?.Name)) ||
@@ -62,8 +65,9 @@ public sealed class BoundMethodEmitter
         if (_statements.ImageScopeEnabled)
         {
             output.Append("    }\n    catch\n    {\n");
-            foreach (var parameter in parameters.Where(p => p.IsByRef && AstImageSupport.IsImage(p.SemanticType?.Name)))
-                output.Append("        ").Append(parameter.Name).Append(" = null;\n");
+            if (clearByRefImageOnFailure)
+                foreach (var parameter in parameters.Where(p => p.IsByRef && AstImageSupport.IsImage(p.SemanticType?.Name)))
+                    output.Append("        ").Append(parameter.Name).Append(" = null;\n");
             output.Append("        throw;\n    }\n");
         }
         output.Append("}\n");
