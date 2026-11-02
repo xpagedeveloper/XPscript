@@ -2,7 +2,7 @@ name: Language FullTest
 
 on:
   push:
-    branches: [main, investigate-ast-compiler]
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
