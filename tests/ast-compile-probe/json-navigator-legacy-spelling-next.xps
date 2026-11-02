@@ -1,0 +1,14 @@
+Option Declare
+
+Sub Main()
+    Dim json As New XPJSONNavigator("{""name"":""Fredrik""}")
+    Dim element As XPJSONElement
+    Set element = json.GetElementByName("name")
+    If element Is Nothing Or CStr(element.Value) <> "Fredrik" Then Error 4300
+    element.Value = "Ada"
+    If CStr(json.GetElementByPointer("/name").Value) <> "Ada" Then Error 4301
+    Call json.AppendObject("child")
+    If json.GetNextElement() Is Nothing Then Error 4302
+    If InStr(json.Stringify(), "child") = 0 Then Error 4303
+    Print "AST_JSON_NAVIGATOR_CANONICAL_OK"
+End Sub

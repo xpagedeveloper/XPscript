@@ -250,5 +250,67 @@ internal sealed class XPScriptJsonElement
     public XPScriptJsonArray? AsArray() => Node is System.Text.Json.Nodes.JsonArray array ? new(array) : null;
     public object? ToObject(object? contract) => XPScriptNativeJson.ToObject(this, contract);
 }
+
+internal sealed class XPScriptJsonNavigator
+{
+    private int _cursor = -1;
+    internal System.Text.Json.Nodes.JsonNode Root { get; private set; }
+    public bool PreferJSONNavigator { get; set; } = true;
+    public bool PreferUTF8 { get; set; } = true;
+    public XPScriptJsonNavigator(object? input = null)
+    {
+        if (input is null || XPScriptNullRuntime.IsNull(input)) Root = new System.Text.Json.Nodes.JsonObject();
+        else if (input is XPScriptJsonNavigator navigator) Root = navigator.Root.DeepClone();
+        else if (input is XPScriptJsonDocument document) Root = document.Node?.DeepClone() ?? new System.Text.Json.Nodes.JsonObject();
+        else Root = XPScriptNativeJson.Parse(input).Node ?? new System.Text.Json.Nodes.JsonObject();
+    }
+    public XPScriptJsonElement? GetElementByName(object? name) => Root is System.Text.Json.Nodes.JsonObject obj && obj.ContainsKey(XPScriptRuntime.CStr(name)) ? ElementFromObject(obj, XPScriptRuntime.CStr(name)) : null;
+    public XPScriptJsonElement? GetElementByPointer(object? pointer)
+    {
+        var text = XPScriptRuntime.CStr(pointer); if (text.Length == 0) return new XPScriptJsonElement(Root, "", value => Root = value ?? new System.Text.Json.Nodes.JsonObject());
+        if (!text.StartsWith("/", StringComparison.Ordinal)) throw new XPScriptRuntimeException(5, "JSON Pointer must start with '/'.");
+        System.Text.Json.Nodes.JsonNode? current = Root, parent = null; string? property = null; int? index = null;
+        foreach (var raw in text.Split('/').Skip(1))
+        {
+            var token = raw.Replace("~1", "/", StringComparison.Ordinal).Replace("~0", "~", StringComparison.Ordinal); parent = current; property = null; index = null;
+            if (current is System.Text.Json.Nodes.JsonObject obj) { if (!obj.TryGetPropertyValue(token, out current)) return null; property = token; }
+            else if (current is System.Text.Json.Nodes.JsonArray arr && int.TryParse(token, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var i) && i >= 0 && i < arr.Count) { current = arr[i]; index = i; }
+            else return null;
+        }
+        if (parent is System.Text.Json.Nodes.JsonObject parentObject && property is not null) return ElementFromObject(parentObject, property);
+        if (parent is System.Text.Json.Nodes.JsonArray parentArray && index.HasValue) return ElementFromArray(parentArray, index.Value);
+        return new XPScriptJsonElement(current);
+    }
+    public XPScriptJsonElement? GetFirstElement() { _cursor = 0; return ElementAt(_cursor, true); }
+    public XPScriptJsonElement? GetNextElement() { _cursor++; return ElementAt(_cursor, true); }
+    public XPScriptJsonElement? GetNthElement(object? indexValue, object? suppressErrors = null)
+    {
+        var oneBased = XPScriptRuntime.CInt(indexValue); var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors); var size = Root is System.Text.Json.Nodes.JsonObject o ? o.Count : Root is System.Text.Json.Nodes.JsonArray a ? a.Count : 1;
+        if (oneBased < 1 || oneBased > size) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); }
+        _cursor = oneBased - 1; return ElementAt(_cursor, false);
+    }
+    public string Stringify() => XPScriptNativeJson.Stringify(Root);
+    public XPScriptJsonElement AppendElement(object? value, object? name = null)
+    {
+        if (Root is System.Text.Json.Nodes.JsonObject obj) { var key = XPScriptRuntime.CStr(name); if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object elements require a name."); obj[key] = XPScriptNativeJson.ToNode(value); return ElementFromObject(obj, key); }
+        if (Root is System.Text.Json.Nodes.JsonArray arr) { arr.Add(XPScriptNativeJson.ToNode(value)); return ElementFromArray(arr, arr.Count - 1); }
+        throw new XPScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
+    }
+    public XPScriptJsonArray AppendArray(object? name = null) { var child = new System.Text.Json.Nodes.JsonArray(); AddChild(child, name); return new XPScriptJsonArray(child); }
+    public XPScriptJsonObject AppendObject(object? name = null) { var child = new System.Text.Json.Nodes.JsonObject(); AddChild(child, name); return new XPScriptJsonObject(child); }
+    private void AddChild(System.Text.Json.Nodes.JsonNode child, object? name)
+    {
+        if (Root is System.Text.Json.Nodes.JsonObject obj) { var key = XPScriptRuntime.CStr(name); if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object children require a name."); obj[key] = child; }
+        else if (Root is System.Text.Json.Nodes.JsonArray arr) arr.Add(child); else throw new XPScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
+    }
+    private XPScriptJsonElement? ElementAt(int index, bool suppress)
+    {
+        if (Root is System.Text.Json.Nodes.JsonObject obj) { if (index < 0 || index >= obj.Count) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); } return ElementFromObject(obj, obj.ElementAt(index).Key); }
+        if (Root is System.Text.Json.Nodes.JsonArray arr) { if (index < 0 || index >= arr.Count) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); } return ElementFromArray(arr, index); }
+        return index == 0 ? new XPScriptJsonElement(Root, "", value => Root = value ?? new System.Text.Json.Nodes.JsonObject()) : null;
+    }
+    private static XPScriptJsonElement ElementFromObject(System.Text.Json.Nodes.JsonObject obj, string key) => new(obj[key], key, value => obj[key] = value);
+    private static XPScriptJsonElement ElementFromArray(System.Text.Json.Nodes.JsonArray arr, int index) => new(arr[index], "", value => arr[index] = value);
+}
 """;
 }

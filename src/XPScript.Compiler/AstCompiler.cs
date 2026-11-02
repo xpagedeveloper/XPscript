@@ -187,15 +187,6 @@ public static class AstCompiler
         ValidateAstAiCallbacks(fullSource);
         var runtimeFeatures = RuntimeFeatures.Detect(fullSource);
         var usesAi = runtimeFeatures.Ai;
-        // XPJSONNavigator remains a legacy-only surface until its AST-backed
-        // navigator is implemented. The JSON object/array/element spellings
-        // are accepted by AST and bind to the canonical XPJson* runtime types.
-        if (Regex.IsMatch(source, @"\bXPJSONNavigator\b", RegexOptions.IgnoreCase))
-            RejectUnsupported(
-                sourcePath,
-                source,
-                @"\bXPJSONNavigator\b",
-                "XPJSONNavigator is not yet implemented by the AST compiler.");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
             if (definition!.Route == AstObjectSupportRegistry.CompilationRoute.LegacyFallback)

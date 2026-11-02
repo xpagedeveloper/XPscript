@@ -127,7 +127,7 @@ public sealed class BoundExpressionEmitter
             $"new XPScriptDbSupabase({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonArray", StringComparison.OrdinalIgnoreCase) => "new XpJsonArray()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase) => "new XpJsonDocument()",
-        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJSONNavigator", StringComparison.OrdinalIgnoreCase) => $"new XPJSONNavigator({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJSONNavigator", StringComparison.OrdinalIgnoreCase) => @new.Arguments.Count == 0 ? "new XPScriptJsonNavigator()" : $"new XPScriptJsonNavigator({Emit(@new.Arguments[0])})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) || @new.SemanticType.Name.Equals("XPNotesHTTPRequest", StringComparison.OrdinalIgnoreCase) => $"new NotesHTTPRequest({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJSONObject", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeJson.CreateObject()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPJSONArray", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeJson.CreateArray()",
@@ -175,6 +175,7 @@ public sealed class BoundExpressionEmitter
         "XPJSONOBJECT" => "XPScriptJsonObject",
         "XPJSONARRAY" => "XPScriptJsonArray",
         "XPJSONELEMENT" => "XPScriptJsonElement",
+        "XPJSONNAVIGATOR" => "XPScriptJsonNavigator",
         "XPJSONSCHEMA" => "XPScriptJsonSchema",
         "XPAI" => "XPScriptAi",
         "XPAIRESPONSE" => "XPScriptAiResponse",
@@ -192,7 +193,7 @@ public sealed class BoundExpressionEmitter
     private static bool IsJsonCompatibilityType(string name) =>
         name.StartsWith("XPJson", StringComparison.OrdinalIgnoreCase) ||
         name.StartsWith("XPJSON", StringComparison.OrdinalIgnoreCase) ||
-        name is "NotesHTTPRequest" or "XPNotesHTTPRequest" or "XPJSONNavigator";
+        name is "NotesHTTPRequest" or "XPNotesHTTPRequest";
 
     private bool TryGetSystemQualifiedName(BoundMemberAccessExpression member, out string name)
     {

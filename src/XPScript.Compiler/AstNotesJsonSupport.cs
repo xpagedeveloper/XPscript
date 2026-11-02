@@ -7,13 +7,13 @@ namespace XPScript.Compiler;
 
 internal static class AstNotesJsonSupport
 {
-    internal static readonly string[] Names = ["NotesHTTPRequest", "XPNotesHTTPRequest", "XPJSONNavigator"];
+    internal static readonly string[] Names = ["NotesHTTPRequest", "XPNotesHTTPRequest"];
     private static readonly ClassDeclarationSyntax[] Classes = CSharpSyntaxTree.ParseText(JsonHttpCompatibilityRuntimeSource.Code).GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>().ToArray();
     // The three JSON object/array/element spellings are resolved by the
     // case-insensitive native AST catalog. Only NotesHTTPRequest and
-    // XPJSONNavigator remain compatibility-only surfaces here.
+    // XPJSONNavigator is implemented by the canonical AST JSON runtime.
     internal static readonly AstNativeObjectSurface.Member[] Members = AstNativeObjectSurface
-        .ReadMembers(Classes, ["NotesHTTPRequest", "XPJSONNavigator"], LanguageType)
+        .ReadMembers(Classes, ["NotesHTTPRequest"], LanguageType)
         .Concat(AstNativeObjectSurface.ReadMembers(Classes, ["NotesHTTPRequest"], LanguageType)
             .Select(member => member with { Owner = "XPNotesHTTPRequest" }))
         .ToArray();
@@ -21,7 +21,7 @@ internal static class AstNotesJsonSupport
     internal static string? RuntimeType(string name) =>
         name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ||
         name.Equals("XPNotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ||
-        name.Equals("XPJSONNavigator", StringComparison.OrdinalIgnoreCase)
+        false
         ? name.Equals("XPNotesHTTPRequest", StringComparison.OrdinalIgnoreCase)
             ? "NotesHTTPRequest"
             : Names.First(n => n.Equals(name, StringComparison.OrdinalIgnoreCase))
@@ -30,7 +30,7 @@ internal static class AstNotesJsonSupport
     // The language is case-insensitive; all-caps XPJSON object/array/element
     // spellings therefore resolve to the canonical native AST symbols.
     internal static bool Uses(string source) =>
-        Names.Where(name => name is "NotesHTTPRequest" or "XPNotesHTTPRequest" or "XPJSONNavigator")
+        Names.Where(name => name is "NotesHTTPRequest" or "XPNotesHTTPRequest")
             .Any(name => AstObjectSupportRegistry.UsesObject(source, name)) ||
         false;
     private static string LanguageType(string type) => type.TrimEnd('?') switch

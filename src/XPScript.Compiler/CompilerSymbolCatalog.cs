@@ -118,6 +118,13 @@ public static class CompilerSymbolCatalog
             Define("XPJsonElement.Name", "method", "XPJsonElement.Name As String", [], "String", "api.XPJsonElement.Name"),
             Define("XPJsonElement.Value", "method", "XPJsonElement.Value As Variant", [], "Variant", "api.XPJsonElement.Value"),
             Define("XPJsonElement.Copy", "method", "XPJsonElement.Copy(source As XPJsonElement)", [new("source", "XPJsonElement")], null, "api.XPJsonElement.Copy"),
+            Define("XPJsonNavigator", "class", "XPJsonNavigator", [], null, "api.XPJsonNavigator"),
+            Define("XPJsonNavigator.GetElementByName", "method", "XPJsonNavigator.GetElementByName(name As String) As XPJsonElement", [new("name", "String")], "XPJsonElement", "api.XPJsonNavigator.GetElementByName"),
+            Define("XPJsonNavigator.GetElementByPointer", "method", "XPJsonNavigator.GetElementByPointer(pointer As String) As XPJsonElement", [new("pointer", "String")], "XPJsonElement", "api.XPJsonNavigator.GetElementByPointer"),
+            Define("XPJsonNavigator.GetFirstElement", "method", "XPJsonNavigator.GetFirstElement() As XPJsonElement", [], "XPJsonElement", "api.XPJsonNavigator.GetFirstElement"),
+            Define("XPJsonNavigator.GetNextElement", "method", "XPJsonNavigator.GetNextElement() As XPJsonElement", [], "XPJsonElement", "api.XPJsonNavigator.GetNextElement"),
+            Define("XPJsonNavigator.Stringify", "method", "XPJsonNavigator.Stringify() As String", [], "String", "api.XPJsonNavigator.Stringify"),
+            Define("XPJsonNavigator.AppendObject", "method", "XPJsonNavigator.AppendObject(name As String) As XPJsonObject", [new("name", "String")], "XPJsonObject", "api.XPJsonNavigator.AppendObject"),
             Define("XPImage", "class", "XPImage", [], null, "api.XPImage"),
             // Web-host globals are injected by XpsWebCompiler after AST binding.
             // Keep their documented members in the shared catalog so route
