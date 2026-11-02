@@ -51,8 +51,7 @@ public readonly record struct RuntimeFeatures(
         return new RuntimeFeatures(
             Http: PreprocessorFeatureGate.ContainsTypeReference(code, "XPHttpClient", "XPHttpResponse", "NotesHTTPRequest", "XPNotesHTTPRequest"),
             Json: PreprocessorFeatureGate.ContainsTypeReference(
-                  code, "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJSONNavigator",
-                      "XPJSONObject", "XPJSONArray", "XPJSONElement") ||
+                  code, "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJSONNavigator") ||
                   PreprocessorFeatureGate.ContainsCall(
                       code, "XPJsonDocument.Parse", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode"),
             JsonSchema: jsonSchema || PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm"),

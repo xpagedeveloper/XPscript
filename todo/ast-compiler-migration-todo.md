@@ -492,6 +492,7 @@ Reverification on 2026-10-08 of the five most recently completed implementation 
       - [ ] Define and test ByVal ownership/alias behavior for the selected Object/user-reference family.
         Design resolved: legacy `XPJSON*` types migrate into the shared AST JSON object model; they must not retain a separate compatibility-only implementation. The modern AST model becomes canonical, and the legacy API surface is migrated onto it.
         - [ ] Migrate `XPJSONElement` onto the canonical AST JSON object model (canonical node storage, mutable `Value`/`Copy`, and element metadata).
+          - [x] AST now accepts the legacy all-caps spelling for `XPJSONObject`, `XPJSONArray` and `XPJSONElement` as aliases of the canonical `XPJson*` runtime types; legacy compilation remains on its compatibility runtime. Class-method signature and Nothing-binding regression added. `XPJSONNavigator` remains a separate open item.
         - [ ] Migrate `XPJSONObject` onto the canonical AST JSON object model (element lookup/append/copy and cursor semantics).
         - [ ] Migrate `XPJSONArray` onto the canonical AST JSON object model (element lookup/append/copy and cursor semantics).
         - [ ] Build `XPJSONNavigator` as an AST-backed canonical navigator over the shared JSON model.

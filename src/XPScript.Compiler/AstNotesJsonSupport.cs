@@ -7,22 +7,18 @@ namespace XPScript.Compiler;
 
 internal static class AstNotesJsonSupport
 {
-    internal static readonly string[] Names = ["NotesHTTPRequest", "XPNotesHTTPRequest", "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement"];
+    internal static readonly string[] Names = ["NotesHTTPRequest", "XPNotesHTTPRequest", "XPJSONNavigator"];
     private static readonly ClassDeclarationSyntax[] Classes = CSharpSyntaxTree.ParseText(JsonHttpCompatibilityRuntimeSource.Code).GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>().ToArray();
-    // XPScript identifiers are case-insensitive, so XPJSONObject/XPJSONArray/
-    // XPJSONElement collide with the native XPJsonObject/XPJsonArray/
-    // XPJsonElement symbols. Keep the native JSON surface authoritative for
-    // those overlapping names; NotesHTTPRequest and XPJSONNavigator remain
-    // compatibility-only surfaces. Do not import XPJSONElement either: its
-    // case-insensitive symbol key is the same as the native XPJsonElement,
-    // and the XPJson surface is authoritative in AST compilation.
+    // The three JSON object/array/element spellings are resolved by the
+    // case-insensitive native AST catalog. Only NotesHTTPRequest and
+    // XPJSONNavigator remain compatibility-only surfaces here.
     internal static readonly AstNativeObjectSurface.Member[] Members = AstNativeObjectSurface
         .ReadMembers(Classes, ["NotesHTTPRequest", "XPJSONNavigator"], LanguageType)
         .Concat(AstNativeObjectSurface.ReadMembers(Classes, ["NotesHTTPRequest"], LanguageType)
             .Select(member => member with { Owner = "XPNotesHTTPRequest" }))
         .ToArray();
     internal static void Import(SymbolTable symbols) => AstNativeObjectSurface.Import(symbols, Members, LanguageType);
-    internal static string? RuntimeType(string name) => name is "XPJSONObject" or "XPJSONArray" or "XPJSONElement" ||
+    internal static string? RuntimeType(string name) =>
         name.Equals("NotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ||
         name.Equals("XPNotesHTTPRequest", StringComparison.OrdinalIgnoreCase) ||
         name.Equals("XPJSONNavigator", StringComparison.OrdinalIgnoreCase)
@@ -30,14 +26,13 @@ internal static class AstNotesJsonSupport
             ? "NotesHTTPRequest"
             : Names.First(n => n.Equals(name, StringComparison.OrdinalIgnoreCase))
         : null;
-    internal static bool IsCompatibilityType(string name) => name is "XPJSONObject" or "XPJSONArray" or "XPJSONElement";
-    // Native XPJsonObject/XPJsonArray/XPJsonElement use PascalCase. Only the
-    // explicitly all-caps compatibility spellings should import the legacy
-    // JSON HTTP constructors; the language itself remains case-insensitive.
+    internal static bool IsCompatibilityType(string name) => false;
+    // The language is case-insensitive; all-caps XPJSON object/array/element
+    // spellings therefore resolve to the canonical native AST symbols.
     internal static bool Uses(string source) =>
         Names.Where(name => name is "NotesHTTPRequest" or "XPNotesHTTPRequest" or "XPJSONNavigator")
             .Any(name => AstObjectSupportRegistry.UsesObject(source, name)) ||
-        Regex.IsMatch(source, @"\b(?:XPJSONObject|XPJSONArray|XPJSONElement)\b");
+        false;
     private static string LanguageType(string type) => type.TrimEnd('?') switch
     {
         "object" or "System.Object" => "Variant",

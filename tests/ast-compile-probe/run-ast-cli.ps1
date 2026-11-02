@@ -1414,6 +1414,12 @@ if ($LASTEXITCODE -eq 0 -or $notesJsonClassMethodDiagnostic -notmatch '(?i)XPJSO
     throw 'AST Notes JSON compatibility types were incorrectly accepted as an AST surface.'
 }
 Write-Host 'AST_NOTES_JSON_EXCLUDED_OK'
+$jsonLegacySpellingOutput = Join-Path $output 'class-method-json-legacy-spelling-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-json-legacy-spelling-next.xps') -o $jsonLegacySpellingOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST JSON legacy spelling class-method compilation failed.' }
+$jsonLegacySpellingResult = dotnet (Join-Path $jsonLegacySpellingOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($jsonLegacySpellingResult -join "`n") -ne 'AST_JSON_LEGACY_SPELLINGS_OK') { throw 'AST JSON legacy spelling class-method execution failed.' }
+Write-Host 'AST_JSON_LEGACY_SPELLINGS_OK'
 $httpRequestClassMethodOutput = Join-Path $output 'class-method-http-request-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-http-request-next.xps') -o $httpRequestClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST HTTP request class-method compilation failed.' }

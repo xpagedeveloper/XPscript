@@ -224,12 +224,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private (Type RuntimeType, XpTypeSymbol SemanticType) ResolveDimType(string? name, bool isArray = false, int? arrayLength = null, bool isList = false, int arrayRank = 1)
     {
-        // XPJSONElement is a deliberately case-sensitive compatibility spelling.
-        // The language is case-insensitive, so resolve this exact Notes JSON name
-        // before the native XPJsonElement TypeSymbol can win the lookup.
-        var compatibilityType = name is "XPJSONObject" or "XPJSONArray" or "XPJSONElement"
-            ? XpTypeSymbol.User(name)
-            : name?.Equals("Path", StringComparison.OrdinalIgnoreCase) == true
+        var compatibilityType = name?.Equals("Path", StringComparison.OrdinalIgnoreCase) == true
                 ? XpTypeSymbol.User("XPPathValue")
             : name?.Equals("XPNotesHTTPRequest", StringComparison.OrdinalIgnoreCase) == true
                 ? XpTypeSymbol.User("NotesHTTPRequest")

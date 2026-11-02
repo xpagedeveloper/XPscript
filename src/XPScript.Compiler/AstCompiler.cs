@@ -187,14 +187,15 @@ public static class AstCompiler
         ValidateAstAiCallbacks(fullSource);
         var runtimeFeatures = RuntimeFeatures.Detect(fullSource);
         var usesAi = runtimeFeatures.Ai;
-        // The native AST surface is PascalCase (XPJson*). Only the explicit
-        // all-caps compatibility spellings are legacy-only.
-        if (Regex.IsMatch(source, @"\bXPJSON(?:Navigator|Object|Array|Element)\b"))
+        // XPJSONNavigator remains a legacy-only surface until its AST-backed
+        // navigator is implemented. The JSON object/array/element spellings
+        // are accepted by AST and bind to the canonical XPJson* runtime types.
+        if (Regex.IsMatch(source, @"\bXPJSONNavigator\b", RegexOptions.IgnoreCase))
             RejectUnsupported(
                 sourcePath,
                 source,
-                @"\bXPJSON(?:Navigator|Object|Array|Element)\b",
-                "The all-caps XPJSON compatibility objects are legacy-only. Use the AST-supported XPJsonNavigator/XPJsonObject/XPJsonArray/XPJsonElement surface instead.");
+                @"\bXPJSONNavigator\b",
+                "XPJSONNavigator is not yet implemented by the AST compiler.");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
             if (definition!.Route == AstObjectSupportRegistry.CompilationRoute.LegacyFallback)
