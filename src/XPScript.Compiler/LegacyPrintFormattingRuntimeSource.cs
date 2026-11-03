@@ -1,9 +1,9 @@
 namespace XPScript.Compiler;
 
-internal static class HclPrintFormattingRuntimeSource
+internal static class LegacyPrintFormattingRuntimeSource
 {
     public const string Code = """
-internal static class LSHclPrintRuntime
+internal static class LSLegacyPrintRuntime
 {
     internal sealed record Part(string Kind, object? Value);
 

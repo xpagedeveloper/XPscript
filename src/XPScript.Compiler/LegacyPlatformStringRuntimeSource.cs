@@ -1,9 +1,9 @@
 namespace XPScript.Compiler;
 
-internal static class HclPlatformStringRuntimeSource
+internal static class LegacyPlatformStringRuntimeSource
 {
     public const string Code = """
-internal static class LSHclPlatformStringRuntime
+internal static class LSLegacyPlatformStringRuntime
 {
     private const System.Reflection.BindingFlags StaticAny = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
 
@@ -11,7 +11,7 @@ internal static class LSHclPlatformStringRuntime
     {
         if (XPScriptNullRuntime.IsNull(value)) throw new XPScriptRuntimeException(94, "Invalid use of Null.");
         if (value is string text) return PlatformEncoding().GetByteCount(text);
-        return LSHclSelectedRuntime.LenB(value);
+        return LSLegacySelectedRuntime.LenB(value);
     }
 
     public static string LeftBP(object? value, object? countValue)

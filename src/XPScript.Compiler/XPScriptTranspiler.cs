@@ -110,7 +110,7 @@ public sealed partial class XPScriptTranspiler
         source = new IfLayoutPreprocessor().Transform(source);
         source = new ParameterlessProcedureHeaderPreprocessor().Transform(source);
         source = new ParameterPassingPreprocessor().Transform(source);
-        source = new HclPrintFormattingPreprocessor().Transform(source, sourceName);
+        source = new LegacyPrintFormattingPreprocessor().Transform(source, sourceName);
         source = new StatementSeparatorPreprocessor().Transform(source, sourceName);
         source = new NativeLibraryPlatformPreprocessor(runtimeIdentifier).Transform(source);
         source = new NativeInteropSafetyPreprocessor().Transform(source);
@@ -174,7 +174,7 @@ public sealed partial class XPScriptTranspiler
         source = new StringConcatenationPreprocessor().Transform(source);
         source = new FileIoExtensionsPreprocessor().Transform(source);
         var protectedSource = ProtectStringLiterals(source, out var protectedStrings, sourceName);
-        protectedSource = new HclSelectedCompatibilityPreprocessor().Transform(protectedSource);
+        protectedSource = new LegacySelectedCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new CrossPlatformPreprocessor().Transform(protectedSource);
         protectedSource = new VariantIndexPreprocessor().Transform(protectedSource);
         protectedSource = new ApplicationObjectPreprocessor().Transform(protectedSource);
@@ -247,11 +247,11 @@ public sealed partial class XPScriptTranspiler
         generated += "\n\n" + OperatorArrayCompatibilityRuntimeSource.Code + "\n";
         generated += "\n\n" + TypeCoercionRuntimeSource.Code + "\n";
         generated += "\n\n" + VariantIndexRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclSelectedCompatibilityRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclArrayReplaceRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclPlatformStringRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclPrintFormattingRuntimeSource.Code + "\n";
-        generated += "\n\n" + HclIsDefinedCompatibilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + LegacySelectedCompatibilityRuntimeSource.Code + "\n";
+        generated += "\n\n" + LegacyArrayReplaceRuntimeSource.Code + "\n";
+        generated += "\n\n" + LegacyPlatformStringRuntimeSource.Code + "\n";
+        generated += "\n\n" + LegacyPrintFormattingRuntimeSource.Code + "\n";
+        generated += "\n\n" + LegacyIsDefinedCompatibilityRuntimeSource.Code + "\n";
         if (usesAi) { generated = new AiSessionRuntimePostProcessor().Transform(generated); generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated); }
         generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures).Transform(generated);
         generated = new BrowserWasmHttpCsrfPostProcessor(runtimeIdentifier).Transform(generated);

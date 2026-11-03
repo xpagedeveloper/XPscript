@@ -1,9 +1,9 @@
 namespace XPScript.Compiler;
 
-internal static class HclSelectedCompatibilityRuntimeSource
+internal static class LegacySelectedCompatibilityRuntimeSource
 {
     public static string Code => """
-internal static class LSHclSelectedRuntime
+internal static class LSLegacySelectedRuntime
 {
     private static Random _random = new();
     private static float _lastRandom;

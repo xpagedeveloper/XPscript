@@ -1,9 +1,9 @@
 namespace XPScript.Compiler;
 
-internal static class HclIsDefinedRuntimeSource
+internal static class LegacyIsDefinedRuntimeSource
 {
     public static string Code { get; } = """
-internal static class LSHclPlatformConstantRuntime
+internal static class LSLegacyPlatformConstantRuntime
 {
     public static bool IsDefined(object? value)
     {

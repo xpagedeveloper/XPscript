@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace XPScript.Compiler;
 
-internal sealed class HclPrintFormattingPreprocessor
+internal sealed class LegacyPrintFormattingPreprocessor
 {
     public string Transform(string source, string sourceName = "input.xps")
     {
@@ -24,14 +24,14 @@ internal sealed class HclPrintFormattingPreprocessor
             var filePrint = Regex.Match(line, @"^Print\s+#([^,]+)\s*,\s*(.*)$", RegexOptions.IgnoreCase);
             if (filePrint.Success)
             {
-                output.Add(indent + $"Print #{filePrint.Groups[1].Value}, LSHclPrintRuntime.Format({BuildParts(filePrint.Groups[2].Value, sourceName, lineIndex + 1, raw)})");
+                output.Add(indent + $"Print #{filePrint.Groups[1].Value}, LSLegacyPrintRuntime.Format({BuildParts(filePrint.Groups[2].Value, sourceName, lineIndex + 1, raw)})");
                 continue;
             }
 
             var consolePrint = Regex.Match(line, @"^Print\s+(.+)$", RegexOptions.IgnoreCase);
             if (consolePrint.Success)
             {
-                output.Add(indent + $"Print LSHclPrintRuntime.Format({BuildParts(consolePrint.Groups[1].Value, sourceName, lineIndex + 1, raw)})");
+                output.Add(indent + $"Print LSLegacyPrintRuntime.Format({BuildParts(consolePrint.Groups[1].Value, sourceName, lineIndex + 1, raw)})");
                 continue;
             }
 
@@ -94,18 +94,18 @@ internal sealed class HclPrintFormattingPreprocessor
             var spc = Regex.Match(part, @"^Spc\s*\((.*)\)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             if (spc.Success)
             {
-                transformed.Add("LSHclPrintRuntime.Spc(" + spc.Groups[1].Value + ")");
+                transformed.Add("LSLegacyPrintRuntime.Spc(" + spc.Groups[1].Value + ")");
                 continue;
             }
 
             var tab = Regex.Match(part, @"^Tab\s*\((.*)\)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             if (tab.Success)
             {
-                transformed.Add("LSHclPrintRuntime.Tab(" + tab.Groups[1].Value + ")");
+                transformed.Add("LSLegacyPrintRuntime.Tab(" + tab.Groups[1].Value + ")");
                 continue;
             }
 
-            transformed.Add("LSHclPrintRuntime.Text(" + part + ")");
+            transformed.Add("LSLegacyPrintRuntime.Text(" + part + ")");
         }
 
         if (transformed.Count == 0) throw SyntaxFailure("Print with Spc/Tab requires at least one print item.", sourceName, line, sourceLine, "print item");

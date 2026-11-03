@@ -1,9 +1,9 @@
 namespace XPScript.Compiler;
 
-internal static class HclArrayReplaceRuntimeSource
+internal static class LegacyArrayReplaceRuntimeSource
 {
     public const string Code = """
-internal static class LSHclArrayRuntime
+internal static class LSLegacyArrayRuntime
 {
     public static object ArrayReplace(object? sourceArray, object? compareArray, object? replaceArray)
     {
