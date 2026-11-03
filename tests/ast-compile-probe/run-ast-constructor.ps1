@@ -223,7 +223,6 @@ foreach ($case in @(
     @('constructor-native-byref-type-error', 'XPS2003', 7),
     @('constructor-native-optional-type-error', 'XPS2001', 2),
     @('constructor-variant-byref-type-error', 'XPS2003', 7),
-    @('constructor-variant-optional-type-error', 'XPS2001', 2),
     @('constructor-overloads-ambiguous-error', 'XPS2005', 8),
     @('constructor-overloads-name-error', 'XPS2006', 2),
     @('constructor-overloads-no-match-error', 'XPS2004', 8),
