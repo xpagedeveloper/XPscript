@@ -433,7 +433,7 @@ public sealed class BoundExpressionEmitter
             return value;
         return expression.Conversion.Kind switch
         {
-            ConversionKind.Identity or ConversionKind.EmptyToVariant or ConversionKind.NullToVariant or ConversionKind.NothingToObject => value,
+            ConversionKind.Identity or ConversionKind.EmptyToVariant or ConversionKind.NullToVariant or ConversionKind.NothingToVariant or ConversionKind.NothingToObject => value,
             ConversionKind.ReferenceUpcast => $"(({BoundMethodEmitter.CSharpType(expression.SemanticType)})({value}))",
             ConversionKind.NumericWidening => $"((double)({value}))",
             ConversionKind.ToVariant => $"((object)({value}))",

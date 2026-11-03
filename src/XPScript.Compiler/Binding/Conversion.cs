@@ -11,6 +11,7 @@ public enum ConversionKind
     ReferenceUpcast,
     EmptyToVariant,
     NullToVariant,
+    NothingToVariant,
     NothingToObject
 }
 
@@ -31,9 +32,12 @@ public readonly record struct Conversion(ConversionKind Kind)
 
         // EMPTY and NULL are Variant states. NOTHING is exclusively an object-reference state.
         if (source.IsNothing)
-            return target.IsObject || (target.RuntimeType == typeof(object) && !target.IsVariant && !target.IsEmpty && !target.IsNull && !target.IsNothing)
-                ? new Conversion(ConversionKind.NothingToObject)
-                : new Conversion(ConversionKind.None);
+            if (target.IsVariant)
+                return new Conversion(ConversionKind.NothingToVariant);
+            else
+                return target.IsObject || (target.RuntimeType == typeof(object) && !target.IsVariant && !target.IsEmpty && !target.IsNull && !target.IsNothing)
+                    ? new Conversion(ConversionKind.NothingToObject)
+                    : new Conversion(ConversionKind.None);
         if (source.IsEmpty)
             return target.IsVariant ? new Conversion(ConversionKind.EmptyToVariant) : new Conversion(ConversionKind.None);
         if (source.IsNull)
