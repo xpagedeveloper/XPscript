@@ -1,6 +1,8 @@
 name: Language Focused Tests (Windows)
 
 on:
+  push:
+    branches: [investigate-ast-compiler]
   workflow_dispatch:
 
 permissions:
