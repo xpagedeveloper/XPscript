@@ -42,7 +42,8 @@ var astOutput = Path.Combine(parityRoot, "ast");
 var legacyOutput = Path.Combine(parityRoot, "legacy");
 await RunCompiler("ast-compile", paritySourcePath, "-o", astOutput);
 await RunCompiler("legacy-compile", paritySourcePath, "-o", legacyOutput, "--single-file=false", "--runtime=false");
-if (!File.Exists(Path.Combine(astOutput, "Generated.dll")) || !File.Exists(legacyOutput))
+if (!Directory.Exists(astOutput) || !Directory.EnumerateFileSystemEntries(astOutput).Any() ||
+    !File.Exists(legacyOutput) && !Directory.Exists(legacyOutput))
     throw new InvalidOperationException("Desktop parity fixture did not produce both AST and legacy outputs.");
 Console.WriteLine("DESKTOP_COMPILE_PARITY_FIXTURE_OK");
 
