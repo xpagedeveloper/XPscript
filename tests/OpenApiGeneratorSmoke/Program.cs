@@ -333,14 +333,22 @@ var referencedParameterServer = new XpsOpenApiGenerator().Generate(referencedPar
 if (!referencedParameterServer.Source.Contains("pProvider As String", StringComparison.Ordinal) ||
     referencedParameterServer.Source.Contains("Set request.Provider =", StringComparison.Ordinal))
     throw new Exception("Referenced primitive OpenAPI parameters must use scalar assignment.");
-var referencedParameterPath = Path.Combine(Path.GetTempPath(), "xps-openapi-referenced-parameter-" + Guid.NewGuid().ToString("N") + ".xps");
-await File.WriteAllTextAsync(referencedParameterPath, referencedParameterServer.Source);
-await using (var referencedParameterUnit = await new XpsWebCompiler().CompileAsync(referencedParameterPath, Path.GetDirectoryName(referencedParameterPath)!))
+var referencedParameterRoot = Path.Combine(Path.GetTempPath(), "xps-openapi-referenced-parameter-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(referencedParameterRoot);
+var referencedParameterPath = Path.Combine(referencedParameterRoot, "referenced-parameter-server.xps");
+try
 {
-    if (!referencedParameterUnit.Routes.ContainsKey("EndpointGetReferencedProvider"))
-        throw new Exception("Referenced primitive OpenAPI parameter regression did not compile its route.");
+    await File.WriteAllTextAsync(referencedParameterPath, referencedParameterServer.Source);
+    await using (var referencedParameterUnit = await new XpsWebCompiler().CompileAsync(referencedParameterPath, referencedParameterRoot))
+    {
+        if (!referencedParameterUnit.Routes.ContainsKey("EndpointGetReferencedProvider"))
+            throw new Exception("Referenced primitive OpenAPI parameter regression did not compile its route.");
+    }
 }
-File.Delete(referencedParameterPath);
+finally
+{
+    try { Directory.Delete(referencedParameterRoot, true); } catch { }
+}
 Console.WriteLine("OPENAPI-SERVER-REFERENCED-PRIMITIVE-PARAMETER=OK");
 
 
@@ -950,10 +958,19 @@ var arrayProviderParameterServer = generator.Generate(arrayProviderParameterOpen
 if (!arrayProviderParameterServer.Source.Contains("Public Provider As XPJsonArray", StringComparison.Ordinal) ||
     !arrayProviderParameterServer.Source.Contains("pProvider As XPJsonArray", StringComparison.Ordinal))
     throw new Exception("Array OpenAPI parameter must remain XPJsonArray in generated server request and wrapper.");
-var arrayProviderParameterPath = Path.Combine(Path.GetTempPath(), "array-provider-parameter-server.xps");
-await File.WriteAllTextAsync(arrayProviderParameterPath, arrayProviderParameterServer.Source);
-await using (var arrayProviderParameterUnit = await new XpsWebCompiler().CompileAsync(arrayProviderParameterPath, Path.GetTempPath()))
+var arrayProviderParameterRoot = Path.Combine(Path.GetTempPath(), "xps-openapi-array-provider-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(arrayProviderParameterRoot);
+var arrayProviderParameterPath = Path.Combine(arrayProviderParameterRoot, "array-provider-parameter-server.xps");
+try
 {
+    await File.WriteAllTextAsync(arrayProviderParameterPath, arrayProviderParameterServer.Source);
+    await using (var arrayProviderParameterUnit = await new XpsWebCompiler().CompileAsync(arrayProviderParameterPath, arrayProviderParameterRoot))
+    {
+    }
+}
+finally
+{
+    try { Directory.Delete(arrayProviderParameterRoot, true); } catch { }
 }
 Console.WriteLine("OPENAPI-SERVER-ARRAY-PARAMETER=OK");
 
