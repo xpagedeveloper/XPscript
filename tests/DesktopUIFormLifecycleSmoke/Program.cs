@@ -33,7 +33,11 @@ var parityRoot = Path.Combine(Path.GetTempPath(), "xpscript-desktop-parity-" + G
 Directory.CreateDirectory(parityRoot);
 var paritySourcePath = Path.Combine(parityRoot, "desktop-parity.xps");
 await File.WriteAllTextAsync(paritySourcePath, desktopParitySource);
-var compilerPath = typeof(XPScriptTranspiler).Assembly.Location;
+var compilerPath = Path.GetFullPath(Path.Combine(
+    Directory.GetCurrentDirectory(),
+    "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll"));
+if (!File.Exists(compilerPath))
+    throw new InvalidOperationException("Built XPScript compiler was not found: " + compilerPath);
 var astOutput = Path.Combine(parityRoot, "ast");
 var legacyOutput = Path.Combine(parityRoot, "legacy");
 await RunCompiler("ast-compile", paritySourcePath, "-o", astOutput);
