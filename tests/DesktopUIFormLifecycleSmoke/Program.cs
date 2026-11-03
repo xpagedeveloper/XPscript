@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Diagnostics;
 using XPScript.Compiler;
 using XPScript.UI.Desktop;
 
@@ -20,6 +21,26 @@ if (!string.Equals(detachedArguments[1] as string, "detached-smoke", StringCompa
     throw new InvalidOperationException("Desktop modeless UI request instance id was not preserved.");
 if (detachedRoot.GetProperty("title").GetString() != "Detached request")
     throw new InvalidOperationException("Desktop modeless UI request remained tied to a disposed JsonDocument.");
+
+var desktopParitySource = """
+Sub Main()
+    Dim form As New UIForm("Desktop parity", 480, 320, True)
+    Call form.AddTextField("name", "Name")
+    Call form.Show(False)
+End Sub
+""";
+var parityRoot = Path.Combine(Path.GetTempPath(), "xpscript-desktop-parity-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(parityRoot);
+var paritySourcePath = Path.Combine(parityRoot, "desktop-parity.xps");
+await File.WriteAllTextAsync(paritySourcePath, desktopParitySource);
+var compilerPath = typeof(XPScriptTranspiler).Assembly.Location;
+var astOutput = Path.Combine(parityRoot, "ast");
+var legacyOutput = Path.Combine(parityRoot, "legacy");
+await RunCompiler("ast-compile", paritySourcePath, "-o", astOutput);
+await RunCompiler("legacy-compile", paritySourcePath, "-o", legacyOutput, "--single-file=false", "--runtime=false");
+if (!File.Exists(Path.Combine(astOutput, "Generated.dll")) || !File.Exists(legacyOutput))
+    throw new InvalidOperationException("Desktop parity fixture did not produce both AST and legacy outputs.");
+Console.WriteLine("DESKTOP_COMPILE_PARITY_FIXTURE_OK");
 
 var modalChildSource = """
 Option Declare
@@ -166,3 +187,21 @@ foreach (var expected in new[]
 Console.WriteLine("DESKTOP_UIFORM_MODAL_CHILD_TRANSPILE_OK");
 Console.WriteLine("DESKTOP_UIFORM_ACCESSIBILITY_TRANSPILE_OK");
 Console.WriteLine("DESKTOP_UIFORM_WEBVIEW_TRANSPILE_OK");
+
+async Task RunCompiler(params string[] arguments)
+{
+    var start = new ProcessStartInfo("dotnet")
+    {
+        WorkingDirectory = parityRoot,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true
+    };
+    start.ArgumentList.Add(compilerPath);
+    foreach (var argument in arguments)
+        start.ArgumentList.Add(argument);
+    using var process = Process.Start(start) ?? throw new InvalidOperationException("Could not start compiler.");
+    var output = await process.StandardOutput.ReadToEndAsync() + await process.StandardError.ReadToEndAsync();
+    await process.WaitForExitAsync();
+    if (process.ExitCode != 0)
+        throw new InvalidOperationException($"Desktop parity compiler invocation failed: {output}");
+}
