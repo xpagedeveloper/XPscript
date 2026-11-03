@@ -296,7 +296,9 @@ public static class XPScriptCompilerCommandLine
             if (usesUiFormAssets)
                 UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
 
-            var effectiveEmbedAssets = embedAssets || usesUiFormAssets;
+            // UIForm applications use external assets by default. Only the
+            // explicit --embed-assets option switches to embedded materialization.
+            var effectiveEmbedAssets = embedAssets;
             using var assetScope = UIFormAssetCompileContext.Push(effectiveEmbedAssets);
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
