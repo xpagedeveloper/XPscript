@@ -45,7 +45,13 @@ await RunCompiler("legacy-compile", paritySourcePath, "-o", legacyOutput, "--sin
 if (!Directory.Exists(astOutput) || !Directory.EnumerateFileSystemEntries(astOutput).Any() ||
     !File.Exists(legacyOutput) && !Directory.Exists(legacyOutput))
     throw new InvalidOperationException("Desktop parity fixture did not produce both AST and legacy outputs.");
+var astAssembly = Path.Combine(astOutput, "Generated.dll");
+if (!File.Exists(astAssembly))
+    throw new InvalidOperationException("Desktop parity AST output is missing Generated.dll.");
+await ProbeDesktopRuntime("AST", "dotnet", astAssembly);
+await ProbeDesktopRuntime("legacy", legacyOutput);
 Console.WriteLine("DESKTOP_COMPILE_PARITY_FIXTURE_OK");
+Console.WriteLine("DESKTOP_RUNTIME_LAUNCH_PARITY_OK");
 
 var modalChildSource = """
 Option Declare
@@ -209,4 +215,29 @@ async Task RunCompiler(params string[] arguments)
     await process.WaitForExitAsync();
     if (process.ExitCode != 0)
         throw new InvalidOperationException($"Desktop parity compiler invocation failed: {output}");
+}
+
+async Task ProbeDesktopRuntime(string label, string file, params string[] arguments)
+{
+    var start = new ProcessStartInfo(file)
+    {
+        WorkingDirectory = parityRoot,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true
+    };
+    foreach (var argument in arguments)
+        start.ArgumentList.Add(argument);
+    using var process = Process.Start(start) ?? throw new InvalidOperationException($"Could not start {label} desktop runtime.");
+    var outputTask = process.StandardOutput.ReadToEndAsync();
+    var errorTask = process.StandardError.ReadToEndAsync();
+    var waitTask = process.WaitForExitAsync();
+    var completed = await Task.WhenAny(waitTask, Task.Delay(TimeSpan.FromSeconds(5)));
+    if (completed != waitTask && !process.HasExited)
+    {
+        process.Kill(entireProcessTree: true);
+        await process.WaitForExitAsync();
+    }
+    var output = await outputTask + await errorTask;
+    if (process.ExitCode != 0 && completed == waitTask)
+        throw new InvalidOperationException($"{label} desktop runtime exited unexpectedly: {output}");
 }
