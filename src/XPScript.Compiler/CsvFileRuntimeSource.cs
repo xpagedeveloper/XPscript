@@ -13,7 +13,7 @@ internal static class XPScriptCsvFileRuntime
         byte[] bytes;
         try
         {
-            var file = System.IO.Path.GetFullPath(XPScriptRuntime.CStr(path));
+            var file = XPScriptFileSystemRuntime.ResolvePath(path);
             bytes = System.IO.File.ReadAllBytes(file);
         }
         catch (System.UnauthorizedAccessException exception)
