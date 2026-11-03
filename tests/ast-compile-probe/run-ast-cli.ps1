@@ -1814,6 +1814,8 @@ finally {
     Remove-Item -LiteralPath $normalStdout -Force -ErrorAction SilentlyContinue
 }
 $applicationProbeProject = Join-Path $root 'tests/AstApplicationRuntimeProbe/AstApplicationRuntimeProbe.csproj'
+dotnet restore $applicationProbeProject
+if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime probe restore failed.' }
 dotnet build $applicationProbeProject -c Release --no-restore -p:UseAppHost=false -p:BuildInParallel=false
 if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime probe build failed.' }
 $applicationProbeDll = Join-Path $root 'tests/AstApplicationRuntimeProbe/bin/Release/net10.0/AstApplicationRuntimeProbe.dll'
