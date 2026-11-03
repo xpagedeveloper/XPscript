@@ -1,4 +1,5 @@
 name: Language Focused Tests (Windows)
+# Branch-triggered diagnostic run for the split language suite.
 
 on:
   push:
