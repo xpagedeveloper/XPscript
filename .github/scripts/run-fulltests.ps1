@@ -234,6 +234,8 @@ if (Should-Run 'runtime') {
     $probe = Invoke-Bounded 'dotnet' @('run','--project',"./tests/$applicationProbe",'-c','Release') 180000 $applicationProbe
     if ($probe.ExitCode -ne 0) { throw "$applicationProbe failed." }
   }
+  $spreadsheetFixturesRestore = Invoke-Bounded 'dotnet' @('restore','./tests/SpreadsheetSecurityFixtures/SpreadsheetSecurityFixtures.csproj') $compileTimeoutMilliseconds 'Spreadsheet security fixture restore'
+  if ($spreadsheetFixturesRestore.ExitCode -ne 0) { exit $spreadsheetFixturesRestore.ExitCode }
   $sheetAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstSpreadsheetRuntimeProbe','-c','Release') 300000 'native spreadsheet AST/normal, XLSX safety and CSV parity'
   if ($sheetAst.ExitCode -ne 0 -or $sheetAst.Output -notmatch 'AST_SPREADSHEET_RUNTIME_OK') { throw 'Native spreadsheet runtime parity failed.' }
   $httpAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstHttpRuntimeProbe','-c','Release') 180000 'native HTTP accessor reference/multipart/disposal/security coverage and HTTP/TLS AST/normal parity'
