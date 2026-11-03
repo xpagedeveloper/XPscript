@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, test-openapi-import-class-skeletons]
+    branches: [main, test-openapi-import-class-skeletons, investigate-ast-compiler]
   workflow_dispatch:
 
 permissions:
