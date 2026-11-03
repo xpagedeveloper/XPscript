@@ -749,7 +749,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
     - The corpus and output contract are defined; timing thresholds remain intentionally absent until runner, SDK and workload variance are controlled.
   - [x] Define edit invalidation boundaries for future incremental parsing: source edits invalidate the file's lexer/parser tree; `Include`/`Use` changes invalidate the consuming unit and dependency closure; referenced declaration/signature changes invalidate dependent binding/emission; compiler target, security, platform, preprocessor, runtime and output options invalidate binding/emission outputs. No cache is enabled until the baseline contract is agreed.
   - [x] Prototype syntax reuse behind the opt-in `ParsedSyntaxCache` seam and compare diagnostics/tree output with clean parses. `tests/ast-lexer` now checks deterministic tree dumps and diagnostic code/message/span equivalence for both the original source and an edited source; production compilation remains uncached until broader incremental semantics are designed.
-    - Blocked by the missing parse benchmark/corpus contract above and the absence of an existing incremental workspace/cache seam; implementing reuse now would require a larger design decision.
+    - [x] Implemented the first bounded opt-in reuse step after the cache contract was agreed: source edits invalidate the file-local syntax result, and parser version, source offset, class-member context and base-class context are independent cache inputs. `tests/ast-lexer` verifies clean tree/diagnostic equivalence plus all four invalidation boundaries; production compilation remains uncached.
 
 ## Phase 10: Compatibility harness
 

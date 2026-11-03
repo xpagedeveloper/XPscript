@@ -31,6 +31,12 @@ var changed = ParsedSyntaxCache.Parse(cacheSource + "\n", "ast-lexer-cache-v1");
 Equal(false, ReferenceEquals(cachedFirst, changed), "parsed cache source invalidation");
 var changedVersion = ParsedSyntaxCache.Parse(cacheSource, "ast-lexer-cache-v2");
 Equal(false, ReferenceEquals(cachedFirst, changedVersion), "parsed cache version invalidation");
+var changedOffset = ParsedSyntaxCache.Parse(cacheSource, "ast-lexer-cache-v1", baseOffset: 10);
+Equal(false, ReferenceEquals(cachedFirst, changedOffset), "parsed cache base-offset invalidation");
+var changedClassContext = ParsedSyntaxCache.Parse(cacheSource, "ast-lexer-cache-v1", classMemberContext: true);
+Equal(false, ReferenceEquals(cachedFirst, changedClassContext), "parsed cache class-context invalidation");
+var changedBaseContext = ParsedSyntaxCache.Parse(cacheSource, "ast-lexer-cache-v1", classHasBase: true);
+Equal(false, ReferenceEquals(cachedFirst, changedBaseContext), "parsed cache base-class invalidation");
 
 // Opt-in reuse must be observationally identical to a clean parse, including
 // tree shape/spans and diagnostics, for both the original text and an edit.
