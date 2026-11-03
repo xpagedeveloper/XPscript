@@ -40,7 +40,7 @@ if (!File.Exists(compilerPath))
     throw new InvalidOperationException("Built XPScript compiler was not found: " + compilerPath);
 var astOutput = Path.Combine(parityRoot, "ast");
 var legacyOutput = Path.Combine(parityRoot, "legacy");
-await RunCompiler("ast-compile", paritySourcePath, "-o", astOutput);
+await RunCompiler("ast-compile", paritySourcePath, "-o", astOutput, "--single-file=false", "--runtime=false");
 await RunCompiler("legacy-compile", paritySourcePath, "-o", legacyOutput, "--single-file=false", "--runtime=false");
 if (!Directory.Exists(astOutput) || !Directory.EnumerateFileSystemEntries(astOutput).Any() ||
     !File.Exists(legacyOutput) && !Directory.Exists(legacyOutput))
