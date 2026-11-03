@@ -67,8 +67,11 @@ public sealed record DesktopFormField(
     public string SchemaValidationError { get; init; } = string.Empty;
     public double? Step { get; init; }
     public double? ProgressValue { get; init; }
-    public bool ProgressIndeterminate { get; init; }
-    public bool ActivityRunning { get; init; }
+    // These fields are omitted/null for non-progress controls because the shared
+    // bridge serializes them as nullable values. Keep the contract nullable so
+    // desktop deserialization accepts the same payload emitted by the compiler.
+    public bool? ProgressIndeterminate { get; init; }
+    public bool? ActivityRunning { get; init; }
 }
 
 public sealed record DesktopFormButton(
