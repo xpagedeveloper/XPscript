@@ -767,7 +767,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
   - [x] Enforce the Notes object boundary for browser-WASM: native `Notes*` and `XPNotes*` objects are rejected unless the source is explicitly marked `[ServerSide]`; server-side web compilation remains supported. The browser boundary regression passes with `NOTES_BOUNDARY_REJECTIONS_OK`, and permanent Platform FullTest coverage is configured for the browser-WASM target.
 - [ ] Compare desktop/Avalonia behavior.
   - [x] Add a bounded compile-parity fixture that sends the same UIForm source through `ast-compile` and `legacy-compile` and verifies both outputs are produced.
-  - [ ] Add runtime launch/parity assertions for the generated AST and legacy desktop applications under the Linux Xvfb workflow.
+  - [x] Add runtime launch/parity assertions for the generated AST and legacy desktop applications under the Linux Xvfb workflow. `DesktopUIFormLifecycleSmoke` compiles the same UIForm fixture through AST and legacy paths, launches both generated outputs with bounded waits, and `.github/workflows/fulltest.yml` runs the probe under `xvfb-run`.
   - [ ] Extend the runtime parity assertion to the Windows desktop smoke workflow.
   - [x] AST desktop-target compilation was verified with `demo/desktop-ui/customer-form.xps`; Avalonia 12.0.3 desktop dependencies were resolved locally and `Generated.exe` was produced. `DesktopUIFormLifecycleSmoke` also passes.
   - [x] The legacy desktop bridge baseline now passes `DesktopUIFormBridgeSmoke` and `DesktopUIFormLifecycleSmoke`; dialog-only sources no longer enter UIForm lifecycle rewriting when no UIForm runtime is generated.
