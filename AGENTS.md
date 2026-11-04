@@ -18,6 +18,10 @@ The permanent FullTest workflow files are `.github/workflows/language-fulltest.y
 
 During migrations, keep the old focused workflow running until equivalent coverage in the destination FullTest is green. Compile, documentation, IntelliSense API documentation, security/placeholder guards, release, cleanup, and other build/meta workflows are not part of this consolidation rule.
 
+## Test diagnostics
+
+Split long regression suites into named, bounded sections. Each section must emit a clear checkpoint before and after it, include a timeout for external processes, and preserve the failing source path and XPscript line in the error output. When a compiler or runtime failure is being diagnosed, run the relevant fixture with `--debug` so generated-C# and source-line diagnostics are retained in the workflow log. Do not leave a long-running test without progress output or a bounded failure.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.

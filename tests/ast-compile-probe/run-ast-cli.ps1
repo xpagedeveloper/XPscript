@@ -7,6 +7,18 @@ param(
 # compiler/runtime invocation below asserts its exit code and output explicitly.
 $ErrorActionPreference = 'Continue'
 $PSNativeCommandUseErrorActionPreference = $false
+$currentTestSection = 'initialization'
+trap {
+    Write-Host "AST_CLI_FAILURE section=$currentTestSection line=$($_.InvocationInfo.ScriptLineNumber) file=$($_.InvocationInfo.ScriptName)"
+    throw
+}
+function Set-TestSection([string] $name) {
+    $script:currentTestSection = $name
+    Write-Host "AST_CLI_SECTION_START=$name line=$($MyInvocation.ScriptLineNumber)"
+}
+function Complete-TestSection([string] $name) {
+    Write-Host "AST_CLI_SECTION_DONE=$name"
+}
 $utf8 = [System.Text.UTF8Encoding]::new($false)
 $OutputEncoding = $utf8
 [Console]::OutputEncoding = $utf8
@@ -2478,11 +2490,13 @@ if (($result -join "`n") -notmatch 'AST_FUNCTION_RESULT_OK') { throw 'AST stored
 if (($result -join "`n") -notmatch '(?m)^43\s*$') { throw 'AST procedure bodies or ByRef copy-back failed.' }
 if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -notmatch 'AST_XPS_COMPILE_OK' -or ($result -join "`n") -notmatch 'AST_XPS_PRINT_OK' -or ($result -join "`n") -notmatch 'AST_XPS_IF_OK' -or ($result -join "`n") -notmatch '(?m)^1$' -or ($result -join "`n") -notmatch '(?m)^2$' -or ($result -join "`n") -notmatch '(?m)^3$' -or ($result -join "`n") -notmatch '(?m)^4$' -or ($result -join "`n") -notmatch 'AST_XPS_SELECT_OK' -or ($result -join "`n") -notmatch '(?m)^7$' -or ($result -join "`n") -notmatch '(?m)^8$') { throw 'AST CLI generated assembly did not run successfully.' }
 
+Set-TestSection 'target-specific-generated-source-probe'
 $targetSourceProbe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $root 'tests/ast-compile-probe/AstCompileProbe.csproj'), '-c', 'Release', '--no-build')
 if ($targetSourceProbe.ExitCode -ne 0 -or $targetSourceProbe.Output -notmatch 'AST_TARGET_GENERATED_DESKTOP_OK' -or
     $targetSourceProbe.Output -notmatch 'AST_TARGET_GENERATED_ANDROID_SKIPPED=ANDROID_PREREQUISITES_NOT_REQUESTED' -or
     $targetSourceProbe.Output -notmatch 'AST_TARGET_GENERATED_BROWSER_SKIPPED=WASM_WORKLOAD_NOT_REQUESTED') {
     throw 'Target-specific generated-source regression failed.'
 }
+Complete-TestSection 'target-specific-generated-source-probe'
 Write-Host 'AST_TARGET_GENERATED_SOURCE_OK'
 Write-Host 'AST CLI compilation probe passed.'
