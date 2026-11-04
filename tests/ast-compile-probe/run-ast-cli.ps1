@@ -1871,7 +1871,7 @@ foreach ($case in @(
 )) {
     $fixture = $case[0]
     $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Native accessor diagnostic lost: $fixture" }
+    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "${fixture}.xps:$($case[2]):\d+: $($case[1]):") { throw "Native accessor diagnostic lost: $fixture" }
 }
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'inherited-reference-runtime.xps') -o (Join-Path $output 'inherited-reference-runtime')
 if ($LASTEXITCODE -ne 0) { throw 'AST inherited reference compilation failed.' }
@@ -1887,7 +1887,7 @@ foreach ($case in @(
 )) {
     $fixture = $case[0]
     $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Inherited reference diagnostic lost: $fixture" }
+    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "${fixture}.xps:$($case[2]):\d+: $($case[1]):") { throw "Inherited reference diagnostic lost: $fixture" }
 }
 foreach ($fixture in @('indexed-object-runtime', 'indexed-object-properties')) {
     $fixtureSource = if ($fixture -eq 'indexed-object-properties') { Join-Path $root 'samples/indexed-object-properties.xps' } else { Join-Path $PSScriptRoot "$fixture.xps" }
@@ -1899,7 +1899,7 @@ foreach ($fixture in @('indexed-object-runtime', 'indexed-object-properties')) {
 }
 foreach ($fixture in @('object-property-member-mode-error', 'object-property-declaration-error', 'object-property-mode-error', 'object-property-scalar-error', 'object-property-type-error', 'object-property-let-error', 'object-property-call-target-error')) {
     $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:(2|4|7|11):\d+: XPS2001:") { throw "Object accessor diagnostic lost: $fixture" }
+    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "${fixture}.xps:(2|4|7|11):\d+: XPS2001:") { throw "Object accessor diagnostic lost: $fixture" }
 }
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'object-property-set.xps') -o (Join-Path $output 'object-property-set')
 if ($LASTEXITCODE -ne 0) { throw 'AST object Property Set compilation failed.' }
@@ -1914,7 +1914,7 @@ foreach ($fixture in @('indexed-optional-simple', 'indexed-optional-runtime')) {
 }
 foreach ($fixture in @('indexed-optional-order-error', 'indexed-optional-default-error', 'indexed-optional-name-error', 'indexed-optional-later-error', 'indexed-optional-signature-error', 'indexed-optional-value-error', 'indexed-optional-required-error', 'indexed-optional-marker-error')) {
     $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:(2|5|8):") { throw "Optional index diagnostic lost: $fixture" }
+    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "${fixture}.xps:(2|5|8):") { throw "Optional index diagnostic lost: $fixture" }
 }
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'static-array.xps') -o (Join-Path $output 'static-array-early')
 if ($LASTEXITCODE -ne 0) { throw 'AST Static array storage compilation failed.' }
@@ -1969,7 +1969,7 @@ $listPropertyByRefResult = dotnet (Join-Path $listPropertyByRefOutput 'Generated
 if ($LASTEXITCODE -ne 0 -or ($listPropertyByRefResult -join "`n") -ne "11`n11") { throw 'AST indexed ByRef property List-element copy-back failed.' }
 foreach ($byRefInvalid in @('indexed-byref-module-type-error', 'indexed-byref-property-error', 'indexed-byref-literal-error', 'indexed-byref-type-error', 'indexed-byref-mode-error', 'indexed-byref-complex-error')) {
     $byRefFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$byRefInvalid.xps") -o (Join-Path $output $byRefInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($byRefFailure -join "`n") -notmatch "$byRefInvalid.xps:(5|8|9|16):") { throw "ByRef index diagnostic source mapping lost: $byRefInvalid" }
+    if ($LASTEXITCODE -ne 2 -or ($byRefFailure -join "`n") -notmatch "${byRefInvalid}.xps:(5|8|9|16):") { throw "ByRef index diagnostic source mapping lost: $byRefInvalid" }
 }
 foreach ($indexedFixture in @('indexed-byref-module-simple', 'indexed-byref-field-capability', 'indexed-properties-runtime', 'indexed-get-parity')) {
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$indexedFixture.xps") -o (Join-Path $output $indexedFixture)
@@ -1990,7 +1990,7 @@ $indexedSampleResult = dotnet (Join-Path $output 'indexed-existing-sample/Genera
 if ($LASTEXITCODE -ne 0 -or ($indexedSampleResult -join "`n") -ne "INDEX1=first`nINDEX2=second") { throw 'Existing indexed scalar sample execution failed.' }
 foreach ($indexedInvalid in @('indexed-signature-error', 'indexed-readonly-error', 'indexed-writeonly-error', 'indexed-arity-error', 'indexed-type-error', 'indexed-private-error')) {
     $indexedFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$indexedInvalid.xps") -o (Join-Path $output $indexedInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($indexedFailure -join "`n") -notmatch "$indexedInvalid.xps:(5|7|8):") { throw "Indexed diagnostic source mapping lost: $indexedInvalid" }
+    if ($LASTEXITCODE -ne 2 -or ($indexedFailure -join "`n") -notmatch "${indexedInvalid}.xps:(5|7|8):") { throw "Indexed diagnostic source mapping lost: $indexedInvalid" }
 }
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-properties-capability.xps') -o (Join-Path $output 'class-properties-capability')
 if ($LASTEXITCODE -ne 0) { throw 'AST explicit property setter/With compilation failed.' }
@@ -2005,11 +2005,11 @@ if ($LASTEXITCODE -ne 0 -or ($propertyResult -join "`n") -ne 'CLASS_PROPERTIES_N
 # legacy support here would reject an explicitly supported AST extension.
 foreach ($propertyInvalid in @('class-property-readonly-error', 'class-property-writeonly-error', 'class-property-private-error', 'class-property-body-error', 'class-property-type-error')) {
     $propertyFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$propertyInvalid.xps") -o (Join-Path $output $propertyInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($propertyFailure -join "`n") -notmatch "$propertyInvalid.xps:(2|3|5|8|9):") { throw "Property diagnostic source mapping lost: $propertyInvalid" }
+    if ($LASTEXITCODE -ne 2 -or ($propertyFailure -join "`n") -notmatch "${propertyInvalid}.xps:(2|3|5|8|9):") { throw "Property diagnostic source mapping lost: $propertyInvalid" }
 }
 foreach ($classInvalid in @('class-method-scope-error', 'class-method-private-error', 'class-field-private-error', 'class-method-body-error')) {
     $classFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$classInvalid.xps") -o (Join-Path $output $classInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($classFailure -join "`n") -notmatch "$classInvalid.xps:(3|6|7):") { throw "Class diagnostic source span lost: $classInvalid" }
+    if ($LASTEXITCODE -ne 2 -or ($classFailure -join "`n") -notmatch "${classInvalid}.xps:(3|6|7):") { throw "Class diagnostic source span lost: $classInvalid" }
 }
 $classCaseOutput = Join-Path $output 'class-method-case'
 $classCaseCompile = Invoke-BoundedDotnetRun @($compiler, 'ast-compile', (Join-Path $PSScriptRoot 'class-method-case.xps'), '-o', $classCaseOutput)
@@ -2033,7 +2033,7 @@ if ($spreadsheetProbe.TimedOut) { throw 'AST native spreadsheet runtime regressi
 if ($spreadsheetProbe.ExitCode -ne 0) { throw "AST native spreadsheet runtime regression failed.`n$($spreadsheetProbe.Output)" }
 foreach ($sheetInvalid in @('spreadsheet-member-error', 'spreadsheet-constructor-error', 'spreadsheet-readonly-error', 'spreadsheet-private-setter-error', 'spreadsheet-arity-error')) {
     $sheetFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$sheetInvalid.xps") -o (Join-Path $output $sheetInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($sheetFailure -join "`n") -notmatch "$sheetInvalid.xps:(2|3):") { throw "Spreadsheet diagnostic or source span lost: $sheetInvalid" }
+    if ($LASTEXITCODE -ne 2 -or ($sheetFailure -join "`n") -notmatch "${sheetInvalid}.xps:(2|3):") { throw "Spreadsheet diagnostic or source span lost: $sheetInvalid" }
 }
 $httpRuntimeProbe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $root 'tests/AstHttpRuntimeProbe'), '-c', 'Release', '--no-restore', '--', $root)
 if ($httpRuntimeProbe.TimedOut) { throw 'AST native HTTP/TLS runtime regression timed out.' }
@@ -2046,7 +2046,7 @@ if ($httpRuntimeProbe.ExitCode -ne 0) {
 }
 foreach ($httpInvalid in @('http-member-error', 'http-constructor-error', 'http-readonly-error', 'http-arity-error')) {
     $httpFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$httpInvalid.xps") -o (Join-Path $output $httpInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($httpFailure -join "`n") -notmatch "$httpInvalid.xps:(2|3):") { throw "HTTP diagnostic or source span lost: $httpInvalid" }
+    if ($LASTEXITCODE -ne 2 -or ($httpFailure -join "`n") -notmatch "${httpInvalid}.xps:(2|3):") { throw "HTTP diagnostic or source span lost: $httpInvalid" }
 }
 & (Join-Path $PSScriptRoot 'run-ast-xml.ps1')
 $csvRoot = Join-Path $output ('csv-' + [Guid]::NewGuid().ToString('N'))
@@ -2086,7 +2086,7 @@ foreach ($csvSample in @('native-csv-regression', 'csv-json-roundtrip')) {
 }
 foreach ($csvInvalid in @('csv-member-error', 'csv-constructor-error', 'csv-readonly-error', 'csv-writefile-error', 'csv-load-arity-error')) {
     $csvFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$csvInvalid.xps") -o (Join-Path $csvRoot $csvInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($csvFailure -join "`n") -notmatch "$csvInvalid.xps:(2|3):") { throw "AST $csvInvalid lost its diagnostic or source position." }
+    if ($LASTEXITCODE -ne 2 -or ($csvFailure -join "`n") -notmatch "${csvInvalid}.xps:(2|3):") { throw "AST $csvInvalid lost its diagnostic or source position." }
 }
 $imageFixtureRoot = Join-Path $output ('xpimage-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $imageFixtureRoot | Out-Null
@@ -2134,7 +2134,7 @@ try { $imageParityResult = dotnet (Join-Path $imageParityOutput 'Generated.dll')
 if ($imageParityExit -ne 0 -or ($imageParityResult -join "`n") -ne "4`n6`n0`n0`n3`n2`nXPIMAGE_PARITY_OK") { throw 'AST image output differs from the shared normal compiler contract.' }
 foreach ($imageInvalid in @('xpimage-constructor-error', 'xpimage-member-error', 'xpimage-readonly-error')) {
     $invalidResult = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$imageInvalid.xps") -o (Join-Path $imageFixtureRoot $imageInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($invalidResult -join "`n") -notmatch "$imageInvalid.xps:3:") { throw "AST $imageInvalid lost its source-mapped diagnostic." }
+    if ($LASTEXITCODE -ne 2 -or ($invalidResult -join "`n") -notmatch "${imageInvalid}.xps:3:") { throw "AST $imageInvalid lost its source-mapped diagnostic." }
 }
 $runtimeOutput = Join-Path $output 'shared-runtime'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'shared-runtime.xps') -o $runtimeOutput
