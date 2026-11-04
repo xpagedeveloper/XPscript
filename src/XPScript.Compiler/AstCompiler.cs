@@ -1664,7 +1664,7 @@ internal static class Program
 }
 """;
         generated = EnsureAttachmentRuntime(generated);
-        if (fullSource.Contains("XPImage", StringComparison.OrdinalIgnoreCase))
+        if (AstObjectSupportRegistry.UsesObject(fullSource, "XPImage"))
             generated += Environment.NewLine + XPImageArrayRuntimeSource.Code;
         if (usesNetworkTools)
             generated = NetworkToolsPhase2RuntimePostProcessor.Transform(generated);
