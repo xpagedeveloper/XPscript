@@ -180,22 +180,27 @@ try
 {
     foreach (var rid in new[] { "win-x64", "linux-x64", "osx-x64" })
     {
+        Console.WriteLine($"AST_TARGET_GENERATED_START={rid}");
         var captured = string.Empty;
         try
         {
-            await XPScript.Compiler.AstCompiler.CompileWithGeneratedSourceTransformAsync(
+            var compileTask = XPScript.Compiler.AstCompiler.CompileWithGeneratedSourceTransformAsync(
                 targetFixture, Path.Combine(targetOutput, rid), rid,
                 generated =>
                 {
                     captured = generated;
                     throw new InvalidOperationException("TARGET_SOURCE_CAPTURED");
                 });
+            if (await Task.WhenAny(compileTask, Task.Delay(TimeSpan.FromSeconds(60))) != compileTask)
+                throw new TimeoutException($"Target-specific generated-source probe timed out for {rid}.");
+            await compileTask;
         }
         catch (InvalidOperationException ex) when (ex.Message == "TARGET_SOURCE_CAPTURED") { }
         if (captured.Length == 0 || !captured.Contains("Main(", StringComparison.Ordinal))
             throw new InvalidOperationException($"Desktop target {rid} lost its generated Main entry point.");
         if (captured.Contains("__xps_android_entry", StringComparison.Ordinal))
             throw new InvalidOperationException($"Desktop target {rid} received the Android entry point.");
+        Console.WriteLine($"AST_TARGET_GENERATED_DONE={rid}");
     }
     Console.WriteLine("AST_TARGET_GENERATED_DESKTOP_OK");
     Console.WriteLine("AST_TARGET_GENERATED_ANDROID_SKIPPED=ANDROID_PREREQUISITES_NOT_REQUESTED");
