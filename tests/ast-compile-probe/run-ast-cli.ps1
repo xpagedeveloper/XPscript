@@ -9,8 +9,13 @@ $ErrorActionPreference = 'Continue'
 $PSNativeCommandUseErrorActionPreference = $false
 $currentTestSection = 'initialization'
 trap {
-    Write-Host "AST_CLI_FAILURE section=$currentTestSection line=$($_.InvocationInfo.ScriptLineNumber) file=$($_.InvocationInfo.ScriptName)"
-    throw
+    $record = $_
+    Write-Host "AST_CLI_FAILURE section=$currentTestSection line=$($record.InvocationInfo.ScriptLineNumber) file=$($record.InvocationInfo.ScriptName)"
+    Write-Host "AST_CLI_FAILURE_COMMAND=$($record.InvocationInfo.Line.Trim())"
+    Write-Host "AST_CLI_FAILURE_EXCEPTION=$($record.Exception.GetType().FullName)"
+    Write-Host "AST_CLI_FAILURE_MESSAGE=$($record.Exception.Message)"
+    Write-Error $record
+    exit 1
 }
 function Set-TestSection([string] $name) {
     $script:currentTestSection = $name
