@@ -67,6 +67,9 @@ jobs:
         run: |
           dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
           dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Build AST compile probe
+        shell: pwsh
+        run: dotnet build ./tests/ast-compile-probe/AstCompileProbe.csproj -c Release
       - name: Run AST CLI corpus
         shell: pwsh
         run: pwsh -NoProfile -File ./tests/ast-compile-probe/run-ast-cli.ps1
