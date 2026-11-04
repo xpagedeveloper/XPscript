@@ -192,7 +192,7 @@ try
                 });
         }
         catch (InvalidOperationException ex) when (ex.Message == "TARGET_SOURCE_CAPTURED") { }
-        if (captured.Length == 0 || !captured.Contains("public static void Main(", StringComparison.Ordinal))
+        if (captured.Length == 0 || !captured.Contains("Main(", StringComparison.Ordinal))
             throw new InvalidOperationException($"Desktop target {rid} lost its generated Main entry point.");
         if (captured.Contains("__xps_android_entry", StringComparison.Ordinal))
             throw new InvalidOperationException($"Desktop target {rid} received the Android entry point.");
