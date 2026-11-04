@@ -1,5 +1,6 @@
 name: Language Focused Tests (Windows)
 # Branch-triggered diagnostic run for the split language suite; CLI corpus retry.
+# Push-trigger verification after PowerShell diagnostic interpolation fix.
 
 on:
   push:
