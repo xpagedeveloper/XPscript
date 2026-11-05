@@ -779,6 +779,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
     - [ ] Move the focused parity probe into the permanent Linux FullTest after it passes reliably.
     - [ ] Extend the same interaction contract to the Windows desktop smoke workflow.
     - [ ] Extend the same interaction contract to the macOS desktop FullTest workflow.
+    - [ ] Extend the interaction contract to an Android UIForm workflow after APK/emulator prerequisites are available; keep device/logcat verification separate from desktop parity.
 - [ ] Compare Android/mobile behavior as support matures.
 - [x] Audit every legacy compiler command-line parameter and confirm that it is implemented and behaviorally compatible in the AST compiler, including aliases, defaults, validation, diagnostics and execution semantics; `tests/cli-compatibility/run-cli-compatibility.ps1` passed `CLI_COMMAND_LINE_COMPATIBILITY_OK` with coverage for the complete currently supported parameter set.
   - [x] AST `run` accepts the legacy `--no-daemon`, `--info` and `--result-format` options with validation and executable compatibility coverage; `--no-daemon` is intentionally ignored because AST-run has no daemon path.
