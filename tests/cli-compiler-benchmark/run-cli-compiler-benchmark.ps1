@@ -38,7 +38,7 @@ Write-Host "CLI_BENCHMARK_SOURCE_LINES=$($lines.Count)"
 
 function Invoke-Compile([string] $mode, [string] $output) {
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
-    $outputText = @(& dotnet $compiler $mode $source --output $output --runtime=true --single-file=false --rid win-x64 --security=off 2>&1)
+    $outputText = @(& dotnet $compiler $mode $source --output $output --runtime=false --single-file=false --rid win-x64 --security=off 2>&1)
     $timer.Stop()
     $exitCode = $LASTEXITCODE
     $outputText | ForEach-Object { Write-Host $_ }
