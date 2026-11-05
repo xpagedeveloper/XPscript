@@ -5,7 +5,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 
 using var session = HeadlessUnitTestSession.StartNew(typeof(ProbeApp));
-var result = await session.Dispatch(() =>
+var result = await session.Dispatch<string[]>(() =>
 {
     var name = new TextBox { Width = 240, Height = 32 };
     var submit = new Button { Content = "Submit", Width = 120, Height = 32 };
