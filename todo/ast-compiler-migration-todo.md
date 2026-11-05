@@ -772,6 +772,12 @@ Initial implementation: expression conversions and a method-body emitter for ass
   - [x] AST desktop-target compilation was verified with `demo/desktop-ui/customer-form.xps`; Avalonia 12.0.3 desktop dependencies were resolved locally and `Generated.exe` was produced. `DesktopUIFormLifecycleSmoke` also passes.
   - [x] The legacy desktop bridge baseline now passes `DesktopUIFormBridgeSmoke` and `DesktopUIFormLifecycleSmoke`; dialog-only sources no longer enter UIForm lifecycle rewriting when no UIForm runtime is generated.
   - [ ] Full legacy/AST desktop runtime parity remains open because the smoke tests currently verify transpilation and bridge/lifecycle contracts rather than launching a complete Avalonia application through both compiler paths. The local Linux run restored the focused projects but could not start Avalonia because this environment has no X display and no `xvfb-run`; the permanent Linux workflow installs Xvfb and remains the executable gate for this item.
+    - [ ] Define one bounded interactive UIForm fixture with deterministic startup, field input, button action and close markers shared by AST and legacy output.
+    - [ ] Add an AST Linux Xvfb runner that launches the fixture, drives the interaction, enforces a timeout and captures ordered lifecycle markers.
+    - [ ] Add a legacy Linux Xvfb runner using the same fixture and marker contract.
+    - [ ] Compare AST and legacy marker sequences and exit behavior in one focused parity probe.
+    - [ ] Move the focused parity probe into the permanent Linux FullTest after it passes reliably.
+    - [ ] Extend the same interaction contract to the Windows desktop smoke workflow.
 - [ ] Compare Android/mobile behavior as support matures.
 - [x] Audit every legacy compiler command-line parameter and confirm that it is implemented and behaviorally compatible in the AST compiler, including aliases, defaults, validation, diagnostics and execution semantics; `tests/cli-compatibility/run-cli-compatibility.ps1` passed `CLI_COMMAND_LINE_COMPATIBILITY_OK` with coverage for the complete currently supported parameter set.
   - [x] AST `run` accepts the legacy `--no-daemon`, `--info` and `--result-format` options with validation and executable compatibility coverage; `--no-daemon` is intentionally ignored because AST-run has no daemon path.
