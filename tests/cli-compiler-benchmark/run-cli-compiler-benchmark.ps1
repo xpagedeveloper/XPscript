@@ -47,13 +47,16 @@ function Invoke-Compile([string] $mode, [string] $output) {
     $artifact = if ($outputItem -and -not $outputItem.PSIsContainer) {
         $outputItem
     } else {
-        Get-ChildItem -LiteralPath $output -Recurse -File |
-            Where-Object { $_.Extension -in @('.exe', '.dll') } |
-            Sort-Object Length -Descending |
-            Select-Object -First 1
+        $generated = Get-ChildItem -LiteralPath $output -Recurse -File -Filter 'Generated.dll' | Select-Object -First 1
+        if ($generated) { $generated } else {
+            Get-ChildItem -LiteralPath $output -Recurse -File -Filter '*.exe' | Select-Object -First 1
+        }
     }
     if ($null -eq $artifact) { throw "$mode produced no executable artifact." }
-    [pscustomobject]@{ Mode = $mode; Seconds = [math]::Round($timer.Elapsed.TotalSeconds, 3); Bytes = $artifact.Length; Artifact = $artifact.FullName }
+    $totalBytes = if ($outputItem -and $outputItem.PSIsContainer) {
+        (Get-ChildItem -LiteralPath $output -Recurse -File | Measure-Object -Property Length -Sum).Sum
+    } else { $artifact.Length }
+    [pscustomobject]@{ Mode = $mode; Seconds = [math]::Round($timer.Elapsed.TotalSeconds, 3); Bytes = $artifact.Length; TotalBytes = $totalBytes; Artifact = $artifact.FullName }
 }
 
 $legacy = Invoke-Compile 'legacy-compile' (Join-Path $resultRoot 'legacy')
@@ -64,3 +67,5 @@ Write-Host "CLI_BENCHMARK_LEGACY_SECONDS=$($legacy.Seconds)"
 Write-Host "CLI_BENCHMARK_AST_SECONDS=$($ast.Seconds)"
 Write-Host "CLI_BENCHMARK_LEGACY_BYTES=$($legacy.Bytes)"
 Write-Host "CLI_BENCHMARK_AST_BYTES=$($ast.Bytes)"
+Write-Host "CLI_BENCHMARK_LEGACY_TOTAL_BYTES=$($legacy.TotalBytes)"
+Write-Host "CLI_BENCHMARK_AST_TOTAL_BYTES=$($ast.TotalBytes)"
