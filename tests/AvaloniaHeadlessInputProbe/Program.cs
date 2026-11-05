@@ -28,7 +28,7 @@ var result = await session.Dispatch<string[]>(() =>
         submitted ? "HEADLESS_BUTTON_OK" : "HEADLESS_BUTTON_FAILED"
     };
     window.Close();
-    return Task.FromResult(markers);
+    return markers;
 });
 
 foreach (var marker in result)
