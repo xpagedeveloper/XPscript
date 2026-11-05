@@ -98,3 +98,6 @@ jobs:
       - name: Run image lifetime probe
         shell: pwsh
         run: pwsh -NoProfile -File ./tests/ast-compile-probe/run-ast-image-get.ps1
+      - name: Restore and build Avalonia headless desktop probe dependency
+        shell: pwsh
+        run: dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
