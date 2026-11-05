@@ -1,0 +1,31 @@
+name: CLI Compiler Benchmark (Legacy vs AST)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [investigate-ast-compiler]
+    paths:
+      - 'tests/cli-compiler-benchmark/**'
+      - 'src/XPScript.Compiler/**'
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: Same 500-line source benchmark
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Compile identical source with legacy and AST compilers
+        shell: pwsh
+        run: pwsh -NoProfile -File ./tests/cli-compiler-benchmark/run-cli-compiler-benchmark.ps1
