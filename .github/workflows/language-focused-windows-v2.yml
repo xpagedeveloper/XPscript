@@ -17,8 +17,6 @@ concurrency:
 jobs:
   language-signatures:
     name: AST signatures and syntax
-    # Temporarily isolate the failing CLI corpus; restore after it is green.
-    if: ${{ false }}
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
@@ -37,8 +35,6 @@ jobs:
 
   language-compatibility:
     name: AST compatibility and diagnostics
-    # Temporarily isolate the failing CLI corpus; restore after it is green.
-    if: ${{ false }}
     runs-on: windows-latest
     timeout-minutes: 25
     steps:
@@ -81,8 +77,6 @@ jobs:
 
   language-lifetimes:
     name: AST constructors, destructors and image lifetimes
-    # Temporarily isolate the failing CLI corpus; restore after it is green.
-    if: ${{ false }}
     runs-on: windows-latest
     timeout-minutes: 35
     steps:

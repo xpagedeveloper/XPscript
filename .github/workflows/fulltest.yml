@@ -155,6 +155,9 @@ jobs:
       - name: Run desktop UI smoke test
         shell: pwsh
         run: dotnet run --project ./tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release
+      - name: Run desktop UI AST and legacy runtime parity
+        shell: pwsh
+        run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
 
   compile-macos:
     name: Compile macOS
