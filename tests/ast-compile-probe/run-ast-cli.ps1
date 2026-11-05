@@ -1718,9 +1718,14 @@ $initializedReferenceDateValueResult = dotnet (Join-Path $initializedReferenceDa
 if ($LASTEXITCODE -ne 0 -or ($initializedReferenceDateValueResult -join "`n") -notmatch '2026') { throw 'AST initialized user-reference DateValue failed.' }
 Write-Host 'AST_INITIALIZED_REFERENCE_DATEVALUE_OK'
 $initializedReferenceTimeValueOutput = Join-Path $output 'initialized-module-reference-timevalue-next'
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-timevalue-next.xps') -o $initializedReferenceTimeValueOutput
-if ($LASTEXITCODE -ne 0) { throw 'AST initialized user-reference TimeValue compilation failed.' }
-$initializedReferenceTimeValueResult = dotnet (Join-Path $initializedReferenceTimeValueOutput 'Generated.dll')
+ $initializedReferenceTimeValueCompile = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-reference-timevalue-next.xps') -o $initializedReferenceTimeValueOutput --debug 2>&1
+if ($LASTEXITCODE -ne 0) {
+    $directoryListing = if (Test-Path -LiteralPath $initializedReferenceTimeValueOutput) { Get-ChildItem -LiteralPath $initializedReferenceTimeValueOutput -Force | Select-Object -ExpandProperty FullName } else { @('<output directory missing>') }
+    throw "AST initialized user-reference TimeValue compilation failed.`n$($initializedReferenceTimeValueCompile -join "`n")`nOutput:`n$($directoryListing -join "`n")"
+}
+$initializedReferenceTimeValueAssembly = Join-Path $initializedReferenceTimeValueOutput 'Generated.dll'
+if (-not (Test-Path -LiteralPath $initializedReferenceTimeValueAssembly)) { throw "AST initialized user-reference TimeValue did not produce $initializedReferenceTimeValueAssembly." }
+$initializedReferenceTimeValueResult = dotnet $initializedReferenceTimeValueAssembly
 if ($LASTEXITCODE -ne 0 -or ($initializedReferenceTimeValueResult -join "`n") -notmatch '12:34:56') { throw 'AST initialized user-reference TimeValue failed.' }
 Write-Host 'AST_INITIALIZED_REFERENCE_TIMEVALUE_OK'
 $initializedXpImageOutput = Join-Path $output 'initialized-module-xpimage-byref-next'
