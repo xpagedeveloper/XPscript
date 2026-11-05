@@ -753,6 +753,17 @@ Initial implementation: expression conversions and a method-body emitter for ass
 
 ## Phase 10: Compatibility harness
 
+### CLI regression execution plan
+
+- [ ] Split `tests/ast-compile-probe/run-ast-cli.ps1` into six independently runnable shards so a green shard is not rerun when another shard hangs or fails.
+  - [ ] Shard 1: CLI options, output formats, preprocessing, includes and target setup.
+  - [ ] Shard 2: core language, operators, arrays, files and runtime globals.
+  - [ ] Shard 3: native objects and services (HTTP, JSON, XML, CSV, spreadsheet and database).
+  - [ ] Shard 4: classes, properties, inheritance, methods and Optional/ByRef signatures.
+  - [ ] Shard 5: constructors, destructors, XPImage ownership and lifecycle behavior.
+  - [ ] Shard 6: diagnostics, source mapping, target-generated source and final CLI execution.
+- [ ] Run the six CLI shards as separate workflow jobs with per-shard timeout, checkpoint markers and rerun-only-failed-job behavior.
+
 - [x] Build a corpus of existing XPscript samples and test programs. `tests/ast-compat` contains focused fixtures plus the repository sweep over representative `samples/` and `demo/` programs; the sweep records compatible successes and existing failures separately.
 - [x] Run each compatible source through legacy and AST compiler paths. The deterministic compatibility corpus contains 15 representative `.xps` sources and `tests/ast-compat/run-ast-compat.ps1` compiles and executes every one through both paths.
 - [x] Compare compile success/failure for the deterministic corpus and mapped negative fixtures. `run-ast-compat.ps1` verifies successful compilation on both paths, while `run-diagnostic-compat.ps1` verifies paired rejection and AST-only capability behavior.
