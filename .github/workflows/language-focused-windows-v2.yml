@@ -101,3 +101,6 @@ jobs:
       - name: Restore and build Avalonia headless desktop probe dependency
         shell: pwsh
         run: dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+      - name: Run Avalonia headless input probe
+        shell: pwsh
+        run: dotnet run --project ./tests/AvaloniaHeadlessInputProbe/AvaloniaHeadlessInputProbe.csproj -c Release
