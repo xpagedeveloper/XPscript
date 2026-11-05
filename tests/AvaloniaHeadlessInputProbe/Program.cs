@@ -5,7 +5,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 
 using var session = HeadlessUnitTestSession.StartNew(typeof(ProbeApp));
-var result = await session.Dispatch<string[]>(() =>
+var result = await session.Dispatch(() =>
 {
     var name = new TextBox { Width = 240, Height = 32 };
     var submit = new Button { Content = "Submit", Width = 120, Height = 32 };
@@ -28,7 +28,7 @@ var result = await session.Dispatch<string[]>(() =>
         submitted ? "HEADLESS_BUTTON_OK" : "HEADLESS_BUTTON_FAILED"
     };
     window.Close();
-    return markers;
+    return Task.FromResult(markers);
 });
 
 foreach (var marker in result)
