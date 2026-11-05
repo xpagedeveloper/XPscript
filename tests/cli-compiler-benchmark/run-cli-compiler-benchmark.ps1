@@ -16,8 +16,10 @@ $lines.Add('Function ReadArray(ByRef values() As Long, ByVal index As Long) As L
 $lines.Add('    ReadArray = values(index)')
 $lines.Add('End Function')
 $lines.Add('Sub Main()')
-$lines.Add('    Dim number As Long = 0')
-$lines.Add('    Dim text As String = "start"')
+$lines.Add('    Dim number As Long')
+$lines.Add('    number = 0')
+$lines.Add('    Dim text As String')
+$lines.Add('    text = "start"')
 $lines.Add('    Dim values(2) As Long')
 for ($i = 0; $i -lt 160; $i++) {
     $lines.Add("    number = AddNumber(number)")
