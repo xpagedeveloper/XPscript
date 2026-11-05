@@ -43,10 +43,15 @@ function Invoke-Compile([string] $mode, [string] $output) {
     $exitCode = $LASTEXITCODE
     $outputText | ForEach-Object { Write-Host $_ }
     if ($exitCode -ne 0) { throw "$mode failed with exit code $exitCode" }
-    $artifact = Get-ChildItem -LiteralPath $output -Recurse -File |
-        Where-Object { $_.Extension -in @('.exe', '.dll') } |
-        Sort-Object Length -Descending |
-        Select-Object -First 1
+    $outputItem = Get-Item -LiteralPath $output -ErrorAction SilentlyContinue
+    $artifact = if ($outputItem -and -not $outputItem.PSIsContainer) {
+        $outputItem
+    } else {
+        Get-ChildItem -LiteralPath $output -Recurse -File |
+            Where-Object { $_.Extension -in @('.exe', '.dll') } |
+            Sort-Object Length -Descending |
+            Select-Object -First 1
+    }
     if ($null -eq $artifact) { throw "$mode produced no executable artifact." }
     [pscustomobject]@{ Mode = $mode; Seconds = [math]::Round($timer.Elapsed.TotalSeconds, 3); Bytes = $artifact.Length; Artifact = $artifact.FullName }
 }
