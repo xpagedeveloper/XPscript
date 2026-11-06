@@ -760,7 +760,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
   - [x] Add a shard runner contract with a named shard, timeout and ordered checkpoint markers. The existing corpus emits `AST_CLI_CHECKPOINT` markers; shard-specific dispatch remains open.
   - [ ] Shard 1: CLI options, output formats, preprocessing, includes and target setup. The runner now supports `-Shard 1`; manual workflow wiring is in place.
   - [ ] Shard 2: core language, operators, arrays, files and runtime globals. Manual runner currently covers core operators and array storage; file/runtime fixtures remain to be added.
-  - [ ] Shard 3: native objects and services (HTTP, JSON, XML, CSV, spreadsheet and database).
+  - [ ] Shard 3: native objects and services (HTTP, JSON, XML, CSV, spreadsheet and database). Manual runner currently covers JSON/XML compile surfaces; runtime/service parity remains open.
   - [ ] Shard 4: classes, properties, inheritance, methods and Optional/ByRef signatures.
   - [ ] Shard 5: constructors, destructors, XPImage ownership and lifecycle behavior.
   - [ ] Shard 6: diagnostics, source mapping, target-generated source and final CLI execution.
