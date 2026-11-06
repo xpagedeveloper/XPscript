@@ -60,47 +60,6 @@ function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
     }
     return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
 }
-function Invoke-BoundedDotnetRun([string[]] $arguments, [int] $timeoutMilliseconds = 120000) {
-    $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
-    $info.UseShellExecute = $false
-    $info.RedirectStandardOutput = $true
-    $info.RedirectStandardError = $true
-    if ($null -ne $info.ArgumentList) {
-        foreach ($argument in $arguments) { [void]$info.ArgumentList.Add([string]$argument) }
-    } else {
-        $info.Arguments = (($arguments | ForEach-Object {
-            $argument = [string]$_
-            if ($argument -match '[\s"]') { '"' + $argument.Replace('\', '\\').Replace('"', '\"') + '"' } else { $argument }
-        }) -join ' ')
-    }
-    $process = [System.Diagnostics.Process]::new()
-    $process.StartInfo = $info
-    [void]$process.Start()
-    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
-    $stderrTask = $process.StandardError.ReadToEndAsync()
-    try {
-        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-        while (-not $process.HasExited -and $stopwatch.ElapsedMilliseconds -lt $timeoutMilliseconds) {
-            Start-Sleep -Milliseconds 100
-        }
-        if (-not $process.HasExited) {
-            $process.Kill($true)
-            [void]$process.WaitForExit(5000)
-            $stdoutReady = $stdoutTask.Wait(5000)
-            $stderrReady = $stderrTask.Wait(5000)
-            $output = if ($stdoutReady) { $stdoutTask.Result } else { '' }
-            $output += if ($stderrReady) { $stderrTask.Result } else { '' }
-            return @{ TimedOut = $true; ExitCode = $null; Output = $output }
-        }
-        $stdoutReady = $stdoutTask.Wait(5000)
-        $stderrReady = $stderrTask.Wait(5000)
-        $output = if ($stdoutReady) { $stdoutTask.Result } else { '' }
-        $output += if ($stderrReady) { $stderrTask.Result } else { '' }
-        return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $output }
-    } finally {
-        $process.Dispose()
-    }
-}
 function Invoke-BoundedExecutable([string] $path, [int] $timeoutMilliseconds = 120000) {
     $info = [System.Diagnostics.ProcessStartInfo]::new($path)
     $info.UseShellExecute = $false
