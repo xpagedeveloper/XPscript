@@ -160,6 +160,22 @@ jobs:
       - name: Run desktop UI AST and legacy runtime parity
         shell: pwsh
         run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+      - name: Verify desktop UI AST and legacy marker parity
+        shell: pwsh
+        run: |
+          $output = dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build 2>&1
+          if ($LASTEXITCODE -ne 0) { throw "Desktop parity probe failed: $($output -join [Environment]::NewLine)" }
+          $text = $output -join [Environment]::NewLine
+          $markers = @(
+            'DESKTOP_PARITY_AST_RUNTIME_START',
+            'DESKTOP_PARITY_AST_RUNTIME_OK',
+            'DESKTOP_PARITY_LEGACY_RUNTIME_START',
+            'DESKTOP_PARITY_LEGACY_RUNTIME_OK',
+            'DESKTOP_RUNTIME_LAUNCH_PARITY_OK'
+          )
+          $positions = $markers | ForEach-Object { $position = $text.IndexOf($_); if ($position -lt 0) { throw "Missing marker: $_" }; $position }
+          if (($positions | Sort-Object) -join ',' -ne ($positions -join ',')) { throw "Unexpected marker order: $($positions -join ',')" }
+          Write-Host 'DESKTOP_UIFORM_AST_LEGACY_MARKER_PARITY_OK'
 
   compile-macos:
     name: Compile macOS
