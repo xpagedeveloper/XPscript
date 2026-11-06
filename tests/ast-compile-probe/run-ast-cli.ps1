@@ -1,6 +1,7 @@
 # Expected negative compiler cases intentionally write diagnostics to stderr.
 param(
-    [string]$CompilerPath
+    [string]$CompilerPath,
+    [ValidateSet(0, 1)][int]$Shard = 0
 )
 
 . (Join-Path $PSScriptRoot 'cli-common.ps1')
@@ -363,6 +364,10 @@ $nativeMissingOutput = Join-Path $output 'native-missing-dependency'
 $nativeMissingDiagnostics = dotnet $compiler ast-compile (Join-Path $root 'samples/native-target-mismatch-error.xps') -o $nativeMissingOutput 2>&1 | Out-String
 if ($LASTEXITCODE -eq 0 -or $nativeMissingDiagnostics -notmatch 'native-probe.dll|dependency') { throw 'AST native missing dependency diagnostic regression failed.' }
 Write-Host 'AST_NATIVE_MISSING_DEPENDENCY_OK'
+if ($Shard -eq 1) {
+    Write-AstCliCheckpoint 'shard-1-complete'
+    exit 0
+}
 # Exercise the previously failing Application metadata/build path before broad regressions.
 Write-AstCliCheckpoint 'native-and-application-surfaces'
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')

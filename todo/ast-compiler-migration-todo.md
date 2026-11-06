@@ -758,7 +758,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Split `tests/ast-compile-probe/run-ast-cli.ps1` into six independently runnable shards so a green shard is not rerun when another shard hangs or fails.
   - [x] Extract shared CLI setup, compiler path resolution, output roots and bounded process helpers without changing test behavior. `tests/ast-compile-probe/cli-common.ps1` now owns the shared context and bounded `dotnet` runner; the unchanged corpus passed on 2026-11-06.
   - [x] Add a shard runner contract with a named shard, timeout and ordered checkpoint markers. The existing corpus emits `AST_CLI_CHECKPOINT` markers; shard-specific dispatch remains open.
-  - [ ] Shard 1: CLI options, output formats, preprocessing, includes and target setup.
+  - [ ] Shard 1: CLI options, output formats, preprocessing, includes and target setup. The runner now supports `-Shard 1`; manual workflow wiring is in place.
   - [ ] Shard 2: core language, operators, arrays, files and runtime globals.
   - [ ] Shard 3: native objects and services (HTTP, JSON, XML, CSV, spreadsheet and database).
   - [ ] Shard 4: classes, properties, inheritance, methods and Optional/ByRef signatures.
