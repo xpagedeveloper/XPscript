@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using System.Threading;
 
@@ -20,8 +21,7 @@ var result = await session.Dispatch<string[]>(() =>
     window.Show();
     name.Focus();
     window.KeyTextInput("Alice");
-    window.MouseDown(new Point(70, 76), MouseButton.Left);
-    window.MouseUp(new Point(70, 76), MouseButton.Left);
+    submit.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
     var markers = new[]
     {
         "HEADLESS_START",
