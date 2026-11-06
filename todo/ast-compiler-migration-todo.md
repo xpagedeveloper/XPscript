@@ -788,7 +788,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
     - [x] Define one bounded interactive UIForm fixture with deterministic startup, field input, button action and close markers shared by AST and legacy output. `tests/DesktopUIFormLifecycleSmoke/desktop-interaction-parity.xps` defines the shared form, text field, submit callback and ordered startup/ready/submit/close markers.
     - [x] Select and validate a Linux/Xvfb-compatible Avalonia input-driving mechanism for deterministic text entry, button activation and window close; document why it is suitable for both generated AST and legacy applications.
       - Selected Avalonia.Headless 12.1.4: it is process-local, deterministic and independent of an X11 display, and can drive both generated applications. `tests/AvaloniaHeadlessInputProbe` passed in the split build/run workflow; the successful run is https://github.com/xpagedeveloper/XPscript/actions/runs/42179329282.
-    - [ ] Add an AST Linux Xvfb runner that launches the fixture, drives the interaction, enforces a timeout and captures ordered lifecycle markers.
+    - [ ] Add an AST Linux Xvfb runner that launches the fixture, drives the interaction, enforces a timeout and captures ordered lifecycle markers. `.github/workflows/desktop-uiform-ast-linux.yml` now provides the bounded Linux/Xvfb runner and checkpoint capture; interactive input-driving remains to be wired into the probe.
     - [ ] Add a legacy Linux Xvfb runner using the same fixture and marker contract.
     - [ ] Compare AST and legacy marker sequences and exit behavior in one focused parity probe.
     - [ ] Move the focused parity probe into the permanent Linux FullTest after it passes reliably.
