@@ -2,17 +2,6 @@ name: AST CLI Shard 6 (Windows)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - investigate-ast-compiler
-    paths:
-      - '.github/workflows/ast-cli-shard-6.yml'
-      - 'tests/ast-compile-probe/run-ast-cli-shard-6.ps1'
-      - 'tests/ast-compile-probe/cli-common.ps1'
-      - 'tests/ast-compile-probe/parser-error.xps'
-      - 'tests/ast-compile-probe/include-parser-span-error-next.xps'
-      - 'tests/ast-compile-probe/cli-main.xps'
-      - 'src/XPScript.Compiler/**'
 
 permissions:
   contents: read
