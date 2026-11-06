@@ -761,7 +761,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
   - [ ] Shard 1: CLI options, output formats, preprocessing, includes and target setup. The runner now supports `-Shard 1`; manual workflow wiring is in place.
   - [ ] Shard 2: core language, operators, arrays, files and runtime globals. Manual runner currently covers core operators and array storage; file/runtime fixtures remain to be added.
   - [ ] Shard 3: native objects and services (HTTP, JSON, XML, CSV, spreadsheet and database). Manual runner currently covers JSON/XML compile surfaces; runtime/service parity remains open.
-  - [ ] Shard 4: classes, properties, inheritance, methods and Optional/ByRef signatures.
+  - [ ] Shard 4: classes, properties, inheritance, methods and Optional/ByRef signatures. Manual runner currently covers Optional methods and inheritance; properties and ByRef fixtures remain open.
   - [ ] Shard 5: constructors, destructors, XPImage ownership and lifecycle behavior.
   - [ ] Shard 6: diagnostics, source mapping, target-generated source and final CLI execution.
 - [ ] Run the six CLI shards as separate workflow jobs with per-shard timeout, checkpoint markers and rerun-only-failed-job behavior.
