@@ -136,6 +136,27 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --runtime=false
       - name: Run desktop UI AST and legacy runtime parity (macOS)
         run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+      - name: Verify desktop UI AST and legacy marker parity (macOS)
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$(dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build 2>&1)"
+          printf '%s\n' "$output"
+          python3 - "$output" <<'PY'
+          import sys
+          text = sys.argv[1]
+          markers = [
+              'DESKTOP_PARITY_AST_RUNTIME_START',
+              'DESKTOP_PARITY_AST_RUNTIME_OK',
+              'DESKTOP_PARITY_LEGACY_RUNTIME_START',
+              'DESKTOP_PARITY_LEGACY_RUNTIME_OK',
+              'DESKTOP_RUNTIME_LAUNCH_PARITY_OK',
+          ]
+          positions = [text.find(marker) for marker in markers]
+          if any(position < 0 for position in positions) or positions != sorted(positions):
+              raise SystemExit(f'Unexpected marker order: {positions}')
+          print('DESKTOP_UIFORM_AST_LEGACY_MARKER_PARITY_OK')
+          PY
       - name: Compile web application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --runtime=false --output ./out/web
       - name: Compile Notes rich-text surface
