@@ -763,7 +763,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
   - [ ] Shard 3: native objects and services (HTTP, JSON, XML, CSV, spreadsheet and database). Manual runner currently covers JSON/XML compile surfaces; runtime/service parity remains open.
   - [ ] Shard 4: classes, properties, inheritance, methods and Optional/ByRef signatures. Manual runner currently covers Optional methods and inheritance; properties and ByRef fixtures remain open.
   - [ ] Shard 5: constructors, destructors, XPImage ownership and lifecycle behavior. Manual runner now groups the existing constructor, destructor and XPImage probes; broader CLI-specific fixtures remain open.
-  - [ ] Shard 6: diagnostics, source mapping, target-generated source and final CLI execution.
+  - [ ] Shard 6: diagnostics, source mapping, target-generated source and final CLI execution. Manual runner now covers parser/source mapping diagnostics and final CLI execution; target-generated source remains open.
 - [ ] Run the six CLI shards as separate workflow jobs with per-shard timeout, checkpoint markers and rerun-only-failed-job behavior.
 
 - [x] Build a corpus of existing XPscript samples and test programs. `tests/ast-compat` contains focused fixtures plus the repository sweep over representative `samples/` and `demo/` programs; the sweep records compatible successes and existing failures separately.
