@@ -764,6 +764,7 @@ public sealed class CompilerDriver
     <AssemblyName>{EscapeXml(assemblyName)}</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <Features>$(Features);experimental-data-section-string-literals=100</Features>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Features>$(Features);experimental-data-section-string-literals=100</Features>
