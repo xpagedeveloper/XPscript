@@ -791,7 +791,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
     - [ ] Add an AST Linux Xvfb runner that launches the fixture, drives the interaction, enforces a timeout and captures ordered lifecycle markers. `.github/workflows/desktop-uiform-ast-linux.yml` now provides the bounded Linux/Xvfb runner and checkpoint capture; interactive input-driving remains to be wired into the probe.
     - [ ] Add a legacy Linux Xvfb runner using the same fixture and marker contract. `.github/workflows/desktop-uiform-legacy-linux.yml` now provides the bounded legacy-side runner; execution verification remains pending.
     - [x] Compare AST and legacy marker sequences and exit behavior in one focused parity probe. `DesktopUIFormLifecycleSmoke` emits explicit AST/legacy runtime markers; the focused Linux workflow passed on 2026-11-06: https://github.com/xpagedeveloper/XPscript/actions/runs/42278181525.
-    - [ ] Move the focused parity probe into the permanent Linux FullTest after it passes reliably.
+    - [ ] Move the focused parity probe into the permanent Linux FullTest after it passes reliably. The marker-order step is now present in `.github/workflows/fulltest.yml`; permanent workflow verification remains pending.
     - [ ] Extend the same interaction contract to the Windows desktop smoke workflow.
     - [ ] Extend the same interaction contract to the macOS desktop FullTest workflow.
     - [ ] Extend the interaction contract to an Android UIForm workflow after APK/emulator prerequisites are available; keep device/logcat verification separate from desktop parity.
