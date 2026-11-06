@@ -99,18 +99,40 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File ./tests/ast-compile-probe/run-ast-image-get.ps1
 
-  avalonia-headless:
-    name: Avalonia headless input probe
+  avalonia-headless-build:
+    name: Avalonia headless restore and build
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - name: Restore and build Avalonia headless desktop probe dependency
+      - name: Restore and build Avalonia headless probe
         shell: pwsh
-        run: dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+        run: dotnet build ./tests/AvaloniaHeadlessInputProbe/AvaloniaHeadlessInputProbe.csproj -c Release
+      - name: Upload built Avalonia probe
+        uses: actions/upload-artifact@v4
+        with:
+          name: avalonia-headless-probe-${{ github.run_id }}
+          path: tests/AvaloniaHeadlessInputProbe/bin/Release/net10.0
+          if-no-files-found: error
+
+  avalonia-headless-run:
+    name: Avalonia headless input execution
+    needs: avalonia-headless-build
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Download built Avalonia probe
+        uses: actions/download-artifact@v4
+        with:
+          name: avalonia-headless-probe-${{ github.run_id }}
+          path: tests/AvaloniaHeadlessInputProbe/bin/Release/net10.0
       - name: Run Avalonia headless input probe
         shell: pwsh
-        run: dotnet run --project ./tests/AvaloniaHeadlessInputProbe/AvaloniaHeadlessInputProbe.csproj -c Release
+        run: dotnet ./tests/AvaloniaHeadlessInputProbe/bin/Release/net10.0/AvaloniaHeadlessInputProbe.dll
