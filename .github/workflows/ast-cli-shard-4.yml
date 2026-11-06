@@ -2,6 +2,15 @@ name: AST CLI Shard 4 (Windows)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [investigate-ast-compiler]
+    paths:
+      - '.github/workflows/ast-cli-shard-4.yml'
+      - 'tests/ast-compile-probe/run-ast-cli-shard-4.ps1'
+      - 'tests/ast-compile-probe/cli-common.ps1'
+      - 'tests/ast-compile-probe/class-method-optional-next.xps'
+      - 'tests/ast-compile-probe/class-method-derived-next.xps'
+      - 'src/XPScript.Compiler/**'
 
 permissions:
   contents: read
