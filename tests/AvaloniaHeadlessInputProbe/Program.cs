@@ -6,7 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using System.Threading;
 
-using var session = HeadlessUnitTestSession.StartNew(typeof(ProbeApp));
+var session = HeadlessUnitTestSession.StartNew(typeof(ProbeApp));
 var result = await session.Dispatch<string[]>(() =>
 {
     var name = new TextBox { Width = 240, Height = 32 };
@@ -36,5 +36,11 @@ foreach (var marker in result)
     Console.WriteLine(marker);
 if (!result.SequenceEqual(new[] { "HEADLESS_START", "HEADLESS_TEXT_OK", "HEADLESS_BUTTON_OK" }))
     throw new InvalidOperationException("Avalonia.Headless input sequence failed.");
+
+// Avalonia 12.1.4 can leave its isolated dispatcher loop alive after the
+// final dispatch has completed. The probe has no further work, so terminate
+// explicitly after validating the markers instead of waiting for cleanup to
+// exceed the workflow timeout.
+Environment.Exit(0);
 
 public sealed class ProbeApp : Application;
