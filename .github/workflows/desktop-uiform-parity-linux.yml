@@ -1,0 +1,43 @@
+name: Desktop UIForm AST Legacy Parity (Linux)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    name: Compare AST and legacy marker sequence
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Restore and build parity probe
+        run: dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+      - name: Verify ordered AST and legacy markers
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ./out
+          timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build 2>&1 | tee ./out/uiform-parity.log
+          python3 - <<'PY'
+          from pathlib import Path
+          lines = Path('./out/uiform-parity.log').read_text().splitlines()
+          expected = [
+              'DESKTOP_PARITY_AST_RUNTIME_START',
+              'DESKTOP_PARITY_AST_RUNTIME_OK',
+              'DESKTOP_PARITY_LEGACY_RUNTIME_START',
+              'DESKTOP_PARITY_LEGACY_RUNTIME_OK',
+              'DESKTOP_RUNTIME_LAUNCH_PARITY_OK',
+          ]
+          positions = [lines.index(item) for item in expected]
+          if positions != sorted(positions):
+              raise SystemExit(f'Unexpected marker order: {positions}')
+          print('DESKTOP_UIFORM_AST_LEGACY_MARKER_PARITY_OK')
+          PY

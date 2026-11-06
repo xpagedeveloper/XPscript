@@ -48,8 +48,12 @@ if (!Directory.Exists(astOutput) || !Directory.EnumerateFileSystemEntries(astOut
 var astAssembly = Path.Combine(astOutput, "Generated.dll");
 if (!File.Exists(astAssembly))
     throw new InvalidOperationException("Desktop parity AST output is missing Generated.dll.");
+Console.WriteLine("DESKTOP_PARITY_AST_RUNTIME_START");
 await ProbeDesktopRuntime("AST", "dotnet", astAssembly);
+Console.WriteLine("DESKTOP_PARITY_AST_RUNTIME_OK");
+Console.WriteLine("DESKTOP_PARITY_LEGACY_RUNTIME_START");
 await ProbeDesktopRuntime("legacy", legacyOutput);
+Console.WriteLine("DESKTOP_PARITY_LEGACY_RUNTIME_OK");
 Console.WriteLine("DESKTOP_COMPILE_PARITY_FIXTURE_OK");
 Console.WriteLine("DESKTOP_RUNTIME_LAUNCH_PARITY_OK");
 
