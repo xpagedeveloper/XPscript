@@ -764,7 +764,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
   - [ ] Shard 4: classes, properties, inheritance, methods and Optional/ByRef signatures. Manual runner currently covers Optional methods and inheritance; properties and ByRef fixtures remain open.
   - [ ] Shard 5: constructors, destructors, XPImage ownership and lifecycle behavior. Manual runner now groups the existing constructor, destructor and XPImage probes; broader CLI-specific fixtures remain open.
   - [ ] Shard 6: diagnostics, source mapping, target-generated source and final CLI execution. Manual runner now covers parser/source mapping diagnostics and final CLI execution; target-generated source remains open.
-- [ ] Run the six CLI shards as separate workflow jobs with per-shard timeout, checkpoint markers and rerun-only-failed-job behavior.
+- [x] Run the six CLI shards as separate workflow jobs with per-shard timeout, checkpoint markers and rerun-only-failed-job behavior. `.github/workflows/ast-cli-shards.yml` uses six matrix jobs with `fail-fast: false`; each shard remains independently rerunnable.
 
 - [x] Build a corpus of existing XPscript samples and test programs. `tests/ast-compat` contains focused fixtures plus the repository sweep over representative `samples/` and `demo/` programs; the sweep records compatible successes and existing failures separately.
 - [x] Run each compatible source through legacy and AST compiler paths. The deterministic compatibility corpus contains 15 representative `.xps` sources and `tests/ast-compat/run-ast-compat.ps1` compiles and executes every one through both paths.
