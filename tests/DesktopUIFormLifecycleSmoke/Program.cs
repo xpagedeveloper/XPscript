@@ -225,6 +225,11 @@ async Task ProbeDesktopRuntime(string label, string file, params string[] argume
 {
     var launchFile = file;
     var launchArguments = arguments.ToList();
+    if (File.Exists(file) && file.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+    {
+        launchFile = "dotnet";
+        launchArguments.Insert(0, file);
+    }
     if (Directory.Exists(file))
     {
         var appHost = Directory.EnumerateFiles(file)
