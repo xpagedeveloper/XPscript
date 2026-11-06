@@ -756,6 +756,8 @@ Initial implementation: expression conversions and a method-body emitter for ass
 ### CLI regression execution plan
 
 - [ ] Split `tests/ast-compile-probe/run-ast-cli.ps1` into six independently runnable shards so a green shard is not rerun when another shard hangs or fails.
+  - [ ] Extract shared CLI setup, compiler path resolution, output roots and bounded process helpers without changing test behavior.
+  - [ ] Add a shard runner contract with a named shard, timeout and ordered checkpoint markers.
   - [ ] Shard 1: CLI options, output formats, preprocessing, includes and target setup.
   - [ ] Shard 2: core language, operators, arrays, files and runtime globals.
   - [ ] Shard 3: native objects and services (HTTP, JSON, XML, CSV, spreadsheet and database).
