@@ -2,15 +2,6 @@ name: AST CLI Shard 2 (Windows)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [investigate-ast-compiler]
-    paths:
-      - '.github/workflows/ast-cli-shard-2.yml'
-      - 'tests/ast-compile-probe/run-ast-cli-shard-2.ps1'
-      - 'tests/ast-compile-probe/cli-common.ps1'
-      - 'tests/ast-compile-probe/operators-core.xps'
-      - 'tests/ast-compile-probe/array-storage.xps'
-      - 'src/XPScript.Compiler/**'
 
 permissions:
   contents: read
