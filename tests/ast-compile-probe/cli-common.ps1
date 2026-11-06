@@ -60,3 +60,7 @@ function Invoke-BoundedDotnetRun([string[]] $arguments, [int] $timeoutMillisecon
         $process.Dispose()
     }
 }
+
+function Write-AstCliCheckpoint([string]$name) {
+    Write-Host "AST_CLI_CHECKPOINT=$name"
+}

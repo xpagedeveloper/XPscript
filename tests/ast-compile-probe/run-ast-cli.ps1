@@ -42,6 +42,7 @@ $source = $cliContext.Source
 $outputRoot = $cliContext.OutputRoot
 $output = Join-Path $outputRoot ('ast-cli/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $output | Out-Null
+Write-AstCliCheckpoint 'full-corpus-start'
 function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
     $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
     [void]$info.ArgumentList.Add($assemblyPath)
@@ -118,6 +119,7 @@ function Assert-HttpAccessorProbe {
     }
 }
 # Run the previously stalled parity boundary before the expensive object matrix.
+Write-AstCliCheckpoint 'class-and-cli-options'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o (Join-Path $output 'class-methods-native')
 if ($LASTEXITCODE -ne 0) { throw 'AST instance class method compilation failed.' }
 $classMethodsResult = dotnet (Join-Path $output 'class-methods-native/Generated.dll')
@@ -362,6 +364,7 @@ $nativeMissingDiagnostics = dotnet $compiler ast-compile (Join-Path $root 'sampl
 if ($LASTEXITCODE -eq 0 -or $nativeMissingDiagnostics -notmatch 'native-probe.dll|dependency') { throw 'AST native missing dependency diagnostic regression failed.' }
 Write-Host 'AST_NATIVE_MISSING_DEPENDENCY_OK'
 # Exercise the previously failing Application metadata/build path before broad regressions.
+Write-AstCliCheckpoint 'native-and-application-surfaces'
 & (Join-Path $PSScriptRoot 'run-ast-array-signature.ps1')
 $missingPathOutput = Join-Path $output 'file-missing-path-errors'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'file-missing-path-errors.xps') -o $missingPathOutput
@@ -1957,6 +1960,7 @@ if ($LASTEXITCODE -ne 0 -or ($propertyResult -join "`n") -ne 'CLASS_PROPERTIES_N
 # This fixture intentionally covers AST-only native property signatures. Legacy
 # parity is retained by the scalar/object property fixtures below; requiring
 # legacy support here would reject an explicitly supported AST extension.
+Write-AstCliCheckpoint 'ast-only-and-final-diagnostics'
 foreach ($propertyInvalid in @('class-property-readonly-error', 'class-property-writeonly-error', 'class-property-private-error', 'class-property-body-error', 'class-property-type-error')) {
     $propertyFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$propertyInvalid.xps") -o (Join-Path $output $propertyInvalid) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($propertyFailure -join "`n") -notmatch "$propertyInvalid.xps:(2|3|5|8|9):") { throw "Property diagnostic source mapping lost: $propertyInvalid" }
