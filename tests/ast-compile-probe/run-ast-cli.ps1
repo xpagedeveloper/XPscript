@@ -3,6 +3,8 @@ param(
     [string]$CompilerPath
 )
 
+. (Join-Path $PSScriptRoot 'cli-common.ps1')
+
 # Keep PowerShell from converting native stderr into terminating errors; every
 # compiler/runtime invocation below asserts its exit code and output explicitly.
 $ErrorActionPreference = 'Continue'
@@ -33,6 +35,11 @@ $compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
 if (-not (Test-Path -LiteralPath $compiler)) { throw "Compiler DLL not found: $compiler" }
 $source = Join-Path $PSScriptRoot 'cli-main.xps'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
+$cliContext = Get-AstCliContext -ProbeRoot $root -ProbeScriptRoot $PSScriptRoot -CompilerPath $CompilerPath -OutputRoot $outputRoot
+$root = $cliContext.Root
+$compiler = $cliContext.Compiler
+$source = $cliContext.Source
+$outputRoot = $cliContext.OutputRoot
 $output = Join-Path $outputRoot ('ast-cli/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
