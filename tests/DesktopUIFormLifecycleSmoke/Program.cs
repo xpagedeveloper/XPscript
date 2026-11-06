@@ -223,13 +223,31 @@ async Task RunCompiler(params string[] arguments)
 
 async Task ProbeDesktopRuntime(string label, string file, params string[] arguments)
 {
-    var start = new ProcessStartInfo(file)
+    var launchFile = file;
+    var launchArguments = arguments.ToList();
+    if (Directory.Exists(file))
+    {
+        var appHost = Directory.EnumerateFiles(file)
+            .FirstOrDefault(path => !path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) &&
+                                    !path.EndsWith(".json", StringComparison.OrdinalIgnoreCase) &&
+                                    !path.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase));
+        var generatedAssembly = Path.Combine(file, "Generated.dll");
+        if (!string.IsNullOrWhiteSpace(appHost) && OperatingSystem.IsWindows())
+            launchFile = appHost;
+        else if (File.Exists(generatedAssembly))
+        {
+            launchFile = "dotnet";
+            launchArguments.Insert(0, generatedAssembly);
+        }
+    }
+
+    var start = new ProcessStartInfo(launchFile)
     {
         WorkingDirectory = parityRoot,
         RedirectStandardOutput = true,
         RedirectStandardError = true
     };
-    foreach (var argument in arguments)
+    foreach (var argument in launchArguments)
         start.ArgumentList.Add(argument);
     using var process = Process.Start(start) ?? throw new InvalidOperationException($"Could not start {label} desktop runtime.");
     var outputTask = process.StandardOutput.ReadToEndAsync();
