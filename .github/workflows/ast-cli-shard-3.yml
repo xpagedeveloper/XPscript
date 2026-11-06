@@ -2,6 +2,15 @@ name: AST CLI Shard 3 (Windows)
 
 on:
   workflow_dispatch:
+  push:
+    branches: [investigate-ast-compiler]
+    paths:
+      - '.github/workflows/ast-cli-shard-3.yml'
+      - 'tests/ast-compile-probe/run-ast-cli-shard-3.ps1'
+      - 'tests/ast-compile-probe/cli-common.ps1'
+      - 'samples/native-json-regression.xps'
+      - 'samples/native-xml-regression.xps'
+      - 'src/XPScript.Compiler/**'
 
 permissions:
   contents: read
