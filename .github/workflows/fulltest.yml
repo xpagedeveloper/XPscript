@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, openapi-client-v2]
+    branches: [main, openapi-client-v2, investigate-ast-compiler]
   workflow_dispatch:
 
 permissions:
