@@ -755,7 +755,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 
 ### CLI regression execution plan
 
-- [ ] Split `tests/ast-compile-probe/run-ast-cli.ps1` into six independently runnable shards so a green shard is not rerun when another shard hangs or fails.
+- [x] Split `tests/ast-compile-probe/run-ast-cli.ps1` into six independently runnable shards so a green shard is not rerun when another shard hangs or fails. The six-job matrix passed in GitHub Actions on 2026-11-06; each job has independent checkpoints, timeout and rerun scope.
   - [x] Extract shared CLI setup, compiler path resolution, output roots and bounded process helpers without changing test behavior. `tests/ast-compile-probe/cli-common.ps1` now owns the shared context and bounded `dotnet` runner; the unchanged corpus passed on 2026-11-06.
   - [x] Add a shard runner contract with a named shard, timeout and ordered checkpoint markers. The existing corpus emits `AST_CLI_CHECKPOINT` markers; shard-specific dispatch remains open.
   - [ ] Shard 1: CLI options, output formats, preprocessing, includes and target setup. The runner now supports `-Shard 1`; manual workflow wiring is in place.
