@@ -26,6 +26,13 @@ var requiredCode = new BoundMethodEmitter().Emit("SetRequired", typeof(void), [n
     new BoundLiteralExpression(true, typeof(bool)), true)]);
 if (!requiredCode.Contains("field.Required = true", StringComparison.Ordinal))
     throw new Exception("UIFormField.Required AST property assignment was not preserved.");
+var addButtonCallback = new BoundMemberAccessExpression(uiFormLocal, "AddButtonCallback", typeof(object), XpTypeSymbol.User("UIFormButton"));
+var addButtonCallbackCall = new BoundCallExpression(addButtonCallback,
+    new FunctionSymbol("AddButtonCallback", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.User("UIFormButton"),
+        [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]),
+    [new BoundLiteralExpression("save", typeof(string)), new BoundLiteralExpression("Save", typeof(string)), new BoundLiteralExpression("OnSave", typeof(string))]);
+if (expressions.Emit(addButtonCallbackCall) != "form.AddButtonCallback(\"save\", \"Save\", \"OnSave\")")
+    throw new Exception("UIForm callback member call was not preserved.");
 var optionalReference = new ParameterSymbol("seed", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
 var optionalDependent = new ParameterSymbol("next", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
 var defaultMutation = new BoundCallExpression(null, new FunctionSymbol("Mutate", typeof(long), [typeof(long)], ByRefParameters: [true]),
