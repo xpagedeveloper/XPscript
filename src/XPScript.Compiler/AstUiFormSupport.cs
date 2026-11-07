@@ -15,7 +15,7 @@ internal static class AstUiFormSupport
             ["UIFormField"] = "XPScriptUIField"
         };
 
-    private static readonly ClassDeclarationSyntax[] Classes = CSharpSyntaxTree.ParseText(new UIFormCallbackModelPostProcessor().Transform(UIExtensionRuntimeSource.Code))
+    private static readonly ClassDeclarationSyntax[] Classes = CSharpSyntaxTree.ParseText(UIExtensionRuntimeSource.Code)
         .GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>().ToArray();
 
     private static string LanguageType(string type) => type.TrimEnd('?') switch
@@ -25,7 +25,10 @@ internal static class AstUiFormSupport
     };
 
     internal static readonly AstNativeObjectSurface.Member[] Members = AstNativeObjectSurface
-        .ReadMembers(Classes, ["XPScriptUI", "XPScriptUIForm", "XPScriptUIField"], LanguageType).ToArray();
+        .ReadMembers(Classes, ["XPScriptUI", "XPScriptUIForm", "XPScriptUIField"], LanguageType)
+        .Append(new AstNativeObjectSurface.Member("UIForm", "AddButtonCallback", "XPScriptUIButton",
+            ["object?", "object?", "object?"], ["name", "label", "handlerName"], false, false, false))
+        .ToArray();
 
     internal static string? RuntimeType(string name) => RuntimeTypes.GetValueOrDefault(name);
     internal static void Import(SymbolTable symbols) => AstNativeObjectSurface.Import(symbols, Members, LanguageType);
