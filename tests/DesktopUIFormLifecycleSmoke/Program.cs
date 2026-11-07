@@ -58,6 +58,9 @@ if (args.Contains("--ast-only", StringComparer.Ordinal))
     Console.WriteLine("DESKTOP_PARITY_AST_COMPILE_START");
     await RunCompiler("ast-compile", paritySourcePath, "-o", astOutput, "--single-file=false", "--runtime=false");
     Console.WriteLine("DESKTOP_PARITY_AST_COMPILE_OK");
+    var generatedSources = Directory.EnumerateFiles(astOutput, "*.cs", SearchOption.AllDirectories).ToArray();
+    Console.WriteLine("DESKTOP_PARITY_AST_GENERATED_CS_COUNT=" + generatedSources.Length);
+    Console.WriteLine("DESKTOP_PARITY_AST_MAC_ENTRY=" + generatedSources.Any(path => File.ReadAllText(path).Contains("RunMacOS", StringComparison.Ordinal)));
     Console.WriteLine("DESKTOP_PARITY_AST_RUNTIME_START");
     await ProbeDesktopRuntime("AST", "dotnet", Path.Combine(astOutput, "Generated.dll"));
     Console.WriteLine("DESKTOP_PARITY_AST_RUNTIME_OK");
