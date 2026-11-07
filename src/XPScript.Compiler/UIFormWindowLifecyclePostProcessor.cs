@@ -6,15 +6,17 @@ internal sealed class UIFormWindowLifecyclePostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
-        generated = ReplaceRequired(generated,
-            "    private readonly List<XPScriptUIField> _fields = [];\n    private readonly List<(string Name, string Command)> _mediaCommands = [];\n\n    internal XPScriptUIForm(string title, int? width, int? height, bool resizable)",
-            "    private readonly List<XPScriptUIField> _fields = [];\n    private readonly List<(string Name, string Command)> _mediaCommands = [];\n    private readonly string _instanceId = Guid.NewGuid().ToString(\"N\");\n    private bool _visible;\n    private bool _modal;\n\n    internal XPScriptUIForm(string title, int? width, int? height, bool resizable)",
-            "form-instance-state");
+        if (!generated.Contains("private readonly string _instanceId", StringComparison.Ordinal))
+            generated = ReplaceRequired(generated,
+                "    private readonly List<XPScriptUIField> _fields = [];\n    private readonly List<(string Name, string Command)> _mediaCommands = [];\n\n    internal XPScriptUIForm(string title, int? width, int? height, bool resizable)",
+                "    private readonly List<XPScriptUIField> _fields = [];\n    private readonly List<(string Name, string Command)> _mediaCommands = [];\n    private readonly string _instanceId = Guid.NewGuid().ToString(\"N\");\n    private bool _visible;\n    private bool _modal;\n\n    internal XPScriptUIForm(string title, int? width, int? height, bool resizable)",
+                "form-instance-state");
 
-        generated = ReplaceRequired(generated,
-            "    public bool HasExplicitSize => _width.HasValue || _height.HasValue;\n    public object Data => _data;",
-            "    public bool HasExplicitSize => _width.HasValue || _height.HasValue;\n    public bool Visible => XPScriptUIDesktopAdapter.TryIsVisible(_instanceId, _visible);\n    public bool Modal => _modal;\n    internal string InstanceId => _instanceId;\n    public object Data => _data;",
-            "form-lifecycle-properties");
+        if (!generated.Contains("internal string InstanceId", StringComparison.Ordinal))
+            generated = ReplaceRequired(generated,
+                "    public bool HasExplicitSize => _width.HasValue || _height.HasValue;\n    public object Data => _data;",
+                "    public bool HasExplicitSize => _width.HasValue || _height.HasValue;\n    public bool Visible => XPScriptUIDesktopAdapter.TryIsVisible(_instanceId, _visible);\n    public bool Modal => _modal;\n    internal string InstanceId => _instanceId;\n    public object Data => _data;",
+                "form-lifecycle-properties");
 
         generated = ReplaceRequired(generated,
             "    public string ShowDialog()\n    {",
