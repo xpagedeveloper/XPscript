@@ -243,6 +243,8 @@ async Task RunCompiler(params string[] arguments)
     using var process = Process.Start(start) ?? throw new InvalidOperationException("Could not start compiler.");
     var output = await process.StandardOutput.ReadToEndAsync() + await process.StandardError.ReadToEndAsync();
     await process.WaitForExitAsync();
+    if (Environment.GetEnvironmentVariable("XPSCRIPT_TRACE_AST_DESKTOP_ENTRY") == "1")
+        Console.WriteLine(output);
     if (process.ExitCode != 0)
         throw new InvalidOperationException($"Desktop parity compiler invocation failed: {output}");
 }
