@@ -44,4 +44,14 @@ if ($LASTEXITCODE -ne 0 -or ($httpResult -join "`n") -notmatch 'AST_HTTP_JSON_TR
 }
 Write-Host 'AST_HTTP_JSON_TRANSITIVE_RUNTIME_OK'
 
+Write-AstCliCheckpoint 'shard-6-filesystem-runtime'
+$filesystemOutput = Join-Path $output 'filesystem-runtime'
+dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'filesystem-transitive-runtime-next.xps') -o $filesystemOutput
+if ($LASTEXITCODE -ne 0) { throw 'Shard 6 filesystem transitive runtime compilation failed.' }
+$filesystemResult = @(dotnet (Join-Path $filesystemOutput 'Generated.dll'))
+if ($LASTEXITCODE -ne 0 -or ($filesystemResult -join "`n") -notmatch 'AST_FILESYSTEM_TRANSITIVE_RUNTIME_OK') {
+    throw 'Shard 6 filesystem transitive runtime execution regression failed.'
+}
+Write-Host 'AST_FILESYSTEM_TRANSITIVE_RUNTIME_OK'
+
 Write-AstCliCheckpoint 'shard-6-complete'

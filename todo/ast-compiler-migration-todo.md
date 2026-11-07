@@ -981,6 +981,7 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
   - [ ] Add focused dependency fixtures for object families with shared JSON, HTTP, filesystem, database, UI and platform runtimes.
     - [x] Add and run the first focused JSON-schema transitive-runtime fixture in AST CLI shard 6.
     - [x] Add the HTTP-plus-JSON transitive-runtime fixture to AST CLI shard 6.
+    - [x] Add the filesystem transitive-runtime fixture to AST CLI shard 6.
   - [ ] Verify that dependency inclusion is minimal for schema-free samples and complete for schema-enabled samples, with en-US and sv-SE checks where formatted output exists.
 
 Next implementation order:

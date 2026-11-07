@@ -1,0 +1,12 @@
+Sub Main()
+    Dim fileNumber As Integer
+    Dim line As String
+    fileNumber = FreeFile
+    Open "ast-filesystem-transitive-runtime-next.txt" For Output As #fileNumber
+    Print #fileNumber, "AST_FILESYSTEM_TRANSITIVE_RUNTIME_OK"
+    Close #fileNumber
+    Open "ast-filesystem-transitive-runtime-next.txt" For Input As #fileNumber
+    Line Input #fileNumber, line
+    Close #fileNumber
+    If line = "AST_FILESYSTEM_TRANSITIVE_RUNTIME_OK" Then Print line
+End Sub
