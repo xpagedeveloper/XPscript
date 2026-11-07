@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Threading;
+using System.Runtime.ExceptionServices;
 
 namespace XPScript.UI.Desktop;
 
@@ -9,6 +10,46 @@ internal static class DesktopApplicationHost
     private static readonly ManualResetEventSlim Started = new(false);
     private static Thread? _uiThread;
     private static Exception? _startupFailure;
+    private static CancellationTokenSource? _macLoopCancellation;
+    private static bool _macScriptCompleted;
+    private static bool _macKeepAlive;
+
+    public static void RunMacOS(Action script)
+    {
+        ArgumentNullException.ThrowIfNull(script);
+        if (!OperatingSystem.IsMacOS())
+            throw new PlatformNotSupportedException("The macOS desktop loop requires macOS.");
+
+        lock (SyncRoot)
+        {
+            if (_uiThread is not null)
+                throw new InvalidOperationException("The desktop UI runtime has already started.");
+            _uiThread = Thread.CurrentThread;
+        }
+
+        InitializeOnCurrentThread();
+        using var cancellation = new CancellationTokenSource();
+        _macLoopCancellation = cancellation;
+        Started.Set();
+        Exception? scriptFailure = null;
+        var worker = new Thread(() =>
+        {
+            try { script(); }
+            catch (Exception ex) { scriptFailure = ex; }
+            finally
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _macScriptCompleted = true;
+                    if (scriptFailure is not null || !_macKeepAlive) cancellation.Cancel();
+                });
+            }
+        }) { IsBackground = true, Name = "XPScript script" };
+        worker.Start();
+        Dispatcher.UIThread.MainLoop(cancellation.Token);
+        worker.Join();
+        if (scriptFailure is not null) ExceptionDispatchInfo.Capture(scriptFailure).Throw();
+    }
 
     public static void EnsureStarted()
     {
@@ -57,6 +98,12 @@ internal static class DesktopApplicationHost
             return;
         }
 
+        if (OperatingSystem.IsMacOS())
+        {
+            _macKeepAlive = keepAlive;
+            if (!keepAlive && _macScriptCompleted) _macLoopCancellation?.Cancel();
+            return;
+        }
         Thread.CurrentThread.IsBackground = !keepAlive;
     }
 

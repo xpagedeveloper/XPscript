@@ -8,6 +8,7 @@ namespace XPScript.UI.Desktop;
 
 public static class DesktopFormLifecycleHost
 {
+    public static void RunMacOS(Action script) => DesktopApplicationHost.RunMacOS(script);
     private static readonly ConcurrentDictionary<string, Window> Windows = new(StringComparer.Ordinal);
 
     public static string Show(string requestJson) => Show(requestJson, null);
