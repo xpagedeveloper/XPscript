@@ -20,6 +20,12 @@ var addTextFieldCall = new BoundCallExpression(addTextField,
     [new BoundLiteralExpression("name", typeof(string)), new BoundLiteralExpression("Name", typeof(string))]);
 if (expressions.Emit(addTextFieldCall) != "form.AddTextField(\"name\", \"Name\")")
     throw new Exception("UIForm AST member call was not preserved.");
+var uiFieldLocal = new BoundNameExpression(new LocalSymbol("field", typeof(object), XpTypeSymbol.User("UIFormField")));
+var requiredProperty = new BoundMemberAccessExpression(uiFieldLocal, "Required", typeof(bool), XpTypeSymbol.FromClr(typeof(bool)), true);
+var requiredCode = new BoundMethodEmitter().Emit("SetRequired", typeof(void), [new BoundAssignmentStatement(requiredProperty,
+    new BoundLiteralExpression(true, typeof(bool)), true)]);
+if (!requiredCode.Contains("field.Required = true", StringComparison.Ordinal))
+    throw new Exception("UIFormField.Required AST property assignment was not preserved.");
 var optionalReference = new ParameterSymbol("seed", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
 var optionalDependent = new ParameterSymbol("next", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
 var defaultMutation = new BoundCallExpression(null, new FunctionSymbol("Mutate", typeof(long), [typeof(long)], ByRefParameters: [true]),
