@@ -187,6 +187,14 @@ public static class AstCompiler
         ValidateAstAiCallbacks(fullSource);
         var runtimeFeatures = RuntimeFeatures.Detect(fullSource);
         var usesAi = runtimeFeatures.Ai;
+        // UIForm currently carries validation members in its shared runtime
+        // source. Keep the dependency trigger explicit until that validation
+        // surface is split out, while also detecting direct generated/source
+        // references to the schema types.
+        var usesJsonSchemaRuntime = runtimeFeatures.Ui ||
+            Regex.IsMatch(fullSource, @"(?i)\b(?:XPScriptJsonSchema|XPScriptJsonValidationResult)\b") ||
+            AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema") ||
+            AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonValidationResult");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
             if (definition!.Route == AstObjectSupportRegistry.CompilationRoute.LegacyFallback)
@@ -962,7 +970,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{(usesArchive ? ArchiveRuntimeSource.Code + ArchiveMemoryRuntimeSource.Code + ArchiveIteratorRuntimeSource.Code : "")}}
 {{(usesArchive && source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ? ArchiveExtendedReaderRuntimeSource.Code + ArchiveExtendedWriterRuntimeSource.Code + ArchiveExtendedWriterFactoryRuntimeSource.Code : "")}}
 {{(usesNetworkTools ? NetworkToolsRuntimeSource.Code : "")}}
-{{((runtimeFeatures.Ui || usesAi || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema") || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonValidationResult")) ? JsonSchemaRuntimeSource.Code : "")}}
+{{((usesJsonSchemaRuntime || usesAi) ? JsonSchemaRuntimeSource.Code : "")}}
 {{AstRuntimeSource.Code}}
 {{(usesNotesRuntime ? NotesRuntimeSourceBuilder.Build() : "")}}
 {{OperatorArrayCompatibilityRuntimeSource.Code}}
