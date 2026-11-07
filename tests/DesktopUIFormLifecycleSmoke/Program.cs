@@ -29,7 +29,10 @@ Sub Main()
     Call form.Show(False)
 End Sub
 """;
-var parityRoot = Path.Combine(Path.GetTempPath(), "xpscript-desktop-parity-" + Guid.NewGuid().ToString("N"));
+var parityRoot = Path.Combine(
+    Directory.GetCurrentDirectory(),
+    "out",
+    "xpscript-desktop-parity-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(parityRoot);
 var paritySourcePath = Path.Combine(parityRoot, "desktop-parity.xps");
 await File.WriteAllTextAsync(paritySourcePath, desktopParitySource);
