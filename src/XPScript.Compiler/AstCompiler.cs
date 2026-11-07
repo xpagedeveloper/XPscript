@@ -962,7 +962,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{(usesArchive ? ArchiveRuntimeSource.Code + ArchiveMemoryRuntimeSource.Code + ArchiveIteratorRuntimeSource.Code : "")}}
 {{(usesArchive && source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ? ArchiveExtendedReaderRuntimeSource.Code + ArchiveExtendedWriterRuntimeSource.Code + ArchiveExtendedWriterFactoryRuntimeSource.Code : "")}}
 {{(usesNetworkTools ? NetworkToolsRuntimeSource.Code : "")}}
-{{((usesAi || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema") || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonValidationResult")) ? JsonSchemaRuntimeSource.Code : "")}}
+{{((runtimeFeatures.Ui || usesAi || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema") || AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonValidationResult")) ? JsonSchemaRuntimeSource.Code : "")}}
 {{AstRuntimeSource.Code}}
 {{(usesNotesRuntime ? NotesRuntimeSourceBuilder.Build() : "")}}
 {{OperatorArrayCompatibilityRuntimeSource.Code}}
