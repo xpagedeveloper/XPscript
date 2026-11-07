@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/temp-macos-ast-uiform.yml'
       - 'src/XPScript.Compiler/AstCompiler.cs'
+      - 'src/XPScript.Compiler/AdvancedXPScriptTranspiler.cs'
       - 'tests/DesktopUIFormLifecycleSmoke/**'
 
 permissions:
