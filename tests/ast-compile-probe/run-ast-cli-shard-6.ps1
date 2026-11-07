@@ -24,4 +24,14 @@ if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -notmatch 'AST_OPTIONAL_CALL_OK
 }
 Write-Host 'AST_CLI_SHARD_6_FINAL_EXECUTION_OK'
 
+Write-AstCliCheckpoint 'shard-6-json-schema-runtime'
+$schemaOutput = Join-Path $output 'json-schema-runtime'
+dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'json-schema-transitive-runtime-next.xps') -o $schemaOutput
+if ($LASTEXITCODE -ne 0) { throw 'Shard 6 JSON-schema transitive runtime compilation failed.' }
+$schemaResult = @(dotnet (Join-Path $schemaOutput 'Generated.dll'))
+if ($LASTEXITCODE -ne 0 -or ($schemaResult -join "`n") -notmatch 'AST_JSON_SCHEMA_TRANSITIVE_RUNTIME_OK') {
+    throw 'Shard 6 JSON-schema transitive runtime execution regression failed.'
+}
+Write-Host 'AST_JSON_SCHEMA_TRANSITIVE_RUNTIME_OK'
+
 Write-AstCliCheckpoint 'shard-6-complete'
