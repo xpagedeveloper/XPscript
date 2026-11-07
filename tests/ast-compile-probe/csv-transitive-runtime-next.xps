@@ -1,0 +1,6 @@
+Sub Main()
+    Dim table As New XPCsvDocument("id;name" & Application.NewLine & "1;Åsa", ";")
+    If table.RowCount = 1 And table.Rows[0].Get("name") = "Åsa" Then
+        Print "AST_CSV_TRANSITIVE_RUNTIME_OK"
+    End If
+End Sub

@@ -64,4 +64,14 @@ if ($LASTEXITCODE -ne 0 -or ($databaseResult -join "`n") -notmatch 'AST_DATABASE
 }
 Write-Host 'AST_DATABASE_TRANSITIVE_RUNTIME_OK'
 
+Write-AstCliCheckpoint 'shard-6-csv-runtime'
+$csvOutput = Join-Path $output 'csv-runtime'
+dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'csv-transitive-runtime-next.xps') -o $csvOutput
+if ($LASTEXITCODE -ne 0) { throw 'Shard 6 CSV transitive runtime compilation failed.' }
+$csvResult = @(dotnet (Join-Path $csvOutput 'Generated.dll'))
+if ($LASTEXITCODE -ne 0 -or ($csvResult -join "`n") -notmatch 'AST_CSV_TRANSITIVE_RUNTIME_OK') {
+    throw 'Shard 6 CSV transitive runtime execution regression failed.'
+}
+Write-Host 'AST_CSV_TRANSITIVE_RUNTIME_OK'
+
 Write-AstCliCheckpoint 'shard-6-complete'
