@@ -810,6 +810,8 @@ public static class AstCompiler
         var methodName = declarationName;
         var macDesktopEntry = methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) &&
             AstObjectSupportRegistry.UsesObject(fullSource, "UIForm");
+        if (Environment.GetEnvironmentVariable("XPSCRIPT_TRACE_AST_DESKTOP_ENTRY") == "1")
+            Console.Error.WriteLine($"AST_DESKTOP_ENTRY application={usesApplication} method={methodName} uiForm={AstObjectSupportRegistry.UsesObject(fullSource, "UIForm")} selected={macDesktopEntry}");
         if (macDesktopEntry && !usesApplication)
         {
             var main = methods.FindIndex(method => method.Name == "Main" && method.Parameters.Count == 0 && method.ReturnType == typeof(void));
