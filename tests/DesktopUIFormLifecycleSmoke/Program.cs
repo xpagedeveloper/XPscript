@@ -58,9 +58,6 @@ if (args.Contains("--ast-only", StringComparer.Ordinal))
     Console.WriteLine("DESKTOP_PARITY_AST_COMPILE_START");
     await RunCompiler("ast-compile", paritySourcePath, "-o", astOutput, "--single-file=false", "--runtime=false");
     Console.WriteLine("DESKTOP_PARITY_AST_COMPILE_OK");
-    var generatedSources = Directory.EnumerateFiles(astOutput, "*.cs", SearchOption.AllDirectories).ToArray();
-    Console.WriteLine("DESKTOP_PARITY_AST_GENERATED_CS_COUNT=" + generatedSources.Length);
-    Console.WriteLine("DESKTOP_PARITY_AST_MAC_ENTRY=" + generatedSources.Any(path => File.ReadAllText(path).Contains("RunMacOS", StringComparison.Ordinal)));
     Console.WriteLine("DESKTOP_PARITY_AST_RUNTIME_START");
     await ProbeDesktopRuntime("AST", "dotnet", Path.Combine(astOutput, "Generated.dll"));
     Console.WriteLine("DESKTOP_PARITY_AST_RUNTIME_OK");
@@ -243,8 +240,6 @@ async Task RunCompiler(params string[] arguments)
     using var process = Process.Start(start) ?? throw new InvalidOperationException("Could not start compiler.");
     var output = await process.StandardOutput.ReadToEndAsync() + await process.StandardError.ReadToEndAsync();
     await process.WaitForExitAsync();
-    if (Environment.GetEnvironmentVariable("XPSCRIPT_TRACE_AST_DESKTOP_ENTRY") == "1")
-        Console.WriteLine(output);
     if (process.ExitCode != 0)
         throw new InvalidOperationException($"Desktop parity compiler invocation failed: {output}");
 }

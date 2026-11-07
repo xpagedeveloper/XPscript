@@ -189,8 +189,6 @@ public static class AstCompiler
         var usesAi = runtimeFeatures.Ai;
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
-            if (Environment.GetEnvironmentVariable("XPSCRIPT_TRACE_AST_DESKTOP_ENTRY") == "1")
-                Console.Error.WriteLine($"AST_FALLBACK_OBJECT={definition?.Name} route={definition?.Route}");
             if (definition!.Route == AstObjectSupportRegistry.CompilationRoute.LegacyFallback)
                 return await CompileWithLegacyFallbackAsync(sourcePath, outputDirectory, cancellationToken).ConfigureAwait(false);
 
@@ -810,15 +808,6 @@ public static class AstCompiler
         }
         var declarationName = sub?.Identifier.Text ?? function!.Identifier.Text;
         var methodName = declarationName;
-        var macDesktopEntry = methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) &&
-            AstObjectSupportRegistry.UsesObject(fullSource, "UIForm");
-        if (Environment.GetEnvironmentVariable("XPSCRIPT_TRACE_AST_DESKTOP_ENTRY") == "1")
-            Console.Error.WriteLine($"AST_DESKTOP_ENTRY application={usesApplication} method={methodName} uiForm={AstObjectSupportRegistry.UsesObject(fullSource, "UIForm")} selected={macDesktopEntry}");
-        if (macDesktopEntry && !usesApplication)
-        {
-            var main = methods.FindIndex(method => method.Name == "Main" && method.Parameters.Count == 0 && method.ReturnType == typeof(void));
-            if (main >= 0) methods[main] = methods[main] with { Name = "__xps_script_main" };
-        }
         string body;
         try
         {
@@ -846,14 +835,8 @@ public static class AstCompiler
         moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
         var entryPoint = usesApplication
             ? "public static void Main(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
-                (methods.Any(m => m.Name == "__xps_application_main" && m.Parameters.Count == 0 && m.ReturnType == typeof(void))
-                    ? macDesktopEntry
-                        ? "if (OperatingSystem.IsMacOS()) { var host = Type.GetType(\"XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop\", throwOnError: true)!; host.GetMethod(\"RunMacOS\")!.Invoke(null, new object[] { (Action)__xps_application_main }); } else __xps_application_main();"
-                        : "__xps_application_main();"
-                    : "") + " }"
-            : macDesktopEntry
-                ? "public static void Main() { if (OperatingSystem.IsMacOS()) { var host = Type.GetType(\"XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop\", throwOnError: true)!; host.GetMethod(\"RunMacOS\")!.Invoke(null, new object[] { (Action)__xps_script_main }); } else __xps_script_main(); }"
-                : methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
+                (methods.Any(m => m.Name == "__xps_application_main" && m.Parameters.Count == 0 && m.ReturnType == typeof(void)) ? "__xps_application_main();" : "") + " }"
+            : methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
         var androidEntryPoint = runtimeIdentifier is "android-arm64" or "android-x64"
             ? usesApplication
                 ? "public static void __xps_android_entry(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
