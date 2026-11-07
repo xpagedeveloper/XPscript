@@ -1,0 +1,6 @@
+Sub Main()
+    Dim image As New XPImage(2, 2)
+    If image.Width = 2 And image.Height = 2 Then
+        Print "AST_IMAGE_TRANSITIVE_RUNTIME_OK"
+    End If
+End Sub
