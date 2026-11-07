@@ -148,7 +148,8 @@ internal sealed class AdvancedXPScriptTranspiler
 
         var macDesktopEntry = AstObjectSupportRegistry.UsesObject(source, "UIForm") ||
             source.Contains("XPScriptUIForm", StringComparison.Ordinal) ||
-            source.Contains("XPScriptUIDesktopAdapter", StringComparison.Ordinal);
+            source.Contains("XPScriptUIDesktopAdapter", StringComparison.Ordinal) ||
+            source.Contains("XPSCRIPT_MAC_DESKTOP_ENTRY", StringComparison.Ordinal);
         var mainCall = macDesktopEntry
             ? $$"""
                 if (OperatingSystem.IsMacOS())

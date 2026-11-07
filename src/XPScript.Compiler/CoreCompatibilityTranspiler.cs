@@ -41,6 +41,8 @@ internal sealed class CoreCompatibilityTranspiler
         var lines = Normalize(source);
         Analyze(lines, sourceName);
         var transformed = TransformModule(lines, sourceName);
+        if (Regex.IsMatch(source, @"(?i)\bUIForm\b"))
+            transformed = "' XPSCRIPT_MAC_DESKTOP_ENTRY\n" + transformed;
         var generated = new AdvancedXPScriptTranspiler().Transpile(transformed, sourceName);
         generated = InjectScriptMembers(generated);
         generated = PostProcessMarkers(generated);
