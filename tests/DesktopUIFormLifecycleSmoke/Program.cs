@@ -53,6 +53,16 @@ if (args.Contains("--legacy-only", StringComparer.Ordinal))
     Console.WriteLine("DESKTOP_PARITY_LEGACY_RUNTIME_OK");
     return;
 }
+if (args.Contains("--ast-only", StringComparer.Ordinal))
+{
+    Console.WriteLine("DESKTOP_PARITY_AST_COMPILE_START");
+    await RunCompiler("ast-compile", paritySourcePath, "-o", astOutput, "--single-file=false", "--runtime=false");
+    Console.WriteLine("DESKTOP_PARITY_AST_COMPILE_OK");
+    Console.WriteLine("DESKTOP_PARITY_AST_RUNTIME_START");
+    await ProbeDesktopRuntime("AST", "dotnet", Path.Combine(astOutput, "Generated.dll"));
+    Console.WriteLine("DESKTOP_PARITY_AST_RUNTIME_OK");
+    return;
+}
 await RunCompiler("ast-compile", paritySourcePath, "-o", astOutput, "--single-file=false", "--runtime=false");
 await RunCompiler("legacy-compile", paritySourcePath, "-o", legacyOutput, "--single-file=false", "--runtime=false");
 if (!Directory.Exists(astOutput) || !Directory.EnumerateFileSystemEntries(astOutput).Any() ||

@@ -808,6 +808,13 @@ public static class AstCompiler
         }
         var declarationName = sub?.Identifier.Text ?? function!.Identifier.Text;
         var methodName = declarationName;
+        var macDesktopEntry = !usesApplication && methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) &&
+            AstObjectSupportRegistry.UsesObject(fullSource, "UIForm");
+        if (macDesktopEntry)
+        {
+            var main = methods.FindIndex(method => method.Name == "Main" && method.Parameters.Count == 0 && method.ReturnType == typeof(void));
+            if (main >= 0) methods[main] = methods[main] with { Name = "__xps_script_main" };
+        }
         string body;
         try
         {
@@ -836,7 +843,9 @@ public static class AstCompiler
         var entryPoint = usesApplication
             ? "public static void Main(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
                 (methods.Any(m => m.Name == "__xps_application_main" && m.Parameters.Count == 0 && m.ReturnType == typeof(void)) ? "__xps_application_main();" : "") + " }"
-            : methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
+            : macDesktopEntry
+                ? "public static void Main() { if (OperatingSystem.IsMacOS()) { var host = Type.GetType(\"XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop\", throwOnError: true)!; host.GetMethod(\"RunMacOS\")!.Invoke(null, new object[] { (Action)__xps_script_main }); } else __xps_script_main(); }"
+                : methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
         var androidEntryPoint = runtimeIdentifier is "android-arm64" or "android-x64"
             ? usesApplication
                 ? "public static void __xps_android_entry(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
