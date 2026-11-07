@@ -162,6 +162,8 @@ internal static class AstObjectSupportRegistry
         var code = RemoveStringsAndComments(source);
         foreach (var candidate in Objects.Where(item => item.Route != CompilationRoute.Ast))
         {
+            if (candidate.Name.Equals("UIForm", StringComparison.OrdinalIgnoreCase) && AstUiFormSupport.CanUseAst(code))
+                continue;
             if (Regex.IsMatch(code, $@"(?i)\b{Regex.Escape(candidate.Name)}\b"))
             {
                 definition = candidate;

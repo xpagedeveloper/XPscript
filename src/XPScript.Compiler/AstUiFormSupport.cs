@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using XPScript.Compiler.Binding;
@@ -32,4 +33,8 @@ internal static class AstUiFormSupport
 
     internal static string? RuntimeType(string name) => RuntimeTypes.GetValueOrDefault(name);
     internal static void Import(SymbolTable symbols) => AstNativeObjectSurface.Import(symbols, Members, LanguageType);
+
+    internal static bool CanUseAst(string source) =>
+        AstObjectSupportRegistry.UsesObject(source, "UIForm") &&
+        !Regex.IsMatch(source, @"(?i)\b(?:AddButtonCallback|SetOnChangeCallback|SetOnPlayCallback|SetOnPauseCallback|SetOnEndedCallback|SetOnErrorCallback)\b");
 }
