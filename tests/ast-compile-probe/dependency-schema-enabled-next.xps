@@ -1,0 +1,5 @@
+Sub Main()
+    Dim schema As XPJsonSchema
+    Set schema = XPJsonSchema.Parse("true")
+    Print schema.IsValid(123)
+End Sub

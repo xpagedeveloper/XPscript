@@ -989,6 +989,7 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
     - [x] Add the spreadsheet transitive-runtime fixture to AST CLI shard 6.
   - [ ] Verify that dependency inclusion is minimal for schema-free samples and complete for schema-enabled samples, with en-US and sv-SE checks where formatted output exists.
     - [x] Add the schema-free generated-source assertion; schema-free AST output must omit JSON-schema and HTTP providers.
+    - [x] Add the schema-enabled generated-source assertion; AST output must include both JSON-schema providers.
 
 Next implementation order:
 

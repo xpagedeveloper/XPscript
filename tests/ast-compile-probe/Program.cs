@@ -196,6 +196,30 @@ finally
     try { Directory.Delete(schemaFreeOutput, recursive: true); } catch { }
 }
 
+var schemaEnabledFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "dependency-schema-enabled-next.xps");
+schemaEnabledFixture = Path.GetFullPath(schemaEnabledFixture);
+var schemaEnabledOutput = Path.Combine(Path.GetTempPath(), "xpscript-schema-enabled-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(schemaEnabledOutput);
+try
+{
+    var schemaEnabledGenerated = string.Empty;
+    try
+    {
+        await XPScript.Compiler.AstCompiler.CompileWithGeneratedSourceTransformAsync(
+            schemaEnabledFixture, schemaEnabledOutput, "linux-x64",
+            generated => { schemaEnabledGenerated = generated; throw new InvalidOperationException("SCHEMA_ENABLED_SOURCE_CAPTURED"); });
+    }
+    catch (InvalidOperationException ex) when (ex.Message == "SCHEMA_ENABLED_SOURCE_CAPTURED") { }
+    if (!schemaEnabledGenerated.Contains("class XPScriptJsonSchema", StringComparison.Ordinal) ||
+        !schemaEnabledGenerated.Contains("class XPScriptJsonValidationResult", StringComparison.Ordinal))
+        throw new InvalidOperationException("Schema-enabled AST source omitted a JSON-schema provider.");
+    Console.WriteLine("AST_SCHEMA_ENABLED_DEPENDENCIES_COMPLETE_OK");
+}
+finally
+{
+    try { Directory.Delete(schemaEnabledOutput, recursive: true); } catch { }
+}
+
 var targetFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "target-specific-generated-code-next.xps");
 targetFixture = Path.GetFullPath(targetFixture);
 var targetOutput = Path.Combine(Path.GetTempPath(), "xpscript-target-source-" + Guid.NewGuid().ToString("N"));
