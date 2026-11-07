@@ -966,6 +966,7 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
 - [x] Add permanent AST CLI coverage for native declaration forms, scalar types, Unicode declarations and missing native dependencies.
 - [x] Re-run the complete AST CLI regression suite from an isolated working directory. The migrated native, file, database, AI, include/use, platform, class/property, constructor/destructor, image, XML/CSV/JSON, spreadsheet and error-flow probes all pass; the spreadsheet subprobe now uses built DLLs without restore/apphost locking and the full run ends with `AST CLI compilation probe passed`.
 - [x] Split the Windows AST CLI corpus into six independently visible shard jobs. `language-focused-windows-v2.yml` now runs the existing shard 1–6 scripts as a fail-fast-disabled matrix so a failure identifies one bounded shard.
+- [ ] Split AST CLI shard 5 into two independently visible jobs: constructor/destructor coverage and XPImage lifetime coverage.
 
 Next implementation order:
 
