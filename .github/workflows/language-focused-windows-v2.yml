@@ -54,10 +54,32 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File ./tests/ast-compat/run-diagnostic-compat.ps1
 
-  language-cli:
-    name: AST CLI corpus
+  language-cli-shards:
+    name: AST CLI shard ${{ matrix.shard }}
     runs-on: windows-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: 1
+            script: run-ast-cli.ps1
+            arguments: '-Shard 1'
+          - shard: 2
+            script: run-ast-cli-shard-2.ps1
+            arguments: ''
+          - shard: 3
+            script: run-ast-cli-shard-3.ps1
+            arguments: ''
+          - shard: 4
+            script: run-ast-cli-shard-4.ps1
+            arguments: ''
+          - shard: 5
+            script: run-ast-cli-shard-5.ps1
+            arguments: ''
+          - shard: 6
+            script: run-ast-cli-shard-6.ps1
+            arguments: ''
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
@@ -71,9 +93,9 @@ jobs:
       - name: Build AST compile probe
         shell: pwsh
         run: dotnet build ./tests/ast-compile-probe/AstCompileProbe.csproj -c Release
-      - name: Run AST CLI corpus
+      - name: Run AST CLI shard ${{ matrix.shard }}
         shell: pwsh
-        run: pwsh -NoProfile -File ./tests/ast-compile-probe/run-ast-cli.ps1
+        run: pwsh -NoProfile -File ./tests/ast-compile-probe/${{ matrix.script }} ${{ matrix.arguments }}
 
   language-lifetimes:
     name: AST constructors, destructors and image lifetimes
