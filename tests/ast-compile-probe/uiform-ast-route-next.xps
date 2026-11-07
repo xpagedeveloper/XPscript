@@ -1,7 +1,0 @@
-Option Declare
-
-Sub Main()
-    Dim form As New UIForm("AST UIForm route")
-    Call form.AddTextField("name", "Name")
-    Print "AST_UIFORM_ROUTE_OK"
-End Sub

@@ -807,8 +807,8 @@ Initial implementation: expression conversions and a method-body emitter for ass
         - [x] Add the first AST UIFormField property regression for `Required`; callback/lifecycle members remain separate.
         - [x] Register the existing `AddButtonCallback` callback signature in the AST symbol analysis and add an emitter regression; callback runtime execution and lifecycle remain separate. The callback postprocessor itself remains in its established desktop pipeline order.
         - [x] Add AST emitter regressions for the existing `UIForm.Show()` and `UIForm.Close()` lifecycle calls; host execution and full AST routing remain separate.
-        - [x] Route callback-free UIForm sources through AST; callback API sources remain on LegacyFallback until callback runtime execution is verified.
-        - [x] Add and run a callback-free UIForm AST route fixture with form creation and `AddTextField`; desktop host and callback execution remain separate.
+        - [ ] Route UIForm sources through AST after the shared runtime is complete; the attempted callback-free route was reverted because the base runtime references desktop-postprocessor members (`Visible`, `InstanceId`, `CarouselLoop`) and would create a false-positive fixture.
+        - [ ] Add and run a callback-free UIForm AST route fixture after the shared runtime surface is self-contained.
         - [x] Include the shared UIForm runtime source in AST-generated output; shard 6 initially exposed missing `XPScriptUI`/`XPScriptUIForm` generated types, fixed in the AST runtime template.
         - [x] Include the JSON-schema support required by the shared UIForm runtime source; shard 6 exposed the transitive `XPScriptJsonSchema`/validation type dependency.
         - [x] Keep the temporary JSON-schema runtime trigger explicit for UIForm and direct `XPScriptJsonSchema`/`XPScriptJsonValidationResult` references until the validation surface is split out.

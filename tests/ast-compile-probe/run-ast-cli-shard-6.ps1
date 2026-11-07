@@ -24,11 +24,4 @@ if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -notmatch 'AST_OPTIONAL_CALL_OK
 }
 Write-Host 'AST_CLI_SHARD_6_FINAL_EXECUTION_OK'
 
-Write-AstCliCheckpoint 'shard-6-uiform-ast-route'
-$uiFormOutput = Join-Path $output 'uiform-ast-route'
-$uiFormCompile = @(dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'uiform-ast-route-next.xps') -o $uiFormOutput --debug 2>&1)
-if ($LASTEXITCODE -ne 0) { throw "Shard 6 callback-free UIForm AST compilation failed:`n$($uiFormCompile -join "`n")" }
-$uiFormResult = @(dotnet (Join-Path $uiFormOutput 'Generated.dll'))
-if ($LASTEXITCODE -ne 0 -or ($uiFormResult -join "`n") -notmatch 'AST_UIFORM_ROUTE_OK') { throw 'Shard 6 callback-free UIForm AST execution failed.' }
-Write-Host 'AST_UIFORM_ROUTE_OK'
 Write-AstCliCheckpoint 'shard-6-complete'
