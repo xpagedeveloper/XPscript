@@ -43,6 +43,16 @@ if (!File.Exists(compilerPath))
     throw new InvalidOperationException("Built XPScript compiler was not found: " + compilerPath);
 var astOutput = Path.Combine(parityRoot, "ast");
 var legacyOutput = Path.Combine(parityRoot, "legacy");
+if (args.Contains("--legacy-only", StringComparer.Ordinal))
+{
+    Console.WriteLine("DESKTOP_PARITY_LEGACY_COMPILE_START");
+    await RunCompiler("legacy-compile", paritySourcePath, "-o", legacyOutput, "--single-file=false", "--runtime=false");
+    Console.WriteLine("DESKTOP_PARITY_LEGACY_COMPILE_OK");
+    Console.WriteLine("DESKTOP_PARITY_LEGACY_RUNTIME_START");
+    await ProbeDesktopRuntime("legacy", legacyOutput);
+    Console.WriteLine("DESKTOP_PARITY_LEGACY_RUNTIME_OK");
+    return;
+}
 await RunCompiler("ast-compile", paritySourcePath, "-o", astOutput, "--single-file=false", "--runtime=false");
 await RunCompiler("legacy-compile", paritySourcePath, "-o", legacyOutput, "--single-file=false", "--runtime=false");
 if (!Directory.Exists(astOutput) || !Directory.EnumerateFileSystemEntries(astOutput).Any() ||
