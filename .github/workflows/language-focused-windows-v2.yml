@@ -74,8 +74,11 @@ jobs:
           - shard: 4
             script: run-ast-cli-shard-4.ps1
             arguments: ''
-          - shard: 5
-            script: run-ast-cli-shard-5.ps1
+          - shard: 5-constructors
+            script: run-ast-cli-shard-5-constructors.ps1
+            arguments: ''
+          - shard: 5-xpimage
+            script: run-ast-image-get.ps1
             arguments: ''
           - shard: 6
             script: run-ast-cli-shard-6.ps1
