@@ -146,7 +146,9 @@ internal sealed class AdvancedXPScriptTranspiler
         if (_currentClass is not null)
             throw new CompilerException($"Missing End Class for '{_currentClass}'.");
 
-        var macDesktopEntry = AstObjectSupportRegistry.UsesObject(source, "UIForm");
+        var macDesktopEntry = AstObjectSupportRegistry.UsesObject(source, "UIForm") ||
+            source.Contains("XPScriptUIForm", StringComparison.Ordinal) ||
+            source.Contains("XPScriptUIDesktopAdapter", StringComparison.Ordinal);
         var mainCall = macDesktopEntry
             ? $$"""
                 if (OperatingSystem.IsMacOS())
