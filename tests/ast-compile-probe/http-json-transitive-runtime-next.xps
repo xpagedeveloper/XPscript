@@ -1,0 +1,8 @@
+Sub Main()
+    Dim client As New XPHttpClient
+    Dim payload As New XPJsonObject
+    Call payload.Set("name", "Åsa")
+    If client.CertificateValidation = "Strict" And payload.Get("name") = "Åsa" Then
+        Print "AST_HTTP_JSON_TRANSITIVE_RUNTIME_OK"
+    End If
+End Sub
