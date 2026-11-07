@@ -976,6 +976,7 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
 - [x] Split AST CLI shard 5 into two independently visible jobs: `5-constructors` runs constructor/destructor coverage and `5-xpimage` runs XPImage lifetime coverage.
 - [ ] Audit transitive generated-runtime dependencies for every AST-routed XP object, not only UIForm.
   - [ ] Build an inventory mapping each AST object/runtime source to every referenced generated type and its provider.
+    - [x] Record the initial provider/dependency map in `docs/ast-runtime-dependency-inventory.md`, including the UIForm → JSON-schema dependency found by shard 6.
   - [ ] Add a generated-source dependency guard that fails when a referenced runtime type has no emitted provider.
   - [ ] Add focused dependency fixtures for object families with shared JSON, HTTP, filesystem, database, UI and platform runtimes.
   - [ ] Verify that dependency inclusion is minimal for schema-free samples and complete for schema-enabled samples, with en-US and sv-SE checks where formatted output exists.
