@@ -88,6 +88,7 @@ public sealed class SymbolTable
         AstXmlSupport.Import(this);
         AstHttpSupport.Import(this);
         AstSpreadsheetSupport.Import(this);
+        AstUiFormSupport.Import(this);
         AstApplicationSupport.Import(this);
         AstNotesJsonSupport.Import(this);
         AstSystemInventorySupport.Import(this);

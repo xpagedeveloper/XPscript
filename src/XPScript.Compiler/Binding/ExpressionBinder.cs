@@ -151,6 +151,14 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "No matching constructor for 'XPSpreadsheet'.");
             return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User("XPSpreadsheet"));
         }
+        if (typeName.Equals("UIForm", StringComparison.OrdinalIgnoreCase) || typeName.Equals("UIFormField", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!typeName.Equals("UIForm", StringComparison.OrdinalIgnoreCase))
+                return Error(syntax.TypeName, CompilerDiagnosticCodes.InvalidNativeConstructor, AstUiFormSupport.ConstructorMessage);
+            if (syntax.Arguments.Count > 4)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "No matching constructor for 'UIForm'.");
+            return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User("UIForm"));
+        }
         if (AstHttpSupport.IsHttp(typeName))
         {
             if (!typeName.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) && !typeName.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase))
