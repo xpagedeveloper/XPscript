@@ -189,6 +189,8 @@ public static class AstCompiler
         var usesAi = runtimeFeatures.Ai;
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
+            if (Environment.GetEnvironmentVariable("XPSCRIPT_TRACE_AST_DESKTOP_ENTRY") == "1")
+                Console.Error.WriteLine($"AST_FALLBACK_OBJECT={definition?.Name} route={definition?.Route}");
             if (definition!.Route == AstObjectSupportRegistry.CompilationRoute.LegacyFallback)
                 return await CompileWithLegacyFallbackAsync(sourcePath, outputDirectory, cancellationToken).ConfigureAwait(false);
 
