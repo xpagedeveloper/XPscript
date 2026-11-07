@@ -8,6 +8,10 @@ using SyntaxKind = XPScript.Compiler.Syntax.SyntaxKind;
 using Conversion = XPScript.Compiler.Binding.Conversion;
 
 var expressions = new BoundExpressionEmitter();
+var uiForm = new BoundNewExpression(typeof(object), [new BoundLiteralExpression("AST UI", typeof(string))], XpTypeSymbol.User("UIForm"));
+var uiFormCode = expressions.Emit(uiForm);
+if (uiFormCode != "XPScriptUI.CreateForm(\"AST UI\")")
+    throw new Exception($"UIForm AST construction was not lowered to the shared factory: {uiFormCode}");
 var optionalReference = new ParameterSymbol("seed", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
 var optionalDependent = new ParameterSymbol("next", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
 var defaultMutation = new BoundCallExpression(null, new FunctionSymbol("Mutate", typeof(long), [typeof(long)], ByRefParameters: [true]),
