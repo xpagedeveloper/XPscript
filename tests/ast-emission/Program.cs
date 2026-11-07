@@ -33,6 +33,13 @@ var addButtonCallbackCall = new BoundCallExpression(addButtonCallback,
     [new BoundLiteralExpression("save", typeof(string)), new BoundLiteralExpression("Save", typeof(string)), new BoundLiteralExpression("OnSave", typeof(string))]);
 if (expressions.Emit(addButtonCallbackCall) != "form.AddButtonCallback(\"save\", \"Save\", \"OnSave\")")
     throw new Exception("UIForm callback member call was not preserved.");
+foreach (var lifecycleMethod in new[] { "Show", "Close" })
+{
+    var lifecycleTarget = new BoundMemberAccessExpression(uiFormLocal, lifecycleMethod, typeof(void), XpTypeSymbol.FromClr(typeof(void)));
+    var lifecycleCall = new BoundCallExpression(lifecycleTarget, new FunctionSymbol(lifecycleMethod, typeof(void), [], XpTypeSymbol.FromClr(typeof(void))), []);
+    if (expressions.Emit(lifecycleCall) != $"form.{lifecycleMethod}()")
+        throw new Exception($"UIForm lifecycle member '{lifecycleMethod}' was not preserved.");
+}
 var optionalReference = new ParameterSymbol("seed", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
 var optionalDependent = new ParameterSymbol("next", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
 var defaultMutation = new BoundCallExpression(null, new FunctionSymbol("Mutate", typeof(long), [typeof(long)], ByRefParameters: [true]),
