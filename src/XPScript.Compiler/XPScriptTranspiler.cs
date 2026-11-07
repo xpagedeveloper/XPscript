@@ -185,7 +185,7 @@ public sealed partial class XPScriptTranspiler
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
-        if (Regex.IsMatch(source, @"(?i)\bUIForm\b") && generated.Contains("Script.Main();", StringComparison.Ordinal))
+        if (generated.Contains("XPScriptUIDesktopAdapter", StringComparison.Ordinal) && generated.Contains("Script.Main();", StringComparison.Ordinal))
         {
             generated = generated.Replace(
                 "Script.Main();",
