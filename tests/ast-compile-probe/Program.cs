@@ -172,6 +172,30 @@ if (definition.Name != "Helper" || definition.Kind != "Sub" || definition.Line !
     throw new InvalidOperationException($"Go-to-definition returned {definition.File}:{definition.Line}:{definition.Column}.");
 Console.WriteLine("AST_GOTO_DEFINITION_OK");
 
+var schemaFreeFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "dependency-schema-free-next.xps");
+schemaFreeFixture = Path.GetFullPath(schemaFreeFixture);
+var schemaFreeOutput = Path.Combine(Path.GetTempPath(), "xpscript-schema-free-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(schemaFreeOutput);
+try
+{
+    var schemaFreeGenerated = string.Empty;
+    try
+    {
+        await XPScript.Compiler.AstCompiler.CompileWithGeneratedSourceTransformAsync(
+            schemaFreeFixture, schemaFreeOutput, "linux-x64",
+            generated => { schemaFreeGenerated = generated; throw new InvalidOperationException("SCHEMA_FREE_SOURCE_CAPTURED"); });
+    }
+    catch (InvalidOperationException ex) when (ex.Message == "SCHEMA_FREE_SOURCE_CAPTURED") { }
+    if (schemaFreeGenerated.Contains("class XPScriptJsonSchema", StringComparison.Ordinal) ||
+        schemaFreeGenerated.Contains("class XPScriptHttpClient", StringComparison.Ordinal))
+        throw new InvalidOperationException("Schema-free AST source included JSON or HTTP runtime providers.");
+    Console.WriteLine("AST_SCHEMA_FREE_DEPENDENCIES_MINIMAL_OK");
+}
+finally
+{
+    try { Directory.Delete(schemaFreeOutput, recursive: true); } catch { }
+}
+
 var targetFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "target-specific-generated-code-next.xps");
 targetFixture = Path.GetFullPath(targetFixture);
 var targetOutput = Path.Combine(Path.GetTempPath(), "xpscript-target-source-" + Guid.NewGuid().ToString("N"));

@@ -1,0 +1,3 @@
+Sub Main()
+    Print "AST_SCHEMA_FREE_DEPENDENCY_OK"
+End Sub
