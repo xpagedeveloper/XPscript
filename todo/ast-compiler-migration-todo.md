@@ -808,6 +808,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
         - [x] Register the existing `AddButtonCallback` callback signature in the AST symbol analysis and add an emitter regression; callback runtime execution and lifecycle remain separate. The callback postprocessor itself remains in its established desktop pipeline order.
         - [x] Add AST emitter regressions for the existing `UIForm.Show()` and `UIForm.Close()` lifecycle calls; host execution and full AST routing remain separate.
         - [x] Route callback-free UIForm sources through AST; callback API sources remain on LegacyFallback until callback runtime execution is verified.
+        - [x] Add and run a callback-free UIForm AST route fixture with form creation and `AddTextField`; desktop host and callback execution remain separate.
         - [ ] Add AST constructor and member lowering for `UIForm`, fields, callbacks and lifecycle methods.
         - [ ] Add focused AST-only compile/runtime fixtures before changing `UIForm` from `LegacyFallback` to `Ast`.
       - [x] Run the existing legacy output first in a focused macOS probe and record its markers and exit code. GitHub run https://github.com/xpagedeveloper/XPscript/actions/runs/42343114766 compiled legacy successfully, then the generated UIForm failed at runtime with `IDispatcherImpl belongs to a different thread` (exit 134). The legacy path needs the same macOS main-thread host fix; `--legacy-only` keeps this regression independently runnable.
