@@ -64,9 +64,7 @@ internal static class DesktopApplicationHost
     {
         try
         {
-            AppBuilder.Configure<XpsDesktopApplication>()
-                .UsePlatformDetect()
-                .SetupWithoutStarting();
+            InitializeOnCurrentThread();
             Started.Set();
             Dispatcher.UIThread.MainLoop(CancellationToken.None);
         }
@@ -75,5 +73,14 @@ internal static class DesktopApplicationHost
             _startupFailure = ex;
             Started.Set();
         }
+    }
+
+    // macOS entry points will call this on the process main thread before
+    // dispatching the XPscript body to a worker thread.
+    internal static void InitializeOnCurrentThread()
+    {
+        AppBuilder.Configure<XpsDesktopApplication>()
+            .UsePlatformDetect()
+            .SetupWithoutStarting();
     }
 }
