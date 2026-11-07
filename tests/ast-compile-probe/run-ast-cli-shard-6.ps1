@@ -104,4 +104,15 @@ if ($LASTEXITCODE -ne 0 -or ($spreadsheetResult -join "`n") -notmatch 'AST_SPREA
 }
 Write-Host 'AST_SPREADSHEET_TRANSITIVE_RUNTIME_OK'
 
+Write-AstCliCheckpoint 'shard-6-platform-runtime'
+$platformOutput = Join-Path $output 'platform-runtime'
+dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'platform-transitive-runtime-next.xps') -o $platformOutput
+if ($LASTEXITCODE -ne 0) { throw 'Shard 6 platform transitive runtime compilation failed.' }
+$env:XPSCRIPT_PLATFORM_FIXTURE = 'ok'
+$platformResult = @(dotnet (Join-Path $platformOutput 'Generated.dll'))
+if ($LASTEXITCODE -ne 0 -or ($platformResult -join "`n") -notmatch 'AST_PLATFORM_TRANSITIVE_RUNTIME_OK') {
+    throw 'Shard 6 platform transitive runtime execution regression failed.'
+}
+Write-Host 'AST_PLATFORM_TRANSITIVE_RUNTIME_OK'
+
 Write-AstCliCheckpoint 'shard-6-complete'

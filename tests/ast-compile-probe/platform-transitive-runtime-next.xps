@@ -1,0 +1,5 @@
+Sub Main()
+    If Len(Application.NewLine) > 0 And Environ("XPSCRIPT_PLATFORM_FIXTURE") = "ok" Then
+        Print "AST_PLATFORM_TRANSITIVE_RUNTIME_OK"
+    End If
+End Sub
