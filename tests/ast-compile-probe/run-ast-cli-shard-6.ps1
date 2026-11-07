@@ -54,4 +54,14 @@ if ($LASTEXITCODE -ne 0 -or ($filesystemResult -join "`n") -notmatch 'AST_FILESY
 }
 Write-Host 'AST_FILESYSTEM_TRANSITIVE_RUNTIME_OK'
 
+Write-AstCliCheckpoint 'shard-6-database-runtime'
+$databaseOutput = Join-Path $output 'database-runtime'
+dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'database-transitive-runtime-next.xps') -o $databaseOutput
+if ($LASTEXITCODE -ne 0) { throw 'Shard 6 database transitive runtime compilation failed.' }
+$databaseResult = @(dotnet (Join-Path $databaseOutput 'Generated.dll'))
+if ($LASTEXITCODE -ne 0 -or ($databaseResult -join "`n") -notmatch 'AST_DATABASE_TRANSITIVE_RUNTIME_OK') {
+    throw 'Shard 6 database transitive runtime execution regression failed.'
+}
+Write-Host 'AST_DATABASE_TRANSITIVE_RUNTIME_OK'
+
 Write-AstCliCheckpoint 'shard-6-complete'
