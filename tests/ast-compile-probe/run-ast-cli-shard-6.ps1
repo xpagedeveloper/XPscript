@@ -94,4 +94,14 @@ if ($LASTEXITCODE -ne 0 -or ($imageResult -join "`n") -notmatch 'AST_IMAGE_TRANS
 }
 Write-Host 'AST_IMAGE_TRANSITIVE_RUNTIME_OK'
 
+Write-AstCliCheckpoint 'shard-6-spreadsheet-runtime'
+$spreadsheetOutput = Join-Path $output 'spreadsheet-runtime'
+dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'spreadsheet-transitive-runtime-next.xps') -o $spreadsheetOutput
+if ($LASTEXITCODE -ne 0) { throw 'Shard 6 spreadsheet transitive runtime compilation failed.' }
+$spreadsheetResult = @(dotnet (Join-Path $spreadsheetOutput 'Generated.dll'))
+if ($LASTEXITCODE -ne 0 -or ($spreadsheetResult -join "`n") -notmatch 'AST_SPREADSHEET_TRANSITIVE_RUNTIME_OK') {
+    throw 'Shard 6 spreadsheet transitive runtime execution regression failed.'
+}
+Write-Host 'AST_SPREADSHEET_TRANSITIVE_RUNTIME_OK'
+
 Write-AstCliCheckpoint 'shard-6-complete'

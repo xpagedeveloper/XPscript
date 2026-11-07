@@ -1,0 +1,9 @@
+Sub Main()
+    Dim book As New XPSpreadsheet
+    Dim sheet As XPWorksheet
+    Set sheet = book.AddWorksheet("Data")
+    sheet.Cell("A1").Value = "Åsa"
+    If sheet.Cell("A1").Text = "Åsa" Then
+        Print "AST_SPREADSHEET_TRANSITIVE_RUNTIME_OK"
+    End If
+End Sub

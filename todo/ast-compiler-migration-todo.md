@@ -986,6 +986,7 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
     - [x] Add the CSV transitive-runtime fixture to AST CLI shard 6.
     - [x] Add the XML transitive-runtime fixture to AST CLI shard 6.
     - [x] Add the image transitive-runtime fixture to AST CLI shard 6.
+    - [x] Add the spreadsheet transitive-runtime fixture to AST CLI shard 6.
   - [ ] Verify that dependency inclusion is minimal for schema-free samples and complete for schema-enabled samples, with en-US and sv-SE checks where formatted output exists.
 
 Next implementation order:
