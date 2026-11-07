@@ -285,6 +285,9 @@ internal sealed class XPScriptUIField
 internal sealed class XPScriptUIForm
 {
     private string _title;
+    private readonly string _instanceId = Guid.NewGuid().ToString("N");
+    private bool _visible;
+    private bool _modal;
     private int? _width;
     private int? _height;
     private bool _resizable;
@@ -307,6 +310,9 @@ internal sealed class XPScriptUIForm
     public int Width { get => _width ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm width must be greater than zero."); _width = value; } }
     public int Height { get => _height ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm height must be greater than zero."); _height = value; } }
     public bool Resizable { get => _resizable; set => _resizable = value; }
+    public bool Visible { get => _visible; set => _visible = value; }
+    public bool Modal => _modal;
+    internal string InstanceId => _instanceId;
     public string BootText { get => _bootText; set => _bootText = value ?? string.Empty; }
     public string BootImage
     {
