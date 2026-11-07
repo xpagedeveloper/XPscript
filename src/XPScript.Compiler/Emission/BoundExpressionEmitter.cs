@@ -96,6 +96,8 @@ public sealed class BoundExpressionEmitter
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase) => "XPScriptNativeHttp.CreateRequest()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPSpreadsheet", StringComparison.OrdinalIgnoreCase) =>
             $"XPScriptSpreadsheetFactory.Create({string.Join(", ", @new.Arguments.Select(Emit))})",
+        BoundNewExpression @new when @new.SemanticType.Name.Equals("UIForm", StringComparison.OrdinalIgnoreCase) =>
+            $"XPScriptUI.CreateForm({string.Join(", ", @new.Arguments.Select(Emit))})",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("NetworkTools", StringComparison.OrdinalIgnoreCase) =>
             "XPScriptNetworkToolsFactory.Create()",
         BoundNewExpression @new when @new.SemanticType.Name.Equals("XPHttpDbSupabase", StringComparison.OrdinalIgnoreCase) =>
