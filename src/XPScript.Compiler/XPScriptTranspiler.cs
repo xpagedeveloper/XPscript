@@ -185,6 +185,13 @@ public sealed partial class XPScriptTranspiler
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
+        if (Regex.IsMatch(source, @"(?i)\bUIForm\b") && generated.Contains("Script.Main();", StringComparison.Ordinal))
+        {
+            generated = generated.Replace(
+                "Script.Main();",
+                "if (OperatingSystem.IsMacOS()) { var host = Type.GetType(\"XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop\", throwOnError: true)!; host.GetMethod(\"RunMacOS\")!.Invoke(null, new object[] { (Action)Script.Main }); } else Script.Main();",
+                StringComparison.Ordinal);
+        }
         generated = new BaseConstructorPostProcessor().Transform(generated);
         generated = jsonNames.ApplyToGeneratedCode(generated);
         generated = new ParameterPassingPostProcessor().Transform(generated);
