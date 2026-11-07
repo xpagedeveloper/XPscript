@@ -64,4 +64,5 @@ internal static class CompilerDiagnosticCodes
     public const string CompilationFailed = "XPS9001";
     public const string InternalCompilationFailed = "XPS9002";
     public const string ValidationBuildTimedOut = "XPS9003";
+    public const string GeneratedRuntimeDependencyMissing = "XPS9004";
 }

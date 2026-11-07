@@ -1694,6 +1694,7 @@ internal static class Program
         generated = RemoveDuplicateTlsRuntime(generated);
         if (generatedSourceTransform is not null)
             generated = generatedSourceTransform(generated);
+        AstRuntimeDependencyGuard.Validate(generated, sourcePath);
         var applicationMarkers = AstApplicationSupport.BuildMarkers(fullSource, sourcePath);
         string outputResult;
         if (applicationMarkers.Length != 0)
