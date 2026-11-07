@@ -185,13 +185,6 @@ public sealed partial class XPScriptTranspiler
         protectedSource = new JsonHttpCompatibilityPreprocessor().Transform(protectedSource);
         protectedSource = new ExtendedCompatibilityTranspiler().Transform(protectedSource);
         var generated = new CoreCompatibilityTranspiler().Transpile(protectedSource, sourceName);
-        if (generated.Contains("XPScriptUIDesktopAdapter", StringComparison.Ordinal) && generated.Contains("Script.Main();", StringComparison.Ordinal))
-        {
-            generated = generated.Replace(
-                "Script.Main();",
-                "if (OperatingSystem.IsMacOS()) { var host = Type.GetType(\"XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop\", throwOnError: true)!; host.GetMethod(\"RunMacOS\")!.Invoke(null, new object[] { (Action)Script.Main }); } else Script.Main();",
-                StringComparison.Ordinal);
-        }
         generated = new BaseConstructorPostProcessor().Transform(generated);
         generated = jsonNames.ApplyToGeneratedCode(generated);
         generated = new ParameterPassingPostProcessor().Transform(generated);
@@ -261,6 +254,13 @@ public sealed partial class XPScriptTranspiler
         generated += "\n\n" + LegacyIsDefinedCompatibilityRuntimeSource.Code + "\n";
         if (usesAi) { generated = new AiSessionRuntimePostProcessor().Transform(generated); generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated); }
         generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures).Transform(generated);
+        if (runtimeFeatures.Ui && generated.Contains("Script.Main();", StringComparison.Ordinal))
+        {
+            generated = generated.Replace(
+                "Script.Main();",
+                "if (OperatingSystem.IsMacOS()) { var host = Type.GetType(\"XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop\", throwOnError: true)!; host.GetMethod(\"RunMacOS\")!.Invoke(null, new object[] { (Action)Script.Main }); } else Script.Main();",
+                StringComparison.Ordinal);
+        }
         generated = new BrowserWasmHttpCsrfPostProcessor(runtimeIdentifier).Transform(generated);
         generated = new FileSystemPortabilityPostProcessor().Transform(generated);
         generated = generated.Replace("XPScriptRuntime.SetArgs(args);", $"XPScriptRuntime.SetArgs(args);\n        XPScriptFileSystemRuntime.SetScriptDirectory(\"{EscapeCSharpString(GetSourceDirectory(sourceName))}\");\n        XPNativeInteropRuntime.Initialize();\n        XPScriptApplicationRuntime.SetArgs(args);\n        LSOperatorArrayRuntime.SetCompareNoCase({operatorArray.CompareNoCase.ToString().ToLowerInvariant()});", StringComparison.Ordinal);
