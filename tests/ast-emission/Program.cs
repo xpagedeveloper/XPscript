@@ -12,6 +12,14 @@ var uiForm = new BoundNewExpression(typeof(object), [new BoundLiteralExpression(
 var uiFormCode = expressions.Emit(uiForm);
 if (uiFormCode != "XPScriptUI.CreateForm(\"AST UI\")")
     throw new Exception($"UIForm AST construction was not lowered to the shared factory: {uiFormCode}");
+var uiFormLocal = new BoundNameExpression(new LocalSymbol("form", typeof(object), XpTypeSymbol.User("UIForm")));
+var addTextField = new BoundMemberAccessExpression(uiFormLocal, "AddTextField", typeof(object), XpTypeSymbol.User("UIFormField"));
+var addTextFieldCall = new BoundCallExpression(addTextField,
+    new FunctionSymbol("AddTextField", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.User("UIFormField"),
+        [XpTypeSymbol.Variant, XpTypeSymbol.Variant]),
+    [new BoundLiteralExpression("name", typeof(string)), new BoundLiteralExpression("Name", typeof(string))]);
+if (expressions.Emit(addTextFieldCall) != "form.AddTextField(\"name\", \"Name\")")
+    throw new Exception("UIForm AST member call was not preserved.");
 var optionalReference = new ParameterSymbol("seed", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
 var optionalDependent = new ParameterSymbol("next", typeof(long), true, XpTypeSymbol.FromClr(typeof(long)));
 var defaultMutation = new BoundCallExpression(null, new FunctionSymbol("Mutate", typeof(long), [typeof(long)], ByRefParameters: [true]),
