@@ -23,5 +23,5 @@ Invoke-Fixture 'class-method-optional-next' @('5', '7')
 Write-AstCliCheckpoint 'shard-4-inheritance'
 Invoke-Fixture 'class-method-derived-next' @('8')
 Write-AstCliCheckpoint 'shard-4-byref'
-Invoke-Fixture 'class-method-overloads-byref' @('BYREF-INNER=11', 'BYREF-AFTER=11', 'BYVAL-STRING=hello')
+Invoke-Fixture 'class-method-list-byref-next' @('21')
 Write-AstCliCheckpoint 'shard-4-complete'
