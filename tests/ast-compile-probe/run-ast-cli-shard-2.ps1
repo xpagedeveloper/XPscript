@@ -22,4 +22,6 @@ Write-AstCliCheckpoint 'shard-2-core-operators'
 Invoke-Fixture 'operators-core' @('POW=8', 'INTDIV=2', 'MOD=2', 'XORBOOL=True', 'EQVBOOL=True', 'IMPBOOL=False', 'ANDBITS=0', 'ORBITS=15', 'XORBITS=255', 'NOTBITS=-4')
 Write-AstCliCheckpoint 'shard-2-arrays'
 Invoke-Fixture 'array-storage' @('1', '0', '1', 'True', 'True')
+Write-AstCliCheckpoint 'shard-2-file-runtime'
+Invoke-Fixture 'file-runtime-next' @('FILE_RUNTIME_OK')
 Write-AstCliCheckpoint 'shard-2-complete'
