@@ -58,4 +58,6 @@ Write-AstCliCheckpoint 'shard-2-file-copy-name'
 Invoke-Fixture 'file-copy-name-next' @('FILE_COPY_NAME_AST_OK')
 Write-AstCliCheckpoint 'shard-2-file-error-goto'
 Invoke-Fixture 'file-error-goto-next' @('FILE_ERROR_GOTO_OK')
+Write-AstCliCheckpoint 'shard-2-file-attributes'
+Invoke-Fixture 'file-attributes-next' @('FILE_ATTRIBUTES_AST_OK')
 Write-AstCliCheckpoint 'shard-2-complete'
