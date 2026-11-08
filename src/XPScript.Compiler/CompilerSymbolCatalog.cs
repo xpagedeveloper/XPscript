@@ -123,6 +123,7 @@ public static class CompilerSymbolCatalog
             Define("XPJsonNavigator.GetElementByPointer", "method", "XPJsonNavigator.GetElementByPointer(pointer As String) As XPJsonElement", [new("pointer", "String")], "XPJsonElement", "api.XPJsonNavigator.GetElementByPointer"),
             Define("XPJsonNavigator.GetFirstElement", "method", "XPJsonNavigator.GetFirstElement() As XPJsonElement", [], "XPJsonElement", "api.XPJsonNavigator.GetFirstElement"),
             Define("XPJsonNavigator.GetNextElement", "method", "XPJsonNavigator.GetNextElement() As XPJsonElement", [], "XPJsonElement", "api.XPJsonNavigator.GetNextElement"),
+            Define("XPJsonNavigator.AppendElement", "method", "XPJsonNavigator.AppendElement(value As Variant, Optional name As Variant = Nothing) As XPJsonElement", [new("value", "Variant"), new("name", "Variant")], "XPJsonElement", "api.XPJsonNavigator.AppendElement"),
             Define("XPJsonNavigator.Stringify", "method", "XPJsonNavigator.Stringify() As String", [], "String", "api.XPJsonNavigator.Stringify"),
             Define("XPJsonNavigator.AppendObject", "method", "XPJsonNavigator.AppendObject(name As String) As XPJsonObject", [new("name", "String")], "XPJsonObject", "api.XPJsonNavigator.AppendObject"),
             Define("XPImage", "class", "XPImage", [], null, "api.XPImage"),
