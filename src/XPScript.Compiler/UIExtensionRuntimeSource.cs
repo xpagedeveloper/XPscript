@@ -71,6 +71,7 @@ internal sealed class XPScriptUIField
     public List<string> CarouselSources { get; } = [];
     public int CarouselIndex { get; set; }
     public bool CarouselLoop { get; set; }
+    public int? CarouselAutoAdvanceMilliseconds { get; set; }
     public bool Required { get; set; }
     public int? MinLength { get; set; }
     public int? MaxLength { get; set; }

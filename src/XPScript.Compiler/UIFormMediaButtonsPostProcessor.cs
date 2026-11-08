@@ -30,7 +30,6 @@ internal sealed class UIFormMediaButtonsPostProcessor
     public string ImageSource { get; set; } = string.Empty;
     public string ImageAltText { get; set; } = string.Empty;
     public string ImageCertificateValidation { get; set; } = "Strict";
-    public int? CarouselAutoAdvanceMilliseconds { get; set; }
 """,
                 "image-field-state");
         }

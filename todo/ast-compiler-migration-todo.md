@@ -982,6 +982,7 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
     - [ ] Make UIForm desktop postprocessors idempotent before adding shared AST-compatible UIForm state.
       - [x] Add shared `Visible`, `Modal` and `InstanceId` state to the UIForm base runtime.
       - [x] Add shared carousel state to the UIField base runtime.
+      - [x] Add shared carousel auto-advance state to the UIField base runtime.
     - [x] Add and run the first focused JSON-schema transitive-runtime fixture in AST CLI shard 6.
     - [x] Add the HTTP-plus-JSON transitive-runtime fixture to AST CLI shard 6.
     - [x] Add the filesystem transitive-runtime fixture to AST CLI shard 6.
