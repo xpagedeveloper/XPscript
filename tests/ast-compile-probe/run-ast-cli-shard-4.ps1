@@ -9,7 +9,7 @@ Write-AstCliCheckpoint 'shard-4-start'
 
 function Invoke-Fixture([string]$name, [string[]]$expected) {
     $directory = Join-Path $output $name
-    dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot "$name.xps") -o $directory
+    dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot "$name.xps") -o $directory --debug
     if ($LASTEXITCODE -ne 0) { throw "Shard 4 compilation failed: $name" }
     $result = @(dotnet (Join-Path $directory 'Generated.dll'))
     if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne ($expected -join "`n")) {
