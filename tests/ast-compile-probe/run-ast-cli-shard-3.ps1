@@ -1,4 +1,7 @@
-param([string]$CompilerPath)
+param(
+    [string]$CompilerPath,
+    [string]$OnlyFixture
+)
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'cli-common.ps1')
@@ -8,6 +11,7 @@ New-Item -ItemType Directory -Force -Path $output | Out-Null
 Write-AstCliCheckpoint 'shard-3-start'
 
 foreach ($fixture in @('native-json-regression', 'native-xml-regression')) {
+    if (-not [string]::IsNullOrWhiteSpace($OnlyFixture) -and $OnlyFixture -ne $fixture) { continue }
     Write-AstCliCheckpoint "shard-3-$fixture"
     $directory = Join-Path $output $fixture
     dotnet $context.Compiler ast-compile (Join-Path $context.Root "samples/$fixture.xps") -o $directory
@@ -20,6 +24,7 @@ foreach ($fixture in @(
     'native-http-regression', 'native-http-json', 'native-http-null-boundaries',
     'native-http-resource-limits', 'native-xml-dom-regression', 'native-csv-regression',
     'csv-json-roundtrip', 'json-http', 'json-resource-limits', 'xpjsonschema-runtime')) {
+    if (-not [string]::IsNullOrWhiteSpace($OnlyFixture) -and $OnlyFixture -ne $fixture) { continue }
     Write-AstCliCheckpoint "shard-3-$fixture"
     $directory = Join-Path $output $fixture
     dotnet $context.Compiler ast-compile (Join-Path $context.Root "samples/$fixture.xps") -o $directory

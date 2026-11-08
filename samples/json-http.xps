@@ -20,7 +20,7 @@ Sub Main()
     Call directObject.AppendElement("value", "key")
     Call directArray.AppendElement("one")
     Print "DIRECTOBJECT=" & CStr(directObject.GetElementByName("key").Value)
-    Print "DIRECTARRAY=" & CStr(directArray.GetNthElement(1).Value)
+    Print "DIRECTARRAY=" & CStr(directArray.GetNthElement(1, False).Value)
     Print "DIRECTELEMENT=" & directElement.Name & ":" & CStr(directElement.Type) & ":" & CStr(directElement.Value)
 
     Call json.AppendElement("Fredrik", "name")
@@ -45,7 +45,7 @@ Sub Main()
     Set element = parsed.GetElementByPointer("/items/1")
     Print "POINTER=" & CStr(element.Value)
 
-    Set element = roles.GetNthElement(2)
+    Set element = roles.GetNthElement(2, False)
     Print "NTH=" & CStr(element.Value)
 
     Set element = roles.GetFirstElement()
