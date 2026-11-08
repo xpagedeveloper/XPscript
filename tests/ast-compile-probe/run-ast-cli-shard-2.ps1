@@ -24,4 +24,6 @@ Write-AstCliCheckpoint 'shard-2-arrays'
 Invoke-Fixture 'array-storage' @('1', '0', '1', 'True', 'True')
 Write-AstCliCheckpoint 'shard-2-file-runtime'
 Invoke-Fixture 'file-runtime-next' @('FILE_RUNTIME_OK')
+Write-AstCliCheckpoint 'shard-2-file-aliases'
+Invoke-Fixture 'file-exists-aliases-next' @('FILE_EXISTS_ALIASES_AST_OK')
 Write-AstCliCheckpoint 'shard-2-complete'
