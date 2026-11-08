@@ -29,6 +29,8 @@ public static class CompilerSymbolCatalog
             Define("XPJsonSchema.Description", "property", "XPJsonSchema.Description As String", [], "String", "api.XPJsonSchema.Description"),
             Define("XPJsonSchema.AdditionalProperties", "property", "XPJsonSchema.AdditionalProperties As Boolean", [], "Boolean", "api.XPJsonSchema.AdditionalProperties"),
             Define("XPJsonSchema.Set", "method", "XPJsonSchema.Set(name As String, value As Variant) As XPJsonSchema", [new("name", "String"), new("value", "Variant")], "XPJsonSchema", "api.XPJsonSchema.Set"),
+            Define("XPJsonSchema.AddInteger", "method", "XPJsonSchema.AddInteger(name As String, required As Boolean) As XPJsonSchema", [new("name", "String"), new("required", "Boolean")], "XPJsonSchema", "api.XPJsonSchema.AddInteger"),
+            Define("XPJsonSchema.AddBoolean", "method", "XPJsonSchema.AddBoolean(name As String, required As Boolean) As XPJsonSchema", [new("name", "String"), new("required", "Boolean")], "XPJsonSchema", "api.XPJsonSchema.AddBoolean"),
             Define("XPJsonSchema.AddString", "method", "XPJsonSchema.AddString(name As String, required As Boolean)", [new("name", "String"), new("required", "Boolean")], "XPJsonSchema", "api.XPJsonSchema.AddString"),
             Define("XPJsonSchema.Validate", "method", "XPJsonSchema.Validate(json As Variant) As XPJsonValidationResult",
                 [new("json", "Variant")], "XPJsonValidationResult", "api.XPJsonSchema.Validate"),
