@@ -1,0 +1,9 @@
+Sub Main()
+    Dim form As New UIForm("Schema form")
+    Dim schema As XPJsonSchema
+    Set schema = XPJsonSchema.Parse("true")
+    Call form.SetValidationSchema(schema)
+    If form.HasValidationSchema And form.IsDataValid Then
+        Print "AST_UIFORM_SCHEMA_ENABLED_OK"
+    End If
+End Sub

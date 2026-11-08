@@ -815,7 +815,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
           - [x] Identify and isolate the UIForm validation contract (`SetValidationSchema`, `ValidateData`, `IsDataValid`, and validation-error lookup) from the core form runtime.
             - [x] Move the validation members into a separate partial AST runtime provider without changing the public contract.
           - [x] Add a schema-free UIForm runtime compilation fixture and verify it does not reference JSON-schema runtime types.
-          - [ ] Add a schema-enabled UIForm fixture covering schema assignment and validation, with explicit en-US and sv-SE output checks where formatted text is involved.
+          - [x] Add a schema-enabled UIForm fixture covering schema assignment and validation; no locale-sensitive formatted text is involved.
           - [ ] Inject the isolated validation runtime only when the source uses UIForm validation APIs; compare generated dependency/size output before and after.
         - [ ] Add AST constructor and member lowering for `UIForm`, fields, callbacks and lifecycle methods.
         - [ ] Add focused AST-only compile/runtime fixtures before changing `UIForm` from `LegacyFallback` to `Ast`.

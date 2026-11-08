@@ -139,4 +139,18 @@ if ($LASTEXITCODE -ne 0 -or ($uiFormSchemaFreeResult -join "`n") -notmatch 'AST_
 }
 Write-Host 'AST_UIFORM_SCHEMA_FREE_OK'
 
+Write-AstCliCheckpoint 'shard-6-uiform-schema-enabled'
+$uiFormSchemaEnabledOutput = Join-Path $output 'uiform-schema-enabled'
+dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'uiform-schema-enabled-next.xps') -o $uiFormSchemaEnabledOutput
+if ($LASTEXITCODE -ne 0) { throw 'Shard 6 schema-enabled UIForm compilation failed.' }
+$uiFormSchemaEnabledAssembly = [System.Reflection.Assembly]::LoadFrom((Join-Path $uiFormSchemaEnabledOutput 'Generated.dll'))
+if ($null -eq $uiFormSchemaEnabledAssembly.GetType('XPScriptJsonSchema', $false) -or $null -eq $uiFormSchemaEnabledAssembly.GetType('XPScriptJsonValidationResult', $false)) {
+    throw 'Schema-enabled UIForm output omitted JSON-schema runtime providers.'
+}
+$uiFormSchemaEnabledResult = @(dotnet (Join-Path $uiFormSchemaEnabledOutput 'Generated.dll'))
+if ($LASTEXITCODE -ne 0 -or ($uiFormSchemaEnabledResult -join "`n") -notmatch 'AST_UIFORM_SCHEMA_ENABLED_OK') {
+    throw 'Shard 6 schema-enabled UIForm execution regression failed.'
+}
+Write-Host 'AST_UIFORM_SCHEMA_ENABLED_OK'
+
 Write-AstCliCheckpoint 'shard-6-complete'
