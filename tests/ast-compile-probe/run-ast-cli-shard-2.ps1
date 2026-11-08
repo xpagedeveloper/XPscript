@@ -38,4 +38,6 @@ if ($LASTEXITCODE -ne 0 -or ($globalsResult -join "`n") -notmatch 'ENVIRON_READ=
     throw "Shard 2 runtime-globals output mismatch.`n$($globalsResult -join "`n")"
 }
 Write-Host 'AST_CLI_SHARD_2_FIXTURE_OK=runtime-globals-next'
+Write-AstCliCheckpoint 'shard-2-file-input-record'
+Invoke-Fixture 'file-input-record-next' @('FILE_INPUT_RECORD_OK')
 Write-AstCliCheckpoint 'shard-2-complete'
