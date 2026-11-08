@@ -88,8 +88,7 @@ public sealed class SymbolTable
             // overloads explicitly; the runtime method supplies the default.
             if (definition.Name.Equals("XPJsonObject.GetNthElement", StringComparison.OrdinalIgnoreCase) ||
                 definition.Name.Equals("XPJsonArray.GetNthElement", StringComparison.OrdinalIgnoreCase) ||
-                definition.Name.Equals("XPJsonNavigator.AppendElement", StringComparison.OrdinalIgnoreCase) ||
-                definition.Name.Equals("XPJsonNavigator.AppendArray", StringComparison.OrdinalIgnoreCase))
+                definition.Name.Equals("XPJsonNavigator.AppendElement", StringComparison.OrdinalIgnoreCase))
             {
                 Declare(new FunctionSymbol(definition.Name, returnType,
                     parameterTypes[..1], semanticReturnType, semanticParameterTypes[..1]));
