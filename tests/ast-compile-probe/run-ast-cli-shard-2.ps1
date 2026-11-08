@@ -48,4 +48,6 @@ Write-AstCliCheckpoint 'shard-2-file-text'
 Invoke-Fixture 'file-text-next' @('FILE_TEXT_OK')
 Write-AstCliCheckpoint 'shard-2-file-missing-paths'
 Invoke-Fixture 'file-missing-path-errors' @('FILE_MISSING_PATH_ERRORS_OK')
+Write-AstCliCheckpoint 'shard-2-file-info'
+Invoke-Fixture 'file-info-next' @('file-exists-aliases-next.xps', '.xps', 'True', 'False', 'True', 'True', 'ast-compile-probe', 'True', 'False', 'True', 'FILE_INFO_AST_OK')
 Write-AstCliCheckpoint 'shard-2-complete'
