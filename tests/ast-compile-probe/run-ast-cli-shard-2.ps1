@@ -56,4 +56,6 @@ Write-AstCliCheckpoint 'shard-2-file-info'
 Invoke-Fixture 'file-info-next' @('file-exists-aliases-next.xps', '.xps', 'True', 'False', 'True', 'True', 'ast-compile-probe', 'True', 'False', 'True', 'FILE_INFO_AST_OK')
 Write-AstCliCheckpoint 'shard-2-file-copy-name'
 Invoke-Fixture 'file-copy-name-next' @('FILE_COPY_NAME_AST_OK')
+Write-AstCliCheckpoint 'shard-2-file-error-goto'
+Invoke-Fixture 'file-error-goto-next' @('FILE_ERROR_GOTO_OK')
 Write-AstCliCheckpoint 'shard-2-complete'
