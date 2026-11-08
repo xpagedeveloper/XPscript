@@ -39,4 +39,9 @@ Invoke-Fixture 'class-property-object-override-next' @('12')
 Invoke-Fixture 'class-method-optional-byref-reference-next' @('0', '1')
 Invoke-Fixture 'class-method-optional-byref-user-reference-next' @('0', '15')
 Invoke-Fixture 'class-method-list-element-byref-next' @('11', '11')
+Write-AstCliCheckpoint 'shard-4-indexed-and-dispatched-properties'
+Invoke-Fixture 'class-method-optional-byref-list-next' @('0', '12', '12')
+Invoke-Fixture 'class-property-derived-index-next' @('7')
+Invoke-Fixture 'class-property-derived-index-set-next' @('13')
+Invoke-Fixture 'class-property-setter-dispatch-next' @('CLASS_PROPERTY_SETTER_DISPATCH_OK')
 Write-AstCliCheckpoint 'shard-4-complete'
