@@ -69,4 +69,16 @@ Invoke-Fixture 'isdir-drive-next' @('ISDIR_DRIVE_OK')
 Write-AstCliCheckpoint 'shard-2-static-storage'
 Invoke-Fixture 'static-array' @('1', '2')
 Invoke-Fixture 'static-list' @('1', '2')
+Write-AstCliCheckpoint 'shard-2-array-batch'
+Invoke-Fixture 'array-storage-bounds' @('ARRAY_STORAGE_BOUNDS_OK')
+Invoke-Fixture 'array-storage-parity' @('-3', '-1', '7', 'ARRAY_STORAGE_PARITY_OK')
+Invoke-Fixture 'date-runtime-api-next' @('DATE_RUNTIME_API_OK')
+Invoke-Fixture 'json-array-legacy-spelling-next' @('AST_JSON_ARRAY_CANONICAL_OK')
+Invoke-Fixture 'nonzero-array' @('10', '30')
+Invoke-Fixture 'redim-array' @('2', '9', '9')
+Invoke-Fixture 'array-parameter-runtime-next' @('41:-2:0')
+Invoke-Fixture 'method-array-runtime-next' @('43:-3:-1')
+Invoke-Fixture 'module-array-default-private-next' @('MODULE_DEFAULT_PRIVATE_ARRAY_OK')
+Invoke-Fixture 'procedure-array-deferred' @('7')
+Invoke-Fixture 'constructor-array-runtime-next' @('42:-1:1')
 Write-AstCliCheckpoint 'shard-2-complete'
