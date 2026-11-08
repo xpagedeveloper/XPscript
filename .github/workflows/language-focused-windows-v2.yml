@@ -100,8 +100,8 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File ./tests/ast-compile-probe/${{ matrix.script }} ${{ matrix.arguments }}
 
-  language-lifetimes:
-    name: AST constructors, destructors and image lifetimes
+  language-constructors:
+    name: AST constructors
     runs-on: windows-latest
     timeout-minutes: 35
     steps:
@@ -117,9 +117,39 @@ jobs:
       - name: Run constructor probe
         shell: pwsh
         run: pwsh -NoProfile -File ./tests/ast-compile-probe/run-ast-constructor.ps1
+
+  language-destructors:
+    name: AST destructors
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Run destructor probe
         shell: pwsh
         run: pwsh -NoProfile -File ./tests/ast-compile-probe/run-ast-destructor.ps1
+
+  language-image-lifetimes:
+    name: AST image lifetimes
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
       - name: Run image lifetime probe
         shell: pwsh
         run: pwsh -NoProfile -File ./tests/ast-compile-probe/run-ast-image-get.ps1
