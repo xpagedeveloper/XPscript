@@ -26,4 +26,6 @@ Write-AstCliCheckpoint 'shard-2-file-runtime'
 Invoke-Fixture 'file-runtime-next' @('FILE_RUNTIME_OK')
 Write-AstCliCheckpoint 'shard-2-file-aliases'
 Invoke-Fixture 'file-exists-aliases-next' @('FILE_EXISTS_ALIASES_AST_OK')
+Write-AstCliCheckpoint 'shard-2-file-binary'
+Invoke-Fixture 'file-get-next' @('FILE_GET_OK')
 Write-AstCliCheckpoint 'shard-2-complete'
