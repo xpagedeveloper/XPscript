@@ -82,6 +82,16 @@ public sealed class SymbolTable
             var returnType = ResolveRuntimeType(definition.ReturnType);
             var semanticReturnType = definition.ReturnType is null ? null : ResolveSemanticType(definition.ReturnType);
             Declare(new FunctionSymbol(definition.Name, returnType, parameterTypes, semanticReturnType, semanticParameterTypes));
+            // The shared catalog records Optional parameters textually, while
+            // this legacy symbol shape stores only CLR parameter arrays. Keep
+            // the AST binder in sync by registering the shortened JSON
+            // overloads explicitly; the runtime method supplies the default.
+            if (definition.Name.Equals("XPJsonObject.GetNthElement", StringComparison.OrdinalIgnoreCase) ||
+                definition.Name.Equals("XPJsonArray.GetNthElement", StringComparison.OrdinalIgnoreCase))
+            {
+                Declare(new FunctionSymbol(definition.Name, returnType,
+                    parameterTypes[..1], semanticReturnType, semanticParameterTypes[..1]));
+            }
         }
         AstImageSupport.Import(this);
         AstCsvSupport.Import(this);
