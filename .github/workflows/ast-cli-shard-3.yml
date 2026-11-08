@@ -3,6 +3,11 @@ name: AST CLI Shard 3 (Windows)
 on:
   push:
     branches: [investigate-ast-compiler]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'tests/ast-compile-probe/**'
+      - 'samples/**'
+      - '.github/workflows/ast-cli-shard-3.yml'
   workflow_dispatch:
 
 permissions:
