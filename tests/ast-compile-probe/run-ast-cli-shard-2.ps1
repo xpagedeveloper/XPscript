@@ -46,4 +46,6 @@ Write-AstCliCheckpoint 'shard-2-file-lock'
 Invoke-Fixture 'file-lock-next' @('FILE_LOCK_OK')
 Write-AstCliCheckpoint 'shard-2-file-text'
 Invoke-Fixture 'file-text-next' @('FILE_TEXT_OK')
+Write-AstCliCheckpoint 'shard-2-file-missing-paths'
+Invoke-Fixture 'file-missing-path-errors' @('FILE_MISSING_PATH_ERRORS_OK')
 Write-AstCliCheckpoint 'shard-2-complete'
