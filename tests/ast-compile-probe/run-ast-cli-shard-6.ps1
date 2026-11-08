@@ -125,4 +125,18 @@ if ($LASTEXITCODE -ne 0 -or ($uiFormResult -join "`n") -notmatch 'AST_UIFORM_ROU
 }
 Write-Host 'AST_UIFORM_ROUTE_OK'
 
+Write-AstCliCheckpoint 'shard-6-uiform-schema-free'
+$uiFormSchemaFreeOutput = Join-Path $output 'uiform-schema-free'
+dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'uiform-schema-free-next.xps') -o $uiFormSchemaFreeOutput
+if ($LASTEXITCODE -ne 0) { throw 'Shard 6 schema-free UIForm compilation failed.' }
+$uiFormSchemaFreeAssembly = [System.Reflection.Assembly]::LoadFrom((Join-Path $uiFormSchemaFreeOutput 'Generated.dll'))
+if ($null -ne $uiFormSchemaFreeAssembly.GetType('XPScriptJsonSchema', $false) -or $null -ne $uiFormSchemaFreeAssembly.GetType('XPScriptJsonValidationResult', $false)) {
+    throw 'Schema-free UIForm output included JSON-schema runtime providers.'
+}
+$uiFormSchemaFreeResult = @(dotnet (Join-Path $uiFormSchemaFreeOutput 'Generated.dll'))
+if ($LASTEXITCODE -ne 0 -or ($uiFormSchemaFreeResult -join "`n") -notmatch 'AST_UIFORM_SCHEMA_FREE_OK') {
+    throw 'Shard 6 schema-free UIForm execution regression failed.'
+}
+Write-Host 'AST_UIFORM_SCHEMA_FREE_OK'
+
 Write-AstCliCheckpoint 'shard-6-complete'

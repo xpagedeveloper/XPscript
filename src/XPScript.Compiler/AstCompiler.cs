@@ -191,8 +191,7 @@ public static class AstCompiler
         // source. Keep the dependency trigger explicit until that validation
         // surface is split out, while also detecting direct generated/source
         // references to the schema types.
-        var usesJsonSchemaRuntime = runtimeFeatures.Ui ||
-            Regex.IsMatch(fullSource, @"(?i)\b(?:XPScriptJsonSchema|XPScriptJsonValidationResult)\b") ||
+        var usesJsonSchemaRuntime = Regex.IsMatch(fullSource, @"(?i)\b(?:XPScriptJsonSchema|XPScriptJsonValidationResult|SetValidationSchema|ValidateData|IsDataValid)\b") ||
             AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema") ||
             AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonValidationResult");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
@@ -966,7 +965,7 @@ using XpJsonArray = XPScriptJsonArray;
 using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
 {{(Regex.IsMatch(fullSource, @"(?i)\b(ShowDialog|LoadFileDialog|OpenFileDialog|SaveFileDialog)\b") ? UIDialogRuntimeSource.Code : "")}}
-{{(runtimeFeatures.Ui ? UIExtensionRuntimeSource.Code + Environment.NewLine + UIFormValidationRuntimeSource.Code : "")}}
+{{(runtimeFeatures.Ui ? UIExtensionRuntimeSource.Code + (usesJsonSchemaRuntime ? Environment.NewLine + UIFormValidationRuntimeSource.Code : "") : "")}}
 {{(usesArchive ? ArchiveRuntimeSource.Code + ArchiveMemoryRuntimeSource.Code + ArchiveIteratorRuntimeSource.Code : "")}}
 {{(usesArchive && source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ? ArchiveExtendedReaderRuntimeSource.Code + ArchiveExtendedWriterRuntimeSource.Code + ArchiveExtendedWriterFactoryRuntimeSource.Code : "")}}
 {{(usesNetworkTools ? NetworkToolsRuntimeSource.Code : "")}}
