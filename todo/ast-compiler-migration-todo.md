@@ -813,6 +813,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
         - [x] Include the JSON-schema support required by the shared UIForm runtime source; shard 6 exposed the transitive `XPScriptJsonSchema`/validation type dependency.
         - [x] Keep the temporary JSON-schema runtime trigger explicit for UIForm and direct `XPScriptJsonSchema`/`XPScriptJsonValidationResult` references until the validation surface is split out.
           - [ ] Identify and isolate the UIForm validation contract (`SetValidationSchema`, `ValidateData`, `IsDataValid`, and validation-error lookup) from the core form runtime.
+            - [x] Move the validation members into a separate partial AST runtime provider without changing the public contract.
           - [ ] Add a schema-free UIForm runtime compilation fixture and verify it does not reference JSON-schema runtime types.
           - [ ] Add a schema-enabled UIForm fixture covering schema assignment and validation, with explicit en-US and sv-SE output checks where formatted text is involved.
           - [ ] Inject the isolated validation runtime only when the source uses UIForm validation APIs; compare generated dependency/size output before and after.
