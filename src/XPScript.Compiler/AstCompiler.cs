@@ -191,7 +191,9 @@ public static class AstCompiler
         // source. Keep the dependency trigger explicit until that validation
         // surface is split out, while also detecting direct generated/source
         // references to the schema types.
-        var usesJsonSchemaRuntime = Regex.IsMatch(fullSource, @"(?i)\b(?:XPScriptJsonSchema|XPScriptJsonValidationResult|SetValidationSchema|ValidateData|IsDataValid)\b") ||
+        var usesJsonSchemaRuntime = Regex.IsMatch(source + Environment.NewLine + fullSource, @"(?i)\b(?:XPJsonSchema|XPJsonValidationResult|XPScriptJsonSchema|XPScriptJsonValidationResult|SetValidationSchema|ValidateData|IsDataValid)\b") ||
+            AstObjectSupportRegistry.UsesObject(source, "XPJsonSchema") ||
+            AstObjectSupportRegistry.UsesObject(source, "XPJsonValidationResult") ||
             AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema") ||
             AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonValidationResult");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
