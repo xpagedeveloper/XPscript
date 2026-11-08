@@ -129,8 +129,8 @@ Write-AstCliCheckpoint 'shard-6-uiform-schema-free'
 $uiFormSchemaFreeOutput = Join-Path $output 'uiform-schema-free'
 dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'uiform-schema-free-next.xps') -o $uiFormSchemaFreeOutput
 if ($LASTEXITCODE -ne 0) { throw 'Shard 6 schema-free UIForm compilation failed.' }
-$uiFormSchemaFreeAssembly = [System.Reflection.Assembly]::LoadFrom((Join-Path $uiFormSchemaFreeOutput 'Generated.dll'))
-if ($null -ne $uiFormSchemaFreeAssembly.GetType('XPScriptJsonSchema', $false) -or $null -ne $uiFormSchemaFreeAssembly.GetType('XPScriptJsonValidationResult', $false)) {
+$uiFormSchemaFreeBinary = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes((Join-Path $uiFormSchemaFreeOutput 'Generated.dll')))
+if ($uiFormSchemaFreeBinary.Contains('XPScriptJsonSchema') -or $uiFormSchemaFreeBinary.Contains('XPScriptJsonValidationResult')) {
     throw 'Schema-free UIForm output included JSON-schema runtime providers.'
 }
 $uiFormSchemaFreeResult = @(dotnet (Join-Path $uiFormSchemaFreeOutput 'Generated.dll'))
@@ -143,8 +143,8 @@ Write-AstCliCheckpoint 'shard-6-uiform-schema-enabled'
 $uiFormSchemaEnabledOutput = Join-Path $output 'uiform-schema-enabled'
 dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'uiform-schema-enabled-next.xps') -o $uiFormSchemaEnabledOutput
 if ($LASTEXITCODE -ne 0) { throw 'Shard 6 schema-enabled UIForm compilation failed.' }
-$uiFormSchemaEnabledAssembly = [System.Reflection.Assembly]::LoadFrom((Join-Path $uiFormSchemaEnabledOutput 'Generated.dll'))
-if ($null -eq $uiFormSchemaEnabledAssembly.GetType('XPScriptJsonSchema', $false) -or $null -eq $uiFormSchemaEnabledAssembly.GetType('XPScriptJsonValidationResult', $false)) {
+$uiFormSchemaEnabledBinary = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes((Join-Path $uiFormSchemaEnabledOutput 'Generated.dll')))
+if (-not $uiFormSchemaEnabledBinary.Contains('XPScriptJsonSchema') -or -not $uiFormSchemaEnabledBinary.Contains('XPScriptJsonValidationResult')) {
     throw 'Schema-enabled UIForm output omitted JSON-schema runtime providers.'
 }
 $uiFormSchemaEnabledResult = @(dotnet (Join-Path $uiFormSchemaEnabledOutput 'Generated.dll'))
