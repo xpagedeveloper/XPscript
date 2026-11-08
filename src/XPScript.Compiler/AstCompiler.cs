@@ -1693,6 +1693,9 @@ internal static class Program
             generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated);
         }
         generated = RemoveDuplicateTlsRuntime(generated);
+        if (Regex.IsMatch(generated, @"\bXPScriptJson(?:Schema|ValidationResult)\b") &&
+            !generated.Contains("internal sealed class XPScriptJsonSchema", StringComparison.Ordinal))
+            generated += Environment.NewLine + JsonSchemaRuntimeSource.Code;
         if (generatedSourceTransform is not null)
             generated = generatedSourceTransform(generated);
         if (runtimeFeatures.Ui && !generated.Contains("internal static class XPScriptUIDesktopAdapter", StringComparison.Ordinal))
