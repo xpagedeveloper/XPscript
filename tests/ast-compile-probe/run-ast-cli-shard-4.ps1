@@ -27,4 +27,6 @@ Invoke-Fixture 'class-method-list-byref-next' @('21')
 Write-AstCliCheckpoint 'shard-4-properties'
 Invoke-Fixture 'class-property-derived-next' @('8')
 Invoke-Fixture 'class-property-derived-set-next' @('9')
+Write-AstCliCheckpoint 'shard-4-optional-byref-array'
+Invoke-Fixture 'class-method-optional-byref-array-next' @('9', '9', '9')
 Write-AstCliCheckpoint 'shard-4-complete'
