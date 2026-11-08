@@ -16,4 +16,16 @@ foreach ($fixture in @('native-json-regression', 'native-xml-regression')) {
     }
     Write-Host "AST_CLI_SHARD_3_COMPILE_OK=$fixture"
 }
+foreach ($fixture in @(
+    'native-http-regression', 'native-http-json', 'native-http-null-boundaries',
+    'native-http-resource-limits', 'native-xml-dom-regression', 'native-csv-regression',
+    'csv-json-roundtrip', 'json-http', 'json-resource-limits', 'xpjsonschema-runtime')) {
+    Write-AstCliCheckpoint "shard-3-$fixture"
+    $directory = Join-Path $output $fixture
+    dotnet $context.Compiler ast-compile (Join-Path $context.Root "samples/$fixture.xps") -o $directory
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $directory 'Generated.dll'))) {
+        throw "Shard 3 native/service compilation failed: $fixture"
+    }
+    Write-Host "AST_CLI_SHARD_3_COMPILE_OK=$fixture"
+}
 Write-AstCliCheckpoint 'shard-3-complete'
