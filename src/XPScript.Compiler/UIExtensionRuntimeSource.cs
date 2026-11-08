@@ -479,6 +479,8 @@ internal sealed class XPScriptUIForm
         if (value < 0) throw new XPScriptRuntimeException(5, "Carousel auto-advance interval cannot be negative.");
         field.CarouselAutoAdvanceMilliseconds = value == 0 ? null : value;
     }
+    private static string NormalizeMediaSource(object? value, string kind)
+        => XPScriptRuntime.CStr(value).Trim();
     public XPScriptUIField AddAudio(object? name) => AddField(name, name, "Audio");
     public XPScriptUIField AddAudio(object? name, object? label) => AddField(name, label, "Audio");
     public XPScriptUIField AddProgressBar(object? name) => AddField(name, string.Empty, "ProgressBar");
