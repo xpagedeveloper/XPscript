@@ -301,7 +301,6 @@ internal sealed partial class XPScriptUIForm
     private string _bootText = string.Empty;
     private string _bootImage = string.Empty;
     private XPScriptJsonObject _data = XPScriptNativeJson.CreateObject();
-    private XPScriptJsonSchema? _validationSchema;
     private readonly List<XPScriptUIField> _fields = [];
     private readonly List<(string Name, string Command)> _mediaCommands = [];
 

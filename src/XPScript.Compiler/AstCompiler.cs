@@ -187,10 +187,7 @@ public static class AstCompiler
         ValidateAstAiCallbacks(fullSource);
         var runtimeFeatures = RuntimeFeatures.Detect(fullSource);
         var usesAi = runtimeFeatures.Ai;
-        // UIForm currently carries validation members in its shared runtime
-        // source. Keep the dependency trigger explicit until that validation
-        // surface is split out, while also detecting direct generated/source
-        // references to the schema types.
+        // Detect direct source references to the schema types and validation API.
         var usesJsonSchemaRuntime = Regex.IsMatch(source + Environment.NewLine + fullSource, @"(?i)\b(?:XPJsonSchema|XPJsonValidationResult|XPScriptJsonSchema|XPScriptJsonValidationResult|SetValidationSchema|ValidateData|IsDataValid)\b") ||
             AstObjectSupportRegistry.UsesObject(source, "XPJsonSchema") ||
             AstObjectSupportRegistry.UsesObject(source, "XPJsonValidationResult") ||

@@ -54,7 +54,7 @@ public readonly record struct RuntimeFeatures(
                   code, "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJSONNavigator") ||
                   PreprocessorFeatureGate.ContainsCall(
                       code, "XPJsonDocument.Parse", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode"),
-            JsonSchema: jsonSchema || PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm"),
+            JsonSchema: jsonSchema,
             Xml: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPXml") ||
                  PreprocessorFeatureGate.ContainsCall(code, "XPXmlDocument.Parse", "XmlParse", "XmlStringify", "XmlEscape"),
             Csv: AstSpreadsheetSupport.UsesWorksheetCsv(source) || PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPCsv") ||

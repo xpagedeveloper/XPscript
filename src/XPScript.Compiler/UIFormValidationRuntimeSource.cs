@@ -5,6 +5,7 @@ internal static class UIFormValidationRuntimeSource
     public const string Code = """
 internal sealed partial class XPScriptUIForm
 {
+    private XPScriptJsonSchema? _validationSchema;
     public bool HasValidationSchema => _validationSchema is not null;
     public void SetValidationSchema(object? value)
     {
