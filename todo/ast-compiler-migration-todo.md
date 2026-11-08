@@ -984,6 +984,7 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
       - [x] Add shared carousel state to the UIField base runtime.
       - [x] Add shared carousel auto-advance state to the UIField base runtime.
       - [x] Route callback-free UIForm sources through AST and retain legacy fallback for callback sources.
+      - [x] Add an AST-only desktop-adapter compatibility provider for callback-free UIForm compilation.
     - [x] Add and run the first focused JSON-schema transitive-runtime fixture in AST CLI shard 6.
     - [x] Add the HTTP-plus-JSON transitive-runtime fixture to AST CLI shard 6.
     - [x] Add the filesystem transitive-runtime fixture to AST CLI shard 6.

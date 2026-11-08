@@ -1694,6 +1694,8 @@ internal static class Program
         generated = RemoveDuplicateTlsRuntime(generated);
         if (generatedSourceTransform is not null)
             generated = generatedSourceTransform(generated);
+        if (runtimeFeatures.Ui && !generated.Contains("internal static class XPScriptUIDesktopAdapter", StringComparison.Ordinal))
+            generated += Environment.NewLine + UIExtensionAstCompatibilitySource.Code;
         AstRuntimeDependencyGuard.Validate(generated, sourcePath);
         var applicationMarkers = AstApplicationSupport.BuildMarkers(fullSource, sourcePath);
         string outputResult;

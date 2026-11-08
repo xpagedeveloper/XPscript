@@ -284,6 +284,9 @@ internal sealed class XPScriptUIField
             throw new XPScriptRuntimeException(5, "UIForm WebView relative Source must stay within the application asset root.");
         return normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ? normalized : "assets/" + normalized;
     }
+
+    private static string NormalizeMediaSource(object? value, string kind)
+        => NormalizeMediaSource(XPScriptRuntime.CStr(value));
 }
 
 internal sealed class XPScriptUIForm
