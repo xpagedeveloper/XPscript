@@ -758,12 +758,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [x] Split `tests/ast-compile-probe/run-ast-cli.ps1` into six independently runnable shards so a green shard is not rerun when another shard hangs or fails. The six-job matrix passed in GitHub Actions on 2026-11-06; each job has independent checkpoints, timeout and rerun scope.
   - [x] Extract shared CLI setup, compiler path resolution, output roots and bounded process helpers without changing test behavior. `tests/ast-compile-probe/cli-common.ps1` now owns the shared context and bounded `dotnet` runner; the unchanged corpus passed on 2026-11-06.
   - [x] Add a shard runner contract with a named shard, timeout and ordered checkpoint markers. The existing corpus emits `AST_CLI_CHECKPOINT` markers; shard-specific dispatch remains open.
-  - [ ] Shard 1: CLI options, output formats, preprocessing, includes and target setup. The runner now supports `-Shard 1`; manual workflow wiring is in place. Split into the bounded subtasks below.
-    - [ ] Add focused CLI-option fixtures for help/version, compiler selection, locale and invalid-option diagnostics.
-    - [ ] Add focused output-format fixtures for executable, source, assembly and diagnostic output contracts.
-    - [ ] Add focused preprocessing fixtures for conditional compilation, defines and source expansion diagnostics.
-    - [ ] Add focused include/use fixtures for resolution order, missing files and mapped source locations.
-    - [ ] Add focused target-setup fixtures for supported targets, prerequisite diagnostics and target-specific output metadata.
+  - [ ] Shard 1: CLI options, output formats, preprocessing, includes and target setup. The runner supports `-Shard 1` and remains a single shard because it completes in under ten minutes; split only if a timeout or an independently failing boundary makes it necessary.
   - [ ] Shard 2: core language, operators, arrays, files and runtime globals. Manual runner currently covers core operators and array storage; file/runtime fixtures remain to be added.
   - [ ] Shard 3: native objects and services (HTTP, JSON, XML, CSV, spreadsheet and database). Manual runner currently covers JSON/XML compile surfaces; runtime/service parity remains open.
   - [ ] Shard 4: classes, properties, inheritance, methods and Optional/ByRef signatures. Manual runner currently covers Optional methods and inheritance; properties and ByRef fixtures remain open.
