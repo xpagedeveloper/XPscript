@@ -33,4 +33,10 @@ Write-AstCliCheckpoint 'shard-4-indexed-object-property'
 Invoke-Fixture 'class-property-indexed-object-next' @('CLASS_INDEXED_PROPERTY_OBJECT_OK')
 Write-AstCliCheckpoint 'shard-4-virtual-property'
 Invoke-Fixture 'class-property-virtual-dispatch-next' @('CLASS_PROPERTY_VIRTUAL_DISPATCH_OK')
+Write-AstCliCheckpoint 'shard-4-remaining-properties-byref'
+Invoke-Fixture 'class-property-parent-next' @('7')
+Invoke-Fixture 'class-property-object-override-next' @('12')
+Invoke-Fixture 'class-method-optional-byref-reference-next' @('0', '1')
+Invoke-Fixture 'class-method-optional-byref-user-reference-next' @('0', '15')
+Invoke-Fixture 'class-method-list-element-byref-next' @('11', '11')
 Write-AstCliCheckpoint 'shard-4-complete'
