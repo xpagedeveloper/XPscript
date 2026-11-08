@@ -1,6 +1,7 @@
 Option Explicit
 
 Sub Main()
+    MkDir "out/ast-filecopy-test"
     FileCopy "tests/ast-compile-probe/file-attributes-next.xps", "out/ast-filecopy-test/copied.txt"
     If Not IsFile("out/ast-filecopy-test/copied.txt") Then Error 9857, "FileCopy did not create the destination"
     Name "out/ast-filecopy-test/copied.txt" As "out/ast-filecopy-test/renamed.txt"

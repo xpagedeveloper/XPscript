@@ -1,4 +1,7 @@
-param([string]$CompilerPath)
+param(
+    [string]$CompilerPath,
+    [string]$OnlyFixture
+)
 
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'cli-common.ps1')
@@ -8,6 +11,7 @@ New-Item -ItemType Directory -Force -Path $output | Out-Null
 Write-AstCliCheckpoint 'shard-2-start'
 
 function Invoke-Fixture([string]$name, [string[]]$expected) {
+    if (-not [string]::IsNullOrWhiteSpace($OnlyFixture) -and $OnlyFixture -ne $name) { return }
     $directory = Join-Path $output $name
     dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot "$name.xps") -o $directory
     if ($LASTEXITCODE -ne 0) { throw "Shard 2 compilation failed: $name" }
