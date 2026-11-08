@@ -44,4 +44,6 @@ Write-AstCliCheckpoint 'shard-2-directory-enumeration'
 Invoke-Fixture 'dir-next' @('DIR_AST_OK')
 Write-AstCliCheckpoint 'shard-2-file-lock'
 Invoke-Fixture 'file-lock-next' @('FILE_LOCK_OK')
+Write-AstCliCheckpoint 'shard-2-file-text'
+Invoke-Fixture 'file-text-next' @('FILE_TEXT_OK')
 Write-AstCliCheckpoint 'shard-2-complete'
