@@ -15,7 +15,8 @@ internal static class AstUiFormSupport
             ["UIFormField"] = "XPScriptUIField"
         };
 
-    private static readonly ClassDeclarationSyntax[] Classes = CSharpSyntaxTree.ParseText(UIExtensionRuntimeSource.Code)
+    private static readonly ClassDeclarationSyntax[] Classes = CSharpSyntaxTree.ParseText(
+        UIExtensionRuntimeSource.Code + Environment.NewLine + UIFormValidationRuntimeSource.Code)
         .GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>().ToArray();
 
     private static string LanguageType(string type) => type.TrimEnd('?') switch
