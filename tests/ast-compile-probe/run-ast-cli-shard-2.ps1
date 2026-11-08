@@ -62,4 +62,11 @@ Write-AstCliCheckpoint 'shard-2-file-attributes'
 Invoke-Fixture 'file-attributes-next' @('FILE_ATTRIBUTES_AST_OK')
 Write-AstCliCheckpoint 'shard-2-file-datetime'
 Invoke-Fixture 'file-date-time-next' @('FILE_DATETIME_OK')
+Write-AstCliCheckpoint 'shard-2-file-navigation'
+Invoke-Fixture 'chdir-next' @('CHDIR_AST_OK')
+Invoke-Fixture 'file-input-chars-next' @('FILE_INPUT_CHARS_OK')
+Invoke-Fixture 'isdir-drive-next' @('ISDIR_DRIVE_OK')
+Write-AstCliCheckpoint 'shard-2-static-storage'
+Invoke-Fixture 'static-array' @('1', '2')
+Invoke-Fixture 'static-list' @('1', '2')
 Write-AstCliCheckpoint 'shard-2-complete'
