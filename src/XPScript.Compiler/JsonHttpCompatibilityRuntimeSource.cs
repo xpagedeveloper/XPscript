@@ -190,7 +190,7 @@ internal sealed class XPJSONObject
     public XPJSONElement? GetNthElement(object? index, object? suppressErrors = null)
     {
         var oneBased = XPScriptRuntime.CInt(index);
-        var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors);
+        var suppress = suppressErrors is null || XPScriptRuntime.CBool(suppressErrors);
         LSJsonNodeRuntime.ValidateOneBasedIndex(oneBased, Size, suppress);
         if (oneBased < 1 || oneBased > Size) return null;
         _cursor = oneBased - 1;
@@ -267,7 +267,7 @@ internal sealed class XPJSONArray
     public XPJSONElement? GetNthElement(object? index, object? suppressErrors = null)
     {
         var oneBased = XPScriptRuntime.CInt(index);
-        var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors);
+        var suppress = suppressErrors is null || XPScriptRuntime.CBool(suppressErrors);
         LSJsonNodeRuntime.ValidateOneBasedIndex(oneBased, Size, suppress);
         if (oneBased < 1 || oneBased > Size) return null;
         _cursor = oneBased - 1;
@@ -394,7 +394,7 @@ internal sealed class XPJSONNavigator
     public XPJSONElement? GetNthElement(object? index, object? suppressErrors = null)
     {
         var oneBased = XPScriptRuntime.CInt(index);
-        var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors);
+        var suppress = suppressErrors is null || XPScriptRuntime.CBool(suppressErrors);
         var size = Root switch
         {
             System.Text.Json.Nodes.JsonObject obj => obj.Count,

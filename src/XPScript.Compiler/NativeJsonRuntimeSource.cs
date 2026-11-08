@@ -149,7 +149,7 @@ internal sealed class XPScriptJsonObject
     public XPScriptJsonElement? GetNthElement(object? indexValue, object? suppressErrors = null)
     {
         var oneBased = XPScriptRuntime.CInt(indexValue);
-        var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors);
+        var suppress = suppressErrors is null || XPScriptRuntime.CBool(suppressErrors);
         if (oneBased < 1 || oneBased > Size) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); }
         _cursor = oneBased - 1; return ElementAt(_cursor, false);
     }
@@ -197,7 +197,7 @@ internal sealed class XPScriptJsonArray : System.Collections.IEnumerable
     public XPScriptJsonElement? GetNthElement(object? indexValue, object? suppressErrors = null)
     {
         var oneBased = XPScriptRuntime.CInt(indexValue);
-        var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors);
+        var suppress = suppressErrors is null || XPScriptRuntime.CBool(suppressErrors);
         if (oneBased < 1 || oneBased > Size) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); }
         _cursor = oneBased - 1; return ElementAt(_cursor, false);
     }
@@ -285,7 +285,7 @@ internal sealed class XPScriptJsonNavigator
     public XPScriptJsonElement? GetNextElement() { _cursor++; return ElementAt(_cursor, true); }
     public XPScriptJsonElement? GetNthElement(object? indexValue, object? suppressErrors = null)
     {
-        var oneBased = XPScriptRuntime.CInt(indexValue); var suppress = suppressErrors is not null && XPScriptRuntime.CBool(suppressErrors); var size = Root is System.Text.Json.Nodes.JsonObject o ? o.Count : Root is System.Text.Json.Nodes.JsonArray a ? a.Count : 1;
+        var oneBased = XPScriptRuntime.CInt(indexValue); var suppress = suppressErrors is null || XPScriptRuntime.CBool(suppressErrors); var size = Root is System.Text.Json.Nodes.JsonObject o ? o.Count : Root is System.Text.Json.Nodes.JsonArray a ? a.Count : 1;
         if (oneBased < 1 || oneBased > size) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); }
         _cursor = oneBased - 1; return ElementAt(_cursor, false);
     }
