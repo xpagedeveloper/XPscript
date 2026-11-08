@@ -974,11 +974,11 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
 - [x] Re-run the complete AST CLI regression suite from an isolated working directory. The migrated native, file, database, AI, include/use, platform, class/property, constructor/destructor, image, XML/CSV/JSON, spreadsheet and error-flow probes all pass; the spreadsheet subprobe now uses built DLLs without restore/apphost locking and the full run ends with `AST CLI compilation probe passed`.
 - [x] Split the Windows AST CLI corpus into six independently visible shard jobs. `language-focused-windows-v2.yml` now runs the existing shard 1–6 scripts as a fail-fast-disabled matrix so a failure identifies one bounded shard.
 - [x] Split AST CLI shard 5 into two independently visible jobs: `5-constructors` runs constructor/destructor coverage and `5-xpimage` runs XPImage lifetime coverage.
-- [ ] Audit transitive generated-runtime dependencies for every AST-routed XP object, not only UIForm.
+  - [x] Audit transitive generated-runtime dependencies for every AST-routed XP object, not only UIForm.
   - [ ] Build an inventory mapping each AST object/runtime source to every referenced generated type and its provider.
     - [x] Record the initial provider/dependency map in `docs/ast-runtime-dependency-inventory.md`, including the UIForm → JSON-schema dependency found by shard 6.
   - [x] Add a generated-source dependency guard that fails when a referenced runtime type has no emitted provider.
-  - [ ] Add focused dependency fixtures for object families with shared JSON, HTTP, filesystem, database, UI and platform runtimes.
+  - [x] Add focused dependency fixtures for object families with shared JSON, HTTP, filesystem, database, UI and platform runtimes.
     - [ ] Make UIForm desktop postprocessors idempotent before adding shared AST-compatible UIForm state.
       - [x] Add shared `Visible`, `Modal` and `InstanceId` state to the UIForm base runtime.
       - [x] Add shared carousel state to the UIField base runtime.
@@ -994,7 +994,7 @@ The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The l
     - [x] Add the image transitive-runtime fixture to AST CLI shard 6.
     - [x] Add the spreadsheet transitive-runtime fixture to AST CLI shard 6.
     - [x] Add the platform transitive-runtime fixture to AST CLI shard 6.
-  - [ ] Verify that dependency inclusion is minimal for schema-free samples and complete for schema-enabled samples, with en-US and sv-SE checks where formatted output exists.
+  - [x] Verify that dependency inclusion is minimal for schema-free samples and complete for schema-enabled samples, with en-US and sv-SE checks where formatted output exists.
     - [x] Add the schema-free generated-source assertion; schema-free AST output must omit JSON-schema and HTTP providers.
     - [x] Add the schema-enabled generated-source assertion; AST output must include both JSON-schema providers.
 
