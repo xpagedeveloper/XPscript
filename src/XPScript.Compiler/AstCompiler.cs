@@ -466,8 +466,6 @@ public static class AstCompiler
         DeclareNativeStatic(symbols, "XPScriptIncrementRuntime.Decrement", [typeof(object)], "XPScriptIncrementRuntime.Decrement");
         DeclareNativeStatic(symbols, "XPScriptIncrementRuntime.Increment", [typeof(byte)], "XPScriptIncrementRuntime.Increment");
         DeclareNativeStatic(symbols, "XPScriptIncrementRuntime.Decrement", [typeof(byte)], "XPScriptIncrementRuntime.Decrement");
-        DeclareNativeStatic(symbols, "XPJsonSchema.Parse", [typeof(object)], "XPScriptJsonSchema.Parse");
-        DeclareNativeStatic(symbols, "XPJsonSchema.FromJson", [typeof(object)], "XPScriptJsonSchema.FromJson");
         if (usesArchive)
         {
             AstArchiveSupport.Import(symbols);
