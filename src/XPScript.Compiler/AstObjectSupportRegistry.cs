@@ -37,6 +37,7 @@ internal static class AstObjectSupportRegistry
         "XPJsonArray",
         "XPJsonObject",
         "XPJsonElement", "XPJsonNavigator", "XPJsonValidationResult", "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall", "XPAttachmentCollection", "Path",
+        "UIForm", "UIFormField",
         "NotesHTTPRequest", "XPNotesHTTPRequest", "NotesSession", "NotesMail", "NotesStream", "NotesAgent", "NotesDXLImporter", "NotesDXLExporter", "NotesDatabase", "NotesDatabaseAccess", "NotesView", "NotesNoteCollection", "NotesDateTime", "NotesName", "NotesDocument", "NotesDocumentCollection", "NotesItem",
         "NotesRichTextItem", "NotesRichTextNavigator", "NotesRichTextParagraphStyle", "NotesRichTextRange", "NotesRichTextSection", "NotesRichTextStyle", "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink",
         "NotesMIMEEntity", "NotesMIMEHeader",
@@ -52,7 +53,7 @@ internal static class AstObjectSupportRegistry
     private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "NotesSAXParser", "NotesSAXAttributeList", "NotesSAXException",
-        "UIForm", "UIListView",
+        "UIListView",
     };
 
     // Generated Notes runtime names deliberately retain the public type's spelling.
@@ -154,6 +155,11 @@ internal static class AstObjectSupportRegistry
 
     public static bool UsesUnsupportedObject(string source, out ObjectDefinition? definition)
     {
+        if (UsesObject(source, "UIForm") && Regex.IsMatch(RemoveStringsAndComments(source), @"(?i)\bAddButtonCallback\b"))
+        {
+            definition = new ObjectDefinition("UIForm callbacks", CompilationRoute.LegacyFallback, null);
+            return true;
+        }
         if (AstHttpSupport.RequiresLegacy(source))
         {
             definition = new ObjectDefinition("XPHttpClient callbacks/UIForm", CompilationRoute.LegacyFallback, null);

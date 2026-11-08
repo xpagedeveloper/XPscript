@@ -115,4 +115,14 @@ if ($LASTEXITCODE -ne 0 -or ($platformResult -join "`n") -notmatch 'AST_PLATFORM
 }
 Write-Host 'AST_PLATFORM_TRANSITIVE_RUNTIME_OK'
 
+Write-AstCliCheckpoint 'shard-6-uiform-ast-route'
+$uiFormOutput = Join-Path $output 'uiform-ast-route'
+dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'uiform-ast-route-next.xps') -o $uiFormOutput
+if ($LASTEXITCODE -ne 0) { throw 'Shard 6 UIForm AST route compilation failed.' }
+$uiFormResult = @(dotnet (Join-Path $uiFormOutput 'Generated.dll'))
+if ($LASTEXITCODE -ne 0 -or ($uiFormResult -join "`n") -notmatch 'AST_UIFORM_ROUTE_OK') {
+    throw 'Shard 6 UIForm AST route execution regression failed.'
+}
+Write-Host 'AST_UIFORM_ROUTE_OK'
+
 Write-AstCliCheckpoint 'shard-6-complete'
