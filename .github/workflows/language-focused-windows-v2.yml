@@ -3,8 +3,6 @@ name: Language Focused Tests (Windows)
 # Push-trigger verification after PowerShell diagnostic interpolation fix.
 
 on:
-  push:
-    branches: [investigate-ast-compiler]
   workflow_dispatch:
 
 permissions:

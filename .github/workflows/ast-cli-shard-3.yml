@@ -1,6 +1,8 @@
 name: AST CLI Shard 3 (Windows)
 
 on:
+  push:
+    branches: [investigate-ast-compiler]
   workflow_dispatch:
 
 permissions:
