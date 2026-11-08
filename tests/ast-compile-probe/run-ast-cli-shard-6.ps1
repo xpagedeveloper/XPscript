@@ -129,8 +129,12 @@ Write-AstCliCheckpoint 'shard-6-uiform-schema-free'
 $uiFormSchemaFreeOutput = Join-Path $output 'uiform-schema-free'
 dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'uiform-schema-free-next.xps') -o $uiFormSchemaFreeOutput
 if ($LASTEXITCODE -ne 0) { throw 'Shard 6 schema-free UIForm compilation failed.' }
-$uiFormSchemaFreeBinary = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes((Join-Path $uiFormSchemaFreeOutput 'Generated.dll')))
-if ($uiFormSchemaFreeBinary.Contains('XPScriptJsonSchema') -or $uiFormSchemaFreeBinary.Contains('XPScriptJsonValidationResult')) {
+$schemaFreeAssembly = Join-Path $uiFormSchemaFreeOutput 'Generated.dll'
+$schemaFreeTypeCheck = & pwsh -NoProfile -Command '& { $assembly = [System.Reflection.Assembly]::LoadFrom($args[0]); if ($null -ne $assembly.GetType($args[1], $false)) { exit 0 }; exit 1 }' $schemaFreeAssembly 'XPScriptJsonSchema'
+$schemaFreeHasSchema = $LASTEXITCODE -eq 0
+$schemaFreeTypeCheck = & pwsh -NoProfile -Command '& { $assembly = [System.Reflection.Assembly]::LoadFrom($args[0]); if ($null -ne $assembly.GetType($args[1], $false)) { exit 0 }; exit 1 }' $schemaFreeAssembly 'XPScriptJsonValidationResult'
+$schemaFreeHasValidationResult = $LASTEXITCODE -eq 0
+if ($schemaFreeHasSchema -or $schemaFreeHasValidationResult) {
     throw 'Schema-free UIForm output included JSON-schema runtime providers.'
 }
 $uiFormSchemaFreeResult = @(dotnet (Join-Path $uiFormSchemaFreeOutput 'Generated.dll'))
@@ -143,8 +147,12 @@ Write-AstCliCheckpoint 'shard-6-uiform-schema-enabled'
 $uiFormSchemaEnabledOutput = Join-Path $output 'uiform-schema-enabled'
 dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'uiform-schema-enabled-next.xps') -o $uiFormSchemaEnabledOutput
 if ($LASTEXITCODE -ne 0) { throw 'Shard 6 schema-enabled UIForm compilation failed.' }
-$uiFormSchemaEnabledBinary = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes((Join-Path $uiFormSchemaEnabledOutput 'Generated.dll')))
-if (-not $uiFormSchemaEnabledBinary.Contains('XPScriptJsonSchema') -or -not $uiFormSchemaEnabledBinary.Contains('XPScriptJsonValidationResult')) {
+$schemaEnabledAssembly = Join-Path $uiFormSchemaEnabledOutput 'Generated.dll'
+$schemaEnabledTypeCheck = & pwsh -NoProfile -Command '& { $assembly = [System.Reflection.Assembly]::LoadFrom($args[0]); if ($null -ne $assembly.GetType($args[1], $false)) { exit 0 }; exit 1 }' $schemaEnabledAssembly 'XPScriptJsonSchema'
+$schemaEnabledHasSchema = $LASTEXITCODE -eq 0
+$schemaEnabledTypeCheck = & pwsh -NoProfile -Command '& { $assembly = [System.Reflection.Assembly]::LoadFrom($args[0]); if ($null -ne $assembly.GetType($args[1], $false)) { exit 0 }; exit 1 }' $schemaEnabledAssembly 'XPScriptJsonValidationResult'
+$schemaEnabledHasValidationResult = $LASTEXITCODE -eq 0
+if (-not $schemaEnabledHasSchema -or -not $schemaEnabledHasValidationResult) {
     throw 'Schema-enabled UIForm output omitted JSON-schema runtime providers.'
 }
 $uiFormSchemaEnabledResult = @(dotnet (Join-Path $uiFormSchemaEnabledOutput 'Generated.dll'))
