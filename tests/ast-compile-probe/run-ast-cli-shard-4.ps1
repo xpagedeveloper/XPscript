@@ -24,4 +24,7 @@ Write-AstCliCheckpoint 'shard-4-inheritance'
 Invoke-Fixture 'class-method-derived-next' @('8')
 Write-AstCliCheckpoint 'shard-4-byref'
 Invoke-Fixture 'class-method-list-byref-next' @('21')
+Write-AstCliCheckpoint 'shard-4-properties'
+Invoke-Fixture 'class-property-derived-next' @('8')
+Invoke-Fixture 'class-property-derived-set-next' @('9')
 Write-AstCliCheckpoint 'shard-4-complete'
