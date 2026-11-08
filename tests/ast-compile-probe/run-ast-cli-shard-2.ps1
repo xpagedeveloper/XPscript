@@ -28,4 +28,14 @@ Write-AstCliCheckpoint 'shard-2-file-aliases'
 Invoke-Fixture 'file-exists-aliases-next' @('FILE_EXISTS_ALIASES_AST_OK')
 Write-AstCliCheckpoint 'shard-2-file-binary'
 Invoke-Fixture 'file-get-next' @('FILE_GET_OK')
+Write-AstCliCheckpoint 'shard-2-runtime-globals'
+$env:XPSCRIPT_RUNTIME_IDENTITY = 'identity-ok'
+$globalsDirectory = Join-Path $output 'runtime-globals-next'
+dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'runtime-globals-next.xps') -o $globalsDirectory
+if ($LASTEXITCODE -ne 0) { throw 'Shard 2 runtime-globals compilation failed.' }
+$globalsResult = @(dotnet (Join-Path $globalsDirectory 'Generated.dll'))
+if ($LASTEXITCODE -ne 0 -or ($globalsResult -join "`n") -notmatch 'ENVIRON_READ=True' -or ($globalsResult -join "`n") -notmatch 'COMMAND_READ=True' -or ($globalsResult -join "`n") -notmatch 'TICKCOUNT_READ=True' -or ($globalsResult -join "`n") -notmatch 'RUNTIME_GLOBALS_OK') {
+    throw "Shard 2 runtime-globals output mismatch.`n$($globalsResult -join "`n")"
+}
+Write-Host 'AST_CLI_SHARD_2_FIXTURE_OK=runtime-globals-next'
 Write-AstCliCheckpoint 'shard-2-complete'
