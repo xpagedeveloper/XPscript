@@ -1689,6 +1689,8 @@ internal static class Program
             .Replace("((XPScriptJsonSchema)(XPJsonSchema)).FromJson", "XPScriptJsonSchema.FromJson", StringComparison.Ordinal);
         generated = jsonNameMetadata.ApplyToGeneratedCode(generated);
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode;
+        if (runtimeFeatures.Ui && AstObjectSupportRegistry.UsesObject(fullSource, "UIForm"))
+            generated = new UIFormWindowLifecyclePostProcessor().Transform(generated);
         using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
         generated = UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);
         if (usesAi)
