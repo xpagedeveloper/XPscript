@@ -65,13 +65,7 @@ public static class DesktopFormLifecycleHost
     }
 
     internal static Window? GetAnyWindowForTests()
-    {
-        Window? result = null;
-        if (Dispatcher.UIThread.CheckAccess())
-            return Windows.Values.FirstOrDefault();
-        Dispatcher.UIThread.Invoke(() => result = Windows.Values.FirstOrDefault());
-        return result;
-    }
+        => Windows.Values.FirstOrDefault();
 
     private static void ShowCore(string instanceId, JsonElement root, Func<string, string, string>? eventCallback)
     {
