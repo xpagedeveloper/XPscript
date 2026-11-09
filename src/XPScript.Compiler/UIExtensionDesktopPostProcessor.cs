@@ -199,8 +199,8 @@ internal sealed class UIExtensionDesktopPostProcessor
         var runtimeIndex = generated.IndexOf(BaseUiRuntimeSentinel, StringComparison.Ordinal);
         var scriptPart = runtimeIndex >= 0 ? generated[..runtimeIndex] : generated;
 
-        if (scriptPart.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
-            scriptPart.Contains("new XPScriptUIForm(", StringComparison.Ordinal) ||
+        if (generated.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
+            generated.Contains("new XPScriptUIForm(", StringComparison.Ordinal) ||
             scriptPart.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
             scriptPart.Contains(RuntimeMsgBoxCall, StringComparison.Ordinal))
             return true;
