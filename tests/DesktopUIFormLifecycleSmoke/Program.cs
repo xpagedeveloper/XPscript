@@ -237,6 +237,8 @@ async Task RunCompiler(params string[] arguments)
     start.ArgumentList.Add(compilerPath);
     foreach (var argument in arguments)
         start.ArgumentList.Add(argument);
+    if (arguments.Length > 0 && arguments[0].Equals("ast-compile", StringComparison.OrdinalIgnoreCase))
+        start.ArgumentList.Add("--debug");
     using var process = Process.Start(start) ?? throw new InvalidOperationException("Could not start compiler.");
     var output = await process.StandardOutput.ReadToEndAsync() + await process.StandardError.ReadToEndAsync();
     await process.WaitForExitAsync();
