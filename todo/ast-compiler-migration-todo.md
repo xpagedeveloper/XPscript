@@ -823,7 +823,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
             - [x] Move the validation members into a separate partial AST runtime provider without changing the public contract.
           - [x] Add a schema-free UIForm runtime compilation fixture and verify it does not reference JSON-schema runtime types.
           - [x] Add a schema-enabled UIForm fixture covering schema assignment and validation; no locale-sensitive formatted text is involved.
-          - [ ] Inject the isolated validation runtime only when the source uses UIForm validation APIs; compare generated dependency/size output before and after.
+          - [x] Inject the isolated validation runtime only when the source uses UIForm validation APIs; schema-free and schema-enabled fixtures pass with the reduced dependency surface. Verified in workflow 42714220678.
         - [ ] Add AST constructor and member lowering for `UIForm`, fields, callbacks and lifecycle methods.
         - [ ] Add focused AST-only compile/runtime fixtures before changing `UIForm` from `LegacyFallback` to `Ast`.
       - [x] Run the existing legacy output first in a focused macOS probe and record its markers and exit code. GitHub run https://github.com/xpagedeveloper/XPscript/actions/runs/42343114766 compiled legacy successfully, then the generated UIForm failed at runtime with `IDispatcherImpl belongs to a different thread` (exit 134). The legacy path needs the same macOS main-thread host fix; `--legacy-only` keeps this regression independently runnable.
