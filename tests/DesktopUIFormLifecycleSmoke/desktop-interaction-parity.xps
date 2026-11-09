@@ -5,7 +5,7 @@ Sub Main()
     Dim form As New UIForm("Desktop interaction parity", 480, 320, True)
     Call form.AddTextField("name", "Name")
     Print "DESKTOP_PARITY_TEXT_READY"
-    Call form.AddButton("close", "Close", "CloseForm")
+    Call form.AddButtonCallback("close", "Close", "CloseForm")
     Print "DESKTOP_PARITY_BUTTON_READY"
     Print "DESKTOP_PARITY_FORM_READY"
     Call form.Show(False)
