@@ -136,7 +136,7 @@ internal static class XPScriptUIDesktopAdapter
         try
         {
             var args = method.GetParameters().Length == 2
-                ? new object?[] { System.Text.Json.JsonSerializer.Serialize(request), new Func<string, string, string>((eventToken, submittedValue) => form.DispatchRegisteredEvent(eventToken, submittedValue)) }
+                ? new object?[] { System.Text.Json.JsonSerializer.Serialize(request), new Func<string, string, string>((eventToken, submittedValue) => string.Empty) }
                 : new object?[] { System.Text.Json.JsonSerializer.Serialize(request) };
             resultJson = Convert.ToString(method.Invoke(null, args), System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
         }
