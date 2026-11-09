@@ -13,6 +13,7 @@ on:
       - 'src/XPScript.Web.Compiler/**'
       - 'src/XPScript.Web.Runtime/**'
       - 'tests/WebBrowserWasmSmoke/**'
+      - 'tests/WebBrowserWasmBrowserSmoke/**'
   workflow_dispatch:
 
 permissions:
@@ -124,5 +125,11 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Install browser WASM workload
         run: dotnet workload install wasm-tools
+      - name: Build browser interaction probe
+        run: dotnet build tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release
+      - name: Install Chromium for Playwright
+        run: pwsh tests/WebBrowserWasmBrowserSmoke/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
       - name: Run browser WASM probe
         run: dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
+      - name: Run browser interaction probe
+        run: dotnet run --project tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release --no-build
