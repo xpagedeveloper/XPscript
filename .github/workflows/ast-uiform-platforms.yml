@@ -34,6 +34,7 @@ jobs:
             throw 'AST Windows UIForm probe timed out after 180 seconds.'
           }
           if ($process.ExitCode -ne 0) { throw "AST Windows UIForm probe failed with exit code $($process.ExitCode)." }
+          dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
 
   desktop-linux:
     name: AST UIForm Show Hide (Linux)
@@ -51,6 +52,7 @@ jobs:
           set -euo pipefail
           dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
           timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only
+          timeout --kill-after=5s 180s dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
 
   desktop-macos:
     name: AST UIForm Show Hide (macOS)
@@ -79,7 +81,13 @@ jobs:
               process.kill()
               process.wait()
               raise SystemExit('AST macOS UIForm probe timed out after 180 seconds.')
-          raise SystemExit(exit_code)
+          if exit_code != 0:
+              raise SystemExit(exit_code)
+          probe = subprocess.run([
+              'dotnet', 'run', '--project', './tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj',
+              '-c', 'Release', '--no-build', '--', '--headless-host-probe'
+          ], timeout=180)
+          raise SystemExit(probe.returncode)
           PY
 
   android:

@@ -1,7 +1,18 @@
 using System.Text.Json;
 using System.Diagnostics;
+using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using XPScript.Compiler;
 using XPScript.UI.Desktop;
+
+if (args.Contains("--headless-host-probe", StringComparer.Ordinal))
+{
+    await RunHeadlessHostProbe();
+    return;
+}
 
 var parseDetachedRequest = typeof(DesktopFormLifecycleHost).GetMethod(
     "ParseDetachedRequest",
@@ -293,4 +304,28 @@ async Task ProbeDesktopRuntime(string label, string file, params string[] argume
     var output = await outputTask + await errorTask;
     if (process.ExitCode != 0 && completed == waitTask)
         throw new InvalidOperationException($"{label} desktop runtime exited unexpectedly: {output}");
+}
+
+async Task RunHeadlessHostProbe()
+{
+    DesktopApplicationHost.TestConfigurator = builder =>
+        builder.UseHeadless(new AvaloniaHeadlessPlatformOptions());
+
+    const string instanceId = "headless-uiform-probe";
+    var request = "{\"instanceId\":\"" + instanceId + "\",\"title\":\"Headless probe\",\"fields\":[{\"name\":\"name\",\"label\":\"Name\",\"type\":\"TextField\"}]}";
+    DesktopFormLifecycleHost.Show(request);
+    var window = DesktopFormLifecycleHost.GetWindowForTests(instanceId)
+        ?? throw new InvalidOperationException("Headless UIForm window was not created.");
+    var text = window.GetVisualDescendants().OfType<TextBox>().Single();
+    var close = window.GetVisualDescendants().OfType<Button>().Single();
+    text.Focus();
+    text.KeyTextInput("Alice");
+    if (!string.Equals(text.Text, "Alice", StringComparison.Ordinal))
+        throw new InvalidOperationException("Headless UIForm text input failed.");
+    close.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+    if (DesktopFormLifecycleHost.IsVisible(instanceId))
+        throw new InvalidOperationException("Headless UIForm close action failed.");
+    Console.WriteLine("HEADLESS_UIFORM_TEXT_OK");
+    Console.WriteLine("HEADLESS_UIFORM_CLOSE_OK");
+    await Task.CompletedTask;
 }

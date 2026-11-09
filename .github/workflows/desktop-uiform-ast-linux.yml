@@ -29,3 +29,8 @@ jobs:
           timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build 2>&1 | tee ./out/ast-uiform-lifecycle.log
           grep -q 'DESKTOP_RUNTIME_LAUNCH_PARITY_OK' ./out/ast-uiform-lifecycle.log
           echo AST_UIFORM_CHECKPOINT=runtime-parity-ok
+      - name: Run Avalonia.Headless host interaction probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --kill-after=5s 180s dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
