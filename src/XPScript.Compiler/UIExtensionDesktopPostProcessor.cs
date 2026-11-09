@@ -132,7 +132,7 @@ internal sealed class UIExtensionDesktopPostProcessor
             + "\n";
 
         replaced = NormalizeLineEndings(replaced);
-        if (!replaced.Contains("class XPScriptUIForm", StringComparison.Ordinal))
+        if (!replaced.Contains("internal sealed class XPScriptUIForm", StringComparison.Ordinal))
             return replaced;
 
         replaced = new UIFormWindowLifecyclePostProcessor().Transform(replaced);
