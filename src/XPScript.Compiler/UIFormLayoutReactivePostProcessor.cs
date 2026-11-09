@@ -306,6 +306,9 @@ internal sealed class XPScriptUIForm
 
     private static string ReplaceRequired(string source, string oldValue, string newValue)
     {
+        if (oldValue == "internal sealed partial class XPScriptUIForm\n{\n" &&
+            source.Contains("internal sealed class XPScriptUIGrid", StringComparison.Ordinal))
+            return source;
         if (!source.Contains(oldValue, StringComparison.Ordinal))
             throw new CompilerException("Unable to install UIForm layout/reactive runtime extension.");
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
