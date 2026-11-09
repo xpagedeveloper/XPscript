@@ -1,6 +1,13 @@
 name: AST CLI Shard 5 (Windows)
 
 on:
+  push:
+    branches: [investigate-ast-compiler]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'tests/ast-compile-probe/**'
+      - 'samples/**'
+      - '.github/workflows/ast-cli-shard-5.yml'
   workflow_dispatch:
 
 permissions:
