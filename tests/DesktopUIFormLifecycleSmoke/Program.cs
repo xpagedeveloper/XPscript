@@ -372,7 +372,12 @@ async Task RunHeadlessAstGeneratedProbe()
         await Task.Delay(50);
         window = DesktopFormLifecycleHost.GetAnyWindowForTests();
     }
-    if (window is null) throw new InvalidOperationException("AST generated headless window was not created.");
+    if (window is null)
+    {
+        DesktopApplicationHost.SetProcessKeepAlive(false);
+        throw new InvalidOperationException("AST generated headless window was not created.");
+    }
+    Console.WriteLine("HEADLESS_AST_GENERATED_WINDOW_OK");
     Dispatcher.UIThread.Invoke(() => window.Close());
     await entryTask.WaitAsync(TimeSpan.FromSeconds(5));
     Console.WriteLine("HEADLESS_AST_GENERATED_OK");
