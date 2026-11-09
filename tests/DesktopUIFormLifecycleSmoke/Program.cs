@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Diagnostics;
+using System.Reflection;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
@@ -12,6 +13,11 @@ using XPScript.UI.Desktop;
 if (args.Contains("--headless-host-probe", StringComparer.Ordinal))
 {
     await RunHeadlessHostProbe();
+    return;
+}
+if (args.Contains("--headless-ast-generated", StringComparer.Ordinal))
+{
+    await RunHeadlessAstGeneratedProbe();
     return;
 }
 
@@ -332,4 +338,42 @@ async Task RunHeadlessHostProbe()
     Console.WriteLine("HEADLESS_UIFORM_TEXT_OK");
     Console.WriteLine("HEADLESS_UIFORM_CLOSE_OK");
     await Task.CompletedTask;
+}
+
+async Task RunHeadlessAstGeneratedProbe()
+{
+    DesktopApplicationHost.TestConfigurator = builder =>
+        builder.UseHeadless(new AvaloniaHeadlessPlatformOptions());
+
+    var root = Path.Combine(Path.GetTempPath(), "xpscript-headless-ast-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(root);
+    var sourcePath = Path.Combine(root, "headless-ast.xps");
+    await File.WriteAllTextAsync(sourcePath, "Sub Main()\n    Dim form As New UIForm(\"AST headless\")\n    Call form.AddTextField(\"name\", \"Name\")\n    Call form.Show(False)\nEnd Sub\n");
+    var compilerPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll"));
+    var output = Path.Combine(root, "ast");
+    var compiler = Process.Start(new ProcessStartInfo("dotnet")
+    {
+        WorkingDirectory = root,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        ArgumentList = { compilerPath, "ast-compile", sourcePath, "-o", output, "--single-file=false", "--runtime=false" }
+    }) ?? throw new InvalidOperationException("Could not start AST compiler.");
+    var compilerOutput = await compiler.StandardOutput.ReadToEndAsync() + await compiler.StandardError.ReadToEndAsync();
+    await compiler.WaitForExitAsync();
+    if (compiler.ExitCode != 0) throw new InvalidOperationException("AST headless fixture compilation failed: " + compilerOutput);
+
+    var assembly = Assembly.LoadFile(Path.Combine(output, "Generated.dll"));
+    var entryPoint = assembly.GetType("Program", throwOnError: true)!.GetMethod("Main", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException("AST generated Program.Main was not found.");
+    var entryTask = Task.Run(() => entryPoint.Invoke(null, entryPoint.GetParameters().Length == 0 ? null : new object?[] { Array.Empty<string>() }));
+    Window? window = null;
+    for (var attempt = 0; attempt < 100 && window is null; attempt++)
+    {
+        await Task.Delay(50);
+        window = DesktopFormLifecycleHost.GetAnyWindowForTests();
+    }
+    if (window is null) throw new InvalidOperationException("AST generated headless window was not created.");
+    Dispatcher.UIThread.Invoke(() => window.Close());
+    await entryTask.WaitAsync(TimeSpan.FromSeconds(5));
+    Console.WriteLine("HEADLESS_AST_GENERATED_OK");
 }

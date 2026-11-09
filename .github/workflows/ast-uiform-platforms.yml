@@ -35,6 +35,7 @@ jobs:
           }
           if ($process.ExitCode -ne 0) { throw "AST Windows UIForm probe failed with exit code $($process.ExitCode)." }
           dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
+          dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-ast-generated
 
   desktop-linux:
     name: AST UIForm Show Hide (Linux)
@@ -53,6 +54,7 @@ jobs:
           dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
           timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only
           timeout --kill-after=5s 180s dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
+          timeout --kill-after=5s 180s dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-ast-generated
 
   desktop-macos:
     name: AST UIForm Show Hide (macOS)
@@ -87,7 +89,13 @@ jobs:
               'dotnet', 'run', '--project', './tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj',
               '-c', 'Release', '--no-build', '--', '--headless-host-probe'
           ], timeout=180)
-          raise SystemExit(probe.returncode)
+          if probe.returncode != 0:
+              raise SystemExit(probe.returncode)
+          generated = subprocess.run([
+              'dotnet', 'run', '--project', './tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj',
+              '-c', 'Release', '--no-build', '--', '--headless-ast-generated'
+          ], timeout=180)
+          raise SystemExit(generated.returncode)
           PY
 
   android:
