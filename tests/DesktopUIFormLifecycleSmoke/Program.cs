@@ -27,6 +27,7 @@ Sub Main()
     Dim form As New UIForm("Desktop parity", 480, 320, True)
     Call form.AddTextField("name", "Name")
     Call form.Show(False)
+    Call form.Hide()
 End Sub
 """;
 var parityRoot = Path.Combine(

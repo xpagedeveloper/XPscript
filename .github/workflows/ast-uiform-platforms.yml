@@ -1,0 +1,65 @@
+name: AST UIForm Show Hide Platforms
+
+on:
+  push:
+    branches: [investigate-ast-compiler]
+    paths:
+      - '.github/workflows/ast-uiform-platforms.yml'
+      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.UI.Desktop/**'
+      - 'tests/DesktopUIFormLifecycleSmoke/**'
+      - 'tests/AndroidAstBackendProbe/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-windows:
+    name: AST UIForm Show Hide (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build and run AST desktop lifecycle probe
+        shell: pwsh
+        run: |
+          dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+          dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only
+
+  desktop-linux:
+    name: AST UIForm Show Hide (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Build and run AST desktop lifecycle probe
+        run: |
+          set -euo pipefail
+          dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+          timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only
+
+  android:
+    name: AST UIForm Show Hide (Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install Android workload
+        run: dotnet workload install android
+      - name: Build compiler and run AST Android lifecycle probe
+        run: |
+          set -euo pipefail
+          dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          dotnet run --project tests/AndroidAstBackendProbe/AndroidAstBackendProbe.csproj -c Release
