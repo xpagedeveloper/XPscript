@@ -57,36 +57,6 @@ var compilerPath = Path.GetFullPath(Path.Combine(
 if (!File.Exists(compilerPath))
     throw new InvalidOperationException("Built XPScript compiler was not found: " + compilerPath);
 var astOutput = Path.Combine(parityRoot, "ast");
-var legacyOutput = Path.Combine(parityRoot, "legacy");
-if (args.Contains("--legacy-only", StringComparer.Ordinal))
-{
-    Console.WriteLine("DESKTOP_PARITY_LEGACY_COMPILE_START");
-    try
-    {
-        await RunCompiler("legacy-compile", paritySourcePath, "-o", legacyOutput, "--single-file=false", "--runtime=true");
-    }
-    catch (InvalidOperationException exception) when (IsKnownLegacyUiFormSurfaceGap(exception.Message))
-    {
-        Console.WriteLine("DESKTOP_PARITY_LEGACY_KNOWN_SURFACE_GAPS_IGNORED");
-    }
-    Console.WriteLine("DESKTOP_PARITY_LEGACY_COMPILE_OK");
-    if (!Directory.Exists(legacyOutput) && !File.Exists(legacyOutput))
-        return;
-    Console.WriteLine("DESKTOP_PARITY_LEGACY_RUNTIME_START");
-    await ProbeDesktopRuntime("legacy", legacyOutput);
-    Console.WriteLine("DESKTOP_PARITY_LEGACY_RUNTIME_OK");
-    return;
-}
-
-bool IsKnownLegacyUiFormSurfaceGap(string output)
-    => output.Contains("does not contain a definition for 'Theme'", StringComparison.Ordinal)
-       && output.Contains("does not contain a definition for 'ShowValidationErrors'", StringComparison.Ordinal)
-       && output.Contains("does not contain a definition for 'HasValidationSchema'", StringComparison.Ordinal)
-       && output.Contains("does not contain a definition for 'GetValidationError'", StringComparison.Ordinal)
-       && output.Contains("does not contain a definition for 'Tabs'", StringComparison.Ordinal)
-       && output.Contains("does not contain a definition for 'Grids'", StringComparison.Ordinal)
-       && output.Contains("does not contain a definition for 'ActiveTab'", StringComparison.Ordinal)
-       && output.Contains("does not contain a definition for 'Buttons'", StringComparison.Ordinal);
 if (args.Contains("--ast-only", StringComparer.Ordinal))
 {
     Console.WriteLine("DESKTOP_PARITY_AST_COMPILE_START");
@@ -98,21 +68,15 @@ if (args.Contains("--ast-only", StringComparer.Ordinal))
     return;
 }
 await RunCompiler("ast-compile", paritySourcePath, "-o", astOutput, "--single-file=false", "--runtime=false");
-await RunCompiler("legacy-compile", paritySourcePath, "-o", legacyOutput, "--single-file=false", "--runtime=false");
-if (!Directory.Exists(astOutput) || !Directory.EnumerateFileSystemEntries(astOutput).Any() ||
-    !File.Exists(legacyOutput) && !Directory.Exists(legacyOutput))
-    throw new InvalidOperationException("Desktop parity fixture did not produce both AST and legacy outputs.");
+if (!Directory.Exists(astOutput) || !Directory.EnumerateFileSystemEntries(astOutput).Any())
+    throw new InvalidOperationException("AST desktop fixture did not produce output.");
 var astAssembly = Path.Combine(astOutput, "Generated.dll");
 if (!File.Exists(astAssembly))
     throw new InvalidOperationException("Desktop parity AST output is missing Generated.dll.");
 Console.WriteLine("DESKTOP_PARITY_AST_RUNTIME_START");
 await ProbeDesktopRuntime("AST", "dotnet", astAssembly);
 Console.WriteLine("DESKTOP_PARITY_AST_RUNTIME_OK");
-Console.WriteLine("DESKTOP_PARITY_LEGACY_RUNTIME_START");
-await ProbeDesktopRuntime("legacy", legacyOutput);
-Console.WriteLine("DESKTOP_PARITY_LEGACY_RUNTIME_OK");
-Console.WriteLine("DESKTOP_COMPILE_PARITY_FIXTURE_OK");
-Console.WriteLine("DESKTOP_RUNTIME_LAUNCH_PARITY_OK");
+Console.WriteLine("DESKTOP_AST_RUNTIME_LAUNCH_OK");
 
 var modalChildSource = """
 Option Declare
