@@ -37,7 +37,7 @@ internal sealed class UIFormCallbackModelPostProcessor
 
         generated = ReplaceRequired(
             generated,
-            "internal sealed class XPScriptUIForm\n{",
+            "internal sealed partial class XPScriptUIForm\n{",
             """
 internal sealed class XPScriptUIFormEvent
 {
@@ -90,7 +90,7 @@ internal sealed class XPScriptUIFormEvent
     public string ToJson() => ToJsonObject().Stringify();
 }
 
-internal sealed class XPScriptUIForm
+internal sealed partial class XPScriptUIForm
 {
 """,
             "event-type");
@@ -181,6 +181,11 @@ internal sealed class XPScriptUIForm
     {
         if (!source.Contains(oldValue, StringComparison.Ordinal))
             throw new CompilerException($"Unable to install UIForm callback model runtime extension ({stage}).");
+        if (oldValue.Contains("XPScriptUIForm", StringComparison.Ordinal))
+        {
+            var index = source.IndexOf(oldValue, StringComparison.Ordinal);
+            return source[..index] + newValue + source[(index + oldValue.Length)..];
+        }
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }
