@@ -1,4 +1,5 @@
 name: AST UIForm Show Hide Platforms
+# Push changes to this workflow deliberately retrigger the platform probe.
 
 on:
   push:
