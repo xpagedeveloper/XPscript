@@ -344,7 +344,7 @@ async Task RunHeadlessAstGeneratedProbe()
     var root = Path.Combine(Path.GetTempPath(), "xpscript-headless-ast-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(root);
     var sourcePath = Path.Combine(root, "headless-ast.xps");
-    await File.WriteAllTextAsync(sourcePath, "Option Declare\n\nSub Main()\n    Dim form As New UIForm(\"AST headless\", 480, 320, True)\n    Call form.AddTextField(\"name\", \"Name\")\n    Call form.Show(False)\nEnd Sub\n");
+    await File.WriteAllTextAsync(sourcePath, "Option Declare\n\nSub Main()\n    Dim form As New UIForm(\"AST headless\", 480, 320, True)\n    Call form.AddTextField(\"name\", \"Name\")\n    Call form.AddButton(\"close\", \"Close\", \"CloseForm\")\n    Call form.Show(False)\nEnd Sub\n\nSub CloseForm()\nEnd Sub\n");
     var compilerPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll"));
     var output = Path.Combine(root, "ast");
     var compiler = Process.Start(new ProcessStartInfo("dotnet")
@@ -377,7 +377,20 @@ async Task RunHeadlessAstGeneratedProbe()
         throw new InvalidOperationException("AST generated headless window was not created.");
     }
     Console.WriteLine("HEADLESS_AST_GENERATED_WINDOW_OK");
-    Dispatcher.UIThread.Invoke(() => window.Close());
+    Dispatcher.UIThread.Invoke(() =>
+    {
+        var text = window.GetVisualDescendants().OfType<TextBox>().Single();
+        var close = window.GetVisualDescendants().OfType<Button>().Single();
+        text.Focus();
+        window.KeyTextInput("Alice");
+        if (!string.Equals(text.Text, "Alice", StringComparison.Ordinal))
+            throw new InvalidOperationException("AST generated UIForm text input failed.");
+        close.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+    });
+    if (window.IsVisible)
+        throw new InvalidOperationException("AST generated UIForm close action failed.");
+    Console.WriteLine("HEADLESS_AST_GENERATED_TEXT_OK");
+    Console.WriteLine("HEADLESS_AST_GENERATED_CLOSE_OK");
     try
     {
         await entryTask.WaitAsync(TimeSpan.FromSeconds(5));
