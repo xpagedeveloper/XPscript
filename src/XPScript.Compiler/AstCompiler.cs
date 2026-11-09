@@ -1694,6 +1694,11 @@ internal static class Program
             var isAndroidTarget = runtimeIdentifier?.StartsWith("android-", StringComparison.OrdinalIgnoreCase) == true;
             generated = new UIFormActionModelPostProcessor().Transform(generated);
             generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
+            generated = new UIFormCallbackModelPostProcessor().Transform(generated);
+            generated = new UIFormNavigationCompatibilityPostProcessor().Transform(generated);
+            generated = new UIFormEventDispatcherPostProcessor().Transform(generated);
+            generated = new UIFormDesktopLayoutMetadataPostProcessor().Transform(generated);
+            generated = new UIFormDesktopReactivePostProcessor().Transform(generated);
             if (!isAndroidTarget)
             {
                 generated += Environment.NewLine + UIExtensionDesktopRuntimeSource.Code;
