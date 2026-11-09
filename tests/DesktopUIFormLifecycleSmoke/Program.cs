@@ -61,7 +61,7 @@ var legacyOutput = Path.Combine(parityRoot, "legacy");
 if (args.Contains("--legacy-only", StringComparer.Ordinal))
 {
     Console.WriteLine("DESKTOP_PARITY_LEGACY_COMPILE_START");
-    await RunCompiler("legacy-compile", paritySourcePath, "-o", legacyOutput, "--single-file=false", "--runtime=false");
+    await RunCompiler("legacy-compile", paritySourcePath, "-o", legacyOutput, "--single-file=false", "--runtime=true");
     Console.WriteLine("DESKTOP_PARITY_LEGACY_COMPILE_OK");
     Console.WriteLine("DESKTOP_PARITY_LEGACY_RUNTIME_START");
     await ProbeDesktopRuntime("legacy", legacyOutput);
