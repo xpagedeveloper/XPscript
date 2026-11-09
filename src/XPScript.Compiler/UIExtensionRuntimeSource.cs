@@ -79,6 +79,9 @@ internal sealed class XPScriptUIField
     public decimal? Maximum { get; set; }
     public double Step { get { EnsureSlider(); return _step; } set { EnsureSlider(); if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0) throw new XPScriptRuntimeException(5, "UIForm Slider Step must be greater than zero."); _step = value; } }
     public List<string> Options { get; } = [];
+    public bool Focusable { get; set; }
+    public bool IsTabStop { get; set; }
+    public string RegexPattern { get; set; } = string.Empty;
     public int LayoutRow { get; set; }
     public int LayoutColumn { get; set; }
     public int ColumnSpan { get; set; } = 1;

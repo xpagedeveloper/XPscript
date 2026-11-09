@@ -1695,8 +1695,6 @@ internal static class Program
             generated = new UIFormActionModelPostProcessor().Transform(generated);
             generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
                 generated = new UIFormMediaButtonsPostProcessor(runtimeIdentifier).Transform(generated);
-                generated = new UIFormAccessibilityPostProcessor().Transform(generated);
-                generated = new UIFormRegexValidationPostProcessor().Transform(generated);
             generated = new UIFormCallbackModelPostProcessor().Transform(generated);
             if (!isAndroidTarget)
             {
