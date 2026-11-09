@@ -82,6 +82,9 @@ internal sealed class XPScriptUIField
     public bool Focusable { get; set; }
     public bool IsTabStop { get; set; }
     public string RegexPattern { get; set; } = string.Empty;
+    public string ImageSource { get; set; } = string.Empty;
+    public string ImageAltText { get; set; } = string.Empty;
+    public string ImageCertificateValidation { get; set; } = "Strict";
     public int LayoutRow { get; set; }
     public int LayoutColumn { get; set; }
     public int ColumnSpan { get; set; } = 1;
@@ -336,6 +339,8 @@ internal sealed partial class XPScriptUIForm
     public int Width { get => _width ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm width must be greater than zero."); _width = value; } }
     public int Height { get => _height ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm height must be greater than zero."); _height = value; } }
     public bool Resizable { get => _resizable; set => _resizable = value; }
+    public bool ShowDefaultButtons { get; set; } = true;
+    public double? DefaultButtonCornerRadius { get; private set; }
     public bool Visible { get => _visible; set => _visible = value; }
     public bool Modal => _modal;
     internal string InstanceId => _instanceId;
