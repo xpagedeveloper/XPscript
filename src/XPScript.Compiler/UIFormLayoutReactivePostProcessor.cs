@@ -322,6 +322,11 @@ internal sealed partial class XPScriptUIForm
             return source;
         if (!source.Contains(oldValue, StringComparison.Ordinal))
             throw new CompilerException("Unable to install UIForm layout/reactive runtime extension.");
+        if (oldValue.Contains("XPScriptUIForm", StringComparison.Ordinal))
+        {
+            var index = source.IndexOf(oldValue, StringComparison.Ordinal);
+            return source[..index] + newValue + source[(index + oldValue.Length)..];
+        }
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }
