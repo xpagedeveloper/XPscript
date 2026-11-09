@@ -319,7 +319,7 @@ async Task RunHeadlessHostProbe()
     var text = window.GetVisualDescendants().OfType<TextBox>().Single();
     var close = window.GetVisualDescendants().OfType<Button>().Single();
     text.Focus();
-    text.KeyTextInput("Alice");
+    window.KeyTextInput("Alice");
     if (!string.Equals(text.Text, "Alice", StringComparison.Ordinal))
         throw new InvalidOperationException("Headless UIForm text input failed.");
     close.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
