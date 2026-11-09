@@ -1691,12 +1691,14 @@ internal static class Program
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode;
         if (runtimeFeatures.Ui && AstObjectSupportRegistry.UsesObject(fullSource, "UIForm"))
         {
-            generated = new UIFormLayoutReactivePostProcessor().Transform(generated);
-            generated = new UIFormActionModelPostProcessor().Transform(generated);
             var isAndroidTarget = runtimeIdentifier?.StartsWith("android-", StringComparison.OrdinalIgnoreCase) == true;
-            generated = !isAndroidTarget
-                ? new UIExtensionDesktopPostProcessor().Transform(generated)
-                : new UIFormWindowLifecyclePostProcessor().Transform(generated);
+            generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
+            generated = new UIFormActionModelPostProcessor().Transform(generated);
+            if (!isAndroidTarget)
+            {
+                generated += Environment.NewLine + UIExtensionDesktopRuntimeSource.Code;
+                generated = new UIFormWindowLifecyclePostProcessor().Transform(generated);
+            }
         }
         using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
         generated = UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);

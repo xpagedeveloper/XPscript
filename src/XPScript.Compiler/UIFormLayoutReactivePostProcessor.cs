@@ -2,7 +2,11 @@ namespace XPScript.Compiler;
 
 internal sealed class UIFormLayoutReactivePostProcessor
 {
-    public string Transform(string generated)
+    public string Transform(string generated) => Transform(generated, includeRendering: true);
+
+    public string TransformModelOnly(string generated) => Transform(generated, includeRendering: false);
+
+    private string Transform(string generated, bool includeRendering)
     {
         ArgumentNullException.ThrowIfNull(generated);
 
@@ -234,6 +238,9 @@ internal sealed class XPScriptUIForm
 
     public object? GetFieldValue(object? name)
 """);
+
+        if (!includeRendering)
+            return generated;
 
         generated = ReplaceRequired(generated,
             "        html.Append(\"<form method=\\\"post\\\" class=\\\"xpscript-uiform\\\">\");\n",
