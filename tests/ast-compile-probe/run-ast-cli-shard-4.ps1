@@ -52,4 +52,8 @@ Write-AstCliCheckpoint 'shard-4-method-dispatch'
 Invoke-Fixture 'class-method-virtual-dispatch-next' @('CLASS_METHOD_VIRTUAL_DISPATCH_OK')
 Invoke-Fixture 'class-method-reference-next' @('7')
 Invoke-Fixture 'class-method-optional-virtual-dispatch-next' @('CLASS_OPTIONAL_METHOD_VIRTUAL_DISPATCH_OK')
+Write-AstCliCheckpoint 'shard-4-optional-signature-variants'
+Invoke-Fixture 'class-method-optional-array-next' @('0', '7', '7')
+Invoke-Fixture 'class-method-optional-list-next' @('0', '12', '12')
+Invoke-Fixture 'class-method-optional-user-reference-next' @('0', '14')
 Write-AstCliCheckpoint 'shard-4-complete'
