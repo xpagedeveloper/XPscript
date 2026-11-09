@@ -1691,6 +1691,8 @@ internal static class Program
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode;
         if (runtimeFeatures.Ui && AstObjectSupportRegistry.UsesObject(fullSource, "UIForm"))
         {
+            generated = new UIFormLayoutReactivePostProcessor().Transform(generated);
+            generated = new UIFormActionModelPostProcessor().Transform(generated);
             var isAndroidTarget = runtimeIdentifier?.StartsWith("android-", StringComparison.OrdinalIgnoreCase) == true;
             generated = !isAndroidTarget
                 ? new UIExtensionDesktopPostProcessor().Transform(generated)
