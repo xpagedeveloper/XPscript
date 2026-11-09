@@ -84,6 +84,12 @@ internal static class XPScriptUIDesktopAdapter
         catch { return fallback; }
     }
 
+    private static bool ReadHasValidationSchema(XPScriptUIForm form)
+        => form.GetType().GetProperty("HasValidationSchema")?.GetValue(form) as bool? == true;
+
+    private static string ReadValidationError(XPScriptUIForm form, string fieldName)
+        => form.GetType().GetMethod("GetValidationError", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)?.Invoke(form, [fieldName]) as string ?? string.Empty;
+
     private static string ShowCore(XPScriptUIForm form, IReadOnlyList<XPScriptUIField> fields, XPScriptJsonObject data, Action<XPScriptUIField, string> apply, Action<XPScriptUIField, IReadOnlyList<string>> applyMany, bool modal)
     {
         var type = modal && !IsBrowserHost ? HostType : LifecycleHostType;
@@ -105,14 +111,14 @@ internal static class XPScriptUIDesktopAdapter
             showDefaultButtons = form.ShowDefaultButtons,
             defaultButtonCornerRadius = form.DefaultButtonCornerRadius,
             gridColumns = form.GridColumns,
-            hasValidationSchema = form.HasValidationSchema,
+            hasValidationSchema = ReadHasValidationSchema(form),
             bootText = form.BootText,
             bootImage = form.BootImage,
             fields = fields.Select(field => new
             {
                 name = field.Name, label = field.Label, type = field.Type, required = field.Required, layoutRow = field.LayoutRow, layoutColumn = field.LayoutColumn, columnSpan = field.ColumnSpan, rowSpan = field.RowSpan,
                 placeholder = field.Placeholder, tooltip = field.Tooltip, imageSource = field.ImageSource, imageAltText = field.ImageAltText, imageCertificateValidation = field.ImageCertificateValidation,
-                regexPattern = field.RegexPattern, schemaValidationError = form.GetValidationError(field.Name),
+                regexPattern = field.RegexPattern, schemaValidationError = ReadValidationError(form, field.Name),
                 value = field.Type is "PasswordField" or "MultiListBox" ? null : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
                 values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
                 minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, step = field.Type == "RangeField" ? field.Step : (double?)null, options = field.Options, cornerRadius = field.CornerRadius, tabName = field.TabName, gridName = field.GridName,
