@@ -789,8 +789,8 @@ Initial implementation: expression conversions and a method-body emitter for ass
     - [ ] Extract a minimal shared interactive fixture with only one text field, one button and one close action; require `START`, `TEXT`, `BUTTON` and `CLOSE` markers and fail on missing or out-of-order markers.
     - [x] Add a headless host adapter that exposes the real desktop lifecycle window to the separate test project without changing compiler output. The probe verified text input and close markers on Linux, Windows and macOS in workflow run 42658927868.
     - [ ] Run the adapter against the AST-generated application on Linux and verify text entry, button activation and close through the marker contract.
-    - [ ] Run the same adapter and fixture against the legacy-generated application and verify the identical marker sequence.
-    - [ ] Compare AST and legacy marker logs in one bounded Linux workflow job, with separate compile, launch, input and close checkpoints and a five-minute maximum runtime.
+    - [ ] Inspect the existing legacy-generated UIForm behavior as a read-only baseline; do not add a test seam or new runtime functionality to the legacy path.
+    - [ ] Run the AST adapter against the shared fixture and compare its observed properties, controls and marker sequence with the read-only legacy baseline in one bounded Linux workflow job, with separate compile, launch, input and close checkpoints and a five-minute maximum runtime.
     - [ ] Extend the proven headless interaction contract to Windows, macOS and Android only after the Linux AST/legacy comparison is green.
     - [x] Define one bounded interactive UIForm fixture with deterministic startup, field input, button action and close markers shared by AST and legacy output. `tests/DesktopUIFormLifecycleSmoke/desktop-interaction-parity.xps` defines the shared form, text field, submit callback and ordered startup/ready/submit/close markers.
     - [x] Select and validate a Linux/Xvfb-compatible Avalonia input-driving mechanism for deterministic text entry, button activation and window close; document why it is suitable for both generated AST and legacy applications.
