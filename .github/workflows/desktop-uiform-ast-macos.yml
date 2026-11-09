@@ -17,7 +17,7 @@ jobs:
   ast-desktop-uiform-macos:
     name: AST generated UIForm on macOS
     runs-on: macos-latest
-    timeout-minutes: 20
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
