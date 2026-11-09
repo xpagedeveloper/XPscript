@@ -1,6 +1,13 @@
 name: AST Desktop UIForm (macOS)
 
 on:
+  push:
+    branches: [investigate-ast-compiler]
+    paths:
+      - '.github/workflows/desktop-uiform-ast-macos.yml'
+      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.UI.Desktop/**'
+      - 'tests/DesktopUIFormLifecycleSmoke/**'
   workflow_dispatch:
 
 permissions:
