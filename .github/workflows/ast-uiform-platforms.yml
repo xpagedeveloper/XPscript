@@ -18,7 +18,7 @@ jobs:
   desktop-windows:
     name: AST UIForm Show Hide (Windows)
     runs-on: windows-latest
-    timeout-minutes: 8
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
