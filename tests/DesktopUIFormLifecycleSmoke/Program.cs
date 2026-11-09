@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using XPScript.Compiler;
 using XPScript.UI.Desktop;
@@ -314,15 +315,18 @@ async Task RunHeadlessHostProbe()
     const string instanceId = "headless-uiform-probe";
     var request = "{\"instanceId\":\"" + instanceId + "\",\"title\":\"Headless probe\",\"fields\":[{\"name\":\"name\",\"label\":\"Name\",\"type\":\"TextField\"}]}";
     DesktopFormLifecycleHost.Show(request);
-    var window = DesktopFormLifecycleHost.GetWindowForTests(instanceId)
-        ?? throw new InvalidOperationException("Headless UIForm window was not created.");
-    var text = window.GetVisualDescendants().OfType<TextBox>().Single();
-    var close = window.GetVisualDescendants().OfType<Button>().Single();
-    text.Focus();
-    window.KeyTextInput("Alice");
-    if (!string.Equals(text.Text, "Alice", StringComparison.Ordinal))
-        throw new InvalidOperationException("Headless UIForm text input failed.");
-    close.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+    Dispatcher.UIThread.Invoke(() =>
+    {
+        var window = DesktopFormLifecycleHost.GetWindowForTests(instanceId)
+            ?? throw new InvalidOperationException("Headless UIForm window was not created.");
+        var text = window.GetVisualDescendants().OfType<TextBox>().Single();
+        var close = window.GetVisualDescendants().OfType<Button>().Single();
+        text.Focus();
+        window.KeyTextInput("Alice");
+        if (!string.Equals(text.Text, "Alice", StringComparison.Ordinal))
+            throw new InvalidOperationException("Headless UIForm text input failed.");
+        close.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+    });
     if (DesktopFormLifecycleHost.IsVisible(instanceId))
         throw new InvalidOperationException("Headless UIForm close action failed.");
     Console.WriteLine("HEADLESS_UIFORM_TEXT_OK");
