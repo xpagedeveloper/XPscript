@@ -51,6 +51,19 @@ public static class DesktopFormLifecycleHost
         return visible;
     }
 
+    // Test-only seam for in-process Avalonia.Headless interaction. The public
+    // UIForm bridge remains unchanged; the friend test assembly can inspect
+    // the real generated window after Show has created it.
+    internal static Window? GetWindowForTests(string instanceId)
+    {
+        if (string.IsNullOrWhiteSpace(instanceId)) return null;
+        Window? result = null;
+        if (Dispatcher.UIThread.CheckAccess())
+            return Windows.TryGetValue(instanceId, out result) ? result : null;
+        Dispatcher.UIThread.Invoke(() => Windows.TryGetValue(instanceId, out result));
+        return result;
+    }
+
     private static void ShowCore(string instanceId, JsonElement root, Func<string, string, string>? eventCallback)
     {
         if (Windows.TryGetValue(instanceId, out var existing))
