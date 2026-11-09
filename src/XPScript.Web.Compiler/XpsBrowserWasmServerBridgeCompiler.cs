@@ -154,6 +154,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
                 sourcePath,
                 CompilerDriver.CurrentRuntimeIdentifier(),
                 [webRoot]);
+            serverGenerated = XPScriptTranspiler.ApplyWebUiFormModelExtensions(serverGenerated);
             await File.WriteAllTextAsync(Path.Combine(workspace, "ServerGenerated.cs"), serverGenerated, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "ServerCompanion.csproj"), BuildServerProject(serverGenerated), cancellationToken).ConfigureAwait(false);
             await RunDotNetAsync(workspace, ["restore", "ServerCompanion.csproj", "--nologo"], "server companion restore", cancellationToken).ConfigureAwait(false);

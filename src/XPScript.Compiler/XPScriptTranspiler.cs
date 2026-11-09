@@ -4,6 +4,15 @@ namespace XPScript.Compiler;
 
 public sealed partial class XPScriptTranspiler
 {
+    public static string ApplyWebUiFormModelExtensions(string generated)
+    {
+        ArgumentNullException.ThrowIfNull(generated);
+        if (!generated.Contains("class XPScriptUIForm", StringComparison.Ordinal)) return generated;
+        generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
+        generated = new UIFormActionModelPostProcessor().Transform(generated);
+        return new UIFormCallbackModelPostProcessor().Transform(generated);
+    }
+
     public string Transpile(string source, string sourceName) =>
         Transpile(source, sourceName, CompilerDriver.CurrentRuntimeIdentifier());
 
@@ -256,11 +265,7 @@ public sealed partial class XPScriptTranspiler
         generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures).Transform(generated);
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase) &&
             generated.Contains("class XPScriptUIForm", StringComparison.Ordinal))
-        {
-            generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
-            generated = new UIFormActionModelPostProcessor().Transform(generated);
-            generated = new UIFormCallbackModelPostProcessor().Transform(generated);
-        }
+            generated = ApplyWebUiFormModelExtensions(generated);
         if (runtimeFeatures.Ui && generated.Contains("Script.Main();", StringComparison.Ordinal))
         {
             generated = generated.Replace(
