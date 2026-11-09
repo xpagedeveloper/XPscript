@@ -29,6 +29,8 @@ internal static class AstUiFormSupport
         .ReadMembers(Classes, ["XPScriptUI", "XPScriptUIForm", "XPScriptUIField"], LanguageType)
         .Append(new AstNativeObjectSurface.Member("UIForm", "Show", "void",
             ["object?"], ["modalValue"], false, false, false))
+        .Append(new AstNativeObjectSurface.Member("UIForm", "Hide", "void",
+            [], [], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "AddButtonCallback", "XPScriptUIButton",
             ["object?", "object?", "object?"], ["name", "label", "handlerName"], false, false, false))
         .ToArray();

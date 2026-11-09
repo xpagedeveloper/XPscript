@@ -19,7 +19,7 @@ internal sealed class UIFormWindowLifecyclePostProcessor
                 "form-lifecycle-properties");
 
         generated = ReplaceRequired(generated,
-            "    public string ShowDialog()\n    {",
+            "    public void Hide() => Close();\n\n    public string ShowDialog()\n    {",
             "    public void Show() => Show(false);\n\n    public void Show(object? modalValue)\n    {\n        var modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture);\n        if (modal)\n        {\n            _ = ShowDialog();\n            return;\n        }\n\n        _modal = false;\n        _visible = true;\n        if (XPScriptUIDesktopAdapter.IsAvailable)\n        {\n            XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);\n            return;\n        }\n        if (!XPScriptUIWebAdapter.IsAvailable)\n            throw new XPScriptRuntimeException(5, \"UIForm.Show requires a configured UI backend or an active XPScript web request.\");\n        XPScriptUIWebAdapter.WriteHtml(RenderWebForm(false));\n    }\n\n    public void Close()\n    {\n        _visible = false;\n        if (XPScriptUIDesktopAdapter.IsAvailable)\n        {\n            XPScriptUIDesktopAdapter.Close(_instanceId);\n            return;\n        }\n        if (XPScriptUIWebAdapter.IsAvailable)\n            XPScriptUIWebAdapter.WriteHtml(RenderWebClose());\n    }\n\n    public string ShowDialog()\n    {",
             "form-show-close-api");
 
