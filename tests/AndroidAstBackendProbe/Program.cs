@@ -5,7 +5,7 @@ Directory.CreateDirectory(root);
 try
 {
     var source = Path.Combine(root, "android-ast-probe.xps");
-    await File.WriteAllTextAsync(source, "Sub Main()\n    Dim form As New UIForm(\"Android AST lifecycle\")\n    Call form.Show(False)\n    Call form.Hide()\n    Print \"ANDROID_AST_BACKEND_OK\"\nEnd Sub\n");
+    await File.WriteAllTextAsync(source, "Sub Main()\n    Dim form As New UIForm(\"Android AST lifecycle\")\n    Call form.AddTextField(\"name\", \"Name\")\n    Call form.AddButton(\"close\", \"Close\", \"CloseForm\")\n    Call form.Show(False)\n    Call form.Hide()\n    Print \"ANDROID_AST_UIFORM_CONTROLS_OK\"\nEnd Sub\n\nSub CloseForm()\nEnd Sub\n");
 
     foreach (var rid in new[] { "android-x64", "android-arm64" })
     {
