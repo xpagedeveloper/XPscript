@@ -48,4 +48,8 @@ Write-AstCliCheckpoint 'shard-4-advanced-properties'
 Invoke-Fixture 'class-property-indexed-setter-dispatch-next' @('CLASS_INDEXED_PROPERTY_SETTER_DISPATCH_OK')
 Invoke-Fixture 'class-property-indexed-virtual-dispatch-next' @('CLASS_INDEXED_PROPERTY_VIRTUAL_DISPATCH_OK')
 Invoke-Fixture 'class-property-object-parent-next' @('9')
+Write-AstCliCheckpoint 'shard-4-method-dispatch'
+Invoke-Fixture 'class-method-virtual-dispatch-next' @('CLASS_METHOD_VIRTUAL_DISPATCH_OK')
+Invoke-Fixture 'class-method-reference-next' @('7')
+Invoke-Fixture 'class-method-optional-virtual-dispatch-next' @('CLASS_OPTIONAL_METHOD_VIRTUAL_DISPATCH_OK')
 Write-AstCliCheckpoint 'shard-4-complete'
