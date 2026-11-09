@@ -66,10 +66,9 @@ internal sealed class UIFormAccessibilityPostProcessor
 
         generated = ReplaceOnceRequired(
             generated,
-            "    public int FieldCount => _fields.Count;\n    public int GridColumns => _gridColumns;\n",
+            "    public int FieldCount => _fields.Count;\n",
             Block(
                 "    public int FieldCount => _fields.Count;",
-                "    public int GridColumns => _gridColumns;",
                 "    public string InitialFocus { get => _initialFocus; set => _initialFocus = NormalizeOptionalFieldName(value); }",
                 "    public string FocusedField => XPScriptUIDesktopAdapter.TryGetFocusedField(InstanceId, _initialFocus);",
                 "    public bool ValidationSummary { get; set; } = true;",
