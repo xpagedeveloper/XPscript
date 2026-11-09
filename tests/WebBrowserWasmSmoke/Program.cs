@@ -34,8 +34,13 @@ Sub Main()
     Call form.AddTextField("name", "Name")
     Call form.SetOnChangeCallback("name", "NameChanged", "browser")
     Call form.AddButtonCallback("save", "Save", "SaveClicked", "browser", 2)
+    Call form.AddTab("details", "Details")
+    Dim grid As Variant
+    Set grid = form.AddGrid("detailsGrid", 2)
+    Call grid.SetTab("details")
     Call form.Navigate("page2")
     Call form.ShowDialog()
+    Call form.Hide()
 End Sub
 """);
 
