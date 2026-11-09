@@ -348,7 +348,7 @@ async Task RunHeadlessAstGeneratedProbe()
     var root = Path.Combine(Path.GetTempPath(), "xpscript-headless-ast-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(root);
     var sourcePath = Path.Combine(root, "headless-ast.xps");
-    await File.WriteAllTextAsync(sourcePath, "Option Declare\n\nSub Main()\n    Dim form As New UIForm(\"AST headless\")\n    Call form.AddTextField(\"name\", \"Name\")\n    Call form.Show(False)\nEnd Sub\n");
+    await File.WriteAllTextAsync(sourcePath, "Option Declare\n\nSub Main()\n    Dim form As New UIForm(\"AST headless\", 480, 320, True)\n    Call form.AddTextField(\"name\", \"Name\")\n    Call form.Show(False)\nEnd Sub\n");
     var compilerPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll"));
     var output = Path.Combine(root, "ast");
     var compiler = Process.Start(new ProcessStartInfo("dotnet")
