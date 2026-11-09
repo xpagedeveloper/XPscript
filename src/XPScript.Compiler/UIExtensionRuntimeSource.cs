@@ -79,6 +79,22 @@ internal sealed class XPScriptUIField
     public decimal? Maximum { get; set; }
     public double Step { get { EnsureSlider(); return _step; } set { EnsureSlider(); if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0) throw new XPScriptRuntimeException(5, "UIForm Slider Step must be greater than zero."); _step = value; } }
     public List<string> Options { get; } = [];
+    public int LayoutRow { get; set; }
+    public int LayoutColumn { get; set; }
+    public int ColumnSpan { get; set; } = 1;
+    public int RowSpan { get; set; } = 1;
+    public string RegionId { get; set; } = string.Empty;
+    public string RefreshTargetRegion { get; set; } = string.Empty;
+    public string RefreshHandler { get; set; } = string.Empty;
+    public string OnChangeHandler { get; set; } = string.Empty;
+    public bool Visible { get; set; } = true;
+    public bool Enabled { get; set; } = true;
+    public bool ReadOnly { get; set; }
+    public double CornerRadius { get; set; }
+    public string Placeholder { get; set; } = string.Empty;
+    public string Tooltip { get; set; } = string.Empty;
+    public string TabName { get; set; } = string.Empty;
+    public string GridName { get; set; } = string.Empty;
     public string IconName { get; set; } = string.Empty;
 
     public string Source

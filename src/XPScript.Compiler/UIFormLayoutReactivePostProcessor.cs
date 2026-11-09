@@ -10,6 +10,9 @@ internal sealed class UIFormLayoutReactivePostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
+        if (generated.Contains("public int LayoutRow { get; set; }", StringComparison.Ordinal))
+            goto LayoutModelFieldsReady;
+
         generated = ReplaceRequired(generated,
             "    public List<string> Options { get; } = [];\n",
             """
@@ -24,6 +27,7 @@ internal sealed class UIFormLayoutReactivePostProcessor
     public string GridName { get; set; } = string.Empty;
 """);
 
+LayoutModelFieldsReady:
         generated = ReplaceRequired(generated,
             generated.Contains("internal sealed partial class XPScriptUIForm\n{\n", StringComparison.Ordinal)
                 ? "internal sealed partial class XPScriptUIForm\n{\n"
