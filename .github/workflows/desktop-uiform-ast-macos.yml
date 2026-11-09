@@ -31,6 +31,7 @@ jobs:
           set -euo pipefail
           mkdir -p ./out
           echo AST_MACOS_CHECKPOINT=build-ready
+          set +e
           python3 - <<'PY'
           import subprocess
           import sys
@@ -49,7 +50,10 @@ jobs:
                   sys.exit(124)
           sys.exit(exit_code)
           PY
+          process_status=$?
+          set -e
           cat ./out/ast-uiform-macos.log
+          if [ "$process_status" -ne 0 ]; then exit "$process_status"; fi
           grep -q 'DESKTOP_PARITY_AST_COMPILE_OK' ./out/ast-uiform-macos.log
           grep -q 'DESKTOP_PARITY_AST_RUNTIME_OK' ./out/ast-uiform-macos.log
           echo AST_MACOS_CHECKPOINT=generated-ast-runtime-ok
