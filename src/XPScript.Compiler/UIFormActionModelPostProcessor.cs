@@ -37,7 +37,7 @@ internal sealed class XPScriptUIButton
 """, StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
-                @"internal\s+sealed\s+class\s+XPScriptUIForm\s*\{",
+                @"internal\s+sealed\s+(?:partial\s+)?class\s+XPScriptUIForm\s*\{",
                 """
 internal sealed class XPScriptUITab
 {

@@ -25,7 +25,9 @@ internal sealed class UIFormLayoutReactivePostProcessor
 """);
 
         generated = ReplaceRequired(generated,
-            "internal sealed partial class XPScriptUIForm\n{\n",
+            generated.Contains("internal sealed partial class XPScriptUIForm\n{\n", StringComparison.Ordinal)
+                ? "internal sealed partial class XPScriptUIForm\n{\n"
+                : "internal sealed class XPScriptUIForm\n{\n",
             """
 internal sealed class XPScriptUIGrid
 {
