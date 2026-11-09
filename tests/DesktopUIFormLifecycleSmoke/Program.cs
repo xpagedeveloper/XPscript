@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.Loader;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
@@ -362,7 +363,7 @@ async Task RunHeadlessAstGeneratedProbe()
     await compiler.WaitForExitAsync();
     if (compiler.ExitCode != 0) throw new InvalidOperationException("AST headless fixture compilation failed: " + compilerOutput);
 
-    var assembly = Assembly.LoadFile(Path.Combine(output, "Generated.dll"));
+    var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(output, "Generated.dll"));
     var entryPoint = assembly.GetType("Program", throwOnError: true)!.GetMethod("Main", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException("AST generated Program.Main was not found.");
     var entryTask = Task.Run(() => entryPoint.Invoke(null, entryPoint.GetParameters().Length == 0 ? null : new object?[] { Array.Empty<string>() }));
@@ -379,6 +380,13 @@ async Task RunHeadlessAstGeneratedProbe()
     }
     Console.WriteLine("HEADLESS_AST_GENERATED_WINDOW_OK");
     Dispatcher.UIThread.Invoke(() => window.Close());
-    await entryTask.WaitAsync(TimeSpan.FromSeconds(5));
+    try
+    {
+        await entryTask.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+    finally
+    {
+        DesktopApplicationHost.SetProcessKeepAlive(false);
+    }
     Console.WriteLine("HEADLESS_AST_GENERATED_OK");
 }
