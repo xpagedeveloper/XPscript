@@ -359,8 +359,11 @@ async Task RunHeadlessAstGeneratedProbe()
         RedirectStandardError = true,
         ArgumentList = { compilerPath, "ast-compile", sourcePath, "-o", output, "--single-file=false", "--runtime=false", "--debug" }
     }) ?? throw new InvalidOperationException("Could not start AST compiler.");
-    var compilerOutput = await compiler.StandardOutput.ReadToEndAsync() + await compiler.StandardError.ReadToEndAsync();
-    await compiler.WaitForExitAsync();
+    var compilerStdout = compiler.StandardOutput.ReadToEndAsync();
+    var compilerStderr = compiler.StandardError.ReadToEndAsync();
+    await compiler.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(60));
+    await Task.WhenAll(compilerStdout, compilerStderr);
+    var compilerOutput = await compilerStdout + await compilerStderr;
     if (compiler.ExitCode != 0) throw new InvalidOperationException("AST headless fixture compilation failed: " + compilerOutput);
 
     var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(output, "Generated.dll"));
