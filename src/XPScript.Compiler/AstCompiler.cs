@@ -812,6 +812,14 @@ public static class AstCompiler
         }
         var declarationName = sub?.Identifier.Text ?? function!.Identifier.Text;
         var methodName = declarationName;
+        var usesMacDesktopUi = runtimeFeatures.Ui &&
+            AstObjectSupportRegistry.UsesObject(fullSource, "UIForm") &&
+            methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) &&
+            methods.Any(method => method.Name.Equals("Main", StringComparison.OrdinalIgnoreCase) && method.Parameters.Count == 0);
+        if (usesMacDesktopUi)
+            methods = methods.Select(method => method.Name.Equals("Main", StringComparison.OrdinalIgnoreCase) && method.Parameters.Count == 0
+                ? method with { Name = "__xps_ui_main" }
+                : method).ToList();
         string body;
         try
         {
@@ -837,7 +845,9 @@ public static class AstCompiler
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, moduleArrayDeclarations
             .Select(match => $"    public static System.Array {match.Groups["name"].Value} = {ModuleArrayInitializer(match.Groups["bounds"].Value, match.Groups["type"].Value)};"));
         moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
-        var entryPoint = usesApplication
+        var entryPoint = usesMacDesktopUi
+            ? "public static void Main() { if (OperatingSystem.IsMacOS()) { var host = Type.GetType(\"XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop\", throwOnError: true)!; host.GetMethod(\"RunMacOS\")!.Invoke(null, new object[] { (Action)__xps_ui_main }); } else __xps_ui_main(); }"
+            : usesApplication
             ? "public static void Main(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
                 (methods.Any(m => m.Name == "__xps_application_main" && m.Parameters.Count == 0 && m.ReturnType == typeof(void)) ? "__xps_application_main();" : "") + " }"
             : methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
