@@ -56,6 +56,23 @@ jobs:
           timeout --kill-after=5s 180s dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
           timeout --kill-after=5s 180s dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-ast-generated
 
+  legacy-linux-baseline:
+    name: Legacy UIForm baseline (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Build and run legacy desktop baseline
+        run: |
+          set -euo pipefail
+          dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+          timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --legacy-only
+
   desktop-macos:
     name: AST UIForm Show Hide (macOS)
     runs-on: macos-latest
