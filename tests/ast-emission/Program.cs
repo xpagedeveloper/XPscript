@@ -20,6 +20,13 @@ var addTextFieldCall = new BoundCallExpression(addTextField,
     [new BoundLiteralExpression("name", typeof(string)), new BoundLiteralExpression("Name", typeof(string))]);
 if (expressions.Emit(addTextFieldCall) != "form.AddTextField(\"name\", \"Name\")")
     throw new Exception("UIForm AST member call was not preserved.");
+var addButton = new BoundMemberAccessExpression(uiFormLocal, "AddButton", typeof(object), XpTypeSymbol.User("UIFormButton"));
+var addButtonCall = new BoundCallExpression(addButton,
+    new FunctionSymbol("AddButton", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.User("UIFormButton"),
+        [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]),
+    [new BoundLiteralExpression("close", typeof(string)), new BoundLiteralExpression("Close", typeof(string)), new BoundLiteralExpression("CloseForm", typeof(string))]);
+if (expressions.Emit(addButtonCall) != "form.AddButton(\"close\", \"Close\", \"CloseForm\")")
+    throw new Exception("UIForm AddButton member call was not preserved.");
 var uiFieldLocal = new BoundNameExpression(new LocalSymbol("field", typeof(object), XpTypeSymbol.User("UIFormField")));
 var requiredProperty = new BoundMemberAccessExpression(uiFieldLocal, "Required", typeof(bool), XpTypeSymbol.FromClr(typeof(bool)), true);
 var requiredCode = new BoundMethodEmitter().Emit("SetRequired", typeof(void), [new BoundAssignmentStatement(requiredProperty,
