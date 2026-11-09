@@ -161,4 +161,31 @@ if ($LASTEXITCODE -ne 0 -or ($uiFormSchemaEnabledResult -join "`n") -notmatch 'A
 }
 Write-Host 'AST_UIFORM_SCHEMA_ENABLED_OK'
 
+Write-AstCliCheckpoint 'shard-6-target-desktop'
+$desktopOutput = Join-Path $output 'target-desktop'
+$desktopText = dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $desktopOutput --target desktop --runtime=false | Out-String
+if ($LASTEXITCODE -ne 0 -or $desktopText -notlike '*AST compilation succeeded*' -or -not (Test-Path (Join-Path $desktopOutput 'Generated.dll'))) { throw 'Shard 6 desktop target output regression failed.' }
+
+Write-AstCliCheckpoint 'shard-6-target-console'
+$consoleOutput = Join-Path $output 'target-console'
+$consoleText = dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $consoleOutput --target console --runtime=false | Out-String
+if ($LASTEXITCODE -ne 0 -or $consoleText -notlike '*AST compilation succeeded*' -or -not (Test-Path (Join-Path $consoleOutput 'Generated.dll'))) { throw 'Shard 6 console target output regression failed.' }
+
+Write-AstCliCheckpoint 'shard-6-target-invalid'
+$invalidTargetText = dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') --target unsupported-target 2>&1 | Out-String
+if ($LASTEXITCODE -eq 0) { throw "Shard 6 invalid target regression failed: $invalidTargetText" }
+
+Write-AstCliCheckpoint 'shard-6-target-webiis'
+$webOutput = Join-Path $output 'target-webiis'
+$webText = dotnet $context.Compiler ast-compile (Join-Path $root 'demo/webiis/main.xps') --target webiis --runtime=false --output $webOutput --result-format json | Out-String
+if ($LASTEXITCODE -ne 0) { throw "Shard 6 webiis target regression failed: $webText" }
+$webResult = $webText | ConvertFrom-Json
+if ($webResult.result -ne 'ok' -or $webResult.operation -ne 'ast-compile' -or -not (Test-Path ($webOutput + '.zip'))) { throw 'Shard 6 webiis package output regression failed.' }
+
+Write-AstCliCheckpoint 'shard-6-target-json-format'
+$jsonOutput = Join-Path $output 'target-json-format'
+$jsonText = dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o $jsonOutput --target console --runtime=false --result-format json | Out-String
+if ($LASTEXITCODE -ne 0 -or ($jsonText | ConvertFrom-Json).result -ne 'ok') { throw 'Shard 6 target JSON result-format regression failed.' }
+Write-Host 'AST_TARGET_OUTPUT_REGRESSIONS_OK'
+
 Write-AstCliCheckpoint 'shard-6-complete'
