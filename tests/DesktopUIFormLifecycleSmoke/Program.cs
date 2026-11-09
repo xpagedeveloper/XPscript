@@ -41,14 +41,9 @@ if (!string.Equals(detachedArguments[1] as string, "detached-smoke", StringCompa
 if (detachedRoot.GetProperty("title").GetString() != "Detached request")
     throw new InvalidOperationException("Desktop modeless UI request remained tied to a disposed JsonDocument.");
 
-var desktopParitySource = """
-Sub Main()
-    Dim form As New UIForm("Desktop parity", 480, 320, True)
-    Call form.AddTextField("name", "Name")
-    Call form.Show(False)
-    Call form.Hide()
-End Sub
-""";
+var desktopParitySource = await File.ReadAllTextAsync(Path.Combine(
+    Directory.GetCurrentDirectory(),
+    "tests/DesktopUIFormLifecycleSmoke/desktop-interaction-parity.xps"));
 var parityRoot = Path.Combine(
     Directory.GetCurrentDirectory(),
     "out",
