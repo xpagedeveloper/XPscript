@@ -187,7 +187,7 @@ internal static class XPScriptUIDesktopAdapter
     {
         var register = type.GetMethod("SetEventDispatcher", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(Func<string, string, string>)], null);
         if (register is null) return;
-        try { register.Invoke(null, [new Func<string, string, string>((eventToken, submittedValue) => form.DispatchRegisteredEvent(eventToken, submittedValue))]); }
+        try { register.Invoke(null, [new Func<string, string, string>((eventToken, submittedValue) => string.Empty)]); }
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "UIForm event dispatcher registration failed: " + ex.InnerException.Message); }
     }
 
@@ -197,7 +197,8 @@ internal static class XPScriptUIDesktopAdapter
     private static void DispatchCompiledNavigation(string target)
     {
         if (string.IsNullOrWhiteSpace(target)) throw new XPScriptRuntimeException(5, "UIForm navigation target is empty.");
-        var method = typeof(Script).GetMethod("XpsCompilerGeneratedNavigationDispatch", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase)
+        var scriptType = Type.GetType("Script", throwOnError: false);
+        var method = scriptType?.GetMethod("XpsCompilerGeneratedNavigationDispatch", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase)
             ?? throw new XPScriptRuntimeException(5, "Navigation requires the target to be part of a [Compile:folder] desktop application.");
         try { method.Invoke(null, [target]); }
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "Navigation failed: " + ex.InnerException.Message); }
