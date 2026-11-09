@@ -1695,7 +1695,6 @@ internal static class Program
             generated = new UIFormActionModelPostProcessor().Transform(generated);
             generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
             generated = new UIFormCallbackModelPostProcessor().Transform(generated);
-            generated = new UIFormDesktopReactivePostProcessor().Transform(generated);
             if (!isAndroidTarget)
             {
                 generated += Environment.NewLine + UIExtensionDesktopRuntimeSource.Code;
