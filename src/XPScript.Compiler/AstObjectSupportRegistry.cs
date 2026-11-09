@@ -155,11 +155,6 @@ internal static class AstObjectSupportRegistry
 
     public static bool UsesUnsupportedObject(string source, out ObjectDefinition? definition)
     {
-        if (UsesObject(source, "UIForm") && Regex.IsMatch(RemoveStringsAndComments(source), @"(?i)\bAddButtonCallback\b"))
-        {
-            definition = new ObjectDefinition("UIForm callbacks", CompilationRoute.LegacyFallback, null);
-            return true;
-        }
         if (AstHttpSupport.RequiresLegacy(source))
         {
             definition = new ObjectDefinition("XPHttpClient callbacks/UIForm", CompilationRoute.LegacyFallback, null);
