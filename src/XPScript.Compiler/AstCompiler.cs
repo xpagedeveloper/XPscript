@@ -1694,7 +1694,6 @@ internal static class Program
             var isAndroidTarget = runtimeIdentifier?.StartsWith("android-", StringComparison.OrdinalIgnoreCase) == true;
             generated = new UIFormActionModelPostProcessor().Transform(generated);
             generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
-                generated = new UIFormMediaButtonsPostProcessor(runtimeIdentifier).Transform(generated);
             generated = new UIFormCallbackModelPostProcessor().Transform(generated);
             if (!isAndroidTarget)
             {
