@@ -14,6 +14,10 @@ internal static class DesktopApplicationHost
     private static bool _macScriptCompleted;
     private static bool _macKeepAlive;
 
+    // Test projects can supply Avalonia.Headless configuration without adding
+    // the test package to the production desktop runtime.
+    internal static Func<AppBuilder, AppBuilder>? TestConfigurator { get; set; }
+
     public static void RunMacOS(Action script)
     {
         ArgumentNullException.ThrowIfNull(script);
@@ -126,8 +130,8 @@ internal static class DesktopApplicationHost
     // dispatching the XPscript body to a worker thread.
     internal static void InitializeOnCurrentThread()
     {
-        AppBuilder.Configure<XpsDesktopApplication>()
-            .UsePlatformDetect()
-            .SetupWithoutStarting();
+        var builder = AppBuilder.Configure<XpsDesktopApplication>();
+        builder = TestConfigurator?.Invoke(builder) ?? builder.UsePlatformDetect();
+        builder.SetupWithoutStarting();
     }
 }
