@@ -92,7 +92,7 @@ internal sealed class XPScriptUIGrid
     }
 }
 
-internal sealed class XPScriptUIForm
+internal sealed partial class XPScriptUIForm
 {
 """);
 

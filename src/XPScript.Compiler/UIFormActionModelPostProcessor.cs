@@ -62,7 +62,7 @@ internal sealed class XPScriptUIButton
     public bool Enabled { get; set; } = true;
 }
 
-internal sealed class XPScriptUIForm
+internal sealed partial class XPScriptUIForm
 {
 """, "button-type");
         }
