@@ -827,7 +827,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
         - [x] Add AST constructor and callback-free member lowering for `UIForm`, fields and lifecycle methods. Callback members remain a separate migration because `AddButtonCallback` still uses the explicit legacy fallback.
           - [x] Constructor lowering: `New UIForm(...)` uses `XPScriptUI.CreateForm(...)`.
           - [x] Field/lifecycle lowering: `AddTextField`, `AddButton`, `Show`, `Hide` and `Close` have AST symbol/emitter coverage.
-          - [ ] Callback lowering: migrate `AddButtonCallback` separately after its generated callback runtime contract is defined.
+          - [x] Callback lowering: `AddButtonCallback` now routes through the AST callback runtime; AST shards 3, 4, 5 and 6 passed after removal of the UIForm legacy fallback (2026-11-09).
         - [x] Add focused AST-only compile/runtime fixtures before changing `UIForm` from `LegacyFallback` to `Ast`. The callback-free route, schema-free/schema-enabled runtime fixtures and desktop headless interaction probe are separate from callback migration.
       - [x] Run the existing legacy output first in a focused macOS probe and record its markers and exit code. GitHub run https://github.com/xpagedeveloper/XPscript/actions/runs/42343114766 compiled legacy successfully, then the generated UIForm failed at runtime with `IDispatcherImpl belongs to a different thread` (exit 134). The legacy path needs the same macOS main-thread host fix; `--legacy-only` keeps this regression independently runnable.
     - [ ] Extend the interaction contract to an Android UIForm workflow after APK/emulator prerequisites are available; keep device/logcat verification separate from desktop parity.
