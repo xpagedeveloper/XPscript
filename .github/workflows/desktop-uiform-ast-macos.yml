@@ -31,7 +31,25 @@ jobs:
           set -euo pipefail
           mkdir -p ./out
           echo AST_MACOS_CHECKPOINT=build-ready
-          timeout --kill-after=5s 180s dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only 2>&1 | tee ./out/ast-uiform-macos.log
+          python3 - <<'PY'
+          import subprocess
+          import sys
+          command = [
+              'dotnet', 'run', '--project', './tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj',
+              '-c', 'Release', '--no-build', '--', '--ast-only'
+          ]
+          with open('./out/ast-uiform-macos.log', 'w', encoding='utf-8') as log:
+              process = subprocess.Popen(command, stdout=log, stderr=subprocess.STDOUT)
+              try:
+                  exit_code = process.wait(timeout=180)
+              except subprocess.TimeoutExpired:
+                  process.kill()
+                  process.wait()
+                  print('AST macOS UIForm probe timed out after 180 seconds', file=sys.stderr)
+                  sys.exit(124)
+          sys.exit(exit_code)
+          PY
+          cat ./out/ast-uiform-macos.log
           grep -q 'DESKTOP_PARITY_AST_COMPILE_OK' ./out/ast-uiform-macos.log
           grep -q 'DESKTOP_PARITY_AST_RUNTIME_OK' ./out/ast-uiform-macos.log
           echo AST_MACOS_CHECKPOINT=generated-ast-runtime-ok
