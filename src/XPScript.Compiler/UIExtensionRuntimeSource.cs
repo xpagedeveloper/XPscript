@@ -319,6 +319,7 @@ internal sealed partial class XPScriptUIForm
     private XPScriptJsonObject _data = XPScriptNativeJson.CreateObject();
     private readonly List<XPScriptUIField> _fields = [];
     private readonly List<(string Name, string Command)> _mediaCommands = [];
+    private int _gridColumns = 1;
 
     internal XPScriptUIForm(string title, int? width, int? height, bool resizable)
     {
@@ -354,6 +355,7 @@ internal sealed partial class XPScriptUIForm
     public bool HasExplicitSize => _width.HasValue || _height.HasValue;
     public object Data => _data;
     public int FieldCount => _fields.Count;
+    public int GridColumns => _gridColumns;
     public void BindData(object? value)
     {
         _data = value switch

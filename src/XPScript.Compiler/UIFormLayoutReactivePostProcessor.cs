@@ -100,7 +100,6 @@ internal sealed class XPScriptUIForm
             "    private readonly List<XPScriptUIField> _fields = [];\n",
             """
     private readonly List<XPScriptUIField> _fields = [];
-    private int _gridColumns = 1;
     private readonly Dictionary<string, XPScriptUIGrid> _grids = new(StringComparer.OrdinalIgnoreCase);
 """);
 
@@ -108,7 +107,6 @@ internal sealed class XPScriptUIForm
             "    public int FieldCount => _fields.Count;\n",
             """
     public int FieldCount => _fields.Count;
-    public int GridColumns => _gridColumns;
 """);
 
         generated = ReplaceRequired(generated,
