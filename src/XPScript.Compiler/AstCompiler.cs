@@ -1690,7 +1690,11 @@ internal static class Program
         generated = jsonNameMetadata.ApplyToGeneratedCode(generated);
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode;
         if (runtimeFeatures.Ui && AstObjectSupportRegistry.UsesObject(fullSource, "UIForm"))
-            generated = new UIFormWindowLifecyclePostProcessor().Transform(generated);
+        {
+            generated = runtimeIdentifier is null
+                ? new UIExtensionDesktopPostProcessor().Transform(generated)
+                : new UIFormWindowLifecyclePostProcessor().Transform(generated);
+        }
         using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
         generated = UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);
         if (usesAi)
