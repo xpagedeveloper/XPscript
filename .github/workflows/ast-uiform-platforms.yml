@@ -44,10 +44,19 @@ jobs:
             exit 0
           fi
           changed="$(git diff --name-only HEAD^ HEAD)"
+          subject="$(git log -1 --format=%s)"
           all=false
           desktop=false
           android=false
           wasm=false
+          if [[ "$subject" == \[wasm-only\]* ]]; then
+            wasm=true
+            echo "all=$all" >> "$GITHUB_OUTPUT"
+            echo "desktop=$desktop" >> "$GITHUB_OUTPUT"
+            echo "android=$android" >> "$GITHUB_OUTPUT"
+            echo "wasm=$wasm" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           if grep -q '^\.github/workflows/ast-uiform-platforms.yml$' <<< "$changed"; then all=true; fi
           if grep -Eq '^src/XPScript.Compiler/' <<< "$changed"; then
             desktop=true
