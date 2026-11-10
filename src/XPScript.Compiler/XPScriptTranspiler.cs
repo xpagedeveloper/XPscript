@@ -8,8 +8,7 @@ public sealed partial class XPScriptTranspiler
     {
         ArgumentNullException.ThrowIfNull(generated);
         if (!generated.Contains("class XPScriptUIForm", StringComparison.Ordinal)) return generated;
-        if (!generated.Contains("private void ApplyDesktopValue(", StringComparison.Ordinal))
-            generated = new UIFormWindowLifecyclePostProcessor().Transform(generated);
+        generated = new UIFormWindowLifecyclePostProcessor().Transform(generated);
         generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
         generated = new UIFormActionModelPostProcessor().Transform(generated);
         return new UIFormCallbackModelPostProcessor().Transform(generated);

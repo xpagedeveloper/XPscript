@@ -18,20 +18,23 @@ internal sealed class UIFormWindowLifecyclePostProcessor
                 "    public bool HasExplicitSize => _width.HasValue || _height.HasValue;\n    public bool Visible => XPScriptUIDesktopAdapter.TryIsVisible(_instanceId, _visible);\n    public bool Modal => _modal;\n    internal string InstanceId => _instanceId;\n    public object Data => _data;",
                 "form-lifecycle-properties");
 
-        generated = ReplaceRequired(generated,
-            "    public string ShowDialog()\n    {",
-            "    private void ApplyDesktopValue(XPScriptUIField field, string submitted) => ApplySubmittedValue(field, submitted);\n    private void ApplyDesktopValues(XPScriptUIField field, IReadOnlyList<string> submitted) => ApplySubmittedValues(field, submitted);\n    private string RenderWebForm(bool includeButtons) => RenderWebForm();\n\n    public string ShowDialog()\n    {",
-            "form-desktop-helpers");
+        if (!generated.Contains("private void ApplyDesktopValue(", StringComparison.Ordinal))
+            generated = ReplaceRequired(generated,
+                "    public string ShowDialog()\n    {",
+                "    private void ApplyDesktopValue(XPScriptUIField field, string submitted) => ApplySubmittedValue(field, submitted);\n    private void ApplyDesktopValues(XPScriptUIField field, IReadOnlyList<string> submitted) => ApplySubmittedValues(field, submitted);\n    private string RenderWebForm(bool includeButtons) => RenderWebForm();\n\n    public string ShowDialog()\n    {",
+                "form-desktop-helpers");
 
-        generated = ReplaceRequired(generated,
-            "    public string ShowDialog()\n    {",
-            "    public void Show() => Show(false);\n\n    public void Show(object? modalValue)\n    {\n        var modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture);\n        if (modal)\n        {\n            _ = ShowDialog();\n            return;\n        }\n\n        _modal = false;\n        _visible = true;\n        if (XPScriptUIDesktopAdapter.IsAvailable)\n        {\n            XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);\n            return;\n        }\n        if (!XPScriptUIWebAdapter.IsAvailable)\n            throw new XPScriptRuntimeException(5, \"UIForm.Show requires a configured UI backend or an active XPScript web request.\");\n        XPScriptUIWebAdapter.WriteHtml(RenderWebForm(false));\n    }\n\n    public void Close()\n    {\n        _visible = false;\n        if (XPScriptUIDesktopAdapter.IsAvailable)\n        {\n            XPScriptUIDesktopAdapter.Close(_instanceId);\n            return;\n        }\n        if (XPScriptUIWebAdapter.IsAvailable)\n            XPScriptUIWebAdapter.WriteHtml(RenderWebClose());\n    }\n\n    public void Hide() => Close();\n\n    public string ShowDialog()\n    {",
-            "form-show-close-api");
+        if (!generated.Contains("public void Show()", StringComparison.Ordinal))
+            generated = ReplaceRequired(generated,
+                "    public string ShowDialog()\n    {",
+                "    public void Show() => Show(false);\n\n    public void Show(object? modalValue)\n    {\n        var modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture);\n        if (modal)\n        {\n            _ = ShowDialog();\n            return;\n        }\n\n        _modal = false;\n        _visible = true;\n        if (XPScriptUIDesktopAdapter.IsAvailable)\n        {\n            XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);\n            return;\n        }\n        if (!XPScriptUIWebAdapter.IsAvailable)\n            throw new XPScriptRuntimeException(5, \"UIForm.Show requires a configured UI backend or an active XPScript web request.\");\n        XPScriptUIWebAdapter.WriteHtml(RenderWebForm(false));\n    }\n\n    public void Close()\n    {\n        _visible = false;\n        if (XPScriptUIDesktopAdapter.IsAvailable)\n        {\n            XPScriptUIDesktopAdapter.Close(_instanceId);\n            return;\n        }\n        if (XPScriptUIWebAdapter.IsAvailable)\n            XPScriptUIWebAdapter.WriteHtml(RenderWebClose());\n    }\n\n    public void Hide() => Close();\n\n    public string ShowDialog()\n    {",
+                "form-show-close-api");
 
-        generated = ReplaceRequired(generated,
-            "    private static string NormalizeFieldName(object? value)",
-            "    private string RenderWebClose()\n    {\n        var id = System.Net.WebUtility.HtmlEncode(_instanceId);\n        return \"<script>(function(){var e=document.getElementById('xps_uiform_\" + id + \"');if(!e)return;if(window.bootstrap&&bootstrap.Modal){var m=bootstrap.Modal.getInstance(e);if(m)m.hide();}e.remove();})();</script>\";\n    }\n\n    private static string NormalizeFieldName(object? value)",
-            "web-close-script");
+        if (!generated.Contains("private string RenderWebClose()", StringComparison.Ordinal))
+            generated = ReplaceRequired(generated,
+                "    private static string NormalizeFieldName(object? value)",
+                "    private string RenderWebClose()\n    {\n        var id = System.Net.WebUtility.HtmlEncode(_instanceId);\n        return \"<script>(function(){var e=document.getElementById('xps_uiform_\" + id + \"');if(!e)return;if(window.bootstrap&&bootstrap.Modal){var m=bootstrap.Modal.getInstance(e);if(m)m.hide();}e.remove();})();</script>\";\n    }\n\n    private static string NormalizeFieldName(object? value)",
+                "web-close-script");
 
         return generated;
     }
