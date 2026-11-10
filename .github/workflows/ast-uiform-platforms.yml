@@ -20,7 +20,46 @@ permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Select affected platform tests
+    runs-on: ubuntu-latest
+    outputs:
+      all: ${{ steps.select.outputs.all }}
+      desktop: ${{ steps.select.outputs.desktop }}
+      android: ${{ steps.select.outputs.android }}
+      wasm: ${{ steps.select.outputs.wasm }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+      - id: select
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo 'all=true' >> "$GITHUB_OUTPUT"
+            echo 'desktop=true' >> "$GITHUB_OUTPUT"
+            echo 'android=true' >> "$GITHUB_OUTPUT"
+            echo 'wasm=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff --name-only HEAD^ HEAD)"
+          all=false
+          desktop=false
+          android=false
+          wasm=false
+          if grep -q '^\.github/workflows/ast-uiform-platforms.yml$' <<< "$changed"; then all=true; fi
+          if grep -Eq '^(src/XPScript.Compiler/|src/XPScript.UI.Desktop/|tests/DesktopUIFormLifecycleSmoke/)' <<< "$changed"; then desktop=true; fi
+          if grep -Eq '^(tests/AndroidAstBackendProbe/|src/XPScript.UI.Android/)' <<< "$changed"; then android=true; fi
+          if grep -Eq '^(src/XPScript.Web.Compiler/|src/XPScript.Web.Runtime/|tests/WebBrowserWasm)' <<< "$changed"; then wasm=true; fi
+          echo "all=$all" >> "$GITHUB_OUTPUT"
+          echo "desktop=$desktop" >> "$GITHUB_OUTPUT"
+          echo "android=$android" >> "$GITHUB_OUTPUT"
+          echo "wasm=$wasm" >> "$GITHUB_OUTPUT"
+
   desktop-windows:
+    needs: changes
+    if: needs.changes.outputs.all == 'true' || needs.changes.outputs.desktop == 'true'
     name: AST UIForm Show Hide (Windows)
     runs-on: windows-latest
     timeout-minutes: 5
@@ -42,6 +81,8 @@ jobs:
           dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
 
   desktop-linux:
+    needs: changes
+    if: needs.changes.outputs.all == 'true' || needs.changes.outputs.desktop == 'true'
     name: AST UIForm Show Hide (Linux)
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -61,6 +102,8 @@ jobs:
           timeout --kill-after=5s 180s dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-ast-generated
 
   desktop-macos:
+    needs: changes
+    if: needs.changes.outputs.all == 'true' || needs.changes.outputs.desktop == 'true'
     name: AST UIForm Show Hide (macOS)
     runs-on: macos-latest
     timeout-minutes: 8
@@ -98,6 +141,8 @@ jobs:
           PY
 
   android:
+    needs: changes
+    if: needs.changes.outputs.all == 'true' || needs.changes.outputs.android == 'true'
     name: AST UIForm target (Android)
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -123,6 +168,8 @@ jobs:
           dotnet run --project tests/AndroidAstBackendProbe/AndroidAstBackendProbe.csproj -c Release
 
   browser-wasm:
+    needs: changes
+    if: needs.changes.outputs.all == 'true' || needs.changes.outputs.wasm == 'true'
     name: AST browser WASM probe (Linux)
     runs-on: ubuntu-latest
     timeout-minutes: 30
