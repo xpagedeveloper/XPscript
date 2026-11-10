@@ -69,14 +69,19 @@ jobs:
   emulator:
     name: Run Android AST UIForm on emulator
     needs: build-apk
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v4
         with:
           name: android-uiform-emulator-apk
           path: out
+      - name: Enable and verify KVM acceleration
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+          "$ANDROID_HOME/emulator/emulator" -accel-check
       - name: Run APK and verify logcat
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -85,6 +90,9 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: false
+          disable-linux-hw-accel: false
+          emulator-boot-timeout: 180
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -accel on
           script: |
             bash .github/scripts/android-uiform-emulator.sh
       - name: Upload emulator logcat

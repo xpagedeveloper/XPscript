@@ -4,16 +4,15 @@ set -euo pipefail
 apk="out/android-uiform-emulator.apk"
 log="android-uiform-logcat.txt"
 
-trap 'adb logcat -d > "$log" 2>/dev/null || true' EXIT
+trap 'timeout 15s adb logcat -d > "$log" 2>/dev/null || true' EXIT
 
 adb wait-for-device
 timeout 120s bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 2; done'
-echo "Emulator boot reported complete; allowing Android services to stabilize"
-sleep 120
+echo "BOOT_OK"
 
 installed=false
 for attempt in 1 2 3 4; do
-  if adb install --no-streaming -r "$apk"; then
+  if timeout 60s adb install --no-streaming -r "$apk"; then
     installed=true
     break
   fi
@@ -22,10 +21,13 @@ for attempt in 1 2 3 4; do
   sleep 10
 done
 test "$installed" = true
+echo "INSTALL_OK"
 
 package="$(aapt dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
 test -n "$package"
 adb logcat -c
 adb shell monkey -p "$package" 1
 timeout 120s bash -c 'until adb logcat -d | grep -q "ANDROID-UIFORM=start"; do sleep 2; done'
+timeout 15s adb logcat -d > "$log"
 grep -q 'ANDROID-UIFORM=start' "$log"
+echo "APP_START_OK"

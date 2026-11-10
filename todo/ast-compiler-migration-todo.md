@@ -1120,6 +1120,7 @@ Run this phase only after all preceding implementation work, permanent FullTest 
 
 - [ ] Run the installed Android SDK/workload-backed APK compilation checks for `android-x64` and `android-arm64`.
 - [ ] Install and run generated APKs on a configured Android emulator and physical device; verify UIForm, media, debug output, runtime errors, and logcat behavior.
+  - Emulator CI now requires KVM acceleration on Ubuntu 24.04 and bounds boot/install/log capture; BOOT_OK, INSTALL_OK and APP_START_OK identify progress. Runtime verification is pending the accelerated workflow result.
 - [ ] Run the full manual HCL Notes/Domino integration suite on configured Notes/Domino installations with `notes.ini`, ID, NSF data, and required credentials.
 - [ ] Launch complete Avalonia desktop applications through both legacy and AST paths and compare runtime behavior on each available Windows, Linux, and macOS environment.
 - [ ] Run direct IIS Server/ARR deployment and hosting checks; IIS Express/WebIIS packaging and automated adapter checks remain covered by CI.
