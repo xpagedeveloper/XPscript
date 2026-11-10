@@ -8,6 +8,7 @@ trap 'adb logcat -d > "$log" 2>/dev/null || true' EXIT
 
 adb wait-for-device
 timeout 120s bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 2; done'
+timeout 180s bash -c 'until adb shell pm path android >/dev/null 2>&1; do sleep 2; done'
 
 installed=false
 for attempt in 1 2 3 4; do
