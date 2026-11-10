@@ -23,6 +23,7 @@ try
     }) ?? throw new InvalidOperationException("Could not start static WASM server.");
     await Task.Delay(500);
     using var playwright = await Playwright.CreateAsync();
+    var browserErrors = new List<string>();
     var chromiumPath = new[] { "/usr/bin/google-chrome-stable", "/usr/bin/google-chrome", "/usr/bin/chromium" }
         .FirstOrDefault(File.Exists);
     await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
@@ -31,9 +32,27 @@ try
         ExecutablePath = chromiumPath
     });
     var page = await browser.NewPageAsync();
+    page.Console += (_, message) =>
+    {
+        if (message.Type is "error" or "warning") Console.WriteLine($"BROWSER_CONSOLE_{message.Type.ToUpperInvariant()}: {message.Text}");
+    };
+    page.PageError += (_, error) =>
+    {
+        browserErrors.Add(error);
+        Console.WriteLine($"BROWSER_PAGE_ERROR: {error}");
+    };
     await page.GotoAsync($"http://127.0.0.1:{port}/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
     var name = page.Locator("input[name='name']");
-    await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 120000 });
+    try
+    {
+        await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 120000 });
+    }
+    catch (TimeoutException exception)
+    {
+        var html = await page.Locator("body").InnerHTMLAsync();
+        var preview = html.Length <= 12000 ? html : html[..12000];
+        throw new InvalidOperationException($"WASM UIForm did not render input[name='name']. Page errors: {string.Join(" | ", browserErrors)}. DOM:\n{preview}", exception);
+    }
     await name.FillAsync("Alice");
     if (await name.InputValueAsync() != "Alice") throw new InvalidOperationException("WASM text input failed.");
     await page.GetByRole(AriaRole.Button, new() { Name = "Save" }).ClickAsync();
