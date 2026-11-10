@@ -23,7 +23,8 @@ try
     }) ?? throw new InvalidOperationException("Could not start static WASM server.");
     await Task.Delay(500);
     using var playwright = await Playwright.CreateAsync();
-    var chromiumPath = File.Exists("/usr/bin/chromium") ? "/usr/bin/chromium" : null;
+    var chromiumPath = new[] { "/usr/bin/google-chrome-stable", "/usr/bin/google-chrome", "/usr/bin/chromium" }
+        .FirstOrDefault(File.Exists);
     await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
     {
         Headless = true,
