@@ -55,7 +55,7 @@ jobs:
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- \
             samples/android-uiform-minimal.xps \
             --output out/android-uiform-emulator \
-            --runtime=false --platform android-x64 --debug
+            --runtime=true --platform android-x64 --debug
           apk="$(find out/android-uiform-emulator -type f -name '*.apk' | head -n 1)"
           test -n "$apk"
           cp "$apk" out/android-uiform-emulator.apk
