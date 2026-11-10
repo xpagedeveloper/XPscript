@@ -23,6 +23,11 @@ internal sealed class UIFormWindowLifecyclePostProcessor
                 "    public string ShowDialog()\n    {",
                 "    private void ApplyDesktopValue(XPScriptUIField field, string submitted) => ApplySubmittedValue(field, submitted);\n    private void ApplyDesktopValues(XPScriptUIField field, IReadOnlyList<string> submitted) => ApplySubmittedValues(field, submitted);\n    private string RenderWebForm(bool includeButtons) => RenderWebForm();\n\n    public string ShowDialog()\n    {",
                 "form-desktop-helpers");
+        if (!generated.Contains("private string RenderWebForm(bool", StringComparison.Ordinal))
+            generated = ReplaceRequired(generated,
+                "    public string ShowDialog()\n    {",
+                "    private string RenderWebForm(bool includeButtons) => RenderWebForm();\n\n    public string ShowDialog()\n    {",
+                "form-web-render-overload");
 
         if (!generated.Contains("public void Show()", StringComparison.Ordinal))
             generated = ReplaceRequired(generated,
