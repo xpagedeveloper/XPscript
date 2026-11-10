@@ -46,3 +46,14 @@ timeout 120s bash -c 'until adb logcat -d | grep -q "ANDROID-UIFORM=start"; do s
 timeout 15s adb logcat -d > "$log"
 grep -q 'ANDROID-UIFORM=start' "$log"
 echo "APP_START_OK"
+
+adb shell uiautomator dump /sdcard/xpscript-uiform.xml >/dev/null
+adb shell cat /sdcard/xpscript-uiform.xml > android-uiform-ui.xml
+grep -q 'Name' android-uiform-ui.xml
+echo "UIFORM_FIELD_FOUND"
+adb shell input text AndroidTest
+adb shell input keyevent KEYCODE_ENTER
+timeout 120s bash -c 'until adb logcat -d | grep -q "ANDROID-UIFORM-RESULT="; do sleep 2; done'
+adb logcat -d > "$log"
+grep -q 'ANDROID-UIFORM-RESULT=' "$log"
+echo "UIFORM_INTERACTION_OK"

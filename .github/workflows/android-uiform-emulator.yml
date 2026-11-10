@@ -100,5 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-uiform-emulator-logcat
-          path: android-uiform-logcat.txt
+          path: |
+            android-uiform-logcat.txt
+            android-uiform-ui.xml
           if-no-files-found: ignore
