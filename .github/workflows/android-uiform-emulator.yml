@@ -35,6 +35,15 @@ jobs:
             ~/.dotnet/packs
             ~/.dotnet/sdk-manifests
           key: android-emulator-${{ runner.os }}-${{ hashFiles('global.json', '**/*.csproj', '**/packages.lock.json') }}
+      - name: Configure GitHub-hosted Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x /usr/local/lib/android/sdk/platform-tools/adb
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "/usr/local/lib/android/sdk/platform-tools" >> "$GITHUB_PATH"
+          echo "/usr/local/lib/android/sdk/build-tools/$(find /usr/local/lib/android/sdk/build-tools -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n 1)" >> "$GITHUB_PATH"
       - name: Install Android workload
         run: dotnet workload install android --skip-manifest-update
       - name: Build compiler and Android UIForm APK
