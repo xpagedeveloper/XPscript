@@ -86,7 +86,18 @@ jobs:
           disable-animations: false
           script: |
             set -euo pipefail
-            adb install -r out/android-uiform-emulator.apk
+            adb wait-for-device
+            timeout 120s bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 2; done'
+            installed=false
+            for attempt in 1 2 3; do
+              if adb install --no-streaming -r out/android-uiform-emulator.apk; then
+                installed=true
+                break
+              fi
+              adb shell getprop sys.boot_completed || true
+              sleep 5
+            done
+            test "$installed" = true
             package="$(aapt dump badging out/android-uiform-emulator.apk | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
             test -n "$package"
             adb logcat -c
