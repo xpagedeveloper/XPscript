@@ -10,6 +10,7 @@ capture_logs() {
   if [ "$status" -ne 0 ]; then
     echo "APP_FAILURE_LOGCAT"
     timeout 10s adb logcat -d -b crash || true
+    timeout 10s adb logcat -d -s XPScript AndroidRuntime || true
     tail -n 200 "$log" || true
   fi
 }
@@ -39,7 +40,7 @@ test -n "$package"
 adb logcat -c
 activity="$("$aapt_path" dump badging "$apk" | sed -n "s/^launchable-activity: name='\([^']*\)'.*/\1/p")"
 test -n "$activity"
-timeout 30s adb shell am start -W -S -n "$package/$activity"
+timeout 30s adb shell am start -W -S -n "$package/$activity" --ez xpscript.appdebug true
 echo "ACTIVITY_START_RETURNED"
 timeout 120s bash -c 'until adb logcat -d | grep -q "ANDROID-UIFORM=start"; do sleep 2; done'
 timeout 15s adb logcat -d > "$log"
