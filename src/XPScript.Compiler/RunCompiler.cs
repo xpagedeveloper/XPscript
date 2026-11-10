@@ -148,9 +148,27 @@ internal static class RunCompiler
                     "Extended Archive runtime"));
             }
             var isAndroid = IsAndroidRuntime(runtimeIdentifier);
+            var androidUi = isAndroid && UIFormAppAssets.UsesUIForm(sourcePath);
+            if (androidUi)
+            {
+                foreach (var package in new[] { "Avalonia", "Avalonia.Android", "Avalonia.Themes.Fluent" })
+                    dependencies.Add(new ApplicationPackageReference(package, "12.1.4", "Android UIForm host"));
+                foreach (var package in new[] { "Xamarin.AndroidX.Media3.ExoPlayer", "Xamarin.AndroidX.Media3.Ui" })
+                    dependencies.Add(new ApplicationPackageReference(package, "1.11.1", "Android UIForm media"));
+                foreach (var package in new[] { "Xamarin.AndroidX.Camera.Core", "Xamarin.AndroidX.Camera.Camera2", "Xamarin.AndroidX.Camera.View" })
+                    dependencies.Add(new ApplicationPackageReference(package, "1.4.2.1", "Android UIForm camera"));
+                dependencies.Add(new ApplicationPackageReference("Xamarin.AndroidX.Lifecycle.LiveData.Core", "2.11.0.1", "Android UIForm lifecycle"));
+                var host = AndroidUIHostSource.Build(debug)
+                    .Replace("Console.AndroidLog =", "Program.Console.AndroidLog =", StringComparison.Ordinal)
+                    .Replace("Program.Main(Array.Empty<string>())", "Program.__xps_android_entry(Array.Empty<string>())", StringComparison.Ordinal);
+                await File.WriteAllTextAsync(Path.Combine(tempRoot, "AndroidUIHost.cs"), host, cancellationToken).ConfigureAwait(false);
+                var values = Path.Combine(tempRoot, "Resources", "values");
+                Directory.CreateDirectory(values);
+                await File.WriteAllTextAsync(Path.Combine(values, "styles.xml"), "<resources><style name=\"Theme.AppCompat.DayNight.NoActionBar\" parent=\"Theme.AppCompat.Light.NoActionBar\" /></resources>", cancellationToken).ConfigureAwait(false);
+            }
             await File.WriteAllTextAsync(projectPath, BuildProject(references, dependencies, runtimeIdentifier, startupObject), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(programPath,
-                isAndroid ? CombineGeneratedSources(generatedSource, AndroidHostSource.Code) : generatedSource,
+                isAndroid && !androidUi ? CombineGeneratedSources(generatedSource, AndroidHostSource.Code) : generatedSource,
                 cancellationToken).ConfigureAwait(false);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
