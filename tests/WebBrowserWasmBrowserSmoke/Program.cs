@@ -23,7 +23,12 @@ try
     }) ?? throw new InvalidOperationException("Could not start static WASM server.");
     await Task.Delay(500);
     using var playwright = await Playwright.CreateAsync();
-    await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+    var chromiumPath = File.Exists("/usr/bin/chromium") ? "/usr/bin/chromium" : null;
+    await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+    {
+        Headless = true,
+        ExecutablePath = chromiumPath
+    });
     var page = await browser.NewPageAsync();
     await page.GotoAsync($"http://127.0.0.1:{port}/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
     await page.GetByLabel("Name").FillAsync("Alice");
