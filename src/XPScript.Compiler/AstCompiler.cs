@@ -1699,6 +1699,10 @@ internal static class Program
             // Theme, tab, grid and button members required by its host.
             generated = new UIFormActionModelPostProcessor().Transform(generated);
             generated = new UIFormCallbackModelPostProcessor().Transform(generated);
+            // The initial desktop extension pass runs before the AST UIForm model
+            // is installed. Re-run it for Android so ShowDialog/Show are lowered
+            // to the AndroidFormHost instead of retaining the generic fallback.
+            generated = new UIExtensionDesktopPostProcessor().Transform(generated);
             if (!isAndroidTarget)
             {
                 generated += Environment.NewLine + UIExtensionDesktopRuntimeSource.Code;
