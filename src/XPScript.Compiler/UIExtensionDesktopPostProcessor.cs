@@ -127,7 +127,7 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = RewriteDialogCalls(replaced);
         replaced = replaced
             + "\n" + UIExtensionDesktopRuntimeSource.Code
-            + "\n" + UIDialogRuntimeSource.Code
+            + "\n" + (generated.Contains("class XPScriptUIDialogRuntime", StringComparison.Ordinal) ? string.Empty : UIDialogRuntimeSource.Code)
             + "\n" + UIListViewRuntimeSource.Code
             + "\n";
 
