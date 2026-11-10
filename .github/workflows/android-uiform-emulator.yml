@@ -82,7 +82,7 @@ jobs:
           api-level: 30
           target: google_apis
           arch: x86_64
-          profile: Pixel_2
+          profile: pixel_2
           script: |
             set -euo pipefail
             adb install -r out/android-uiform-emulator.apk
