@@ -390,6 +390,11 @@ internal static class RunCompiler
             : "  <ItemGroup>\n" + string.Join(Environment.NewLine, dependencies.Select(package =>
                 $"    <PackageReference Include=\"{EscapeXml(package.Name)}\" Version=\"{EscapeXml(package.Version)}\" />")) +
               "\n  </ItemGroup>\n";
+        if (IsAndroidRuntime(runtimeIdentifier) && dependencies.Any(package => package.Name == "Avalonia.Android"))
+            packageItems += "  <ItemGroup>\n" +
+                "    <PackageReference Include=\"Xamarin.AndroidX.Tracing.Tracing\" Version=\"1.3.0.4\" />\n" +
+                "    <PackageReference Include=\"Xamarin.AndroidX.Tracing.Tracing.Ktx\" Version=\"1.2.0.10\" ExcludeAssets=\"all\" />\n" +
+                "  </ItemGroup>\n";
         var isAndroid = IsAndroidRuntime(runtimeIdentifier);
         var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
         var startup = isAndroid || string.IsNullOrWhiteSpace(startupObject) ? string.Empty : $"    <StartupObject>{EscapeXml(startupObject)}</StartupObject>\n";
