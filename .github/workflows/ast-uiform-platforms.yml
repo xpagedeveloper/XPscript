@@ -106,8 +106,16 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
+      - name: Cache Android workload and NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+            ~/.dotnet/packs
+            ~/.dotnet/sdk-manifests
+          key: android-${{ runner.os }}-${{ hashFiles('global.json', '**/*.csproj', '**/packages.lock.json') }}
       - name: Install Android workload
-        run: dotnet workload install android
+        run: dotnet workload install android --skip-manifest-update
       - name: Build and run Android AST probe
         run: |
           set -euo pipefail
@@ -123,8 +131,16 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
+      - name: Cache WASM workload and NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+            ~/.dotnet/packs
+            ~/.dotnet/sdk-manifests
+          key: wasm-${{ runner.os }}-${{ hashFiles('global.json', '**/*.csproj', '**/packages.lock.json') }}
       - name: Install browser WASM workload
-        run: dotnet workload install wasm-tools
+        run: dotnet workload install wasm-tools --skip-manifest-update
       - name: Build browser interaction probe
         run: dotnet build tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release
       - name: Install Chromium system dependencies
