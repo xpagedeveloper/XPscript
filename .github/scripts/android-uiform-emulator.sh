@@ -51,8 +51,12 @@ adb shell uiautomator dump /sdcard/xpscript-uiform.xml >/dev/null
 adb shell cat /sdcard/xpscript-uiform.xml > android-uiform-ui.xml
 grep -q 'Name' android-uiform-ui.xml
 echo "UIFORM_FIELD_FOUND"
+python3 .github/scripts/android-ui-tap.py field
 adb shell input text AndroidTest
-adb shell input keyevent KEYCODE_ENTER
+adb shell input keyevent KEYCODE_BACK
+adb shell uiautomator dump /sdcard/xpscript-uiform.xml >/dev/null
+adb shell cat /sdcard/xpscript-uiform.xml > android-uiform-ui.xml
+python3 .github/scripts/android-ui-tap.py ok
 timeout 120s bash -c 'until adb logcat -d | grep -q "ANDROID-UIFORM-RESULT="; do sleep 2; done'
 adb logcat -d > "$log"
 grep -q 'ANDROID-UIFORM-RESULT=' "$log"

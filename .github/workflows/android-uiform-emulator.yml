@@ -10,6 +10,7 @@ on:
       - 'samples/android-uiform-minimal.xps'
       - 'tests/AndroidAstBackendProbe/**'
       - '.github/scripts/android-uiform-emulator.sh'
+      - '.github/scripts/android-ui-tap.py'
   workflow_dispatch:
 
 permissions:
