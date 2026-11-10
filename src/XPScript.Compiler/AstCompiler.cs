@@ -1694,6 +1694,10 @@ internal static class Program
             var isAndroidTarget = runtimeIdentifier?.StartsWith("android-", StringComparison.OrdinalIgnoreCase) == true;
             generated = new UIFormActionModelPostProcessor().Transform(generated);
             generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
+            // Layout model insertion can replace the form declaration surface;
+            // reapply the idempotent action model so Android retains the shared
+            // Theme, tab, grid and button members required by its host.
+            generated = new UIFormActionModelPostProcessor().Transform(generated);
             generated = new UIFormCallbackModelPostProcessor().Transform(generated);
             if (!isAndroidTarget)
             {
