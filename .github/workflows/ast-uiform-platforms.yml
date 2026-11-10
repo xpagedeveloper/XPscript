@@ -49,7 +49,12 @@ jobs:
           android=false
           wasm=false
           if grep -q '^\.github/workflows/ast-uiform-platforms.yml$' <<< "$changed"; then all=true; fi
-          if grep -Eq '^(src/XPScript.Compiler/|src/XPScript.UI.Desktop/|tests/DesktopUIFormLifecycleSmoke/)' <<< "$changed"; then desktop=true; fi
+          if grep -Eq '^src/XPScript.Compiler/' <<< "$changed"; then
+            desktop=true
+            android=true
+            wasm=true
+          fi
+          if grep -Eq '^(src/XPScript.UI.Desktop/|tests/DesktopUIFormLifecycleSmoke/)' <<< "$changed"; then desktop=true; fi
           if grep -Eq '^(tests/AndroidAstBackendProbe/|src/XPScript.UI.Android/)' <<< "$changed"; then android=true; fi
           if grep -Eq '^(src/XPScript.Web.Compiler/|src/XPScript.Web.Runtime/|tests/WebBrowserWasm)' <<< "$changed"; then wasm=true; fi
           echo "all=$all" >> "$GITHUB_OUTPUT"
