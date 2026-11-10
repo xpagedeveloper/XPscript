@@ -611,6 +611,8 @@ public static class AndroidFormHost
                     _ => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) }
                 };
 
+                AutomationProperties.SetAutomationId(editor, "xps-field-" + name);
+                AutomationProperties.SetName(editor, "xps-field-" + name);
                 if (field.TryGetProperty("value", out var value) && value.ValueKind != JsonValueKind.Null)
                     SetEditorValue(editor, value);
 
