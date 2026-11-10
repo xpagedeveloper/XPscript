@@ -9,6 +9,7 @@ on:
       - 'src/XPScript.UI.Android/**'
       - 'samples/android-uiform-minimal.xps'
       - 'tests/AndroidAstBackendProbe/**'
+      - '.github/scripts/android-uiform-emulator.sh'
   workflow_dispatch:
 
 permissions:
@@ -85,17 +86,7 @@ jobs:
           profile: pixel_2
           disable-animations: false
           script: |
-            set -euo pipefail
-            adb wait-for-device
-            timeout 120s bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 2; done'
-            adb install --no-streaming -r out/android-uiform-emulator.apk
-            package="$(aapt dump badging out/android-uiform-emulator.apk | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
-            test -n "$package"
-            adb logcat -c
-            adb shell monkey -p "$package" 1
-            timeout 120s bash -c 'until adb logcat -d | grep -q "ANDROID-UIFORM=start"; do sleep 2; done'
-            adb logcat -d | tee android-uiform-logcat.txt
-            grep -q 'ANDROID-UIFORM=start' android-uiform-logcat.txt
+            bash .github/scripts/android-uiform-emulator.sh
       - name: Upload emulator logcat
         if: always()
         uses: actions/upload-artifact@v4
