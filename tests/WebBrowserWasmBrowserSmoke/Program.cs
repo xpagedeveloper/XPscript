@@ -32,8 +32,10 @@ try
     });
     var page = await browser.NewPageAsync();
     await page.GotoAsync($"http://127.0.0.1:{port}/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
-    await page.GetByLabel("Name").FillAsync("Alice");
-    if (await page.GetByLabel("Name").InputValueAsync() != "Alice") throw new InvalidOperationException("WASM text input failed.");
+    var name = page.Locator("input[name='name']");
+    await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 120000 });
+    await name.FillAsync("Alice");
+    if (await name.InputValueAsync() != "Alice") throw new InvalidOperationException("WASM text input failed.");
     await page.GetByRole(AriaRole.Button, new() { Name = "Save" }).ClickAsync();
     Console.WriteLine("WASM_BROWSER_TEXT_OK");
     Console.WriteLine("WASM_BROWSER_BUTTON_OK");
