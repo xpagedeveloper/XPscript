@@ -51,13 +51,15 @@ jobs:
         run: |
           set -euo pipefail
           dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
-          rm -rf out/android-uiform-emulator.apk
+          rm -rf out/android-uiform-emulator
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- \
             compile \
             samples/android-uiform-minimal.xps \
-            -o out/android-uiform-emulator.apk \
+            -o out/android-uiform-emulator \
             --runtime=true --platform android-x64 --debug
-          test -s out/android-uiform-emulator.apk
+          apk="$(find out/android-uiform-emulator -type f -name '*.apk' | head -n 1)"
+          test -s "$apk"
+          cp "$apk" out/android-uiform-emulator.apk
       - uses: actions/upload-artifact@v4
         with:
           name: android-uiform-emulator-apk

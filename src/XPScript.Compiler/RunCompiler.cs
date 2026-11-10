@@ -174,6 +174,16 @@ internal static class RunCompiler
                     generatedDiagnostics);
             }
 
+            if (IsAndroidRuntime(runtimeIdentifier))
+            {
+                var apkPath = Directory.EnumerateFiles(outputRoot, "*.apk", SearchOption.AllDirectories)
+                    .OrderBy(path => path.EndsWith("-Signed.apk", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                    .FirstOrDefault();
+                if (apkPath is null)
+                    throw new CompilerException("Android compilation succeeded, but no APK artifact was produced.");
+                return apkPath;
+            }
+
             var assemblyPath = CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile
                 ? Path.Combine(outputRoot, IsWindowsRuntime(runtimeIdentifier) ? "Generated.exe" : "Generated")
                 : Path.Combine(outputRoot, "Generated.dll");
