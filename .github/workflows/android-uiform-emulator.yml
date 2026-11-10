@@ -81,7 +81,6 @@ jobs:
         run: |
           test -c /dev/kvm
           sudo chmod a+rw /dev/kvm
-          "$ANDROID_HOME/emulator/emulator" -accel-check
       - name: Run APK and verify logcat
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -91,6 +90,7 @@ jobs:
           profile: pixel_2
           disable-animations: false
           disable-linux-hw-accel: false
+          pre-emulator-launch-script: '"$ANDROID_HOME/emulator/emulator" -accel-check'
           emulator-boot-timeout: 180
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -accel on
           script: |
