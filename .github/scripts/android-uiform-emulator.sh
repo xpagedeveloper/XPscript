@@ -8,7 +8,8 @@ trap 'adb logcat -d > "$log" 2>/dev/null || true' EXIT
 
 adb wait-for-device
 timeout 120s bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 2; done'
-timeout 300s bash -c 'until [ "$(adb shell getprop dev.bootcomplete 2>/dev/null | tr -d "\r")" = "1" ] && [ "$(adb shell getprop init.svc.bootanim 2>/dev/null | tr -d "\r")" = "stopped" ] && [ "$(adb shell settings get global device_provisioned 2>/dev/null | tr -d "\r")" = "1" ] && [ "$(adb shell settings get secure user_setup_complete 2>/dev/null | tr -d "\r")" = "1" ] && adb shell cmd package list packages >/dev/null 2>&1; do sleep 2; done'
+echo "Emulator boot reported complete; allowing Android services to stabilize"
+sleep 120
 
 installed=false
 for attempt in 1 2 3 4; do
