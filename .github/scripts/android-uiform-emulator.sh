@@ -23,7 +23,9 @@ done
 test "$installed" = true
 echo "INSTALL_OK"
 
-package="$(aapt dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
+aapt_path="$(find "${ANDROID_HOME:?ANDROID_HOME is required}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+test -x "$aapt_path"
+package="$("$aapt_path" dump badging "$apk" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
 test -n "$package"
 adb logcat -c
 adb shell monkey -p "$package" 1
