@@ -53,7 +53,7 @@ jobs:
           dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
           rm -rf out/android-uiform-emulator out/android-uiform-emulator.apk
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- \
-            ast-compile \
+            compile \
             samples/android-uiform-minimal.xps \
             --output out/android-uiform-emulator \
             --runtime=true --platform android-x64 --debug
