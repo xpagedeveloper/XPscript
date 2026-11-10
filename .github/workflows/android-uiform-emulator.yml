@@ -1,0 +1,92 @@
+name: Android UIForm AST Emulator
+
+on:
+  push:
+    branches: [investigate-ast-compiler]
+    paths:
+      - '.github/workflows/android-uiform-emulator.yml'
+      - 'src/XPScript.Compiler/**'
+      - 'src/XPScript.UI.Android/**'
+      - 'samples/android-uiform-minimal.xps'
+      - 'tests/AndroidAstBackendProbe/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Build Android AST UIForm APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+            ~/.dotnet/packs
+            ~/.dotnet/sdk-manifests
+          key: android-emulator-${{ runner.os }}-${{ hashFiles('global.json', '**/*.csproj', '**/packages.lock.json') }}
+      - name: Install Android workload
+        run: dotnet workload install android --skip-manifest-update
+      - name: Build compiler and Android UIForm APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          rm -rf out/android-uiform-emulator
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- \
+            samples/android-uiform-minimal.xps \
+            --output out/android-uiform-emulator \
+            --runtime=false --platform android-x64 --debug
+          apk="$(find out/android-uiform-emulator -type f -name '*.apk' | head -n 1)"
+          test -n "$apk"
+          cp "$apk" out/android-uiform-emulator.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-uiform-emulator-apk
+          path: out/android-uiform-emulator.apk
+
+  emulator:
+    name: Run Android AST UIForm on emulator
+    needs: build-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-uiform-emulator-apk
+          path: out
+      - name: Run APK and verify logcat
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          profile: Pixel_2
+          script: |
+            set -euo pipefail
+            adb install -r out/android-uiform-emulator.apk
+            package="$(aapt dump badging out/android-uiform-emulator.apk | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
+            test -n "$package"
+            adb logcat -c
+            adb shell monkey -p "$package" 1
+            timeout 120s bash -c 'until adb logcat -d | grep -q "ANDROID-UIFORM=start"; do sleep 2; done'
+            adb logcat -d | tee android-uiform-logcat.txt
+            grep -q 'ANDROID-UIFORM=start' android-uiform-logcat.txt
+      - name: Upload emulator logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-uiform-emulator-logcat
+          path: android-uiform-logcat.txt
+          if-no-files-found: ignore
