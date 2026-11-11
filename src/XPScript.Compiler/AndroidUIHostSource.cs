@@ -612,7 +612,7 @@ public static class AndroidFormHost
                 };
 
                 AutomationProperties.SetAutomationId(editor, "xps-field-" + name);
-                AutomationProperties.SetName(editor, "xps-field-" + name);
+                // Keep the automation id as the resource id; exposing the id as the name makes Android report it as field text.
                 if (field.TryGetProperty("value", out var value) && value.ValueKind != JsonValueKind.Null)
                     SetEditorValue(editor, value);
 
