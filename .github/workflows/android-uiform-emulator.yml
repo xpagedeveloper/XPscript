@@ -2,15 +2,8 @@ name: Android UIForm AST Emulator
 
 on:
   push:
-    branches: [investigate-ast-compiler]
-    paths:
-      - '.github/workflows/android-uiform-emulator.yml'
-      - 'src/XPScript.Compiler/**'
-      - 'src/XPScript.UI.Android/**'
-      - 'samples/android-uiform-minimal.xps'
-      - 'tests/AndroidAstBackendProbe/**'
-      - '.github/scripts/android-uiform-emulator.sh'
-      - '.github/scripts/android-ui-interact.py'
+    branches:
+      - investigate-ast-compiler
   workflow_dispatch:
 
 permissions:
