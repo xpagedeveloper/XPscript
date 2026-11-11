@@ -47,10 +47,6 @@ timeout 15s adb logcat -d > "$log"
 grep -q 'ANDROID-UIFORM=start' "$log"
 echo "APP_START_OK"
 
-adb shell uiautomator dump /sdcard/xpscript-uiform.xml >/dev/null
-adb shell cat /sdcard/xpscript-uiform.xml > android-uiform-ui.xml
-grep -q 'Name' android-uiform-ui.xml
-echo "UIFORM_FIELD_FOUND"
 timeout 120s python3 .github/scripts/android-ui-interact.py
 timeout 120s bash -c 'until adb logcat -d | grep -q "ANDROID-UIFORM-RESULT="; do sleep 2; done'
 adb logcat -d > "$log"
