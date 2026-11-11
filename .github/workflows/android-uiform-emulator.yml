@@ -10,7 +10,7 @@ on:
       - 'samples/android-uiform-minimal.xps'
       - 'tests/AndroidAstBackendProbe/**'
       - '.github/scripts/android-uiform-emulator.sh'
-      - '.github/scripts/android-ui-tap.py'
+      - '.github/scripts/android-ui-interact.py'
   workflow_dispatch:
 
 permissions:
@@ -82,6 +82,11 @@ jobs:
         run: |
           test -c /dev/kvm
           sudo chmod a+rw /dev/kvm
+      - name: Install Android UI automation
+        run: |
+          python3 -m venv .android-ui-venv
+          .android-ui-venv/bin/pip install 'uiautomator2==3.2.10'
+          echo "$PWD/.android-ui-venv/bin" >> "$GITHUB_PATH"
       - name: Run APK and verify logcat
         uses: reactivecircus/android-emulator-runner@v2
         with:
