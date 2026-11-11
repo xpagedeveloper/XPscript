@@ -1,7 +1,18 @@
 name: Android UIForm AST Emulator
-# Push-trigger verification
+# Temporary verification on the AST compiler branch.
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches: [investigate-ast-compiler]
+    paths:
+      - '.github/workflows/android-uiform-emulator.yml'
+      - '.github/scripts/android-ui-interact.py'
+      - '.github/scripts/android-uiform-emulator.sh'
+      - 'src/XPScript.Compiler/**'
+      - 'samples/android-uiform-minimal.xps'
+      - 'tests/AndroidAstBackendProbe/**'
+      - 'src/XPScript.UI.Android/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
