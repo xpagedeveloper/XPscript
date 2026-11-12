@@ -45,7 +45,7 @@ for %%F in (model.safetensors tokenizer.json config.json) do (
 )
 
 mkdir "%RERANKER_DIR%" 2>nul
-if not exist "%RERANKER_DIR%\model.onnx" curl.exe -L --fail --retry 3 "https://github.com/dillibabukadati/ccindex/releases/latest/download/reranker-onnx-model.onnx" -o "%RERANKER_DIR%\model.onnx"
+if not exist "%RERANKER_DIR%\model.onnx" curl.exe -L --fail --retry 3 "https://github.com/dillibabukadati/ccindex/releases/latest/download/model.onnx" -o "%RERANKER_DIR%\model.onnx"
 if errorlevel 1 exit /b 1
 for %%F in (tokenizer.json tokenizer_config.json special_tokens_map.json) do (
   if not exist "%RERANKER_DIR%\%%F" curl.exe -L --fail --retry 3 "https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2/resolve/main/%%F" -o "%RERANKER_DIR%\%%F"
