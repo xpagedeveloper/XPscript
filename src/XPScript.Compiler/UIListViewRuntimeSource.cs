@@ -2,7 +2,9 @@ namespace XPScript.Compiler;
 
 internal static class UIListViewRuntimeSource
 {
-    public const string Code = """
+    public static readonly string Code = BuildCode();
+
+    private const string BaseCode = """
 internal static class XPScriptUIList
 {
     public static XPScriptUIListView CreateListView()
@@ -320,4 +322,16 @@ internal sealed class XPScriptUIListView
     private static string HtmlAttribute(string value) => System.Net.WebUtility.HtmlEncode(value ?? string.Empty);
 }
 """;
+
+    private static string BuildCode()
+    {
+        var generated = BaseCode;
+        generated = new UIListViewDesktopPostProcessor().Transform(generated);
+        generated = new UIListViewEventPostProcessor().Transform(generated);
+        generated = new UIListViewCallbackRuntimePostProcessor().Transform(generated);
+        generated = new UIListViewLiveUpdatePostProcessor().Transform(generated);
+        generated = new UIListViewRowActionsPostProcessor().Transform(generated);
+        generated = new UIListViewRowActionCompatibilityPostProcessor().Transform(generated);
+        return generated;
+    }
 }

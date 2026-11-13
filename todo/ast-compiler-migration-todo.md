@@ -837,7 +837,7 @@ Initial implementation: expression conversions and a method-body emitter for ass
   - [x] Add direct AST event-dispatch coverage; `AST_UI_LIST_VIEW_EVENT_DISPATCH_OK` validates callback event type and context.
   - [x] Add a permanent Platform FullTest Kestrel probe; `WEB-UILISTVIEW-EVENT=OK` validates GET rendering, POST event transport and callback-updated live state.
   - [x] Complete desktop interaction coverage on the Windows, Linux and macOS platform workflows with an Avalonia-headless probe; selection, AST callback/live-state update and dialog result are verified.
-  - [ ] Remove the remaining UIListView postprocessor-only compatibility gaps; these are now isolated to generated-runtime compatibility transforms rather than compiler fallback routing.
+  - [x] Remove the AST postprocessor-only compatibility gap by composing the complete UIListView runtime source before AST generation; the legacy desktop postprocessor path remains for legacy compiler compatibility.
 - [ ] Compare Android/mobile behavior as support matures.
   - [ ] Complete Android UIForm interaction coverage before starting iOS: locate generated fields and buttons with UIAutomator, enter a value, trigger the form action and verify the returned result in logcat.
   - [ ] Verify Android-specific UIForm controls and runtime behavior for media, camera, lifecycle and error routing with focused emulator probes.
