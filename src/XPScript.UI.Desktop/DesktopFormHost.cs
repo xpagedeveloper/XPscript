@@ -27,7 +27,7 @@ public static class DesktopFormHost
         if (!XpsUIDesktopRuntimeBridge.IsSupportedPlatform())
             throw new PlatformNotSupportedException("XPScript desktop UIForm is supported on Windows, Linux and macOS.");
 
-        EnsureApplication();
+        DesktopApplicationHost.EnsureStarted();
         DesktopFormResult? result = null;
         Dispatcher.UIThread.Invoke(() => result = ShowDialogCore(request, eventCallback));
         return XpsUIDesktopRuntimeBridge.SerializeResult(result ?? EmptyResult("Cancel"));

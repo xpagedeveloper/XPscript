@@ -16,7 +16,7 @@ public static class DesktopDialogHost
     {
         var request = JsonSerializer.Deserialize<ChoiceDialogRequest>(requestJson, JsonOptions())
             ?? new ChoiceDialogRequest();
-        EnsureApplication();
+        DesktopApplicationHost.EnsureStarted();
         string result = "Cancel";
         Dispatcher.UIThread.Invoke(() => result = ShowChoiceDialogCore(request));
         return result;
@@ -26,7 +26,7 @@ public static class DesktopDialogHost
     {
         var request = JsonSerializer.Deserialize<FileDialogRequest>(requestJson, JsonOptions())
             ?? new FileDialogRequest();
-        EnsureApplication();
+        DesktopApplicationHost.EnsureStarted();
         string result = string.Empty;
         Dispatcher.UIThread.Invoke(() => result = RunFilePicker(request, save: false));
         return result;
@@ -36,7 +36,7 @@ public static class DesktopDialogHost
     {
         var request = JsonSerializer.Deserialize<FileDialogRequest>(requestJson, JsonOptions())
             ?? new FileDialogRequest();
-        EnsureApplication();
+        DesktopApplicationHost.EnsureStarted();
         string result = string.Empty;
         Dispatcher.UIThread.Invoke(() => result = RunFilePicker(request, save: true));
         return result;
