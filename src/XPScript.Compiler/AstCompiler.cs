@@ -973,7 +973,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
 {{LegacyPrintFormattingRuntimeSource.Code}}
 {{(Regex.IsMatch(fullSource, @"(?i)\b(ShowDialog|LoadFileDialog|OpenFileDialog|SaveFileDialog)\b") ? UIDialogRuntimeSource.Code : "")}}
-{{(runtimeFeatures.Ui ? UIExtensionRuntimeSource.Code + UIListViewRuntimeSource.Code + (usesJsonSchemaRuntime ? Environment.NewLine + UIFormValidationRuntimeSource.Code : "") : "")}}
+{{(runtimeFeatures.Ui ? UIExtensionRuntimeSource.Code + (AstObjectSupportRegistry.UsesObject(fullSource, "UIListView") ? UIListViewRuntimeSource.Code : "") + (usesJsonSchemaRuntime ? Environment.NewLine + UIFormValidationRuntimeSource.Code : "") : "")}}
 {{(usesArchive ? ArchiveRuntimeSource.Code + ArchiveMemoryRuntimeSource.Code + ArchiveIteratorRuntimeSource.Code : "")}}
 {{(usesArchive && source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ? ArchiveExtendedReaderRuntimeSource.Code + ArchiveExtendedWriterRuntimeSource.Code + ArchiveExtendedWriterFactoryRuntimeSource.Code : "")}}
 {{(usesNetworkTools ? NetworkToolsRuntimeSource.Code : "")}}

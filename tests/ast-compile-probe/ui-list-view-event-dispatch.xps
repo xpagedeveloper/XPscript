@@ -1,0 +1,21 @@
+Public CurrentList As Variant
+Public CallbackEvent As String
+Public CallbackContext As String
+
+Sub Main()
+    Dim rows As New XPJsonArray
+    Dim row As New XPJsonObject
+    Dim list As New UIListView("Events")
+    Call row.Set("id", "42")
+    Call rows.Add(row)
+    Call list.BindData(rows)
+    Call list.AddColumn("id", "Id")
+    Set CurrentList = list
+    Call list.SetOnSelectCallback("OnSelected", "probe-context")
+    Call list.SelectRow(0)
+End Sub
+
+Sub OnSelected(evt As Variant, context As String)
+    CallbackEvent = evt.EventType
+    CallbackContext = context
+End Sub

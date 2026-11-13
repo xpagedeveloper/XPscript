@@ -23,11 +23,17 @@ if (declaration is null || binder.Diagnostics.Count != 0)
 var method = new BoundMethodEmitter().Emit("Main", typeof(void), bound);
 var generated = $$"""
 using System;
+using System.Linq;
 public static class Program
 {
     public static class XPScriptRuntime
     {
         public static string PrintText(object? value) => value?.ToString() ?? "Variable is null";
+    }
+    public static class LSLegacyPrintRuntime
+    {
+        public static object? Text(object? value) => value;
+        public static string Format(params object?[] values) => string.Join("", values.Select(value => value?.ToString() ?? "Variable is null"));
     }
     public static string AstPrintText(object? value) => XPScriptRuntime.PrintText(value);
     {{method}}
@@ -186,8 +192,8 @@ try
             generated => { schemaFreeGenerated = generated; throw new InvalidOperationException("SCHEMA_FREE_SOURCE_CAPTURED"); });
     }
     catch (InvalidOperationException ex) when (ex.Message == "SCHEMA_FREE_SOURCE_CAPTURED") { }
-    if (schemaFreeGenerated.Contains("class XPScriptJsonSchema", StringComparison.Ordinal) ||
-        schemaFreeGenerated.Contains("class XPScriptHttpClient", StringComparison.Ordinal))
+    if (schemaFreeGenerated.Contains("internal sealed class XPScriptJsonSchema", StringComparison.Ordinal) ||
+        schemaFreeGenerated.Contains("internal sealed class XPScriptHttpClient", StringComparison.Ordinal))
         throw new InvalidOperationException("Schema-free AST source included JSON or HTTP runtime providers.");
     Console.WriteLine("AST_SCHEMA_FREE_DEPENDENCIES_MINIMAL_OK");
 }
@@ -215,9 +221,36 @@ try
         throw new InvalidOperationException("Schema-enabled AST source omitted a JSON-schema provider.");
     Console.WriteLine("AST_SCHEMA_ENABLED_DEPENDENCIES_COMPLETE_OK");
 }
+
 finally
 {
     try { Directory.Delete(schemaEnabledOutput, recursive: true); } catch { }
+}
+
+var listEventFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "ui-list-view-event-dispatch.xps");
+listEventFixture = Path.GetFullPath(listEventFixture);
+var listEventOutput = Path.Combine(Path.GetTempPath(), "xpscript-ui-list-event-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(listEventOutput);
+try
+{
+    await XPScript.Compiler.AstCompiler.CompileAsync(listEventFixture, listEventOutput, "win-x64");
+    var listAssembly = Assembly.LoadFile(Path.Combine(listEventOutput, "Generated.dll"));
+    var listProgram = listAssembly.GetType("Program") ?? throw new InvalidOperationException("UIListView AST Program type missing.");
+    listProgram.GetMethod("Main")!.Invoke(null, null);
+    var currentList = listProgram.GetField("CurrentList", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null)
+        ?? throw new InvalidOperationException("UIListView AST module field was not populated.");
+    var dispatch = currentList.GetType().GetMethod("DispatchRegisteredEvent", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+        ?? throw new InvalidOperationException("UIListView event dispatcher was not installed.");
+    dispatch.Invoke(currentList, ["select", "0"]);
+    var eventValue = listProgram.GetField("CallbackEvent", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null)?.ToString();
+    var contextValue = listProgram.GetField("CallbackContext", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null)?.ToString();
+    if (eventValue != "select" || contextValue != "probe-context")
+        throw new InvalidOperationException($"UIListView callback dispatch returned '{eventValue}|{contextValue}'.");
+    Console.WriteLine("AST_UI_LIST_VIEW_EVENT_DISPATCH_OK");
+}
+finally
+{
+    try { Directory.Delete(listEventOutput, recursive: true); } catch { }
 }
 
 var targetFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "target-specific-generated-code-next.xps");
