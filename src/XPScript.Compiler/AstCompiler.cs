@@ -1707,6 +1707,19 @@ internal static class Program
                 generated += Environment.NewLine + UIExtensionDesktopRuntimeSource.Code;
                 generated = new UIFormWindowLifecyclePostProcessor().Transform(generated);
             }
+            generated = new UIFormDateRangeValidationPostProcessor().Transform(generated);
+            generated = new UIFormTemporalRangeValidationPostProcessor().Transform(generated);
+            generated = new UIFormAdditionalFieldPreparePostProcessor().Transform(generated);
+            generated = new UIFormAdditionalFieldsPostProcessor().Transform(generated);
+            generated = new UIFormAdditionalFieldFixupPostProcessor().Transform(generated);
+            generated = UIFormBasicStructuralPostProcessor.Transform(generated);
+            if (!generated.Contains("internal sealed class XPScriptHttpClient", StringComparison.Ordinal))
+                generated += Environment.NewLine + NativeHttpRuntimeSource.Code;
+            if (generated.Contains("XPScriptTlsValidationState", StringComparison.Ordinal) &&
+                !generated.Contains("internal sealed class XPScriptTlsValidationState", StringComparison.Ordinal))
+                generated += Environment.NewLine + AstTlsRuntimeCode();
+            if (generated.Contains("XPScriptHttpCoreHelpers", StringComparison.Ordinal))
+                generated += Environment.NewLine + HttpCoreRuntimeSource.Code + HttpJsonRuntimeSource.Code;
         }
         using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
         generated = UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);

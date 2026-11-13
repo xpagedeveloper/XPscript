@@ -188,4 +188,14 @@ $jsonText = dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'cli-m
 if ($LASTEXITCODE -ne 0 -or ($jsonText | ConvertFrom-Json).result -ne 'ok') { throw 'Shard 6 target JSON result-format regression failed.' }
 Write-Host 'AST_TARGET_OUTPUT_REGRESSIONS_OK'
 
+Write-AstCliCheckpoint 'shard-6-uiform-controls'
+$uiFormControlsOutput = Join-Path $output 'uiform-controls-next'
+dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'ui-form-controls-next.xps') -o $uiFormControlsOutput --runtime=false --debug
+if ($LASTEXITCODE -ne 0) { throw 'Shard 6 UIForm controls compilation failed.' }
+$uiFormControlsResult = @(dotnet (Join-Path $uiFormControlsOutput 'Generated.dll'))
+if ($LASTEXITCODE -ne 0 -or ($uiFormControlsResult -join "`n") -notmatch 'AST_UIFORM_CONTROLS_OK') {
+    throw 'Shard 6 UIForm controls execution regression failed.'
+}
+Write-Host 'AST_UIFORM_CONTROLS_OK'
+
 Write-AstCliCheckpoint 'shard-6-complete'
