@@ -21,7 +21,7 @@ public sealed class XpsWebCompiler
     private static readonly Regex MainOrInitialize = new(@"(?im)^\s*(?:Public\s+|Private\s+)?Sub\s+(?:Main|Initialize)\b", RegexOptions.CultureInvariant);
     private static readonly Regex ScriptClassMarker = new(@"internal\s+static\s+class\s+Script\s*\{", RegexOptions.CultureInvariant);
     private static readonly Regex VariantDeclaration = new(@"(?im)^\s*Dim\s+([A-Za-z_]\w*)\s+As\s+Variant\s*$", RegexOptions.CultureInvariant);
-    private static readonly Regex LegacyWebObject = new(@"(?i)\b(?:UIForm|UIListView)\b", RegexOptions.CultureInvariant);
+    private static readonly Regex LegacyWebObject = new(@"(?i)\bUIForm\b", RegexOptions.CultureInvariant);
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, long> PersistentCacheSweeps = new(StringComparer.OrdinalIgnoreCase);
 
     public Task<XpsCompiledWebUnit> CompileAsync(string sourcePath, CancellationToken cancellationToken = default)
@@ -116,9 +116,9 @@ public sealed class XpsWebCompiler
         if (compilerSource.Contains(".Attachments", StringComparison.OrdinalIgnoreCase))
             compilerSource += "\n' XPScript compiler runtime feature: XPDBSQLite Attachments\n";
         compilerSource = EnsureCompilerEntryPoint(compilerSource);
-        // AST is the normal web compiler path. UIForm/UIListView are deliberately
-        // legacy-backed objects and must use the web-aware legacy transpilation
-        // path so Request/Response injection is preserved.
+        // AST is the normal web compiler path. UIForm remains on the web-aware
+        // legacy path until its full form web surface is migrated; UIListView
+        // uses the AST runtime and web postprocessors below.
         if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_LEGACY"), "1", StringComparison.Ordinal)
             && !LegacyWebObject.IsMatch(compilerSource))
         {

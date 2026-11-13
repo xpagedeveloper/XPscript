@@ -30,6 +30,7 @@ jobs:
           $projects = @(
             'tests/WebRestApiSmoke/WebRestApiSmoke.csproj',
             'tests/WebKestrelSmoke/WebKestrelSmoke.csproj',
+            'tests/WebUIListViewKestrelSmoke/WebUIListViewKestrelSmoke.csproj',
             'tests/WebCgiSmoke/WebCgiSmoke.csproj',
             'tests/WebFastCgiSmoke/WebFastCgiSmoke.csproj'
           )

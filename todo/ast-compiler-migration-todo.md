@@ -834,7 +834,9 @@ Initial implementation: expression conversions and a method-body emitter for ass
 - [ ] Migrate UIListView completely to the AST route.
   - [x] Bind `UIListView`/`UIListColumn`, constructor creation, core data/column/selection APIs and shared generated runtime; `ui-list-view-ast-core.xps` passes AST execution.
   - [x] Bind UIListView select/double-click callback and row-action signatures; `samples/ui-list-view-core.xps` now compiles and executes through AST.
-  - [ ] Add direct event-dispatch and desktop/web interaction probes, then remove the remaining UIListView postprocessor-only compatibility gaps and move coverage into the permanent FullTest workflow.
+  - [x] Add direct AST event-dispatch coverage; `AST_UI_LIST_VIEW_EVENT_DISPATCH_OK` validates callback event type and context.
+  - [x] Add a permanent Platform FullTest Kestrel probe; `WEB-UILISTVIEW-EVENT=OK` validates GET rendering, POST event transport and callback-updated live state.
+  - [ ] Complete desktop interaction coverage and remove the remaining UIListView postprocessor-only compatibility gaps.
 - [ ] Compare Android/mobile behavior as support matures.
   - [ ] Complete Android UIForm interaction coverage before starting iOS: locate generated fields and buttons with UIAutomator, enter a value, trigger the form action and verify the returned result in logcat.
   - [ ] Verify Android-specific UIForm controls and runtime behavior for media, camera, lifecycle and error routing with focused emulator probes.
