@@ -69,12 +69,13 @@ public sealed class XpsBrowserWasmCompiler
             // diagnostics during the isolated browser build.
             File.Copy(sourcePath, Path.Combine(workspace, Path.GetFileName(sourcePath)), overwrite: true);
             var usesExtendedArchive = generated.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
-            await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildProject(typeof(BrowserFormHost).Assembly.Location, usesExtendedArchive), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildProjectForWebAssemblySdk(typeof(BrowserFormHost).Assembly.Location, usesExtendedArchive), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "main.js"), MainJs, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), BrowserModuleJs, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
-            await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo"], cancellationToken).ConfigureAwait(false);
-            await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", "-o", publishRoot], cancellationToken).ConfigureAwait(false);
+            await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo", "-p:TargetFramework=net11.0", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true"], cancellationToken).ConfigureAwait(false);
+            await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", "-p:TargetFramework=net11.0", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-o", publishRoot], cancellationToken).ConfigureAwait(false);
+            NormalizePublishedLayout(publishRoot);
             var builtAppRoot = ResolveBuiltAppRoot(publishRoot, workspace);
             CopyDirectory(builtAppRoot, appRoot);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
@@ -99,6 +100,20 @@ public sealed class XpsBrowserWasmCompiler
         return path;
     }
     private static bool IsValidAppRoot(string appRoot) => Directory.Exists(appRoot) && File.Exists(Path.Combine(appRoot, "main.js")) && File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js"));
+    private static void NormalizePublishedLayout(string root)
+    {
+        var framework = Path.Combine(root, "_framework");
+        if (File.Exists(Path.Combine(root, "dotnet.js")) && !Directory.Exists(framework))
+        {
+            Directory.CreateDirectory(framework);
+            foreach (var file in Directory.EnumerateFiles(root))
+            {
+                var name = Path.GetFileName(file);
+                if (name is "index.html" or "main.js" or "xpscript-browser.js") continue;
+                File.Move(file, Path.Combine(framework, name));
+            }
+        }
+    }
     private static string ResolveBuiltAppRoot(params string[] searchRoots)
     {
         foreach (var searchRoot in searchRoots)
@@ -142,12 +157,15 @@ public sealed class XpsBrowserWasmCompiler
         var archiveItems = usesExtendedArchive
             ? "<PackageReference Include=\"SharpCompress\" Version=\"" + ApplicationDependencyCatalog.ResolveVersion("SharpCompress", ApplicationDependencyCatalog.SharpCompressVersion) + "\" /><TrimmerRootAssembly Include=\"SharpCompress\" />"
             : string.Empty;
-        return "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework><RuntimeIdentifier>browser-wasm</RuntimeIdentifier><SelfContained>true</SelfContained><PublishTrimmed>false</PublishTrimmed><GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles><OutputType>Exe</OutputType><StartupObject>Program</StartupObject><AllowUnsafeBlocks>true</AllowUnsafeBlocks><WasmMainJSPath>main.js</WasmMainJSPath><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><NoWarn>CA1416;CS8600;CS8601;CS8603;CS8618;$(NoWarn)</NoWarn><AssemblyName>XPScript.BrowserApp</AssemblyName></PropertyGroup><ItemGroup><Reference Include=\"XPScript.UI.Browser\"><HintPath>" + escaped + "</HintPath><Private>true</Private></Reference><TrimmerRootAssembly Include=\"XPScript.UI.Browser\" />" + archiveItems + "<Content Include=\"index.html\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /><Content Include=\"xpscript-browser.js\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /></ItemGroup></Project>";
+        return "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework><RuntimeIdentifier>browser-wasm</RuntimeIdentifier><SelfContained>true</SelfContained><PublishTrimmed>false</PublishTrimmed><GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles><OutputType>Exe</OutputType><StartupObject>Program</StartupObject><AllowUnsafeBlocks>true</AllowUnsafeBlocks><WasmMainJSPath>main.js</WasmMainJSPath><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings><NoWarn>CA1416;CS8600;CS8601;CS8603;CS8618;$(NoWarn)</NoWarn><AssemblyName>XPScript.BrowserApp</AssemblyName></PropertyGroup><ItemGroup><Reference Include=\"XPScript.UI.Browser\"><HintPath>" + escaped + "</HintPath><Private>true</Private></Reference><TrimmerRootAssembly Include=\"XPScript.UI.Browser\" />" + archiveItems + "<Content Include=\"index.html\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /><Content Include=\"main.js\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /><Content Include=\"xpscript-browser.js\" CopyToOutputDirectory=\"PreserveNewest\" CopyToPublishDirectory=\"PreserveNewest\" /></ItemGroup></Project>";
     }
+    private static string BuildProjectForWebAssemblySdk(string browserRuntimeAssemblyPath, bool usesExtendedArchive) =>
+        BuildProject(browserRuntimeAssemblyPath, usesExtendedArchive).Replace("Microsoft.NET.Sdk\"", "Microsoft.NET.Sdk.WebAssembly\"", StringComparison.Ordinal);
+
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
         var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workingDirectory, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true }; foreach (var argument in arguments) psi.ArgumentList.Add(argument);
-        using var process = Process.Start(psi) ?? throw new XpsWebCompilationException("Unable to start dotnet for browser-wasm compilation."); var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken); var stderr = process.StandardError.ReadToEndAsync(cancellationToken); await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false); var output = await stdout.ConfigureAwait(false) + Environment.NewLine + await stderr.ConfigureAwait(false); if (process.ExitCode != 0) throw new XpsWebCompilationException("browser-wasm build failed." + Environment.NewLine + Redact(output, workingDirectory));
+        using var process = Process.Start(psi) ?? throw new XpsWebCompilationException("Unable to start dotnet for browser-wasm compilation."); var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken); var stderr = process.StandardError.ReadToEndAsync(cancellationToken); await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false); var output = await stdout.ConfigureAwait(false) + Environment.NewLine + await stderr.ConfigureAwait(false); if (process.ExitCode != 0) { var details = Redact(output, workingDirectory); if (details.Contains("browser-wasm", StringComparison.OrdinalIgnoreCase) || details.Contains("wasm-tools", StringComparison.OrdinalIgnoreCase) || details.Contains("Microsoft.NETCore.App.Runtime.Mono.browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new XpsWebCompilationException("Browser WASM requires the .NET WASM workload. Install it with 'dotnet workload install wasm-tools' and retry." + Environment.NewLine + details); throw new XpsWebCompilationException("browser-wasm build failed." + Environment.NewLine + details); }
     }
     private static string Redact(string value, string workspace) { var result = value.Replace(workspace, "<wasm-build>", StringComparison.OrdinalIgnoreCase); return result.Length <= 16_384 ? result : result[..16_384] + Environment.NewLine + "<diagnostics truncated>"; }
     private static void TryDelete(string path) { try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch { } }

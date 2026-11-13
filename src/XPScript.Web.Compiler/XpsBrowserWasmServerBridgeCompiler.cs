@@ -134,13 +134,14 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             // Stage that source beside the generated file for the browser and
             // server companion builds.
             File.Copy(sourcePath, Path.Combine(workspace, Path.GetFileName(sourcePath)), overwrite: true);
-            await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildBrowserProject(typeof(BrowserFormHost).Assembly.Location), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildBrowserProject(typeof(BrowserFormHost).Assembly.Location).Replace("Microsoft.NET.Sdk\"", "Microsoft.NET.Sdk.WebAssembly\"", StringComparison.Ordinal), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "main.js"), BrowserRuntimeConstant("MainJs"), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
 
-            await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo"], "browser-wasm restore", cancellationToken).ConfigureAwait(false);
-            await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", "-o", browserPublishRoot], "browser-wasm publish", cancellationToken).ConfigureAwait(false);
+            await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo", "-p:TargetFramework=net11.0", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true"], "browser-wasm restore", cancellationToken).ConfigureAwait(false);
+            await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", "-p:TargetFramework=net11.0", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-o", browserPublishRoot], "browser-wasm publish", cancellationToken).ConfigureAwait(false);
+            NormalizePublishedLayout(browserPublishRoot);
 
             var builtAppRoot = ResolveBuiltAppRoot(browserPublishRoot, workspace);
             CopyDirectory(builtAppRoot, appRoot);
@@ -235,6 +236,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     </Reference>
     <TrimmerRootAssembly Include="XPScript.UI.Browser" />
     <Content Include="index.html" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="main.js" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="xpscript-browser.js" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
@@ -333,7 +335,16 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         }
         var output = await stdout.ConfigureAwait(false) + Environment.NewLine + await stderr.ConfigureAwait(false);
         if (process.ExitCode != 0)
-            throw new XpsWebCompilationException(operation + " failed." + Environment.NewLine + Redact(output, workingDirectory));
+        {
+            var details = Redact(output, workingDirectory);
+            if (details.Contains("browser-wasm", StringComparison.OrdinalIgnoreCase) ||
+                details.Contains("wasm-tools", StringComparison.OrdinalIgnoreCase) ||
+                details.Contains("Microsoft.NETCore.App.Runtime.Mono.browser-wasm", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new XpsWebCompilationException("Browser WASM requires the .NET WASM workload. Install it with 'dotnet workload install wasm-tools' and retry." + Environment.NewLine + details);
+            }
+            throw new XpsWebCompilationException(operation + " failed." + Environment.NewLine + details);
+        }
     }
 
     private static void TryKillProcessTree(Process process)
@@ -359,6 +370,20 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     }
 
     private static bool IsValidAppRoot(string appRoot) => Directory.Exists(appRoot) && File.Exists(Path.Combine(appRoot, "main.js")) && File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js"));
+    private static void NormalizePublishedLayout(string root)
+    {
+        var framework = Path.Combine(root, "_framework");
+        if (File.Exists(Path.Combine(root, "dotnet.js")) && !Directory.Exists(framework))
+        {
+            Directory.CreateDirectory(framework);
+            foreach (var file in Directory.EnumerateFiles(root))
+            {
+                var name = Path.GetFileName(file);
+                if (name is "index.html" or "main.js" or "xpscript-browser.js") continue;
+                File.Move(file, Path.Combine(framework, name));
+            }
+        }
+    }
 
     private static string ResolveBuiltAppRoot(params string[] searchRoots)
     {

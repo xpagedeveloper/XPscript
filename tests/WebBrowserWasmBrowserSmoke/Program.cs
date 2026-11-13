@@ -14,7 +14,10 @@ try
         .FirstOrDefault(path => path is not null && File.Exists(Path.Combine(path, "index.html")))
         ?? throw new InvalidOperationException("WASM publish root was not found.");
     var port = Random.Shared.Next(18000, 28000);
-    using var server = Process.Start(new ProcessStartInfo("python3", $"-m http.server {port} --bind 127.0.0.1")
+    var python = new[] { "python.exe", "python3", "py.exe" }
+        .FirstOrDefault(command => command is "python3" || File.Exists(command) || Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator).Any(path => File.Exists(Path.Combine(path, command))) == true)
+        ?? throw new InvalidOperationException("Could not find Python for the local WASM static server.");
+    using var server = Process.Start(new ProcessStartInfo(python, $"-m http.server {port} --bind 127.0.0.1")
     {
         WorkingDirectory = appRoot,
         RedirectStandardError = true,
