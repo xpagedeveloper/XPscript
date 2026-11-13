@@ -1853,11 +1853,14 @@ internal static class Program
                     throw MappedDiagnosticFromTransformed(control.Span, sourcePath, transformedSource, fullSource, $"Unknown label '{target.Text}'.");
             }
             ValidateLoopEntryTransfers(procedureStatements, labels, sourcePath, transformedSource, fullSource);
-            var topLevelLabels = procedureStatements
-                .Select((statement, index) => (statement, index))
-                .Where(item => item.statement is LabelStatementSyntax)
-                .Select(item => (Label: (LabelStatementSyntax)item.statement, item.index))
-                .ToArray();
+            var hasGoSub = FlattenStatements(procedureStatements).OfType<GoToStatementSyntax>().Any(item => item.IsGoSub);
+            var topLevelLabels = hasGoSub
+                ? procedureStatements
+                    .Select((statement, index) => (statement, index))
+                    .Where(item => item.statement is LabelStatementSyntax)
+                    .Select(item => (Label: (LabelStatementSyntax)item.statement, item.index))
+                    .ToArray()
+                : [];
             var mainSyntax = topLevelLabels.Length == 0
                 ? procedureStatements
                 : procedureStatements.Take(topLevelLabels[0].index).ToArray();
