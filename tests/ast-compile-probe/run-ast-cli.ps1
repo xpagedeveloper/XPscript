@@ -2314,12 +2314,24 @@ if ($LASTEXITCODE -ne 0) { throw 'AST GoSub On Error compilation failed.' }
 $gosubErrorResult = dotnet (Join-Path $gosubErrorOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($gosubErrorResult -join "`n") -ne "recovered`nafter") { throw 'AST GoSub On Error execution failed.' }
 Write-Host 'AST_GOSUB_ERROR_OK'
+$gosubErrorGotoOutput = Join-Path $output 'gosub-on-error-goto'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'gosub-on-error-goto.xps') -o $gosubErrorGotoOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST GoSub On Error GoTo compilation failed.' }
+$gosubErrorGotoResult = dotnet (Join-Path $gosubErrorGotoOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($gosubErrorGotoResult -join "`n") -ne "handled`nrecovered`nafter") { throw 'AST GoSub On Error GoTo/Resume Next execution failed.' }
+Write-Host 'AST_GOSUB_ERROR_GOTO_OK'
 $gosubLoopOutput = Join-Path $output 'gosub-loop'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'gosub-loop.xps') -o $gosubLoopOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST GoSub loop compilation failed.' }
 $gosubLoopResult = dotnet (Join-Path $gosubLoopOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($gosubLoopResult -join "`n") -ne '3') { throw 'AST GoSub loop execution failed.' }
 Write-Host 'AST_GOSUB_LOOP_OK'
+$printFormattingOutput = Join-Path $output 'print-formatting-ast'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'print-formatting-ast.xps') -o $printFormattingOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST structural Print formatting compilation failed.' }
+$printFormattingResult = dotnet (Join-Path $printFormattingOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($printFormattingResult -join "`n") -ne "  x   y") { throw 'AST structural Print Spc/Tab execution failed.' }
+Write-Host 'AST_PRINT_FORMATTING_OK'
 $resumeOutput = Join-Path $output 'resume-runtime'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'resume-runtime.xps') -o $resumeOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Resume runtime fixture failed to compile.' }

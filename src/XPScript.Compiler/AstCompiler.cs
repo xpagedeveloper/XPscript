@@ -971,6 +971,7 @@ using XpJsonObject = XPScriptJsonObject;
 using XpJsonArray = XPScriptJsonArray;
 using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
+{{LegacyPrintFormattingRuntimeSource.Code}}
 {{(Regex.IsMatch(fullSource, @"(?i)\b(ShowDialog|LoadFileDialog|OpenFileDialog|SaveFileDialog)\b") ? UIDialogRuntimeSource.Code : "")}}
 {{(runtimeFeatures.Ui ? UIExtensionRuntimeSource.Code + (usesJsonSchemaRuntime ? Environment.NewLine + UIFormValidationRuntimeSource.Code : "") : "")}}
 {{(usesArchive ? ArchiveRuntimeSource.Code + ArchiveMemoryRuntimeSource.Code + ArchiveIteratorRuntimeSource.Code : "")}}
@@ -1881,6 +1882,22 @@ internal static class Program
                 throw SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, transformedSource, fullSource);
             var boundHelpers = new Dictionary<string, IReadOnlyList<BoundStatement>>(StringComparer.OrdinalIgnoreCase);
             var bindingHelpers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            IReadOnlyList<BoundStatement> InlineErrorHandlers(IReadOnlyList<BoundStatement> statements)
+            {
+                var result = statements.ToList();
+                var existing = BoundStatementTraversal.Descendants(result).OfType<BoundLabelStatement>()
+                    .Select(item => item.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                foreach (var handler in BoundStatementTraversal.Descendants(result).OfType<BoundOnErrorStatement>()
+                             .Where(item => item.Target is not null).ToArray())
+                {
+                    if (existing.Contains(handler.Target!)) continue;
+                    if (!helperSyntax.ContainsKey(handler.Target!)) continue;
+                    result.Add(new BoundLabelStatement(handler.Target!));
+                    result.AddRange(BindGoSubHelper(handler.Target!));
+                    existing.Add(handler.Target!);
+                }
+                return result;
+            }
             IReadOnlyList<BoundStatement> BindGoSubHelper(string name)
             {
                 if (boundHelpers.TryGetValue(name, out var cached))
@@ -1899,12 +1916,14 @@ internal static class Program
                     throw SyntaxDiagnosticException(helperBinder.Diagnostics[0], sourcePath, transformedSource, fullSource);
                 foreach (var call in BoundStatementTraversal.Descendants(helperBound).OfType<BoundGoSubStatement>())
                     call.Body = BindGoSubHelper(call.Target);
+                helperBound = InlineErrorHandlers(helperBound).ToArray();
                 bindingHelpers.Remove(name);
                 boundHelpers[name] = helperBound;
                 return helperBound;
             }
             foreach (var call in BoundStatementTraversal.Descendants(bound).OfType<BoundGoSubStatement>())
                 call.Body = BindGoSubHelper(call.Target);
+            bound = InlineErrorHandlers(bound).ToList();
             foreach (var call in BoundStatementTraversal.Descendants(bound).OfType<BoundGoSubStatement>())
                 if (call.Body is null)
                     throw MappedDiagnosticFromTransformed(call.Span!.Value, sourcePath, transformedSource, fullSource, $"GoSub label '{call.Target}' could not be lowered.");

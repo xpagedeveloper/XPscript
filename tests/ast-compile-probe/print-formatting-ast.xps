@@ -1,0 +1,3 @@
+Sub Main()
+    Print Spc(2), "x", Tab(6), "y"
+End Sub

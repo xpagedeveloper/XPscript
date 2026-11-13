@@ -2,8 +2,8 @@ using XPScript.Compiler.Syntax;
 
 namespace XPScript.Compiler.Binding;
 
-public sealed class BoundPrintStatement(BoundExpression expression) : BoundStatement
+public sealed class BoundPrintStatement(IReadOnlyList<BoundExpression> expressions) : BoundStatement
 {
-    public BoundExpression Expression { get; } = expression;
+    public IReadOnlyList<BoundExpression> Expressions { get; } = expressions;
     public override BoundNodeKind Kind => BoundNodeKind.ExpressionStatement;
 }

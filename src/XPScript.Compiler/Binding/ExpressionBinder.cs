@@ -419,6 +419,14 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         {
             target = null;
             name = nameSyntax.IdentifierToken.Text;
+            if (name.Equals("Spc", StringComparison.OrdinalIgnoreCase) || name.Equals("Tab", StringComparison.OrdinalIgnoreCase))
+            {
+                var printArguments = syntax.Arguments.Select(Bind).ToArray();
+                var printFunction = new FunctionSymbol("Print." + name, typeof(object),
+                    printArguments.Select(argument => argument.Type).ToArray(), XpTypeSymbol.Variant,
+                    printArguments.Select(_ => XpTypeSymbol.Variant).ToArray());
+                return new BoundCallExpression(null, printFunction, printArguments);
+            }
             if (_symbols.TryLookup(name, out var ownIndexed) && ownIndexed is IndexedPropertySymbol indexed && _symbols.TryLookup("Me", out var me))
                 return BindIndexedProperty(syntax, new BoundNameExpression(me), indexed);
             if (name.Equals("CsvSave", StringComparison.OrdinalIgnoreCase) || name.Equals("CsvWriteFile", StringComparison.OrdinalIgnoreCase))

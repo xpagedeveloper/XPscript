@@ -325,7 +325,7 @@ public sealed class BoundStatementEmitter
                 Line($"XPScriptErrorRuntime.Raise(Convert.ToInt32({_expressions.Emit(error.Number)}), {description});");
                 break;
             case BoundPrintStatement print:
-                Line($"Console.WriteLine(Program.AstPrintText({_expressions.Emit(print.Expression)}));");
+                Line($"Console.WriteLine(LSLegacyPrintRuntime.Format({string.Join(", ", print.Expressions.Select(PrintPart))}));");
                 break;
             case BoundReturnStatement @return:
                 var returnedValue = @return.Expression is null ? null : _expressions.Emit(@return.Expression);
@@ -428,6 +428,21 @@ public sealed class BoundStatementEmitter
 
     private static string Label(string name) => "__xps_label_" + name.ToUpperInvariant();
     private static string GoSubMethod(string name) => "__xps_gosub_" + new string(name.Select(ch => char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_').ToArray());
+
+    private string PrintPart(BoundExpression expression)
+    {
+        if (expression is BoundConversionExpression conversion)
+        {
+            var converted = PrintPart(conversion.Expression);
+            if (!converted.StartsWith("LSLegacyPrintRuntime.Text(", StringComparison.Ordinal))
+                return converted;
+        }
+        if (expression is BoundCallExpression call && call.Function.Name.Split('.').Last().Equals("Spc", StringComparison.OrdinalIgnoreCase))
+            return $"LSLegacyPrintRuntime.Spc({_expressions.Emit(call.Arguments[0])})";
+        if (expression is BoundCallExpression tab && tab.Function.Name.Split('.').Last().Equals("Tab", StringComparison.OrdinalIgnoreCase))
+            return $"LSLegacyPrintRuntime.Tab({_expressions.Emit(tab.Arguments[0])})";
+        return $"LSLegacyPrintRuntime.Text({_expressions.Emit(expression)})";
+    }
 
     private void EmitGoSubHelpers(BoundEmissionContext output, IReadOnlyList<BoundStatement> statements)
     {

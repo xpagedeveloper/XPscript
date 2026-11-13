@@ -64,7 +64,7 @@ End Function
 
 Use block control flow unless a repository sample proves a shorter form is supported:
 
-`GoTo label` targets a case-insensitive label in the same Sub or Function. Experimental `ast-compile` supports top-level `GoSub label` / `Return` blocks, sequential GoSubs, nested control-flow calls, loop calls, calls from another GoSub helper and `On Error Resume Next` inside a helper. `On Error GoTo`/`Resume label` across extracted helper blocks remains migration work. Prefer a Sub or Function for new code. See `docs/ast-gosub-lowering.md` and the executable GoSub fixtures in `tests/ast-compile-probe`.
+`GoTo label` targets a case-insensitive label in the same Sub or Function. Experimental `ast-compile` supports top-level `GoSub label` / `Return` blocks, sequential GoSubs, nested control-flow calls, loop calls and error handling inside extracted helpers, including `On Error GoTo` with `Resume label`. Prefer a Sub or Function for new code. See `docs/ast-gosub-lowering.md` and the executable GoSub fixtures in `tests/ast-compile-probe`.
 
 For a declared List, `ForAll alias In values` exposes a writable element alias: assignment to the alias updates the List, and `ListTag(alias)` returns its tag. Prefer different alias names in nested loops for legacy compatibility. Experimental AST covers typed List declarations without initializers, alias reads/writes, tags and iteration snapshots; ByRef alias copy-back and the complete List API remain pending. See `docs/forall-iteration.md` and `tests/ast-compile-probe/forall-list-alias.xps`.
 

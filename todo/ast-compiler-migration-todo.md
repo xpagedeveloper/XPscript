@@ -910,7 +910,7 @@ Target outcome: unchanged files should be able to reuse their AST and bound sema
     - [x] Support GoSub calls from nested control-flow to top-level labels with `nested-gosub.xps`.
     - [x] Support GoSub from inside another GoSub helper with `nested-gosub-helper.xps`.
     - [x] Support GoSub calls from loop bodies and `On Error Resume Next` inside a helper with `gosub-loop.xps` and `gosub-on-error.xps`.
-    - [ ] Handle GoSub `On Error GoTo`/`Resume label` interaction across extracted helper blocks separately.
+    - [x] Handle GoSub `On Error GoTo`/`Resume label` interaction across extracted helper blocks; `gosub-on-error-goto.xps` verifies handler transfer and recovery.
 - [x] Migrate procedures. `Sub` and `Function` declarations, parameters, returns, Optional/ByRef handling and procedure-scoped labels are covered by AST fixtures.
 - [ ] Migrate classes/properties.
 - [ ] Migrate remaining special compiler constructs.
@@ -919,7 +919,7 @@ Target outcome: unchanged files should be able to reuse their AST and bound sema
 - [ ] Make AST path the default only after compatibility gates pass.
 - [x] Keep temporary legacy fallback only where explicitly documented. `AstObjectSupportRegistry` owns the remaining object fallback routes; XPImage now uses native AST compilation.
 - [ ] Remove legacy parser/transpiler paths after all supported syntax is migrated.
-- [ ] Remove obsolete regex/string rewriting after replacement coverage exists.
+- [ ] Remove obsolete regex/string rewriting after replacement coverage exists. Print multi-part formatting (`Spc`/`Tab`) now uses bound expressions and shared runtime formatting; remaining special constructs are tracked in the inventory.
 
 ## Investigation questions
 
