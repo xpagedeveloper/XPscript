@@ -39,6 +39,7 @@ public static class DesktopListViewHost
 {
     private static readonly object SyncRoot = new();
     private static bool _initialized;
+    private static Window? _testWindow;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
@@ -52,7 +53,7 @@ public static class DesktopListViewHost
         if (!XpsUIDesktopRuntimeBridge.IsSupportedPlatform())
             throw new PlatformNotSupportedException("XPScript desktop UIListView is supported on Windows, Linux and macOS.");
 
-        EnsureApplication();
+        DesktopApplicationHost.EnsureStarted();
         var request = JsonSerializer.Deserialize<DesktopListRequest>(requestJson, JsonOptions)
             ?? throw new InvalidOperationException("Desktop UIListView request is empty.");
 
@@ -60,6 +61,8 @@ public static class DesktopListViewHost
         Dispatcher.UIThread.Invoke(() => result = ShowDialogCore(request, eventCallback));
         return JsonSerializer.Serialize(result ?? new DesktopListResult("Cancel", -1), JsonOptions);
     }
+
+    internal static Window? GetWindowForTests() => _testWindow;
 
     private static void EnsureApplication()
     {
@@ -269,6 +272,7 @@ public static class DesktopListViewHost
             CanResize = true,
             Content = root
         };
+        _testWindow = window;
 
         var loop = new DispatcherFrame();
         ok.Click += (_, _) =>
@@ -295,7 +299,11 @@ public static class DesktopListViewHost
             result = new DesktopListResult("Cancel", -1);
             window.Close();
         };
-        window.Closed += (_, _) => loop.Continue = false;
+        window.Closed += (_, _) =>
+        {
+            _testWindow = null;
+            loop.Continue = false;
+        };
 
         RebuildHeader();
         RebuildRows();

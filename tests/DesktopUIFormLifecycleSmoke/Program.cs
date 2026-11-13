@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.Loader;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
@@ -19,6 +20,11 @@ if (args.Contains("--headless-host-probe", StringComparer.Ordinal))
 if (args.Contains("--headless-ast-generated", StringComparer.Ordinal))
 {
     await RunHeadlessAstGeneratedProbe();
+    return;
+}
+if (args.Contains("--headless-uilistview", StringComparer.Ordinal))
+{
+    await RunHeadlessUIListViewProbe();
     return;
 }
 
@@ -384,4 +390,93 @@ async Task RunHeadlessAstGeneratedProbe()
         DesktopApplicationHost.SetProcessKeepAlive(false);
     }
     Console.WriteLine("HEADLESS_AST_GENERATED_OK");
+}
+
+async Task RunHeadlessUIListViewProbe()
+{
+    DesktopApplicationHost.TestConfigurator = builder =>
+        builder.UseHeadless(new AvaloniaHeadlessPlatformOptions());
+
+    var callbackCount = 0;
+    var callbackContext = string.Empty;
+    var request = JsonSerializer.Serialize(new
+    {
+        title = "Headless list probe",
+        selectedIndex = -1,
+        sortable = false,
+        filterEnabled = false,
+        hasRowAction = false,
+        hasOnSelect = true,
+        hasOnDoubleClick = false,
+        rowActions = Array.Empty<object>(),
+        columns = new[]
+        {
+            new { name = "id", label = "ID", width = 120 },
+            new { name = "name", label = "Name", width = 180 }
+        },
+        rows = new[]
+        {
+            new { index = 0, values = new Dictionary<string, string> { ["id"] = "1001", ["name"] = "Kalle" } },
+            new { index = 1, values = new Dictionary<string, string> { ["id"] = "1002", ["name"] = "Anna" } }
+        }
+    });
+
+    var liveState = JsonSerializer.Serialize(new
+    {
+        selectedIndex = 1,
+        sortable = false,
+        filterEnabled = false,
+        columns = new[]
+        {
+            new { name = "id", label = "Selected ID", width = 120 },
+            new { name = "name", label = "Name", width = 180 }
+        },
+        rows = new[]
+        {
+            new { index = 0, href = (string?)null, values = new[] { "1001", "Kalle" }, actions = (object?)null },
+            new { index = 1, href = (string?)null, values = new[] { "1002", "Anna" }, actions = (object?)null }
+        }
+    });
+
+    DesktopApplicationHost.EnsureStarted();
+    var dialogTask = Task.Run(() => DesktopListViewHost.ShowDialog(request, (eventType, context) =>
+    {
+        callbackCount++;
+        callbackContext = eventType + ":" + context;
+        return liveState;
+    }));
+
+    Window? window = null;
+    for (var attempt = 0; attempt < 100 && window is null; attempt++)
+    {
+        await Task.Delay(50);
+        window = DesktopListViewHost.GetWindowForTests();
+    }
+    if (window is null)
+        throw new InvalidOperationException("Headless UIListView window was not created.");
+
+    Console.WriteLine("HEADLESS_UILISTVIEW_WINDOW_OK");
+    Dispatcher.UIThread.Invoke(() =>
+    {
+        var list = window.GetVisualDescendants().OfType<ListBox>().Single();
+        list.SelectedIndex = 1;
+        if (list.SelectedItem is null)
+            throw new InvalidOperationException("Headless UIListView row selection failed.");
+        var headers = window.GetVisualDescendants().OfType<TextBlock>().Select(text => text.Text).ToArray();
+        if (!headers.Contains("Selected ID", StringComparer.Ordinal))
+            throw new InvalidOperationException("Headless UIListView live update failed.");
+        var ok = window.GetVisualDescendants().OfType<Button>().Single(button => string.Equals(button.Content?.ToString(), "OK", StringComparison.Ordinal));
+        ok.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+    });
+
+    var result = await dialogTask.WaitAsync(TimeSpan.FromSeconds(5));
+    if (callbackCount != 1 || callbackContext != "select:1")
+        throw new InvalidOperationException($"Headless UIListView callback failed: {callbackContext} ({callbackCount}).");
+    if (!result.Contains("\"Result\":\"OK\"", StringComparison.OrdinalIgnoreCase) ||
+        !result.Contains("\"SelectedIndex\":1", StringComparison.OrdinalIgnoreCase))
+        throw new InvalidOperationException("Headless UIListView result did not preserve selection.");
+
+    DesktopApplicationHost.SetProcessKeepAlive(false);
+    Console.WriteLine("HEADLESS_UILISTVIEW_SELECT_OK");
+    Console.WriteLine("HEADLESS_UILISTVIEW_OK");
 }
