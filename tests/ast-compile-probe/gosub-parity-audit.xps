@@ -1,8 +1,12 @@
 Sub Main()
+    Dim value As Integer
+    value = 1
     GoSub worker
+    Print value
     Print "after"
     Exit Sub
 worker:
     Print "worker"
+    value = value + 1
     Return
 End Sub

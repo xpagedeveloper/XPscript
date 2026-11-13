@@ -1,13 +1,16 @@
 # AST GoSub lowering notes
 
-Status: design captured; implementation has not started.
+Status: top-level label blocks, nested control-flow calls, nested helper calls, loop calls and `On Error Resume Next` are implemented; labeled error-flow interaction remains open.
 
 ## Current behavior
 
 The lexer and syntax parser already recognize `GoSub label` and `Return`. The
-AST binder deliberately rejects GoSub with the diagnostic that GoSub is not
-implemented. Ordinary `GoTo` labels and procedure `Return` are already emitted
-by the AST path.
+AST binder lowers top-level GoSub label blocks to local generated helper
+functions. Ordinary `GoTo` labels and procedure `Return` remain emitted by the
+AST path. GoSub inside nested control-flow is supported when the target is a
+top-level label, including calls from another GoSub helper. Interaction with
+`On Error Resume Next` is supported inside a helper. `On Error GoTo` and
+`Resume label` across extracted helper blocks remain deliberately deferred.
 
 The legacy compatibility transpiler uses a separate return stack per procedure.
 It pushes a generated return id before jumping to the label and pops that id at
@@ -34,12 +37,13 @@ unchanged.
 
 ## Implementation order
 
-1. Add a lowering representation for one label block and one GoSub call.
-2. Generate a local helper for the simple `gosub-parity-audit.xps` case.
+1. Add a lowering representation for one label block and one GoSub call. (done)
+2. Generate a local helper for the simple `gosub-parity-audit.xps` case. (done)
 3. Bind `Return` in the extracted block to helper return and keep normal
    procedure returns unchanged.
-4. Add the sequential `multiple-gosub.xps` regression.
-5. Handle nested GoSub and loops in a separate change.
+4. Add the sequential `multiple-gosub.xps` regression. (done)
+5. Handle nested GoSub and loops in a separate change. (done for helper calls,
+   loop calls and `On Error Resume Next`; labeled error-flow integration remains open)
 6. Handle `On Error`/`Resume` interaction in a separate change.
 
 Do not replace GoSub with a normal top-level XPscript Function: that would

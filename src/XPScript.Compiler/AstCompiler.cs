@@ -1853,11 +1853,58 @@ internal static class Program
                     throw MappedDiagnosticFromTransformed(control.Span, sourcePath, transformedSource, fullSource, $"Unknown label '{target.Text}'.");
             }
             ValidateLoopEntryTransfers(procedureStatements, labels, sourcePath, transformedSource, fullSource);
+            var topLevelLabels = procedureStatements
+                .Select((statement, index) => (statement, index))
+                .Where(item => item.statement is LabelStatementSyntax)
+                .Select(item => (Label: (LabelStatementSyntax)item.statement, item.index))
+                .ToArray();
+            var mainSyntax = topLevelLabels.Length == 0
+                ? procedureStatements
+                : procedureStatements.Take(topLevelLabels[0].index).ToArray();
+            var helperSyntax = new Dictionary<string, IReadOnlyList<StatementSyntax>>(StringComparer.OrdinalIgnoreCase);
+            for (var i = 0; i < topLevelLabels.Length; i++)
+            {
+                var start = topLevelLabels[i].index + 1;
+                var end = i + 1 < topLevelLabels.Length ? topLevelLabels[i + 1].index : procedureStatements.Count;
+                helperSyntax[topLevelLabels[i].Label.Identifier.Text] = procedureStatements.Skip(start).Take(end - start).ToArray();
+            }
+            foreach (var transfer in FlattenStatements(mainSyntax).OfType<GoToStatementSyntax>().Where(item => item.IsGoSub))
+                if (!helperSyntax.ContainsKey(transfer.Target.Text))
+                    throw MappedDiagnosticFromTransformed(transfer.Span, sourcePath, transformedSource, fullSource, $"Unknown GoSub label '{transfer.Target.Text}'.");
             var binder = new StatementBinder(scope, returnType, returnType is not null, true, functionName, result, identity,
                 allowDynamicConversions: allowDynamicConversions);
-            var bound = procedureStatements.Select(binder.Bind).OfType<BoundStatement>().ToList();
+            var bound = mainSyntax.Select(binder.Bind).OfType<BoundStatement>().ToList();
             if (binder.Diagnostics.Count > 0)
                 throw SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, transformedSource, fullSource);
+            var boundHelpers = new Dictionary<string, IReadOnlyList<BoundStatement>>(StringComparer.OrdinalIgnoreCase);
+            var bindingHelpers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            IReadOnlyList<BoundStatement> BindGoSubHelper(string name)
+            {
+                if (boundHelpers.TryGetValue(name, out var cached))
+                    return cached;
+                if (!helperSyntax.TryGetValue(name, out var syntax))
+                    throw MappedDiagnosticFromTransformed(bound.First(statement => statement is BoundGoSubStatement call &&
+                        call.Target.Equals(name, StringComparison.OrdinalIgnoreCase)).Span!.Value,
+                        sourcePath, transformedSource, fullSource, $"Unknown GoSub label '{name}'.");
+                if (!bindingHelpers.Add(name))
+                    throw MappedDiagnosticFromTransformed(syntax[0].Span, sourcePath, transformedSource, fullSource,
+                        $"Recursive GoSub helper cycle involving '{name}' is not supported.");
+                var helperBinder = new StatementBinder(scope, returnType, returnType is not null, true, functionName, result, identity,
+                    allowDynamicConversions: allowDynamicConversions, allowGoSubReturn: true);
+                var helperBound = syntax.Select(helperBinder.Bind).OfType<BoundStatement>().ToArray();
+                if (helperBinder.Diagnostics.Count > 0)
+                    throw SyntaxDiagnosticException(helperBinder.Diagnostics[0], sourcePath, transformedSource, fullSource);
+                foreach (var call in BoundStatementTraversal.Descendants(helperBound).OfType<BoundGoSubStatement>())
+                    call.Body = BindGoSubHelper(call.Target);
+                bindingHelpers.Remove(name);
+                boundHelpers[name] = helperBound;
+                return helperBound;
+            }
+            foreach (var call in BoundStatementTraversal.Descendants(bound).OfType<BoundGoSubStatement>())
+                call.Body = BindGoSubHelper(call.Target);
+            foreach (var call in BoundStatementTraversal.Descendants(bound).OfType<BoundGoSubStatement>())
+                if (call.Body is null)
+                    throw MappedDiagnosticFromTransformed(call.Span!.Value, sourcePath, transformedSource, fullSource, $"GoSub label '{call.Target}' could not be lowered.");
             if (result is not null)
             {
                 // Function-name assignment is ordinary state mutation, never

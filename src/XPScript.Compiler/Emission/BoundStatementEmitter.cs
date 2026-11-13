@@ -14,8 +14,8 @@ public sealed class BoundStatementEmitter
 
     public string Emit(IReadOnlyList<BoundStatement> statements)
     {
-        if (BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
-            return new BoundErrorFlowEmitter(ImageScopeEnabled).Emit(statements);
+        if (ContainsErrorFlow(statements))
+            return new BoundErrorFlowEmitter(ImageScopeEnabled).Emit(statements) + EmitGoSubHelpersCode(statements);
         _flatControlFlow = Collect(statements).Any();
         var output = new BoundEmissionContext(statements);
         if (_flatControlFlow)
@@ -33,6 +33,7 @@ public sealed class BoundStatementEmitter
         }
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
+        EmitGoSubHelpers(output, statements);
         return output.Finish().Code;
     }
 
@@ -42,8 +43,11 @@ public sealed class BoundStatementEmitter
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         var output = new BoundEmissionContext(statements, source, sourcePath);
-        if (BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
-            return new BoundErrorFlowEmitter(ImageScopeEnabled).EmitMapped(statements, source, sourcePath);
+        if (ContainsErrorFlow(statements))
+        {
+            var errorFlow = new BoundErrorFlowEmitter(ImageScopeEnabled).EmitMapped(statements, source, sourcePath);
+            return new BoundEmissionResult(errorFlow.Code + EmitGoSubHelpersCode(statements), errorFlow.SourceMappings);
+        }
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
         return output.Finish();
@@ -63,6 +67,12 @@ public sealed class BoundStatementEmitter
                 break;
             case BoundGoToStatement transfer:
                 Line($"goto {Label(transfer.Target)};");
+                break;
+            case BoundGoSubStatement goSub:
+                Line($"{GoSubMethod(goSub.Target)}();");
+                break;
+            case BoundGoSubReturnStatement:
+                Line("return;");
                 break;
             case BoundExitForAllStatement:
                 Line("break;");
@@ -417,6 +427,66 @@ public sealed class BoundStatementEmitter
         => EmitStatement(output, statement, indent);
 
     private static string Label(string name) => "__xps_label_" + name.ToUpperInvariant();
+    private static string GoSubMethod(string name) => "__xps_gosub_" + new string(name.Select(ch => char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_').ToArray());
+
+    private void EmitGoSubHelpers(BoundEmissionContext output, IReadOnlyList<BoundStatement> statements)
+    {
+        foreach (var goSub in EnumerateGoSubs(statements).GroupBy(item => item.Target, StringComparer.OrdinalIgnoreCase).Select(group => group.First()))
+        {
+            if (goSub.Body is null)
+                throw new NotSupportedException($"GoSub '{goSub.Target}' has no lowered body.");
+            output.Write($"void {GoSubMethod(goSub.Target)}()", 0, goSub.Span);
+            output.Write("{", 0, goSub.Span);
+            foreach (var bodyStatement in goSub.Body)
+                EmitStatement(output, bodyStatement, 1);
+            output.Write("}", 0, goSub.Span);
+        }
+    }
+
+    private string EmitGoSubHelpersCode(IReadOnlyList<BoundStatement> statements)
+    {
+        var output = new BoundEmissionContext(statements);
+        foreach (var goSub in EnumerateGoSubs(statements).GroupBy(item => item.Target, StringComparer.OrdinalIgnoreCase).Select(group => group.First()))
+        {
+            if (goSub.Body is null)
+                throw new NotSupportedException($"GoSub '{goSub.Target}' has no lowered body.");
+            output.Write($"\nvoid {GoSubMethod(goSub.Target)}()", 0, goSub.Span);
+            output.Write("{", 0, goSub.Span);
+            var bodyHasErrorFlow = BoundStatementTraversal.Descendants(goSub.Body).Any(item => item is BoundOnErrorStatement or BoundResumeStatement);
+            if (bodyHasErrorFlow)
+            {
+                var code = new BoundErrorFlowEmitter(ImageScopeEnabled).Emit(goSub.Body);
+                foreach (var line in code.Split(["\r\n", "\n"], StringSplitOptions.None))
+                    output.Write(line, 1, goSub.Span);
+            }
+            else
+            {
+                foreach (var bodyStatement in goSub.Body)
+                    EmitStatement(output, bodyStatement, 1);
+            }
+            output.Write("}", 0, goSub.Span);
+        }
+        return output.Finish().Code;
+    }
+
+    private static IEnumerable<BoundGoSubStatement> EnumerateGoSubs(IEnumerable<BoundStatement> statements)
+    {
+        foreach (var statement in BoundStatementTraversal.Descendants(statements))
+        {
+            if (statement is BoundGoSubStatement goSub)
+            {
+                yield return goSub;
+                if (goSub.Body is not null)
+                    foreach (var nested in EnumerateGoSubs(goSub.Body))
+                        yield return nested;
+            }
+        }
+    }
+
+    private static bool ContainsErrorFlow(IEnumerable<BoundStatement> statements)
+        => BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement)
+           || EnumerateGoSubs(statements).Any(goSub => goSub.Body is not null &&
+               BoundStatementTraversal.Descendants(goSub.Body).Any(item => item is BoundOnErrorStatement or BoundResumeStatement));
 
     private static IEnumerable<BoundGoToStatement> Collect(IEnumerable<BoundStatement> statements)
         => BoundStatementTraversal.Descendants(statements).OfType<BoundGoToStatement>();

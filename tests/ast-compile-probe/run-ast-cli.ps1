@@ -2285,8 +2285,41 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'goto-procedure-scope.xps'
 if ($LASTEXITCODE -ne 0) { throw 'AST procedure-scoped GoTo compilation failed.' }
 $gotoResult = dotnet (Join-Path $gotoOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($gotoResult -join "`n") -ne "7`nGOTO_PROCEDURE_SCOPE_OK") { throw 'AST procedure-scoped GoTo execution failed.' }
-$unsupportedGoSub = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'unsupported-gosub.xps') -o (Join-Path $output 'unsupported-gosub') 2>&1
-if ($LASTEXITCODE -ne 2 -or ($unsupportedGoSub -join "`n") -notmatch 'GoSub is not implemented in the AST compiler') { throw 'AST GoSub was not explicitly rejected.' }
+$gosubOutput = Join-Path $output 'gosub-parity-audit'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'gosub-parity-audit.xps') -o $gosubOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST simple GoSub compilation failed.' }
+$gosubResult = dotnet (Join-Path $gosubOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($gosubResult -join "`n") -ne "worker`n2`nafter") { throw 'AST simple GoSub/Return execution failed.' }
+$multipleGoSubOutput = Join-Path $output 'multiple-gosub'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multiple-gosub.xps') -o $multipleGoSubOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST sequential GoSub compilation failed.' }
+$multipleGoSubResult = dotnet (Join-Path $multipleGoSubOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($multipleGoSubResult -join "`n") -ne "one`ntwo`nafter") { throw 'AST sequential GoSub/Return execution failed.' }
+Write-Host 'AST_GOSUB_OK'
+$nestedGoSubOutput = Join-Path $output 'nested-gosub'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-gosub.xps') -o $nestedGoSubOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST nested GoSub compilation failed.' }
+$nestedGoSubResult = dotnet (Join-Path $nestedGoSubOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($nestedGoSubResult -join "`n") -ne '') { throw 'AST nested GoSub execution failed.' }
+Write-Host 'AST_NESTED_GOSUB_OK'
+$nestedHelperGoSubOutput = Join-Path $output 'nested-gosub-helper'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-gosub-helper.xps') -o $nestedHelperGoSubOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST nested GoSub helper compilation failed.' }
+$nestedHelperGoSubResult = dotnet (Join-Path $nestedHelperGoSubOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($nestedHelperGoSubResult -join "`n") -ne "outer`ninner`nafter") { throw 'AST nested GoSub helper execution failed.' }
+Write-Host 'AST_NESTED_GOSUB_HELPER_OK'
+$gosubErrorOutput = Join-Path $output 'gosub-on-error'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'gosub-on-error.xps') -o $gosubErrorOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST GoSub On Error compilation failed.' }
+$gosubErrorResult = dotnet (Join-Path $gosubErrorOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($gosubErrorResult -join "`n") -ne "recovered`nafter") { throw 'AST GoSub On Error execution failed.' }
+Write-Host 'AST_GOSUB_ERROR_OK'
+$gosubLoopOutput = Join-Path $output 'gosub-loop'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'gosub-loop.xps') -o $gosubLoopOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST GoSub loop compilation failed.' }
+$gosubLoopResult = dotnet (Join-Path $gosubLoopOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($gosubLoopResult -join "`n") -ne '3') { throw 'AST GoSub loop execution failed.' }
+Write-Host 'AST_GOSUB_LOOP_OK'
 $resumeOutput = Join-Path $output 'resume-runtime'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'resume-runtime.xps') -o $resumeOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Resume runtime fixture failed to compile.' }

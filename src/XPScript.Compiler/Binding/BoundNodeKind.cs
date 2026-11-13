@@ -21,6 +21,8 @@ public enum BoundNodeKind
     ReturnStatement,
     LabelStatement,
     GoToStatement,
+    GoSubStatement,
+    GoSubReturnStatement,
     ExitForAllStatement,
     IfStatement,
     ForStatement,

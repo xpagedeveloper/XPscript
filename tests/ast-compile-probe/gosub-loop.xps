@@ -1,0 +1,12 @@
+Sub Main()
+    Dim i As Integer
+    Dim total As Integer
+    For i = 1 To 3
+        GoSub worker
+    Next
+    Print total
+    Exit Sub
+worker:
+    total = total + 1
+    Return
+End Sub

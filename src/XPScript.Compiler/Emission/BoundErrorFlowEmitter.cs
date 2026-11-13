@@ -92,6 +92,10 @@ internal sealed class BoundErrorFlowEmitter
                 return next;
             case BoundGoToStatement transfer:
                 return Add(statement, next, indent => Write($"{_next} = {Target(transfer.Target)};", indent, statement));
+            case BoundGoSubStatement goSub:
+                return Add(statement, next, indent => Write($"__xps_gosub_{Sanitize(goSub.Target)}();", indent, statement));
+            case BoundGoSubReturnStatement:
+                return Add(statement, next, _ => Write("return;", 0, statement));
             case BoundOnErrorStatement handler:
                 return Add(statement, next, indent =>
                 {
@@ -200,4 +204,6 @@ internal sealed class BoundErrorFlowEmitter
                 });
         }
     }
+
+    private static string Sanitize(string name) => new(name.Select(ch => char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_').ToArray());
 }

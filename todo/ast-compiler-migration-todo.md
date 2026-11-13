@@ -905,9 +905,12 @@ Target outcome: unchanged files should be able to reuse their AST and bound sema
 - [ ] Migrate control-flow statements.
   - [x] Add inline and split-line `If ... Then ... Else ...` / `ElseIf ... Then` parsing/emission. `samples/if-layouts.xps` now compiles and runs through both AST and legacy with matching output.
   - [ ] Implement GoSub lowering as a generated local helper that captures the procedure locals. Design and implementation notes are in `docs/ast-gosub-lowering.md`.
-    - [ ] Support one simple GoSub/Return block and `gosub-parity-audit.xps`.
-    - [ ] Support multiple sequential GoSubs with `multiple-gosub.xps`.
-    - [ ] Handle nested GoSub/loop control and On Error/Resume separately.
+    - [x] Support one simple GoSub/Return block and `gosub-parity-audit.xps`.
+    - [x] Support multiple sequential GoSubs with `multiple-gosub.xps`.
+    - [x] Support GoSub calls from nested control-flow to top-level labels with `nested-gosub.xps`.
+    - [x] Support GoSub from inside another GoSub helper with `nested-gosub-helper.xps`.
+    - [x] Support GoSub calls from loop bodies and `On Error Resume Next` inside a helper with `gosub-loop.xps` and `gosub-on-error.xps`.
+    - [ ] Handle GoSub `On Error GoTo`/`Resume label` interaction across extracted helper blocks separately.
 - [x] Migrate procedures. `Sub` and `Function` declarations, parameters, returns, Optional/ByRef handling and procedure-scoped labels are covered by AST fixtures.
 - [ ] Migrate classes/properties.
 - [ ] Migrate remaining special compiler constructs.
