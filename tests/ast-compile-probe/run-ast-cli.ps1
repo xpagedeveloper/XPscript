@@ -2342,6 +2342,10 @@ $expectedUiListView = @(
 )
 if ($LASTEXITCODE -ne 0 -or -not [string]::Equals(($uiListViewResult -join "`n"), ($expectedUiListView -join "`n"), [StringComparison]::Ordinal)) { throw 'AST UIListView callback execution failed.' }
 Write-Host 'AST_UI_LIST_VIEW_OK'
+$uiListViewEventsOutput = Join-Path $output 'ui-list-view-events'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot '..\..\samples\ui-list-view-events.xps') -o $uiListViewEventsOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST UIListView event/row-action compilation failed.' }
+Write-Host 'AST_UI_LIST_VIEW_EVENTS_COMPILE_OK'
 $resumeOutput = Join-Path $output 'resume-runtime'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'resume-runtime.xps') -o $resumeOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Resume runtime fixture failed to compile.' }

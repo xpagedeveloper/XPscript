@@ -112,6 +112,11 @@ internal sealed class XPScriptUIListView
         _rowActionTarget = NormalizeTarget(targetScript);
     }
 
+    // Compatibility overload retained for the legacy row-action declaration;
+    // the current navigation contract carries the target script only.
+    public void SetRowAction(object? targetScript, object? keyField, object? parameterName)
+        => SetRowAction(targetScript);
+
     public object? GetRow(object? index)
     {
         var rowIndex = NormalizeRowIndex(index);
