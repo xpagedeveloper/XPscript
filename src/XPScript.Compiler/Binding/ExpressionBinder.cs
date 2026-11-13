@@ -159,6 +159,14 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "No matching constructor for 'UIForm'.");
             return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User("UIForm"));
         }
+        if (typeName.Equals("UIListView", StringComparison.OrdinalIgnoreCase) || typeName.Equals("UIListColumn", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!typeName.Equals("UIListView", StringComparison.OrdinalIgnoreCase))
+                return Error(syntax.TypeName, CompilerDiagnosticCodes.InvalidNativeConstructor, AstUiListViewSupport.ConstructorMessage);
+            if (syntax.Arguments.Count > 1)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "No matching constructor for 'UIListView'.");
+            return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User("UIListView"));
+        }
         if (AstHttpSupport.IsHttp(typeName))
         {
             if (!typeName.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) && !typeName.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase))

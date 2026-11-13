@@ -1,0 +1,13 @@
+Sub Main()
+    Dim rows As New XPJsonArray
+    Dim first As New XPJsonObject
+    Dim list As New UIListView("Customers")
+    Call first.Set("id", "1001")
+    Call first.Set("name", "Kalle")
+    Call rows.Add(first)
+    Call list.BindData(rows)
+    Call list.AddColumn("name", "Name")
+    Call list.SetKeyField("id")
+    Call list.SelectRow(0)
+    Print list.Title & "|" & CStr(list.RowCount) & "|" & CStr(list.ColumnCount) & "|" & list.GetSelectedKey()
+End Sub
