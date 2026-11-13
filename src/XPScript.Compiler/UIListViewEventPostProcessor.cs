@@ -289,7 +289,10 @@ var method = hostType.GetMethod(
     private static string NormalizeTarget(object? value)
 """, "handler-normalizer");
 
-        return prefix + listSource;
+        var result = prefix + listSource;
+        return result.Contains("internal static class Program", StringComparison.Ordinal)
+            ? result.Replace("typeof(Script)", "typeof(Program)", StringComparison.Ordinal)
+            : result;
     }
 
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)

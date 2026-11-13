@@ -160,12 +160,6 @@ internal static class AstObjectSupportRegistry
             return true;
         }
         var code = RemoveStringsAndComments(source);
-        if (Regex.IsMatch(code, @"(?i)\bUIListView\b[\s\S]*\.(?:SetOn(?:Select|DoubleClick)Callback|AddRow(?:Button|NavigationButton)|SetRowAction)\s*\(") ||
-            Regex.IsMatch(code, @"(?i)\bUIListView\b[\s\S]*\b(?:SetOn(?:Select|DoubleClick)Callback|AddRow(?:Button|NavigationButton)|SetRowAction)\b"))
-        {
-            definition = new ObjectDefinition("UIListView callbacks/row actions", CompilationRoute.LegacyFallback, null);
-            return true;
-        }
         foreach (var candidate in Objects.Where(item => item.Route != CompilationRoute.Ast))
         {
             if (Regex.IsMatch(code, $@"(?i)\b{Regex.Escape(candidate.Name)}\b"))

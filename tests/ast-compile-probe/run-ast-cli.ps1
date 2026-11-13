@@ -2332,6 +2332,16 @@ if ($LASTEXITCODE -ne 0) { throw 'AST structural Print formatting compilation fa
 $printFormattingResult = dotnet (Join-Path $printFormattingOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($printFormattingResult -join "`n") -ne "  x   y") { throw 'AST structural Print Spc/Tab execution failed.' }
 Write-Host 'AST_PRINT_FORMATTING_OK'
+$uiListViewOutput = Join-Path $output 'ui-list-view-core'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot '..\..\samples\ui-list-view-core.xps') -o $uiListViewOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST UIListView callback compilation failed.' }
+$uiListViewResult = dotnet (Join-Path $uiListViewOutput 'Generated.dll')
+$expectedUiListView = @(
+    'TITLE=Customers', 'ROWS=2', 'COLUMNS=2', 'ROW0_NAME=Kalle',
+    'SELECTED_INDEX=1', 'SELECTED_NAME=Anna', 'SELECTED_KEY=1002', 'SELECTED_AFTER_CLEAR=-1'
+)
+if ($LASTEXITCODE -ne 0 -or -not [string]::Equals(($uiListViewResult -join "`n"), ($expectedUiListView -join "`n"), [StringComparison]::Ordinal)) { throw 'AST UIListView callback execution failed.' }
+Write-Host 'AST_UI_LIST_VIEW_OK'
 $resumeOutput = Join-Path $output 'resume-runtime'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'resume-runtime.xps') -o $resumeOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Resume runtime fixture failed to compile.' }

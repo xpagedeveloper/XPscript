@@ -26,7 +26,17 @@ internal static class AstUiListViewSupport
     };
 
     internal static readonly IReadOnlyList<AstNativeObjectSurface.Member> Members =
-        AstNativeObjectSurface.ReadMembers(Classes, ["XPScriptUIList", "XPScriptUIListView", "XPScriptUIListColumn"], LanguageType).ToArray();
+        AstNativeObjectSurface.ReadMembers(Classes, ["XPScriptUIList", "XPScriptUIListView", "XPScriptUIListColumn"], LanguageType)
+        .Concat([
+            new("UIListView", "SetOnSelect", "void", ["object?"], ["handlerName"], false, false, false),
+            new("UIListView", "SetOnDoubleClick", "void", ["object?"], ["handlerName"], false, false, false),
+            new("UIListView", "SetOnSelectCallback", "void", ["object?", "object?"], ["handlerName", "callbackArgument"], false, false, false),
+            new("UIListView", "SetOnDoubleClickCallback", "void", ["object?", "object?", "object?"], ["handlerName", "callbackArgument", "callbackArgument2"], false, false, false),
+            new("UIListView", "AddRowButton", "void", ["object?", "object?", "object?"], ["name", "label", "handlerName"], false, false, false),
+            new("UIListView", "AddRowNavigationButton", "void", ["object?", "object?", "object?"], ["name", "label", "targetScript"], false, false, false),
+            new("UIListView", "ClearRowActions", "void", [], [], false, false, false),
+            new("UIListView", "RemoveSelectedRow", "void", [], [], false, false, false)
+        ]).ToArray();
 
     internal static string? RuntimeType(string name) => RuntimeTypes.GetValueOrDefault(name);
     internal static void Import(SymbolTable symbols) => AstNativeObjectSurface.Import(symbols, Members, LanguageType);

@@ -831,6 +831,10 @@ Initial implementation: expression conversions and a method-body emitter for ass
         - [x] Add focused AST-only compile/runtime fixtures before changing `UIForm` from `LegacyFallback` to `Ast`. The callback-free route, schema-free/schema-enabled runtime fixtures and desktop headless interaction probe are separate from callback migration.
       - [x] Run the existing legacy output first in a focused macOS probe and record its markers and exit code. GitHub run https://github.com/xpagedeveloper/XPscript/actions/runs/42343114766 compiled legacy successfully, then the generated UIForm failed at runtime with `IDispatcherImpl belongs to a different thread` (exit 134). The legacy path needs the same macOS main-thread host fix; `--legacy-only` keeps this regression independently runnable.
     - [x] Extend the interaction contract to an Android UIForm workflow after APK/emulator prerequisites are available; keep device/logcat verification separate from desktop parity. The focused AST emulator workflow passed APK build, KVM boot, installation, explicit activity start and `ANDROID-UIFORM=start` logcat verification in run 42902450822.
+- [ ] Migrate UIListView completely to the AST route.
+  - [x] Bind `UIListView`/`UIListColumn`, constructor creation, core data/column/selection APIs and shared generated runtime; `ui-list-view-ast-core.xps` passes AST execution.
+  - [x] Bind UIListView select/double-click callback and row-action signatures; `samples/ui-list-view-core.xps` now compiles and executes through AST.
+  - [ ] Add direct event-dispatch and desktop/web interaction probes, then remove the remaining UIListView postprocessor-only compatibility gaps and move coverage into the permanent FullTest workflow.
 - [ ] Compare Android/mobile behavior as support matures.
   - [ ] Complete Android UIForm interaction coverage before starting iOS: locate generated fields and buttons with UIAutomator, enter a value, trigger the form action and verify the returned result in logcat.
   - [ ] Verify Android-specific UIForm controls and runtime behavior for media, camera, lifecycle and error routing with focused emulator probes.

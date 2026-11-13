@@ -1708,6 +1708,15 @@ internal static class Program
                 generated = new UIFormWindowLifecyclePostProcessor().Transform(generated);
             }
         }
+        if (runtimeFeatures.Ui && AstObjectSupportRegistry.UsesObject(fullSource, "UIListView"))
+        {
+            generated = new UIListViewDesktopPostProcessor().Transform(generated);
+            generated = new UIListViewEventPostProcessor().Transform(generated);
+            generated = new UIListViewCallbackRuntimePostProcessor().Transform(generated);
+            generated = new UIListViewLiveUpdatePostProcessor().Transform(generated);
+            generated = new UIListViewRowActionsPostProcessor().Transform(generated);
+            generated = new UIListViewRowActionCompatibilityPostProcessor().Transform(generated);
+        }
         using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
         generated = UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);
         if (usesAi)

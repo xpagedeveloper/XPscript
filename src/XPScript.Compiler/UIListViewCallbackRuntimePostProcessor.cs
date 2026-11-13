@@ -54,9 +54,15 @@ internal sealed class UIListViewCallbackRuntimePostProcessor
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
-        if (generated.Contains(NewHandler, StringComparison.Ordinal)) return generated;
+        if (generated.Contains(NewHandler, StringComparison.Ordinal) ||
+            generated.Contains("private void InvokeRegisteredHandler(string handlerName)", StringComparison.Ordinal) &&
+            generated.Contains("XPScriptCallbackRuntime.Invoke(handlerName, \"UIListView event\")", StringComparison.Ordinal))
+            return generated;
         if (!generated.Contains(OldHandler, StringComparison.Ordinal))
             throw new CompilerException("Unable to route UIListView handlers through the shared callback runtime.");
-        return generated.Replace(OldHandler, NewHandler, StringComparison.Ordinal);
+        var result = generated.Replace(OldHandler, NewHandler, StringComparison.Ordinal);
+        return result.Contains("internal static class Program", StringComparison.Ordinal)
+            ? result.Replace("typeof(Script)", "typeof(Program)", StringComparison.Ordinal)
+            : result;
     }
 }
