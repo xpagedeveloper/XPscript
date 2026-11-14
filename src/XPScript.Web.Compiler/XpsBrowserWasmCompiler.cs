@@ -40,7 +40,7 @@ public sealed class XpsBrowserWasmCompiler
 
         var compilerIdentity = typeof(XpsBrowserWasmCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
         var assetFingerprint = UIFormAppAssets.ComputeFingerprint(sourcePath);
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity + "\0" + assetFingerprint)));
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity + "\0" + assetFingerprint + "\0" + SelectedTargetFramework())));
         var sourceKey = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetRelativePath(_webRoot, sourcePath).Replace('\\', '/').ToLowerInvariant())))[..24];
         var bundleRoot = Path.Combine(_cacheRoot, sourceKey, hash);
         var appRoot = Path.Combine(bundleRoot, "app");
@@ -74,8 +74,8 @@ public sealed class XpsBrowserWasmCompiler
             await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), BrowserModuleJs, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
             var targetFramework = SelectedTargetFramework();
-            await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true"], cancellationToken).ConfigureAwait(false);
-            await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-o", publishRoot], cancellationToken).ConfigureAwait(false);
+            await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-p:NuGetAudit=false", "-p:RestoreIgnoreFailedSources=true"], cancellationToken).ConfigureAwait(false);
+            await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-p:NuGetAudit=false", "-o", publishRoot], cancellationToken).ConfigureAwait(false);
             NormalizePublishedLayout(publishRoot);
             var builtAppRoot = ResolveBuiltAppRoot(publishRoot, workspace);
             CopyDirectory(builtAppRoot, appRoot);

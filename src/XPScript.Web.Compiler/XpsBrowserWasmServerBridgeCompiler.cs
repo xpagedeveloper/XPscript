@@ -63,9 +63,10 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     {
         sourcePath = Path.GetFullPath(sourcePath);
         webRoot = Path.GetFullPath(webRoot);
+        var targetFramework = SelectedTargetFramework();
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var compilerIdentity = typeof(XpsBrowserWasmServerBridgeCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
-        var sourceHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity + "\0" + BridgeCompilerVersion)));
+        var sourceHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity + "\0" + BridgeCompilerVersion + "\0" + targetFramework)));
         var serverSideOptions = BrowserWasmServerSideMetadata.ReadAnnotatedProcedureOptions(source);
         var annotatedProcedures = BrowserWasmServerSideMetadata.ReadAnnotatedProcedures(source);
         var normalizedSource = NormalizeVariantSetAssignments(parsed.Source);
@@ -139,9 +140,9 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), BuildIndexHtml(), cancellationToken).ConfigureAwait(false);
 
-            var targetFramework = SelectedTargetFramework();
-            await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true"], "browser-wasm restore", cancellationToken).ConfigureAwait(false);
-            await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-o", browserPublishRoot], "browser-wasm publish", cancellationToken).ConfigureAwait(false);
+            var buildIsolation = new[] { "-p:UseSharedCompilation=false", "-p:BuildInParallel=false", "-m:1" };
+            await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--disable-build-servers", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-p:NuGetAudit=false", "-p:RestoreIgnoreFailedSources=true", .. buildIsolation], "browser-wasm restore", cancellationToken).ConfigureAwait(false);
+            await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--disable-build-servers", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-p:NuGetAudit=false", "-o", browserPublishRoot, .. buildIsolation], "browser-wasm publish", cancellationToken).ConfigureAwait(false);
             NormalizePublishedLayout(browserPublishRoot);
 
             var builtAppRoot = ResolveBuiltAppRoot(browserPublishRoot, workspace);
@@ -151,16 +152,19 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
 
             var serverSource = EnsureEntryPoint(normalizedSource, parsed.Routes);
+            LogBuildStep("server transpile: start");
             var serverGenerated = new XPScriptTranspiler().TranspileRestricted(
                 serverSource,
                 sourcePath,
                 CompilerDriver.CurrentRuntimeIdentifier(),
                 [webRoot]);
+            LogBuildStep("server transpile: done");
             serverGenerated = XPScriptTranspiler.ApplyWebUiFormModelExtensions(serverGenerated);
+            LogBuildStep("server model extensions: done");
             await File.WriteAllTextAsync(Path.Combine(workspace, "ServerGenerated.cs"), serverGenerated, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "ServerCompanion.csproj"), BuildServerProject(serverGenerated), cancellationToken).ConfigureAwait(false);
-            await RunDotNetAsync(workspace, ["restore", "ServerCompanion.csproj", "--nologo"], "server companion restore", cancellationToken).ConfigureAwait(false);
-            await RunDotNetAsync(workspace, ["build", "ServerCompanion.csproj", "-c", "Release", "--no-restore", "--nologo", "-o", serverOutputRoot], "server companion build", cancellationToken).ConfigureAwait(false);
+            await RunDotNetAsync(workspace, ["restore", "ServerCompanion.csproj", "--disable-build-servers", "--nologo", "-p:NuGetAudit=false", "-p:RestoreIgnoreFailedSources=true", .. buildIsolation], "server companion restore", cancellationToken).ConfigureAwait(false);
+            await RunDotNetAsync(workspace, ["build", "ServerCompanion.csproj", "-c", "Release", "--no-restore", "--disable-build-servers", "--nologo", "-o", serverOutputRoot, .. buildIsolation], "server companion build", cancellationToken).ConfigureAwait(false);
 
             var builtServerAssembly = Path.Combine(serverOutputRoot, "XPScript.BrowserServer.dll");
             if (!File.Exists(builtServerAssembly))
@@ -325,11 +329,10 @@ internal static class XpsBrowserWasmServerBridgeCompiler
 
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, string operation, CancellationToken cancellationToken)
     {
-        var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workingDirectory, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
+        var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workingDirectory, UseShellExecute = false, RedirectStandardOutput = false, RedirectStandardError = false, CreateNoWindow = true };
         foreach (var argument in arguments) psi.ArgumentList.Add(argument);
+        LogBuildStep($"{operation}: start {string.Join(' ', arguments)}");
         using var process = Process.Start(psi) ?? throw new XpsWebCompilationException("Unable to start dotnet for " + operation + ".");
-        var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
         try
         {
             await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
@@ -340,18 +343,21 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             try { await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false); } catch { }
             throw;
         }
-        var output = await stdout.ConfigureAwait(false) + Environment.NewLine + await stderr.ConfigureAwait(false);
+        LogBuildStep($"{operation}: exit {process.ExitCode}");
         if (process.ExitCode != 0)
         {
-            var details = Redact(output, workingDirectory);
-            if (details.Contains("browser-wasm", StringComparison.OrdinalIgnoreCase) ||
-                details.Contains("wasm-tools", StringComparison.OrdinalIgnoreCase) ||
-                details.Contains("Microsoft.NETCore.App.Runtime.Mono.browser-wasm", StringComparison.OrdinalIgnoreCase))
+            if (operation.Contains("browser-wasm", StringComparison.OrdinalIgnoreCase))
             {
-                throw new XpsWebCompilationException("Browser WASM requires the matching .NET WASM workload, but it is not available. XPScript does not install workloads; install it separately and retry." + Environment.NewLine + details);
+                throw new XpsWebCompilationException("Browser WASM build failed. Verify that the matching .NET WASM workload is installed; XPScript does not install workloads.");
             }
-            throw new XpsWebCompilationException(operation + " failed." + Environment.NewLine + details);
+            throw new XpsWebCompilationException(operation + " failed with exit code " + process.ExitCode + ".");
         }
+    }
+
+    private static void LogBuildStep(string message)
+    {
+        if (string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal))
+            Console.Error.WriteLine($"[XPScript.WASM {DateTimeOffset.UtcNow:O}] {message}");
     }
 
     private static void TryKillProcessTree(Process process)
