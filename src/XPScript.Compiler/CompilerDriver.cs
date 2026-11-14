@@ -233,6 +233,7 @@ public sealed class CompilerDriver
                 assemblyName: OutputAssemblyName(outputPath));
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
+            await WriteSelectedSdkGlobalJsonAsync(tempRoot);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
             CompilerSourceDocuments.Stage(sourcePath, includeResult.Map, tempRoot);
@@ -361,6 +362,7 @@ public sealed class CompilerDriver
                 assemblyName: "Generated");
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
+            await WriteSelectedSdkGlobalJsonAsync(tempRoot);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
             if (IsAndroidRuntime(rid))
@@ -609,6 +611,7 @@ public sealed class CompilerDriver
 
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
+            await WriteSelectedSdkGlobalJsonAsync(tempRoot);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
             var stagedSourcePath = Path.Combine(tempRoot, Path.GetFileName(sourcePath));
@@ -708,6 +711,15 @@ public sealed class CompilerDriver
         throw new CompilerException(diagnostic.Description, [diagnostic]);
     }
 
+    private static async Task WriteSelectedSdkGlobalJsonAsync(string tempRoot)
+    {
+        var targetFramework = Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK");
+        if (string.IsNullOrWhiteSpace(targetFramework)) return;
+        var path = Path.Combine(tempRoot, "global.json");
+        await File.WriteAllTextAsync(path, DotNetVersionSelection.CreateGlobalJson(targetFramework));
+        CompilerPathSecurity.HardenTemporaryFile(path);
+    }
+
     private static string BuildGeneratedProject(
         string runtimeIdentifier,
         bool selfContained,
@@ -743,7 +755,8 @@ public sealed class CompilerDriver
     <EnableCompressionInSingleFile>{selfContained.ToString().ToLowerInvariant()}</EnableCompressionInSingleFile>
 """
             : string.Empty;
-        var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
+        var targetFramework = isAndroid ? "net10.0-android" :
+            (Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selected ? selected : "net10.0");
         var startupObject = isAndroid ? string.Empty : "    <StartupObject>Program</StartupObject>\n";
         var androidProperties = isAndroid
             ? $"""

@@ -193,6 +193,7 @@ public static class XPScriptCompilerCommandLine
         var resultFormat = "text";
         var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
         string? target = null;
+        string? targetFramework = null;
         var restricted = false;
         var debug = false;
         var info = false;
@@ -232,6 +233,8 @@ public static class XPScriptCompilerCommandLine
                 }
                 else if (Is(args[i], "--target") && i + 1 < args.Length)
                     target = args[++i].ToLowerInvariant();
+                else if (Is(args[i], "--target-framework") && i + 1 < args.Length)
+                    targetFramework = args[++i];
                 else if (Is(args[i], "--result-format") && i + 1 < args.Length)
                     resultFormat = args[++i].ToLowerInvariant();
                 else if (Is(args[i], "--restricted"))
@@ -259,6 +262,9 @@ public static class XPScriptCompilerCommandLine
 
             if (resultFormat is not ("text" or "json" or "xml"))
                 throw new ArgumentException("--result-format must be text, json, or xml.");
+            targetFramework = DotNetVersionSelection.NormalizeTargetFramework(targetFramework);
+            _ = DotNetVersionSelection.SelectSdk(targetFramework);
+            Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", targetFramework);
             if (target is not null && target is not ("desktop" or "console" or "webiis"))
                 throw new ArgumentException("--target must be desktop, console, or webiis.");
             if (target == "webiis" && embedAssets)
@@ -338,6 +344,7 @@ public static class XPScriptCompilerCommandLine
         var sourcePath = Path.GetFullPath(args[0]);
         var outputDirectory = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourcePath)!, "ast-output"));
         string? target = null;
+        string? targetFramework = null;
         var debug = false;
         var info = false;
         var resultFormat = "text";
@@ -363,6 +370,8 @@ public static class XPScriptCompilerCommandLine
                 info = true;
             else if (Is(args[i], "--target") && i + 1 < args.Length)
                 target = args[++i].ToLowerInvariant();
+            else if (Is(args[i], "--target-framework") && i + 1 < args.Length)
+                targetFramework = args[++i];
             else if ((Is(args[i], "--rid") || Is(args[i], "--platform")) && i + 1 < args.Length)
                 runtimeIdentifier = args[++i].ToLowerInvariant();
             else if (args[i].StartsWith("--runtime=", StringComparison.OrdinalIgnoreCase))
@@ -412,6 +421,9 @@ public static class XPScriptCompilerCommandLine
 
         try
         {
+            targetFramework = DotNetVersionSelection.NormalizeTargetFramework(targetFramework);
+            _ = DotNetVersionSelection.SelectSdk(targetFramework);
+            Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", targetFramework);
             // Keep the established framework-dependent AST layout by default. When
             // either publish switch explicitly requests a non-default layout, pass
             // that choice into the generated-project backend.
@@ -509,6 +521,7 @@ public static class XPScriptCompilerCommandLine
         var debug = false;
         var info = false;
         var resultFormat = "text";
+        string? targetFramework = null;
         var restricted = false;
         var scriptArgs = new List<string>();
         var sourceRoots = new List<string>();
@@ -527,6 +540,11 @@ public static class XPScriptCompilerCommandLine
                 }
                 else if (value.Equals("--debug", StringComparison.OrdinalIgnoreCase)) debug = true;
                 else if (value.Equals("--info", StringComparison.OrdinalIgnoreCase)) info = true;
+                else if (value.Equals("--target-framework", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--target-framework requires a .NET major version, for example 10 or 11.");
+                    targetFramework = args[i];
+                }
                 else if (value.Equals("--no-daemon", StringComparison.OrdinalIgnoreCase)) { }
                 else if (value.Equals("--result-format", StringComparison.OrdinalIgnoreCase))
                 {
@@ -574,6 +592,11 @@ public static class XPScriptCompilerCommandLine
             }
             if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("XPScript source files must use the .xps extension.");
+
+            targetFramework = DotNetVersionSelection.NormalizeTargetFramework(targetFramework);
+            _ = DotNetVersionSelection.SelectSdk(targetFramework);
+            DotNetVersionSelection.RequireRuntime(targetFramework);
+            Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", targetFramework);
 
             var sourceDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
             if (UIFormAppAssets.UsesUIForm(sourcePath))
@@ -1180,10 +1203,10 @@ XPScript Compiler and Runtime
 (c) xpagedeveloper.com 2026
 
 Usage:
-  {compileCommand} <source.xps> [-o output] [--target desktop|console|webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--info] [--debug] [--embed-assets] [--result-format text|json|xml] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  {compileCommand} <source.xps> [-o output] [--target desktop|console|webiis] [--target-framework 10|11|...] [--platform RID] [--single-file true|false] [--runtime true|false] [--info] [--debug] [--embed-assets] [--result-format text|json|xml] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
   xpscript legacy-compile|compilev1 <source.xps> [legacy compiler options]
   xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml]
-  xpscript ast-run <source.xps> [--platform RID] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
+  xpscript ast-run <source.xps> [--target-framework 10|11|...] [--platform RID] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
   xpscript mcp
   xpscript mcp install codex|claude [--scope user|project] [--force]
   {runCommand} <source.xps> [--info] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
@@ -1200,11 +1223,12 @@ Compiler targets:
 The default compile and run commands use the AST compiler. Use legacy-compile/compilev1 and legacy-run/runv1 for the legacy compiler during migration.
 
 If --platform/--rid is omitted, XPScript targets the current operating system and process architecture.
-Desktop compile defaults to --single-file=true and --runtime=false: application libraries are bundled into the executable, while .NET 10 must be installed on the target computer.
+If --target-framework is omitted, the highest installed .NET SDK major version (10 or higher) is selected, including its highest installed patch. For example, --target-framework 10 selects the highest installed 10.x SDK and emits net10.0.
+Desktop compile defaults to --single-file=true and --runtime=false: application libraries are bundled into the executable, while the selected .NET runtime must be installed on the target computer.
 --single-file=false publishes the executable and application libraries as separate files in the output directory.
---runtime=true includes the .NET 10 runtime; --runtime=false requires a compatible installed .NET 10 runtime.
-When --runtime=false and .NET 10 is missing, the native .NET apphost reports the missing framework and provides Microsoft's install/download link before managed application code starts.
-For --target webiis, --runtime=true creates a self-contained package and --runtime=false creates a .NET 10 Hosting Bundle dependent package.
+--runtime=true includes the selected .NET runtime; --runtime=false requires a compatible installed runtime for the selected target framework.
+When running a framework-dependent program, XPscript checks that the selected runtime major is installed and reports the required version before managed application code starts.
+For --target webiis, --runtime=true creates a self-contained package and --runtime=false creates a Hosting Bundle dependent package for the selected target framework.
 --embed-assets embeds a UIForm application's assets/ tree into a desktop executable. Embedded assets are materialized beside the executable at startup so existing assets/... paths continue to work.
 Without --embed-assets, UIForm assets are copied next to the compiled desktop executable.
 UIForm compile and run operations automatically create a sibling assets/ directory when it does not exist.

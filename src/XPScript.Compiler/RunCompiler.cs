@@ -167,6 +167,8 @@ internal static class RunCompiler
                 await File.WriteAllTextAsync(Path.Combine(values, "styles.xml"), "<resources><style name=\"Theme.AppCompat.DayNight.NoActionBar\" parent=\"Theme.AppCompat.Light.NoActionBar\" /></resources>", cancellationToken).ConfigureAwait(false);
             }
             await File.WriteAllTextAsync(projectPath, BuildProject(references, dependencies, runtimeIdentifier, startupObject), cancellationToken).ConfigureAwait(false);
+            if (!IsAndroidRuntime(runtimeIdentifier) && Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selectedFramework)
+                await File.WriteAllTextAsync(Path.Combine(tempRoot, "global.json"), DotNetVersionSelection.CreateGlobalJson(selectedFramework), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(programPath,
                 isAndroid && !androidUi ? CombineGeneratedSources(generatedSource, AndroidHostSource.Code) : generatedSource,
                 cancellationToken).ConfigureAwait(false);
@@ -396,7 +398,8 @@ internal static class RunCompiler
                 "    <PackageReference Include=\"Xamarin.AndroidX.Tracing.Tracing.Ktx\" Version=\"1.2.0.10\" ExcludeAssets=\"all\" />\n" +
                 "  </ItemGroup>\n";
         var isAndroid = IsAndroidRuntime(runtimeIdentifier);
-        var targetFramework = isAndroid ? "net10.0-android" : "net10.0";
+        var targetFramework = isAndroid ? "net10.0-android" :
+            (Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selected ? selected : "net10.0");
         var startup = isAndroid || string.IsNullOrWhiteSpace(startupObject) ? string.Empty : $"    <StartupObject>{EscapeXml(startupObject)}</StartupObject>\n";
         var androidProperties = isAndroid
             ? $"    <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>\n" +
