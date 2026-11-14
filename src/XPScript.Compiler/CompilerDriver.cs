@@ -768,8 +768,15 @@ public sealed class CompilerDriver
 """
             : string.Empty;
 
+        var projectSdk = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase)
+            ? "Microsoft.NET.Sdk.WebAssembly"
+            : "Microsoft.NET.Sdk";
+        var wasmProperties = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase)
+            ? "    <UseMonoRuntime>true</UseMonoRuntime>\n"
+            : string.Empty;
+
         return $"""
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="{projectSdk}">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
 {startupObject}
@@ -791,6 +798,7 @@ public sealed class CompilerDriver
     <RuntimeIdentifier>{runtimeIdentifier}</RuntimeIdentifier>
     <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
     <UseAppHost>true</UseAppHost>
+{wasmProperties}
 {androidProperties}{publishProperties}  </PropertyGroup>
 {itemGroup}</Project>
 """;
