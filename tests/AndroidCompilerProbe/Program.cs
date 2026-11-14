@@ -401,7 +401,7 @@ foreach (var expected in new[]
     "defaultButtonCornerRadius = form.DefaultButtonCornerRadius",
     "gridColumns = form.GridColumns",
     "placeholder = field.Placeholder",
-    "schemaValidationError = form.GetValidationError(field.Name)",
+    "schemaValidationError = ReadValidationError(form, field.Name)",
     "layoutRow = button.LayoutRow",
     "bootText = form.BootText",
     "tabs = form.Tabs.Select",
@@ -505,8 +505,9 @@ if (compilerProjectSource.Contains("PackageReference Include=\"Avalonia", String
     throw new Exception("Non-UI XPScript compiler/runtime must remain independent from Avalonia Android.");
 
 var compilerCliSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "XPScriptCompilerCommandLine.cs"));
-if (!compilerCliSource.Contains("var effectiveEmbedAssets = embedAssets || usesUiFormAssets;", StringComparison.Ordinal))
-    throw new Exception("UIForm applications must embed assets automatically for native compilation.");
+if (!compilerCliSource.Contains("var effectiveEmbedAssets = embedAssets;", StringComparison.Ordinal) ||
+    !compilerCliSource.Contains("UIFormAppAssets.PublishExternalAssets(sourcePath, outputPath)", StringComparison.Ordinal))
+    throw new Exception("UIForm applications must publish external assets by default and embed only when requested.");
 
 var uiFormAssetsSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormAppAssets.cs"));
 if (!uiFormAssetsSource.Contains("System.Environment.SpecialFolder.LocalApplicationData", StringComparison.Ordinal) ||
