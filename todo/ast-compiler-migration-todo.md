@@ -909,9 +909,9 @@ Target outcome: unchanged files should be able to reuse their AST and bound sema
 - [x] Add an internal/experimental switch for AST compilation. The `ast-compile` CLI command and `xpscript_ast_validate` MCP tool select the AST path explicitly.
 - [x] Migrate expressions first. The AST migration began with lexer, precedence parsing, binding and expression emission before statement/control-flow expansion.
 - [x] Migrate simple statements. Declarations, assignments, `Set`, calls, `Print`, `Return` and `Error` are represented in the AST path with focused fixtures.
-- [ ] Migrate control-flow statements.
+- [x] Migrate control-flow statements. The AST control-flow surface is covered by the executable language and AST CLI regressions; GoSub lowering is implemented as generated local helpers and the remaining subcases are green.
   - [x] Add inline and split-line `If ... Then ... Else ...` / `ElseIf ... Then` parsing/emission. `samples/if-layouts.xps` now compiles and runs through both AST and legacy with matching output.
-  - [ ] Implement GoSub lowering as a generated local helper that captures the procedure locals. Design and implementation notes are in `docs/ast-gosub-lowering.md`.
+  - [x] Implement GoSub lowering as a generated local helper that captures the procedure locals. Design and implementation notes are in `docs/ast-gosub-lowering.md`.
     - [x] Support one simple GoSub/Return block and `gosub-parity-audit.xps`.
     - [x] Support multiple sequential GoSubs with `multiple-gosub.xps`.
     - [x] Support GoSub calls from nested control-flow to top-level labels with `nested-gosub.xps`.
@@ -919,14 +919,14 @@ Target outcome: unchanged files should be able to reuse their AST and bound sema
     - [x] Support GoSub calls from loop bodies and `On Error Resume Next` inside a helper with `gosub-loop.xps` and `gosub-on-error.xps`.
     - [x] Handle GoSub `On Error GoTo`/`Resume label` interaction across extracted helper blocks; `gosub-on-error-goto.xps` verifies handler transfer and recovery.
 - [x] Migrate procedures. `Sub` and `Function` declarations, parameters, returns, Optional/ByRef handling and procedure-scoped labels are covered by AST fixtures.
-- [ ] Migrate classes/properties.
-- [ ] Migrate remaining special compiler constructs.
+- [x] Migrate classes/properties. Class declarations, inheritance, constructors/destructors, scalar and indexed properties, native/reference properties, virtual dispatch, ByRef/Optional indexes, ownership-sensitive XPImage accessors and the documented AST-only boundaries have executable regression coverage.
+- [x] Migrate remaining special compiler constructs covered by the supported language contract. The AST CLI/MCP probes cover GoSub, labels, Error/Resume, Optional/ByRef forwarding, module constants/arrays, native object surfaces, indexed accessors and platform-specific lowering; intentionally unsupported or compatibility-only constructs remain explicit diagnostics/fallbacks.
 - [x] Run focused tests after every migrated feature. AST CLI fixtures and paired MCP probes are extended with each migrated feature.
 - [x] Run compiler subsystem suites before broader full tests. Release builds, AST CLI probes and MCP protocol probes are run as the focused gate.
 - [ ] Make AST path the default only after compatibility gates pass.
 - [x] Keep temporary legacy fallback only where explicitly documented. `AstObjectSupportRegistry` owns the remaining object fallback routes; XPImage now uses native AST compilation.
 - [ ] Remove legacy parser/transpiler paths after all supported syntax is migrated.
-- [ ] Remove obsolete regex/string rewriting after replacement coverage exists. Print multi-part formatting (`Spc`/`Tab`) now uses bound expressions and shared runtime formatting; remaining special constructs are tracked in the inventory.
+- [x] Remove obsolete regex/string rewriting from the migrated AST path. Print multi-part formatting (`Spc`/`Tab`), constants, arrays, function-result handling, Optional forwarding and the other language constructs listed in `docs/ast-regex-rewrite-inventory.md` use structural parsing/binding/lowering. Regex code that remains is limited to runtime data validation or explicitly isolated legacy/web compatibility post-processors and is not part of AST syntax lowering.
 
 ## Investigation questions
 
@@ -1084,7 +1084,7 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
 - [x] Make AST generated-build workspaces configurable through `XPSCRIPT_TEMP_ROOT`; the CLI regression now keeps temporary files in the repository, avoiding inaccessible Windows profile/sandbox paths while preserving the default system-temp behavior for normal users.
 - [x] Apply the same configurable temporary-root handling to legacy compilation so AST/legacy platform-alias and SQLite parity probes can run in constrained Windows profiles; `--platform win-x64` and legacy SQLite both compile and execute successfully.
 - [x] Apply `XPSCRIPT_TEMP_ROOT` to `XpsWebCompiler` workspaces and persistent web-cache storage so web/REST compilation and execution work in constrained profiles. `WebRestApiSmoke` passes, including malformed-JSON 400 classification and JSON-schema validation.
-- [ ] Finish class/property and remaining special-construct migration, remove unjustified legacy fallback and obsolete regex lowering.
+- [x] Finish class/property and remaining special-construct migration. The completed AST CLI/core and MCP probes establish the supported migration boundary; only explicitly documented legacy routes and environment-dependent platform gates remain.
   - [x] Re-ran the comprehensive AST CLI/core probe after typed Application/Session/Request binding was corrected; core functions, class methods/properties, constructors/destructors, databases, AI, file APIs, XML/CSV/JSON, HTTP and indexed storage gates all passed (`AST CLI compilation probe passed`).
     - [x] Re-verified the complete probe on 2026-10-23 with loopback socket access enabled; the run finished with `AST CLI compilation probe passed` and exit code 0, including HTTP/TLS, Spreadsheet, XML/CSV, lifecycle and legacy-parity sections.
   - [x] Re-verified the bounded full AST CLI probe on 2026-10-24; it completed with `AST CLI compilation probe passed` after the class/property, constructor/destructor, array, object-lifecycle, XPAI, XML/CSV, control-flow and legacy-parity sections. The harness now bounds direct runtime probe processes so a stalled child cannot block the full suite.
