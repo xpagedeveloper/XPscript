@@ -306,10 +306,18 @@ internal sealed class OperatorArrayCompatibilityPreprocessor
         {
             if (source[i] == '"') { CopyQuoted(source, ref i, sb); continue; }
             if (source[i] == '|') { CopyDelimited(source, ref i, sb, '|'); continue; }
-            if (source[i] == '{') { CopyDelimited(source, ref i, sb, '}'); continue; }
+            if (source[i] == '{' && !IsRouteAttributePlaceholder(source, i)) { CopyDelimited(source, ref i, sb, '}'); continue; }
             sb.Append(source[i]);
         }
         return sb.ToString();
+    }
+
+    private static bool IsRouteAttributePlaceholder(string source, int index)
+    {
+        var lineStart = source.LastIndexOf('\n', Math.Max(0, index - 1));
+        lineStart = lineStart < 0 ? 0 : lineStart + 1;
+        while (lineStart < index && source[lineStart] is ' ' or '\t') lineStart++;
+        return source.AsSpan(lineStart).StartsWith("[Route:", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void CopyQuoted(string source, ref int i, StringBuilder sb)

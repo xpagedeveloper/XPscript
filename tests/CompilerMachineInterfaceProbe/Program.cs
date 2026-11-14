@@ -351,7 +351,7 @@ var oversizedValidation = await driver.ValidateWithResultAsync(oversizedSource);
 var oversizedDiagnostic = oversizedValidation.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS8009");
 Require(oversizedDiagnostic is not null, "oversized file source diagnostic");
 Require(oversizedDiagnostic.Category == "input", "oversized file source category");
-Require(oversizedDiagnostic.Properties?.Any(p => p.Name == "maximumBytes" && p.Value == "1048576") == true, "oversized file maximum bytes");
+Require(oversizedDiagnostic.Properties?.Any(p => p.Name == "maximumBytes" && p.Value == "16777216") == true, "oversized file maximum bytes");
 Require(oversizedDiagnostic.Properties?.Any(p => p.Name == "actualBytes" && p.Value == "1048577") == true, "oversized file actual bytes");
 
 

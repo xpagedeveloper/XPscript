@@ -34,23 +34,18 @@ public sealed class XpsOpenApiImporter
 
     private readonly XpsOpenApiGenerator _generator = new();
 
-    public XpsOpenApiImportResult ImportFile(string specificationPath, string existingSource)
+    public XpsOpenApiImportResult ImportFile(string specificationPath, string existingSource, XpsOpenApiGenerationOptions? options = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(specificationPath);
         var fullPath = Path.GetFullPath(specificationPath);
         if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI specification file was not found.", fullPath);
-        return Import(File.ReadAllText(fullPath), existingSource, Path.GetFileName(fullPath));
+        return Import(File.ReadAllText(fullPath), existingSource, Path.GetFileName(fullPath), options);
     }
 
-    public XpsOpenApiImportResult Import(string specification, string existingSource, string? sourceName = null)
+    public XpsOpenApiImportResult Import(string specification, string existingSource, string? sourceName = null, XpsOpenApiGenerationOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(existingSource);
-        var desired = _generator.Generate(specification, sourceName);
-        // Server import is intentionally one-time. Existing handwritten source can be
-        // extended by the first import, but generated OpenAPI infrastructure is immutable.
-        if (!string.IsNullOrWhiteSpace(existingSource) && ContainsGeneratedOpenApiSource(existingSource))
-            throw new XpsOpenApiGenerationException(
-                "OpenAPI has already been imported into this XPScript source. Reimport/update is not supported; generate a new server source when the contract changes.");
+        var desired = _generator.Generate(specification, sourceName, options);
         var source = existingSource;
         var newline = DetectNewline(source);
         var addedClasses = new List<string>();

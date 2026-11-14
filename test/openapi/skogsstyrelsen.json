@@ -1,0 +1,1445 @@
+{
+  "x-generator": "NSwag v14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))",
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Skogsstyrelsens Skogliga grunddata API v1.0",
+    "description": "## Schema\r\nAlla anrop måste ske över HTTPS. All data till och från Skogsstyrelsen API är JSON.  \r\nAlla datum i Skogsstyrelsen API anges på formatet ISO 8601.  \r\n`YYYY-MM-DDTHH:MM:SS`\r\n\r\n## HTTP-verb\r\nSkogsstyrelsen API använder standard HTTP-verb för alla anrop.\r\n\r\n| Verb | Beskrivning |\r\n| ----------- | ----------- |\r\n| GET | Används för att hämta data. |\r\n| POST | Används för att hämta data med geometrier (WKT) som parameter |\r\n\r\n## Felhantering\r\nSkogsstyrelsen API använder standard HTTP-statuskoder för att indikera fel.<br />\r\nYtterligare felbeskrivning fås i svarsmeddelandet.\r\n\r\n| Statuskod | Beskrivning |\r\n| ----------- | ----------- |\r\n| 400 | `BadRequest` Felaktigt format på anrop. |\r\n| 401 | `Unauthorized` Obehörig att använda Skogsstyrelsen API. |\r\n| 404 | `Not Found` Kan inte hitta data som efterfrågas. |\r\n| 429 | `Too Many Requests` För många anrop inom tidsfönster, gränser retuneras i headers. |\r\n| 500 | `Internal Server Error` Internt fel i Skogsstyrelsen API. |\r\n\r\n## Geodata\r\nI Skogsstyrelsen anges geodata på formatet WKT. Skogsstyrelsen stöder endast koordinatsystemet SWEREF 99 TM.\r\n\r\n## OAuth 2.0\r\nSkogsstyrelsen API använder protokollet OAuth 2.0 för behörighetskontroll av alla anrop. För att kunna använda Skogsstyrelsen API måste en anropande applikation finnas registrerad i Skogsstyrelsen API. En registrerad applikation erhåller ett servicekonto med en unikt klient-id (ClientId) och en tillhörande privat nyckel (ClientSecret).\r\n\r\n## Server-till-server-flöde\r\nAutentisering sker med OAuth-flödet Client Credentials, ett autentiseringsflöde för server-till-server (Flödet är beskrivet i [RFC-65749](https://tools.ietf.org/html/rfc6749)). För att kunna använda ett API-anrop måste en anropande applikation först erhålla ett tillfälligt s.k. token som skickas med vid varje anrop. Ett token är giltigt under en begränsad tid, i Skogsstyrelsen APIs fall 60 minuter. Om ett API-anrop sker utan token eller med en ogiltig token, returnerar Skogsstyrelsen API HTTP-statuskoden `401Unauthorized (\"Message\": \"Authorization has been denied for this request.\").` Skogsstyrelsen API returnerar token på formatet JWT (JSON Web Token).\r\n\r\nFöljande anrop begär en ny token:  \r\n`POST https://auth.skogsstyrelsen.se/connect/token  \r\nContent-Type: application/x-www-form-urlencoded  \r\ngrant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_CLIENT_SECRET J+s=&scope=sks_api`  \r\n\r\n| Parameter | Beskrivning |\r\n| ----------- | ----------- |\r\n| `client_id` | Applikationens klient-id (ClientId) |\r\n| `client_secret` | Applikationens privata nyckel (ClientSecret) |\r\n| `grant_type` | Typ av OAuth2 - flöde: Client Credentials.Värdet måste vara `client_credentials`. |\r\n| `scope` | Behörighetstyp. Värdet måste vara `sks_api`. |\r\n\r\n### Svar:\r\n```json\r\n{\r\n\"access_token\": TOKEN,  \r\n\"expires_in\": 3600,  \r\n\"token_type\": \"Bearer\",\r\n\"scope\":\"sks_api\"\r\n}\r\n```\r\n\r\nDet erhållna token-värdet används sedan i Authorization-headern i API-anropen:\r\n`Authorization: Bearer TOKEN`\r\n",
+    "version": "v1.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.skogsstyrelsen.se/sksapi"
+    }
+  ],
+  "paths": {
+    "/skogligagrunddata/v1/api-info": {
+      "get": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Returnerar information om detta API.\napiName: Namn på API\napiVersion: API-version med MAJOR, MINOR och PATCH version\napiReleased: Datum som denna API-version publicerades\napiDocumentation: En länk till aktuell API dokumentation.Om API:et består av flera delar (t.ex.flera webbsidor) bör en samlingsplats skapas för alla delar skapas där alla delar är åtkomliga via länkar eller liknande.\napiStatus: Visar API:ets tillstånd eller status enligt livscykelhantering längre ned på denna sida.T.ex.beta, active eller deprecated.\nOvan information ska anges, men ytterligare attribut och värden kan läggas till om önskas.",
+        "operationId": "Skogligagrunddata_ApiInfo",
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiInfo"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true
+      }
+    },
+    "/skogligagrunddata/v1/Biomassa": {
+      "post": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Beräkning av biomassa.",
+        "description": "Beräknar medelvärde TS/ha samt total biomassa TS för angiven geometri.  \n[Skogskunskaps ordlista om Biomassa](https://www.skogskunskap.se/ordlista/b/biomassa)",
+        "operationId": "Skogligagrunddata_Biomassa",
+        "requestBody": {
+          "x-name": "parameters",
+          "description": "Parametrar  \n            **geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n            **omdrev** - Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  \n            **pixelstorlek** - Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  \n            **marktyp** - Marktyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.\n            ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatistikParameters"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Lista med beräknade värden fördelat på marktyp.  \n            Metadata i fom av min- och max skanningsdatum över aktuellt område, omdrev samt en lista med skanningsdatum för området och om det skannats med eller utan löv på träden.\n            ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BiomassaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/skogligagrunddata/v1/Biomassa/Histogram": {
+      "post": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Summerar areal fördelat på olika biomassaklasser.",
+        "description": "Summerar areal hektar fördelat på olika biomassaklasser för angiven geometri. Klassbredden är valbar och anges i ton torrsubstans per hektar. Som default kommer svaret i 20 klasser fördelat på 100 ton torrsubstans per hektar och klass.  \n[Skogskunskaps ordlista om Biomassa](https://www.skogskunskap.se/ordlista/b/biomassa)",
+        "operationId": "Skogligagrunddata_BiomassaHistogram",
+        "requestBody": {
+          "x-name": "parameters",
+          "description": "Parametrar  \n**geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n**omdrev** - Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  \n**pixelstorlek** - Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  \n**marktyp** - Marktyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.  \n**klassBredd** - Klassbredd för summering av biomassa. Som default används en indelning i 100 meters klasser.  \n**antalKlasser** - Ange antal klasser för redovisning av summering av biomassafördelningen, som default används 10 klasser. ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistogramParameters"
+              },
+              "examples": {
+                "Example 1": {
+                  "value": {
+                    "klassBredd": 100,
+                    "antalKlasser": 10,
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark"
+                    ]
+                  }
+                },
+                "Example 2": {
+                  "value": {
+                    "klassBredd": 100,
+                    "antalKlasser": 10,
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Lista med beräknade värden fördelat på marktyp. För varje marktyp redovisas en lista med uppgifter för varje klass. För varje klass redovisas areal (hektar) och antal pixlar, samt klassens min- och maxvärde.  \nI klassen ingår minvärdet, medan maxvärdet är exkluderat. I exempelvis klassen 5-10 ingår värdena 5, 6, 7, 8 och 9. Klassen 0 (noll) innehåller bara pixlar med värdet 0. Sista klassen sträcker sig alltid till det teoretiska maxvärdet 2147483647",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistogramDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/skogligagrunddata/v1/VolymFramskriven": {
+      "post": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Beräkning av volym, medelhöjd och grundyta framskrivet till giltigt datum utifrån en teoretisk modell.",
+        "description": "Beräknar ny volym, medelhöjd och grundyta utifrån giltigt datum. Utifrån giltigt datum visas även hur många tillväxtsäsonger framskrivningen har skett.  \nFramskrivningsfunktionen är utvecklad av SLU och framtagen i samband med Förenklad fastighetstaxering 2026. Framskrivningsfuktionen är utvecklad för produktiv skogsmark och utgår från höjdtillväxt mellan två laserskanningstillfällen.  \nGiltiga datum fås från endpoint /VolymFramskriven/GiltigaDatum/.",
+        "operationId": "Skogligagrunddata_VolymFramskriven",
+        "requestBody": {
+          "x-name": "parameters",
+          "description": "**geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n**datum** – Datum för framskrivning, skrivs i formatet 'YYYY-MM-DD'. Giltiga datum är alltid första dagen på ett år 'YYYY-01-01'. Anges inget används datum för närmast kommande årsskifte. Tillgängliga giltiga datum erhålls genom att fråga endpoint /VolymFramskriven/GiltigaDatum/ i detta API.\n**pixelstorlek** - Pixelstorlek för beräkningen, anges i meter.Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden.För områden > 100 ha rekommenderas pixelstorlek 10x10m.Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.\n**marktyp** - Marktyp som ska ingå i beräkningen.Uppgiften hämtas från kartskikt med Nationella Marktäckedata.Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `AllMark`. Om inget anges görs beräkningen på produktiv skogsmark, vilket rekommenderas. 'All mark' kan användas om egen bedömning av produktiv skogsmark är en annan än  Nationella Marktäckedata.  ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FramskrivningVolymParameters"
+              },
+              "examples": {
+                "Example 1": {
+                  "value": {
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark",
+                      "AllMark"
+                    ]
+                  }
+                },
+                "Example 2": {
+                  "value": {
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark",
+                      "AllMark"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Lista med beräknade värden fördelat på de olika variablerna volym, medelhöjd och grundyta.  \n            För varje variabel redovisas areal samt värde fördelat på respektive marktyp.  \n            Metadata i form av Pixelstorlek, Framskrivet till Datum samt min- och maxvärde för antal tillväxtsäsonger som framskrivningen är gjord.\n            ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FramskrivenVolymDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/skogligagrunddata/v1/VolymFramskriven/GiltigaDatum": {
+      "get": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Hämta lista över giltiga datum att skriva fram till, används med VolymFramskriven",
+        "operationId": "Skogligagrunddata_GetFramskrivningDatum",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/skogligagrunddata/v1/Grundyta": {
+      "post": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Beräkning av grundyta.",
+        "description": "Beräknar medelvärde grundyta m2/ha för angiven geometri.  \n[Skogskunskaps ordlista om Grundyta](https://www.skogskunskap.se/ordlista/g/grundyta)",
+        "operationId": "Skogligagrunddata_Grundyta",
+        "requestBody": {
+          "x-name": "parameters",
+          "description": "Parametrar  \n            **geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n            **omdrev** - Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  \n            **pixelstorlek** - Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  \n            **marktyp** - Marktyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.\n            ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatistikParameters"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Lista med beräknade värden fördelat på marktyp.  \n            Metadata i fom av min- och max skanningsdatum över aktuellt område, omdrev samt en lista med skanningsdatum för området och om det skannats med eller utan löv på träden.\n            ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrundytaDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/skogligagrunddata/v1/Grundyta/Histogram": {
+      "post": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Summerar areal fördelat på olika grundyteklasser.",
+        "description": "Summerar areal hektar fördelat på olika grundyteklasser för angiven geometri. Klassbredden är valbar och anges i kvadratmeter per hektar. Som default kommer svaret i 10 klasser fördelat på 5 kvadratmeter per hektar och klass.  \n[Skogskunskaps ordlista om Grundyta](https://www.skogskunskap.se/ordlista/g/grundyta)",
+        "operationId": "Skogligagrunddata_GrundytaHistogram",
+        "requestBody": {
+          "x-name": "parameters",
+          "description": "Parametrar  \n**geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n**omdrev** - Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  \n**pixelstorlek** - Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  \n**marktyp** - Marktyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.  \n**klassBredd** - Klassbredd för summering av grundyta. Som default används en indelning i 10 meters klasser.  \n**antalKlasser** - Ange antal klasser för redovisning av summering av grundytefördelningen, som default används 10 klasser. ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistogramParameters"
+              },
+              "examples": {
+                "Example 1": {
+                  "value": {
+                    "klassBredd": 10,
+                    "antalKlasser": 10,
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark"
+                    ]
+                  }
+                },
+                "Example 2": {
+                  "value": {
+                    "klassBredd": 10,
+                    "antalKlasser": 10,
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Lista med beräknade värden fördelat på marktyp. För varje marktyp redovisas en lista med uppgifter för varje klass. För varje klass redovisas areal (hektar) och antal pixlar, samt klassens min- och maxvärde.  \nI klassen ingår minvärdet, medan maxvärdet är exkluderat. I exempelvis klassen 5-10 ingår värdena 5, 6, 7, 8 och 9. Klassen 0 (noll) innehåller bara pixlar med värdet 0. Sista klassen sträcker sig alltid till det teoretiska maxvärdet 2147483647",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistogramDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/skogligagrunddata/v1/Medeldiameter": {
+      "post": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Beräkning av grundytevägd medeldiameter.",
+        "description": "Beräknar medelvärde grundytevägd medeldiameter för angiven geometri. \n[Skogkunskaps ordlista om Grundytavägd medeldiamter](https://www.skogskunskap.se/ordlista/g/grundytevagd-medeldiameter)",
+        "operationId": "Skogligagrunddata_Medeldiameter",
+        "requestBody": {
+          "x-name": "parameters",
+          "description": "Parametrar  \n            **geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n            **omdrev** - Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  \n            **pixelstorlek** - Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  \n            **marktyp** - Marktyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.\n            ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatistikParameters"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Lista med beräknade värden fördelat på marktyp.  \n            Metadata i fom av min- och max skanningsdatum över aktuellt område, omdrev samt en lista med skanningsdatum för området och om det skannats med eller utan löv på träden.\n            ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedeldiameterDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/skogligagrunddata/v1/Medeldiameter/Histogram": {
+      "post": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Summerar areal fördelat på olika diameterklasser.",
+        "description": "Summerar areal hektar fördelat på olika diameterklasser för angiven geometri. Klassbredden är valbar och anges i centimeter. Som default kommer svaret i 20 klasser fördelat på 5 centimeter per klass.  \n[Skogkunskaps ordlista om Grundytavägd medeldiamter](https://www.skogskunskap.se/ordlista/g/grundytevagd-medeldiameter)",
+        "operationId": "Skogligagrunddata_MedeldiameterHistogram",
+        "requestBody": {
+          "x-name": "parameters",
+          "description": "Parametrar  \n**geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n**omdrev** - Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  \n**pixelstorlek** - Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  \n**marktyp** - Marktyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.  \n**klassBredd** - Klassbredd för summering av medeldiameter. Som default används en indelning i 10 meters klasser.  \n**antalKlasser** - Ange antal klasser för redovisning av summering av medeldiameterfördelningen, som default används 10 klasser. ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistogramParameters"
+              },
+              "examples": {
+                "Example 1": {
+                  "value": {
+                    "klassBredd": 10,
+                    "antalKlasser": 10,
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark",
+                      "AllMark"
+                    ]
+                  }
+                },
+                "Example 2": {
+                  "value": {
+                    "klassBredd": 10,
+                    "antalKlasser": 10,
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark",
+                      "AllMark"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Lista med beräknade värden fördelat på marktyp. För varje marktyp redovisas en lista med uppgifter för varje klass. För varje klass redovisas areal (hektar) och antal pixlar, samt klassens min- och maxvärde.  \nI klassen ingår minvärdet, medan maxvärdet är exkluderat. I exempelvis klassen 5-10 ingår värdena 5, 6, 7, 8 och 9. Klassen 0 (noll) innehåller bara pixlar med värdet 0. Sista klassen sträcker sig alltid till det teoretiska maxvärdet 2147483647",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistogramDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/skogligagrunddata/v1/Medelhojd": {
+      "post": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Beräkning av grundytevägd medelhöjd.",
+        "description": "Beräknar medelvärde grundytevägd medelhöjd för angiven geometri.  \n[Skogskunsaps ordlista om Grundytevägd Medelhöjd](https://www.skogskunskap.se/ordlista/g/grundytevagd-medelhojd)",
+        "operationId": "Skogligagrunddata_Medelhojd",
+        "requestBody": {
+          "x-name": "parameters",
+          "description": "Parametrar  \n            **geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n            **omdrev** - Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  \n            **pixelstorlek** - Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  \n            **marktyp** - Marktyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.\n            ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatistikParameters"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Lista med beräknade värden fördelat på marktyp.  \n            Metadata i fom av min- och max skanningsdatum över aktuellt område, omdrev samt en lista med skanningsdatum för området och om det skannats med eller utan löv på träden.\n            ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedelhojdDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/skogligagrunddata/v1/Medelhojd/Histogram": {
+      "post": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Summerar areal fördelat på olika höjdklasser.",
+        "description": "Summerar areal hektar fördelat på olika höjdklasser för angiven geometri. Klassbredden är valbar och anges i decimeter. Som default kommer svaret i 10 klasser fördelat på 5 meter (50 decimeter) per klass.  \n[Skogskunsaps ordlista om Grundytevägd Medelhöjd](https://www.skogskunskap.se/ordlista/g/grundytevagd-medelhojd)",
+        "operationId": "Skogligagrunddata_MedelhojdHistogram",
+        "requestBody": {
+          "x-name": "parameters",
+          "description": "Parametrar  \n**geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n**omdrev** - Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  \n**pixelstorlek** - Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  \n**marktyp** - Marktyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.  \n**klassBredd** - Klassbredd för summering av höjder. Som default används en indelning i 5 meters klasser.  \n**antalKlasser** - Ange antal klasser för redovisning av summering av höjdfördelningen, som default används 20 klasser. ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistogramParameters"
+              },
+              "examples": {
+                "Example 1": {
+                  "value": {
+                    "klassBredd": 5,
+                    "antalKlasser": 20,
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark"
+                    ]
+                  }
+                },
+                "Example 2": {
+                  "value": {
+                    "klassBredd": 5,
+                    "antalKlasser": 20,
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Lista med beräknade värden fördelat på marktyp. För varje marktyp redovisas en lista med uppgifter för varje klass. För varje klass redovisas areal (hektar) och antal pixlar, samt klassens min- och maxvärde.  \nI klassen ingår minvärdet, medan maxvärdet är exkluderat. I exempelvis klassen 5-10 ingår värdena 5, 6, 7, 8 och 9. Klassen 0 (noll) innehåller bara pixlar med värdet 0. Sista klassen sträcker sig alltid till det teoretiska maxvärdet 2147483647",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistogramDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/skogligagrunddata/v1/Volym": {
+      "post": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Beräkning av volym.",
+        "description": "Beräknar medelvärde totalt virkesförråd för angiven geometri.  \n[Skogskunskaps ordlista om Skogskubikmeter](https://www.skogskunskap.se/ordlista/s/skogskubikmeter)",
+        "operationId": "Skogligagrunddata_Volym",
+        "requestBody": {
+          "x-name": "parameters",
+          "description": "Parametrar  \n            **geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n            **omdrev** - Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  \n            **pixelstorlek** - Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  \n            **marktyp** - Marktyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.\n            ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatistikParameters"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Lista med beräknade värden fördelat på marktyp.  \n            Metadata i fom av min- och max skanningsdatum över aktuellt område, omdrev samt en lista med skanningsdatum för området och om det skannats med eller utan löv på träden.\n            ",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VolymDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/skogligagrunddata/v1/Volym/Histogram": {
+      "post": {
+        "tags": [
+          "Skogligagrunddata"
+        ],
+        "summary": "Summerar areal fördelat på olika volymklasser.",
+        "description": "Summerar areal hektar fördelat på olika volymklasser för angiven geometri. Klassbredden är valbar och anges i skogskubikmeter per hektar (m3sk/ha). Som default kommer svaret i 20 klasser fördelat på 50 skogskubikmeter per hektar och klass.  \n[Skogskunskaps ordlista om Skogskubikmeter](https://www.skogskunskap.se/ordlista/s/skogskubikmeter)",
+        "operationId": "Skogligagrunddata_VolymHistogram",
+        "requestBody": {
+          "x-name": "parameters",
+          "description": "Parametrar  \n**geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n**omdrev** - Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  \n**pixelstorlek** - Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  \n**marktyp** - Marktyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.  \n**klassBredd** - Klassbredd för summering av volym. Som default används en indelning i 100 meters klasser.  \n**antalKlasser** - Ange antal klasser för redovisning av summering av volymfördelningen, som default används 10 klasser. ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistogramParameters"
+              },
+              "examples": {
+                "Example 1": {
+                  "value": {
+                    "klassBredd": 100,
+                    "antalKlasser": 10,
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark"
+                    ]
+                  }
+                },
+                "Example 2": {
+                  "value": {
+                    "klassBredd": 100,
+                    "antalKlasser": 10,
+                    "geometri": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))",
+                    "marktyp": [
+                      "ProduktivSkogsmark"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "Lista med beräknade värden fördelat på marktyp. För varje marktyp redovisas en lista med uppgifter för varje klass. För varje klass redovisas areal (hektar) och antal pixlar, samt klassens min- och maxvärde.  \nI klassen ingår minvärdet, medan maxvärdet är exkluderat. I exempelvis klassen 5-10 ingår värdena 5, 6, 7, 8 och 9. Klassen 0 (noll) innehåller bara pixlar med värdet 0. Sista klassen sträcker sig alltid till det teoretiska maxvärdet 2147483647",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistogramDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiInfo": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "apiName": {
+            "type": "string",
+            "nullable": true
+          },
+          "apiVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "apiReleased": {
+            "type": "string",
+            "nullable": true
+          },
+          "apiDocumentation": {
+            "type": "string",
+            "nullable": true
+          },
+          "apiStatus": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "BiomassaDto": {
+        "type": "object",
+        "description": "Resultat utifrån variabeln 'berakna' (marktyp). Uppgift om olika marktyper hämtas från kartskikt med Nationella Marktäckedata.  \nMetadata presenteras för hela beräkningsområdet.",
+        "additionalProperties": false,
+        "properties": {
+          "metadataDto": {
+            "description": "Metadata för beräkningsområdet. Metadata presenteras för hela beräkningsområdet.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MetadataDto"
+              }
+            ]
+          },
+          "data": {
+            "type": "object",
+            "description": "Data för olika marktyper. Beräknad utifrån inskickade Marktyper. ",
+            "x-dictionaryKey": {
+              "$ref": "#/components/schemas/Marktyp"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/BiomassaStatistikDto"
+            }
+          }
+        }
+      },
+      "MetadataDto": {
+        "type": "object",
+        "description": "Metadata för beräkningsområdet. Metadata presenteras för hela beräkningsområdet.",
+        "additionalProperties": false,
+        "properties": {
+          "pixelstorlek": {
+            "type": "integer",
+            "description": "Pixelstorlek - anges i meter.",
+            "format": "int32",
+            "example": 2
+          },
+          "omdrev": {
+            "type": "integer",
+            "description": "Omdrev - Valt omdrev med full täckning.",
+            "format": "int32",
+            "example": 1
+          },
+          "maxDatum": {
+            "type": "string",
+            "description": "MaxDatum - Visar senaste datum som området laserskannats.",
+            "format": "date-time"
+          },
+          "minDatum": {
+            "type": "string",
+            "description": "Mindatum - Visar första datum som området laserskannats.",
+            "format": "date-time",
+            "example": "2017-07-01T12:00:00.000Z"
+          },
+          "datum": {
+            "type": "array",
+            "description": "Lista med unika datum för laserskanningen över området. Laserskanningen kan ha skett med eller utan löv på träden, vilket kan påverka noggrannheten på resultatet.",
+            "items": {
+              "$ref": "#/components/schemas/MetadataDatumDto"
+            }
+          }
+        }
+      },
+      "MetadataDatumDto": {
+        "type": "object",
+        "description": "Datum för laserskanningen över området. Laserskanningen kan ha skett med eller utan löv på träden, vilket kan påverka noggrannheten på resultatet.",
+        "additionalProperties": false,
+        "properties": {
+          "datum": {
+            "type": "string",
+            "description": "Datum för laserskanningen.",
+            "format": "date-time"
+          },
+          "andelMedLov": {
+            "type": "number",
+            "description": "Andel (0-1) som skannats med löv på träden.",
+            "format": "double"
+          },
+          "andelUtanLov": {
+            "type": "number",
+            "description": "Andel (0-1) som skannats utan löv på träden.",
+            "format": "double"
+          }
+        }
+      },
+      "Marktyp": {
+        "type": "string",
+        "description": "Möjliga urval av marktyper utifrån Nationella Marktäckedata",
+        "x-enumNames": [
+          "ProduktivSkogsmark",
+          "ImproduktivSkogsmark",
+          "AllSkogsmark",
+          "OvrigMark",
+          "AllMark"
+        ],
+        "enum": [
+          "ProduktivSkogsmark",
+          "ImproduktivSkogsmark",
+          "AllSkogsmark",
+          "OvrigMark",
+          "AllMark"
+        ]
+      },
+      "BiomassaStatistikDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "arealHa": {
+            "type": "number",
+            "description": "Enhet: hektar, beräknat utifrån antalet pixlar med angiven pixelstorlek. OBS! Uppgiften kan skilja något från inskickad polygonarea beroende på pixelstorlek!",
+            "format": "double"
+          },
+          "medelvarde": {
+            "type": "number",
+            "description": "Enhet: ton torrsubstans/ha",
+            "format": "double"
+          },
+          "total": {
+            "type": "number",
+            "description": "Enhet: TS, beräknat total Biomassa (arealHa * medelvarde)",
+            "format": "double"
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "additionalProperties": {
+          "nullable": true
+        },
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          },
+          "extensions": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        }
+      },
+      "StatistikParameters": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/StandardParameters"
+          },
+          {
+            "type": "object",
+            "description": "Parametrar  \n            **geometri** - Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  \n            **omdrev** - Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  \n            **pixelstorlek** - Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  \n            **berakna** - Martyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.\n            ",
+            "additionalProperties": false,
+            "properties": {
+              "omdrev": {
+                "type": "integer",
+                "description": "Anger omdrev, tidsperiod när laserskanningen genomfördes (1 = 2008-2016, 2 = 2018-ca 2025, 3 = 2025-ca 2032). Giltiga värden 1-3. Om inget anges hämtas värden från senaste omdrev där inskickad polygon ligger helt inom ett omdrev.  ",
+                "format": "int32",
+                "maximum": 3.0,
+                "minimum": 1.0,
+                "nullable": true,
+                "example": null
+              }
+            }
+          }
+        ]
+      },
+      "StandardParameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "geometri": {
+            "type": "string",
+            "description": "Anges som WKT. Endast stöd för koordninatsystem SWEREF99 TM (SRID=3006). Endast POLYGON och MULTIPOLYGON är tillåtna.  ",
+            "example": "POLYGON ((485486 7018193, 486179 7018193, 486179 7018896, 485486 7018896, 485486 7018193))"
+          },
+          "pixelstorlek": {
+            "type": "integer",
+            "description": "Pixelstorlek för beräkningen, anges i meter. Om inget anges görs beräkningarna på 2x2 meters pixlar, för att minska kanteffekter på mindre områden. För områden > 100 ha rekommenderas pixelstorlek 10x10m. Om beräkningen inte går igenom behöver områdets storlek eller pixelstorlek justeras.  ",
+            "format": "int32",
+            "maximum": 500.0,
+            "minimum": 2.0,
+            "nullable": true,
+            "example": null
+          },
+          "marktyp": {
+            "type": "array",
+            "description": "Martyp som ska ingå i beräkningen. Uppgiften hämtas från kartskikt med Nationella Marktäckedata. Ett eller fler giltiga värden kan anges - `ProduktivSkogsmark`, `ImproduktivSkogsmark`, `AllSkogsmark`, `OvrigMark`, `AllMark`.",
+            "example": [
+              "ProduktivSkogsmark",
+              "ImproduktivSkogsmark"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Marktyp"
+            }
+          }
+        }
+      },
+      "HistogramDto": {
+        "type": "object",
+        "description": "Resultat utifrån variabeln 'berakna' (marktyp). Uppgift om olika marktyper hämtas från kartskikt med Nationella Marktäckedata.  \nMetadata presenteras för hela beräkningsområdet.",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Data för olika marktyper. Beräknad utifrån inskickade Marktyper. ",
+            "x-dictionaryKey": {
+              "$ref": "#/components/schemas/Marktyp"
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/MarktypHistogramDto"
+              }
+            }
+          },
+          "klassbredd": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pixelstorlek": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "MarktypHistogramDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "antal": {
+            "type": "integer",
+            "description": "Antalet pixlar i klassen",
+            "format": "int32"
+          },
+          "klassMinVarde": {
+            "type": "integer",
+            "description": "Minsta värde i klassen (inklusiv)",
+            "format": "int32"
+          },
+          "klassMaxVarde": {
+            "type": "integer",
+            "description": "Maximala värde i klassen (exklusiv)",
+            "format": "int32"
+          },
+          "klass": {
+            "type": "integer",
+            "description": "Numer på klassen",
+            "format": "int32"
+          },
+          "arealHa": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "HistogramParameters": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/StatistikParameters"
+          },
+          {
+            "type": "object",
+            "description": "Parametrar för histogramberäkning.",
+            "additionalProperties": false,
+            "properties": {
+              "klassBredd": {
+                "type": "integer",
+                "description": "Klassbredd för histogrammet, antalet enheter i varje klass för histogrammet. ",
+                "format": "int32",
+                "maximum": 2147483647.0,
+                "minimum": 1.0,
+                "example": 20
+              },
+              "antalKlasser": {
+                "type": "integer",
+                "description": "Antalet klasser för histogrammet, måste vara mellan 1 och 255. ",
+                "format": "int32",
+                "maximum": 255.0,
+                "minimum": 1.0,
+                "example": 10
+              }
+            }
+          }
+        ]
+      },
+      "FramskrivenVolymDto": {
+        "type": "object",
+        "description": "Resultat utifrån variabeln 'berakna' (marktyp). Uppgift om olika marktyper hämtas från kartskikt med Nationella Marktäckedata.  \nMetadata presenteras för hela beräkningsområdet.",
+        "additionalProperties": false,
+        "properties": {
+          "volym": {
+            "type": "object",
+            "description": "Volym för olika marktyper. Beräknad utifrån inskickade Marktyper. ",
+            "x-dictionaryKey": {
+              "$ref": "#/components/schemas/Marktyp"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FramskrivenVolymDStatistikDto"
+            }
+          },
+          "medelhojd": {
+            "type": "object",
+            "description": "Medelhöjd för olika marktyper. Beräknad utifrån inskickade Marktyper. ",
+            "x-dictionaryKey": {
+              "$ref": "#/components/schemas/Marktyp"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FramskrivenMedelhojdStatistikDto"
+            }
+          },
+          "grundyta": {
+            "type": "object",
+            "description": "Grundyta för olika marktyper. Beräknad utifrån inskickade Marktyper. ",
+            "x-dictionaryKey": {
+              "$ref": "#/components/schemas/Marktyp"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FramskrivenGrundytaStatistikDto"
+            }
+          },
+          "metadataDto": {
+            "description": "Data för olika marktyper. Beräknad utifrån inskickade Marktyper. ",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MetadataFramskrivningDto"
+              }
+            ]
+          }
+        }
+      },
+      "FramskrivenVolymDStatistikDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "arealHa": {
+            "type": "number",
+            "description": "Enhet: hektar, beräknas utifrån antalet pixlar med angiven pixelstorlek. OBS! Uppgiften kan skilja något från inskickad polygonarea beroende på pixelstorlek!",
+            "format": "double"
+          },
+          "medel": {
+            "type": "number",
+            "description": "Enhet: m3sk/ha, beräknat medelvirkesförråd.",
+            "format": "double"
+          },
+          "total": {
+            "type": "number",
+            "description": "Enhet: m3sk, beräknat totalt virkesförråd (arealHa * medel)",
+            "format": "double"
+          }
+        }
+      },
+      "FramskrivenMedelhojdStatistikDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "arealHa": {
+            "type": "number",
+            "description": "Enhet: hektar, beräknat utifrån antalet pixlar med angiven pixelstorlek. OBS! Uppgiften kan skilja något från inskickad polygonarea beroende på pixelstorlek!",
+            "format": "double"
+          },
+          "medelvarde": {
+            "type": "number",
+            "description": "Enhet: m",
+            "format": "double"
+          }
+        }
+      },
+      "FramskrivenGrundytaStatistikDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "arealHa": {
+            "type": "number",
+            "description": "Enhet: hektar, beräknat utifrån antalet pixlar med angiven pixelstorlek. OBS! Uppgiften kan skilja något från inskickad polygonarea beroende på pixelstorlek!",
+            "format": "double"
+          },
+          "medel": {
+            "type": "number",
+            "description": "Enhet: m2/ha",
+            "format": "double"
+          }
+        }
+      },
+      "MetadataFramskrivningDto": {
+        "type": "object",
+        "description": "Metadata för beräkningsområdet. Metadata presenteras för hela beräkningsområdet.",
+        "additionalProperties": false,
+        "properties": {
+          "pixelstorlek": {
+            "type": "integer",
+            "description": "Pixelstorlek - anges i meter.",
+            "format": "int32",
+            "example": 2
+          },
+          "framskrivetTillDatum": {
+            "type": "string",
+            "format": "date"
+          },
+          "antalTillvaxtsasonger": {
+            "type": "object",
+            "x-dictionaryKey": {
+              "$ref": "#/components/schemas/Marktyp"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Tillvaxtsasonger"
+            }
+          }
+        }
+      },
+      "Tillvaxtsasonger": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "minSasong": {
+            "type": "number",
+            "format": "double"
+          },
+          "maxSasong": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "FramskrivningVolymParameters": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/StandardParameters"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "datum": {
+                "type": "string",
+                "format": "date",
+                "nullable": true
+              }
+            }
+          }
+        ]
+      },
+      "GrundytaDto": {
+        "type": "object",
+        "description": "Resultat utifrån variabeln 'berakna' (marktyp). Uppgift om olika marktyper hämtas från kartskikt med Nationella Marktäckedata.  \nMetadata presenteras för hela beräkningsområdet.",
+        "additionalProperties": false,
+        "properties": {
+          "metadataDto": {
+            "description": "Metadata för beräkningsområdet. Metadata presenteras för hela beräkningsområdet.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MetadataDto"
+              }
+            ]
+          },
+          "data": {
+            "type": "object",
+            "description": "Data för olika marktyper. Beräknad utifrån inskickade Marktyper. ",
+            "x-dictionaryKey": {
+              "$ref": "#/components/schemas/Marktyp"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/GrundytaStatistikDto"
+            }
+          }
+        }
+      },
+      "GrundytaStatistikDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "arealHa": {
+            "type": "number",
+            "description": "Enhet: hektar, beräknat utifrån antalet pixlar med angiven pixelstorlek. OBS! Uppgiften kan skilja något från inskickad polygonarea beroende på pixelstorlek!",
+            "format": "double"
+          },
+          "medel": {
+            "type": "number",
+            "description": "Enhet: m2/ha",
+            "format": "double"
+          }
+        }
+      },
+      "MedeldiameterDto": {
+        "type": "object",
+        "description": "Resultat utifrån variabeln 'berakna' (marktyp). Uppgift om olika marktyper hämtas från kartskikt med Nationella Marktäckedata.  \nMetadata presenteras för hela beräkningsområdet.",
+        "additionalProperties": false,
+        "properties": {
+          "metadataDto": {
+            "description": "Metadata för beräkningsområdet. Metadata presenteras för hela beräkningsområdet.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MetadataDto"
+              }
+            ]
+          },
+          "data": {
+            "type": "object",
+            "description": "Data för olika marktyper. Beräknad utifrån inskickade Marktyper. ",
+            "x-dictionaryKey": {
+              "$ref": "#/components/schemas/Marktyp"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MedeldiameterStatistikDto"
+            }
+          }
+        }
+      },
+      "MedeldiameterStatistikDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "arealHa": {
+            "type": "number",
+            "description": "Enhet: hektar, beräknat utifrån antalet pixlar med angiven pixelstorlek. OBS! Uppgiften kan skilja något från inskickad polygonarea beroende på pixelstorlek!",
+            "format": "double"
+          },
+          "medelvarde": {
+            "type": "number",
+            "description": "Enhet: cm",
+            "format": "double"
+          }
+        }
+      },
+      "MedelhojdDto": {
+        "type": "object",
+        "description": "Resultat utifrån variabeln 'berakna' (marktyp). Uppgift om olika marktyper hämtas från kartskikt med Nationella Marktäckedata.  \nMetadata presenteras för hela beräkningsområdet.",
+        "additionalProperties": false,
+        "properties": {
+          "metadataDto": {
+            "description": "Metadata för beräkningsområdet. Metadata presenteras för hela beräkningsområdet.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MetadataDto"
+              }
+            ]
+          },
+          "data": {
+            "type": "object",
+            "description": "Data för olika marktyper. Beräknad utifrån inskickade Marktyper. ",
+            "x-dictionaryKey": {
+              "$ref": "#/components/schemas/Marktyp"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/MedelhojdStatistikDto"
+            }
+          }
+        }
+      },
+      "MedelhojdStatistikDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "arealHa": {
+            "type": "number",
+            "description": "Enhet: hektar, beräknat utifrån antalet pixlar med angiven pixelstorlek. OBS! Uppgiften kan skilja något från inskickad polygonarea beroende på pixelstorlek!",
+            "format": "double"
+          },
+          "medelvarde": {
+            "type": "number",
+            "description": "Enhet: m",
+            "format": "double"
+          }
+        }
+      },
+      "VolymDto": {
+        "type": "object",
+        "description": "Resultat utifrån variabeln 'berakna' (marktyp). Uppgift om olika marktyper hämtas från kartskikt med Nationella Marktäckedata.  \nMetadata presenteras för hela beräkningsområdet.",
+        "additionalProperties": false,
+        "properties": {
+          "volymMetadata": {
+            "description": "Metadata för beräkningsområdet. Metadata presenteras för hela beräkningsområdet.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MetadataDto"
+              }
+            ]
+          },
+          "data": {
+            "type": "object",
+            "description": "Data för olika marktyper. Beräknad utifrån inskickade Marktyper. ",
+            "x-dictionaryKey": {
+              "$ref": "#/components/schemas/Marktyp"
+            },
+            "additionalProperties": {
+              "$ref": "#/components/schemas/VolymStatistikDto"
+            }
+          }
+        }
+      },
+      "VolymStatistikDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "arealHa": {
+            "type": "number",
+            "description": "Enhet: hektar, beräknas utifrån antalet pixlar med angiven pixelstorlek. OBS! Uppgiften kan skilja något från inskickad polygonarea beroende på pixelstorlek!",
+            "format": "double"
+          },
+          "medel": {
+            "type": "number",
+            "description": "Enhet: m3sk/ha, beräknat medelvirkesförråd.",
+            "format": "double"
+          },
+          "total": {
+            "type": "number",
+            "description": "Enhet: m3sk, beräknat totalt virkesförråd (arealHa * medel)",
+            "format": "double"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "type": "oauth2",
+        "description": "OAuth2",
+        "flows": {
+          "clientCredentials": {
+            "authorizationUrl": "https://auth.skogsstyrelsen.se/connect/authorize",
+            "tokenUrl": "https://auth.skogsstyrelsen.se/connect/token",
+            "scopes": {
+              "sks_api": "Access Skogsstyrelsen API"
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer": []
+    }
+  ]
+}

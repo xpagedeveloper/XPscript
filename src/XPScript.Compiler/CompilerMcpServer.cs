@@ -6,7 +6,7 @@ namespace XPScript.Compiler;
 public static class CompilerMcpServer
 {
     private const string ProtocolVersion = "2025-06-18";
-    private const int MaxSourceChars = 1_048_576;
+    private const int MaxSourceChars = 16 * 1024 * 1024;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

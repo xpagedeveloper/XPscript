@@ -470,6 +470,15 @@ When asked to write an XPscript program:
 
 ## Verification checklist
 
+When consuming generated OpenAPI models, copy type names from the generated
+declarations. Do not Pascalize schema keys yourself. Server generation preserves
+valid keys such as `clear_actor_limits` and maps converted names consistently
+across `$ref` uses. See `docs/rest-api.md` for generation and initial import.
+Generated model array fields use `XPJsonArray`; do not replace them with
+`Public items() As Model`, which the CLI class parser does not support.
+Copy enum member names from the generated declaration too; collisions can add
+an enum-name prefix or numeric suffix.
+
 Before presenting code as valid XPscript, check:
 
 - Every variable required by `Option Declare` is declared.
