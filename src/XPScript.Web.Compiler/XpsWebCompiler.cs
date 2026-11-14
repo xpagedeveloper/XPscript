@@ -718,6 +718,7 @@ internal static class Script
     private static string BuildProject(string webRuntimeAssemblyPath, bool usesSqlite, bool usesMsSql, bool usesImage)
     {
         var escapedPath = SecurityElement.Escape(webRuntimeAssemblyPath) ?? throw new XpsWebCompilationException("Unable to encode the web runtime assembly path.");
+        var targetFramework = SelectedTargetFramework();
         var sqlitePackage = usesSqlite
             ? $"""
     <PackageReference Include="Microsoft.Data.Sqlite" Version="{MicrosoftDataSqliteVersion}" />
@@ -734,7 +735,7 @@ internal static class Script
         return $"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>{targetFramework}</TargetFramework>
     <OutputType>Library</OutputType>
     <AssemblyName>XPScript.WebUnit</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -747,6 +748,9 @@ internal static class Script
 </Project>
 """;
     }
+
+    private static string SelectedTargetFramework() =>
+        Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } value ? value : "net10.0";
     private static void DebugStep(string step, string sourcePath)
     {
         if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS"), "1", StringComparison.Ordinal)) return;
