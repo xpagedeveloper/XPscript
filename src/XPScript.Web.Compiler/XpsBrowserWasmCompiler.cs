@@ -136,7 +136,9 @@ public sealed class XpsBrowserWasmCompiler
         foreach (var directory in Directory.EnumerateDirectories(sourceRoot, "*", SearchOption.AllDirectories)) Directory.CreateDirectory(Path.Combine(destinationRoot, Path.GetRelativePath(sourceRoot, directory)));
         foreach (var file in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories)) { var destination = Path.Combine(destinationRoot, Path.GetRelativePath(sourceRoot, file)); Directory.CreateDirectory(Path.GetDirectoryName(destination)!); File.Copy(file, destination, true); }
     }
-    private string BuildIndexHtml(string sourcePath) => IndexHtml.Replace("__XPSCRIPT_BASE_HREF__", "./", StringComparison.Ordinal);
+    private string BuildIndexHtml(string sourcePath) => IndexHtml
+        .Replace("__XPSCRIPT_BASE_HREF__", "./", StringComparison.Ordinal)
+        .Replace("__XPSCRIPT_BOOTSTRAP__", UIFormAppAssets.UsesUIForm(sourcePath) ? "<link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css\" rel=\"stylesheet\">" : string.Empty, StringComparison.Ordinal);
     private static string NormalizeVariantSetAssignments(string source)
     {
         var variantNames = VariantDeclaration.Matches(source).Select(match => match.Groups[1].Value).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
@@ -177,7 +179,7 @@ public sealed class XpsBrowserWasmCompiler
     private static void TryDelete(string path) { try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch { } }
 
     private const string IndexHtml = """
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="__XPSCRIPT_BASE_HREF__"><title>XPScript</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"></head><body><main id="xpscript-app" class="container py-4"></main><script type="module" src="./main.js"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="__XPSCRIPT_BASE_HREF__"><title>XPScript</title>__XPSCRIPT_BOOTSTRAP__</head><body><main id="xpscript-app"></main><script type="module" src="./main.js"></script></body></html>
 """;
     private const string MainJs = """
 import { dotnet } from './_framework/dotnet.js';

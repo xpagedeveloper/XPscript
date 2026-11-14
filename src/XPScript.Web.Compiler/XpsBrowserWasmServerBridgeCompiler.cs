@@ -138,7 +138,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildBrowserProject(typeof(BrowserFormHost).Assembly.Location).Replace("Microsoft.NET.Sdk\"", "Microsoft.NET.Sdk.WebAssembly\"", StringComparison.Ordinal), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "main.js"), BrowserRuntimeConstant("MainJs"), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
-            await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), BuildIndexHtml(), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
 
             var buildIsolation = new[] { "-p:UseSharedCompilation=false", "-p:BuildInParallel=false", "-m:1" };
             await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--disable-build-servers", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-p:NuGetAudit=false", "-p:RestoreIgnoreFailedSources=true", .. buildIsolation], "browser-wasm restore", cancellationToken).ConfigureAwait(false);
@@ -147,7 +147,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
 
             var builtAppRoot = ResolveBuiltAppRoot(browserPublishRoot, workspace);
             CopyDirectory(builtAppRoot, appRoot);
-            await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(), cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "main.js"), BrowserRuntimeConstant("MainJs"), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
 
@@ -321,10 +321,12 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             ?? throw new XpsWebCompilationException("browser-wasm runtime template has an invalid value: " + name);
     }
 
-    private static string BuildIndexHtml()
+    private static string BuildIndexHtml(string sourcePath)
     {
         var template = BrowserRuntimeConstant("IndexHtml");
-        return template.Replace("__XPSCRIPT_BASE_HREF__", "./", StringComparison.Ordinal);
+        return template
+            .Replace("__XPSCRIPT_BASE_HREF__", "./", StringComparison.Ordinal)
+            .Replace("__XPSCRIPT_BOOTSTRAP__", UIFormAppAssets.UsesUIForm(sourcePath) ? "<link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css\" rel=\"stylesheet\">" : string.Empty, StringComparison.Ordinal);
     }
 
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, string operation, CancellationToken cancellationToken)
