@@ -748,6 +748,18 @@ public static class AstCompiler
         // Bind every procedure in its own scope; declarations are registered
         // before bodies so forward calls and recursion see real signatures.
         var methods = new List<BoundMethodDefinition>();
+        // Keep module/class declarations in the semantic cache context, but
+        // remove procedure bodies so an unrelated edit does not invalidate
+        // every procedure in the compilation unit.
+        var semanticContextBuilder = new StringBuilder(source);
+        foreach (var procedure in unit.Declarations.Where(item => item is SubDeclarationSyntax or FunctionDeclarationSyntax))
+        {
+            var span = procedure.Span;
+            if (span.Start < 0 || span.End > semanticContextBuilder.Length) continue;
+            for (var index = span.Start; index < span.End; index++)
+                if (semanticContextBuilder[index] is not '\r' and not '\n') semanticContextBuilder[index] = ' ';
+        }
+        var semanticContext = semanticContextBuilder.ToString();
         // Reserve a generated result name against every source identifier,
         // including parameters and declarations not yet bound.
         var identifiers = new Lexer(source).Lex().Select(token => token.Text).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -775,7 +787,7 @@ public static class AstCompiler
                 semanticReturnType, procedureFunction?.Identifier.Text, result,
                 (procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text).ToUpperInvariant() +
                 "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName + ":" + parameter.SemanticType?.Name)) + ")",
-                sourcePath, source, fullSource, dependencies: includeResult.Dependencies);
+                sourcePath, source, fullSource, dependencies: includeResult.Dependencies, semanticContext: semanticContext);
             var name = procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text;
             // Roslyn's console entry point is case-sensitive; XPscript is not.
             if (name.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0)
@@ -1843,7 +1855,7 @@ internal static class Program
     internal static IReadOnlyList<BoundStatement> BindProcedure(IReadOnlyList<StatementSyntax> procedureStatements, SymbolTable scope,
         IReadOnlyList<ParameterSymbol> parameters, XpTypeSymbol? returnType, string? functionName, LocalSymbol? result,
         string identity, string sourcePath, string transformedSource, string fullSource, bool allowDynamicConversions = true,
-        IReadOnlyList<string>? dependencies = null)
+        IReadOnlyList<string>? dependencies = null, string? semanticContext = null)
     {
             var signature = string.Join(";", parameters.Select(parameter =>
                 $"{parameter.Name}:{parameter.Type.FullName}:{parameter.SemanticType?.Name}:{parameter.IsByRef}"))
@@ -1854,7 +1866,8 @@ internal static class Program
                 ? transformedSource[procedureStart..procedureEnd]
                 : identity;
             var cacheKey = BoundTreeCache.CreateKey(identity, procedureSource,
-                BoundTreeCache.DependencyFingerprint(dependencies, sourcePath), signature, allowDynamicConversions);
+                BoundTreeCache.DependencyFingerprint(dependencies, sourcePath), semanticContext ?? string.Empty,
+                signature, allowDynamicConversions);
             if (BoundTreeCache.TryGet(cacheKey, out var cachedTree))
                 return cachedTree;
             var allProcedureStatements = FlattenStatements(procedureStatements).ToArray();

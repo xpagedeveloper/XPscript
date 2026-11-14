@@ -24,13 +24,14 @@ public static class BoundTreeCache
     public static int Count { get { lock (Gate) return Entries.Count; } }
     public static int MaxEntries => ReadMaxEntries();
 
-    public static string CreateKey(string identity, string procedureSource, string dependencyFingerprint, string signature, bool allowDynamicConversions)
+    public static string CreateKey(string identity, string procedureSource, string dependencyFingerprint, string semanticContext, string signature, bool allowDynamicConversions)
     {
         ArgumentNullException.ThrowIfNull(identity);
         ArgumentNullException.ThrowIfNull(procedureSource);
         ArgumentNullException.ThrowIfNull(dependencyFingerprint);
+        ArgumentNullException.ThrowIfNull(semanticContext);
         ArgumentNullException.ThrowIfNull(signature);
-        var payload = string.Join("\n", identity, signature, allowDynamicConversions ? "dynamic" : "strict", dependencyFingerprint, procedureSource);
+        var payload = string.Join("\n", identity, signature, allowDynamicConversions ? "dynamic" : "strict", dependencyFingerprint, semanticContext, procedureSource);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
     }
 
