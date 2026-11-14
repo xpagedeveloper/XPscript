@@ -775,7 +775,7 @@ public static class AstCompiler
                 semanticReturnType, procedureFunction?.Identifier.Text, result,
                 (procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text).ToUpperInvariant() +
                 "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName + ":" + parameter.SemanticType?.Name)) + ")",
-                sourcePath, source, fullSource);
+                sourcePath, source, fullSource, dependencies: includeResult.Dependencies);
             var name = procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text;
             // Roslyn's console entry point is case-sensitive; XPscript is not.
             if (name.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0)
@@ -1842,12 +1842,19 @@ internal static class Program
 
     internal static IReadOnlyList<BoundStatement> BindProcedure(IReadOnlyList<StatementSyntax> procedureStatements, SymbolTable scope,
         IReadOnlyList<ParameterSymbol> parameters, XpTypeSymbol? returnType, string? functionName, LocalSymbol? result,
-        string identity, string sourcePath, string transformedSource, string fullSource, bool allowDynamicConversions = true)
+        string identity, string sourcePath, string transformedSource, string fullSource, bool allowDynamicConversions = true,
+        IReadOnlyList<string>? dependencies = null)
     {
             var signature = string.Join(";", parameters.Select(parameter =>
                 $"{parameter.Name}:{parameter.Type.FullName}:{parameter.SemanticType?.Name}:{parameter.IsByRef}"))
                 + $"|return:{returnType?.Name}|function:{functionName}|result:{result?.Name}";
-            var cacheKey = BoundTreeCache.CreateKey(identity, fullSource, signature, allowDynamicConversions);
+            var procedureStart = procedureStatements.Count == 0 ? 0 : procedureStatements.Min(statement => statement.Span.Start);
+            var procedureEnd = procedureStatements.Count == 0 ? 0 : procedureStatements.Max(statement => statement.Span.End);
+            var procedureSource = procedureStart >= 0 && procedureEnd >= procedureStart && procedureEnd <= transformedSource.Length
+                ? transformedSource[procedureStart..procedureEnd]
+                : identity;
+            var cacheKey = BoundTreeCache.CreateKey(identity, procedureSource,
+                BoundTreeCache.DependencyFingerprint(dependencies), signature, allowDynamicConversions);
             if (BoundTreeCache.TryGet(cacheKey, out var cachedTree))
                 return cachedTree;
             var allProcedureStatements = FlattenStatements(procedureStatements).ToArray();

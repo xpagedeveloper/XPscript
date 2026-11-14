@@ -20,13 +20,27 @@ public static class BoundTreeCache
     public static long Hits => Interlocked.Read(ref _hits);
     public static long Misses => Interlocked.Read(ref _misses);
 
-    public static string CreateKey(string identity, string expandedSource, string signature, bool allowDynamicConversions)
+    public static string CreateKey(string identity, string procedureSource, string dependencyFingerprint, string signature, bool allowDynamicConversions)
     {
         ArgumentNullException.ThrowIfNull(identity);
-        ArgumentNullException.ThrowIfNull(expandedSource);
+        ArgumentNullException.ThrowIfNull(procedureSource);
+        ArgumentNullException.ThrowIfNull(dependencyFingerprint);
         ArgumentNullException.ThrowIfNull(signature);
-        var payload = string.Join("\n", identity, signature, allowDynamicConversions ? "dynamic" : "strict", expandedSource);
+        var payload = string.Join("\n", identity, signature, allowDynamicConversions ? "dynamic" : "strict", dependencyFingerprint, procedureSource);
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
+    }
+
+    public static string DependencyFingerprint(IEnumerable<string>? dependencyPaths)
+    {
+        if (dependencyPaths is null) return string.Empty;
+        var builder = new StringBuilder();
+        foreach (var path in dependencyPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var fullPath = Path.GetFullPath(path);
+            builder.Append(fullPath).Append('\0');
+            builder.Append(File.Exists(fullPath) ? File.ReadAllText(fullPath) : "<missing>").Append('\0');
+        }
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
     }
 
     public static bool TryGet(string key, out IReadOnlyList<BoundStatement> tree)
