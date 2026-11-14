@@ -11,14 +11,14 @@ internal static class TargetPrerequisiteValidator
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
         {
             RequireDotNetSdk("browser-wasm");
-            RequireWorkload("wasm-tools", "dotnet workload install wasm-tools");
+            RequireWorkload("wasm-tools");
             return;
         }
 
         if (runtimeIdentifier is "android-arm64" or "android-x64")
         {
             RequireDotNetSdk("Android");
-            RequireWorkload("android", "dotnet workload install android");
+            RequireWorkload("android");
             ValidateAndroidSdk();
         }
     }
@@ -30,7 +30,7 @@ internal static class TargetPrerequisiteValidator
             throw new CompilerException($"{target} compilation requires the .NET 10 SDK. Install it manually and retry: https://dotnet.microsoft.com/download/dotnet/10.0", "", "configuration");
     }
 
-    private static void RequireWorkload(string workload, string installCommand)
+    private static void RequireWorkload(string workload)
     {
         if (VerifiedWorkloads.Contains(workload)) return;
         Console.Error.WriteLine($"Checking .NET workload '{workload}'...");
@@ -42,10 +42,10 @@ internal static class TargetPrerequisiteValidator
             return;
         }
 
-        // workload list can fail on restricted Windows machines because the
-        // SDK tries to query system services. Verify the installed SDK layout
-        // directly before reporting the workload as missing.
-        if (IsWorkloadPresentInSdk(workload))
+        // The WASM runtime packs may be present in the SDK layout even when the
+        // workload is not registered. Trust `dotnet workload list` for WASM so
+        // a stale pack cannot make compilation proceed and fail later.
+        if (!workload.Equals("wasm-tools", StringComparison.OrdinalIgnoreCase) && IsWorkloadPresentInSdk(workload))
         {
             VerifiedWorkloads.Add(workload);
             Console.Error.WriteLine($".NET workload '{workload}' is installed (verified from the SDK layout).");
@@ -53,10 +53,10 @@ internal static class TargetPrerequisiteValidator
         }
 
         if (!result.Success)
-            throw new CompilerException($"Unable to verify the '{workload}' .NET workload. Run 'dotnet workload list' manually and install it if missing: {installCommand}", "", "configuration");
+            throw new CompilerException($"Unable to verify the '{workload}' .NET workload. Run 'dotnet workload list' manually and ensure the matching workload is installed.", "", "configuration");
 
         if (!result.Success || !IsWorkloadPresentInSdk(workload))
-            throw new CompilerException($"The '{workload}' .NET workload is required for this target. Install it manually with: {installCommand}", "", "configuration");
+            throw new CompilerException($"The '{workload}' .NET workload is required for this target, but it is not installed.", "", "configuration");
     }
 
     private static bool IsWorkloadPresentInSdk(string workload)

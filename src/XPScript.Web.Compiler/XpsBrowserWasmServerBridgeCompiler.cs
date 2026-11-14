@@ -139,8 +139,9 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), BuildIndexHtml(), cancellationToken).ConfigureAwait(false);
 
-            await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo", "-p:TargetFramework=net10.0", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true"], "browser-wasm restore", cancellationToken).ConfigureAwait(false);
-            await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", "-p:TargetFramework=net10.0", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-o", browserPublishRoot], "browser-wasm publish", cancellationToken).ConfigureAwait(false);
+            var targetFramework = SelectedTargetFramework();
+            await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true"], "browser-wasm restore", cancellationToken).ConfigureAwait(false);
+            await RunDotNetAsync(workspace, ["publish", "BrowserApp.csproj", "-c", "Release", "--no-restore", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-o", browserPublishRoot], "browser-wasm publish", cancellationToken).ConfigureAwait(false);
             NormalizePublishedLayout(browserPublishRoot);
 
             var builtAppRoot = ResolveBuiltAppRoot(browserPublishRoot, workspace);
@@ -212,10 +213,11 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     private static string BuildBrowserProject(string browserRuntimeAssemblyPath)
     {
         var escaped = SecurityElement.Escape(browserRuntimeAssemblyPath) ?? throw new XpsWebCompilationException("Unable to encode browser runtime path.");
+        var targetFramework = SelectedTargetFramework();
         return $$"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>{targetFramework}</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishTrimmed>false</PublishTrimmed>
@@ -243,8 +245,14 @@ internal static class XpsBrowserWasmServerBridgeCompiler
 """;
     }
 
+    private static string SelectedTargetFramework() =>
+        Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } value
+            ? value
+            : "net10.0";
+
     private static string BuildServerProject(string generated)
     {
+        var targetFramework = SelectedTargetFramework();
         var usesUi = generated.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
                      generated.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
                      generated.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
@@ -268,7 +276,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         return $"""
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>{targetFramework}</TargetFramework>
     <OutputType>Library</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -340,7 +348,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
                 details.Contains("wasm-tools", StringComparison.OrdinalIgnoreCase) ||
                 details.Contains("Microsoft.NETCore.App.Runtime.Mono.browser-wasm", StringComparison.OrdinalIgnoreCase))
             {
-                throw new XpsWebCompilationException("Browser WASM requires the .NET WASM workload. Install it with 'dotnet workload install wasm-tools' and retry." + Environment.NewLine + details);
+                throw new XpsWebCompilationException("Browser WASM requires the matching .NET WASM workload, but it is not available. XPScript does not install workloads; install it separately and retry." + Environment.NewLine + details);
             }
             throw new XpsWebCompilationException(operation + " failed." + Environment.NewLine + details);
         }

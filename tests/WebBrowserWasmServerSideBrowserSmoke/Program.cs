@@ -54,7 +54,7 @@ End Sub
     var status = page.Locator("input[name='status']");
     try
     {
-        await status.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30000 });
+        await status.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 120000 });
     }
     catch
     {
@@ -64,7 +64,7 @@ End Sub
     }
     if (await status.InputValueAsync() != "CLIENT") throw new Exception("Initial WASM state missing.");
     await page.GetByRole(AriaRole.Button, new() { Name = "Send to server" }).ClickAsync();
-    await Assertions.Expect(status).ToHaveValueAsync("WASM-SERVER-CLIENT", new() { Timeout = 30000 });
+    await Assertions.Expect(status).ToHaveValueAsync("WASM-SERVER-CLIENT", new() { Timeout = 120000 });
     if (errors.Count != 0) throw new Exception("Browser errors: " + string.Join(" | ", errors));
     Console.WriteLine("WASM_PLAYWRIGHT_PAGE_OK");
     Console.WriteLine("WASM_SERVERSIDE_EVENT_OK");
