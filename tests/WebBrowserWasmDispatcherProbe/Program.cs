@@ -41,18 +41,18 @@ End Sub
     if (bootstrap.StatusCode != 200)
         throw new Exception($"Bootstrap returned HTTP {bootstrap.StatusCode}: {Encoding.UTF8.GetString(bootstrap.Body.Span)}");
     var bootstrapText = Encoding.UTF8.GetString(bootstrap.Body.Span);
-    if (!bootstrapText.Contains("<base href=\"index.xps/\">", StringComparison.Ordinal))
+    if (!bootstrapText.Contains("<base href=\"./\">", StringComparison.Ordinal))
         throw new Exception("Bootstrap base href is incorrect.");
 
     DumpWasmCache(root, "after-bootstrap");
 
-    var main = await SendAsync(dispatcher, root, "/index.xps/main.js");
+    var main = await SendAsync(dispatcher, root, "/main.js");
     Console.WriteLine($"MAINJS={main.StatusCode} bytes={main.Body.Length} compilations={cache.CompilationStarts}");
     DumpWasmCache(root, "after-mainjs");
     if (main.StatusCode != 200 || main.Body.Length == 0)
         throw new Exception($"main.js returned HTTP {main.StatusCode} with {main.Body.Length} bytes.");
 
-    var framework = await SendAsync(dispatcher, root, "/index.xps/_framework/dotnet.js");
+    var framework = await SendAsync(dispatcher, root, "/_framework/dotnet.js");
     Console.WriteLine($"DOTNETJS={framework.StatusCode} bytes={framework.Body.Length} compilations={cache.CompilationStarts}");
     if (framework.StatusCode != 200 || framework.Body.Length == 0)
         throw new Exception($"dotnet.js returned HTTP {framework.StatusCode} with {framework.Body.Length} bytes.");

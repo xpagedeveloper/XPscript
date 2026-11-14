@@ -480,8 +480,7 @@ public sealed class XpsWebCompiler
             {
                 var path = context.Request.Path.Replace('\\', '/');
                 var marker = path.IndexOf(".xps/", StringComparison.OrdinalIgnoreCase);
-                if (marker < 0) throw new XpsWebRouteException("Invalid browser-wasm asset route.");
-                relativeAsset = path[(marker + 5)..];
+                relativeAsset = marker < 0 ? path.TrimStart('/') : path[(marker + 5)..];
             }
 
             if (await bundle.TryHandleBridgeAsync(relativeAsset, context).ConfigureAwait(false)) return;

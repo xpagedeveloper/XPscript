@@ -111,6 +111,12 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $astOutput 'Generated.dll'))) { throw 'Browser-WASM AST XPHttpDbSupabase.Attachments compilation failed.' }
           dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
           if ($LASTEXITCODE -ne 0) { throw 'Browser-WASM or Notes server-boundary smoke test failed.' }
+          dotnet restore tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj --force-evaluate
+          dotnet build tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-restore -p:UseSharedCompilation=false
+          & (Join-Path $PWD 'tests/WebBrowserWasmServerSideBrowserSmoke/bin/Release/net10.0/playwright.ps1') install chromium
+          if ($LASTEXITCODE -ne 0) { throw 'Playwright Chromium installation failed.' }
+          dotnet run --project tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-build
+          if ($LASTEXITCODE -ne 0) { throw 'Browser-WASM client/server/client event smoke test failed.' }
 
   android-ast:
     name: Android AST target (${{ matrix.os }})

@@ -28,6 +28,14 @@ public sealed class XpsWebPathResolver
         var segments = NormalizeUrlPath(requestPath);
         if (segments.Count == 0) return ResolveCandidate(_defaultDocumentName, null, fileExists);
 
+        if (segments.Count > 0 && (segments[0].Equals("main.js", StringComparison.OrdinalIgnoreCase) ||
+            segments[0].Equals("xpscript-browser.js", StringComparison.OrdinalIgnoreCase) ||
+            segments[0].Equals("_framework", StringComparison.OrdinalIgnoreCase)))
+        {
+            var browserAssetSource = ResolveCandidate(_defaultDocumentName, BrowserWasmAssetRoute, fileExists);
+            if (browserAssetSource.Found) return browserAssetSource;
+        }
+
         // Keep URL routing canonical independently of filesystem behavior. APFS/HFS+
         // can transparently match decomposed Unicode against a composed filename,
         // which would otherwise create a second URL for the same script.
