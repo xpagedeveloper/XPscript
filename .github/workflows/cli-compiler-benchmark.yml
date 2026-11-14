@@ -29,3 +29,6 @@ jobs:
       - name: Compile identical source with legacy and AST compilers
         shell: pwsh
         run: pwsh -NoProfile -File ./tests/cli-compiler-benchmark/run-cli-compiler-benchmark.ps1
+      - name: Verify incremental AST cache and include invalidation
+        shell: pwsh
+        run: dotnet run --project ./tests/AstIncrementalCacheProbe/AstIncrementalCacheProbe.csproj -c Release --no-restore -p:UseSharedCompilation=false -p:BuildInParallel=false -m:1
