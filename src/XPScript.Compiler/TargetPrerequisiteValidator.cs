@@ -134,6 +134,7 @@ internal static class TargetPrerequisiteValidator
             {
                 FileName = executable,
                 Arguments = arguments,
+                WorkingDirectory = ResolveDotNetRoot() ?? Environment.CurrentDirectory,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
