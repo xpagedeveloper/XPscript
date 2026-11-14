@@ -27,6 +27,8 @@ internal sealed class XPScriptHttpDbSupabase
     public string CertificateValidation { get => _http.CertificateValidation; set => _http.CertificateValidation = value; }
     public string BaseUrl => _baseUrl;
     public string Schema => _schema;
+    public XPScriptAttachmentCollectionV3 Attachments(object? table, object? keyColumn, object? keyValue)
+        => XPScriptDatabaseAttachmentApi.ForSupabase(this, table, keyColumn, keyValue);
 
     public void SetApiKey(object? apiKey) => _apiKey = RequiredText(apiKey, "Supabase API key");
     public void SetBearerToken(object? token) => _bearerToken = XPScriptRuntime.CStr(token).Trim();

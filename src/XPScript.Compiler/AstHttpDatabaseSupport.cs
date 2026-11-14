@@ -21,6 +21,7 @@ internal static class AstHttpDatabaseSupport
         new("XPHttpDbSupabase", "ConfigureCloudManagement", "void", ["object", "object"], ["projectRef", "accessToken"], false, false, false),
         new("XPHttpDbSupabase", "ConfigureSqlEndpoint", "void", ["object", "object"], ["endpoint", "adminToken"], false, false, false),
         new("XPHttpDbSupabase", "ExecuteSql", "XPJsonDocument", ["object"], ["sql"], false, false, false),
+        new("XPHttpDbSupabase", "Attachments", "XPAttachmentCollection", ["object", "object", "object"], ["table", "keyColumn", "keyValue"], false, false, false),
         new("XPHttpDbSupabase", "BaseUrl", "string", [], [], false, true, false),
         new("XPHttpDbSupabase", "Schema", "string", [], [], false, true, false),
         new("XPHttpDbSupabase", "CertificateValidation", "string", [], [], false, true, true),

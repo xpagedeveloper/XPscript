@@ -106,6 +106,9 @@ jobs:
       - name: Run browser-WASM and Notes server-boundary smoke test
         shell: pwsh
         run: |
+          $astOutput = Join-Path $env:RUNNER_TEMP 'browser-wasm-ast-attachments'
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/browser-wasm-attachment-download.xps --output $astOutput --platform browser-wasm --runtime=false --debug
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $astOutput 'Generated.dll'))) { throw 'Browser-WASM AST XPHttpDbSupabase.Attachments compilation failed.' }
           dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
           if ($LASTEXITCODE -ne 0) { throw 'Browser-WASM or Notes server-boundary smoke test failed.' }
 
