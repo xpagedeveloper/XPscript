@@ -759,6 +759,11 @@ public static class AstCompiler
             for (var index = span.Start; index < span.End; index++)
                 if (semanticContextBuilder[index] is not '\r' and not '\n') semanticContextBuilder[index] = ' ';
         }
+        // Declaration-level preprocessing can blank the source prefix before
+        // the parser sees it. Preserve module constants from the preprocessed
+        // full source explicitly so their consumers invalidate correctly.
+        foreach (Match moduleConstant in Regex.Matches(fullSource, @"(?im)^\s*(?:(?:Public|Private)\s+)?Const\s+[^\r\n]+"))
+            semanticContextBuilder.Append('\n').Append(moduleConstant.Value.Trim());
         var semanticContext = semanticContextBuilder.ToString();
         // Reserve a generated result name against every source identifier,
         // including parameters and declarations not yet bound.
