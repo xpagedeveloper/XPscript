@@ -1844,6 +1844,12 @@ internal static class Program
         IReadOnlyList<ParameterSymbol> parameters, XpTypeSymbol? returnType, string? functionName, LocalSymbol? result,
         string identity, string sourcePath, string transformedSource, string fullSource, bool allowDynamicConversions = true)
     {
+            var signature = string.Join(";", parameters.Select(parameter =>
+                $"{parameter.Name}:{parameter.Type.FullName}:{parameter.SemanticType?.Name}:{parameter.IsByRef}"))
+                + $"|return:{returnType?.Name}|function:{functionName}|result:{result?.Name}";
+            var cacheKey = BoundTreeCache.CreateKey(identity, fullSource, signature, allowDynamicConversions);
+            if (BoundTreeCache.TryGet(cacheKey, out var cachedTree))
+                return cachedTree;
             var allProcedureStatements = FlattenStatements(procedureStatements).ToArray();
             var labels = allProcedureStatements.OfType<LabelStatementSyntax>()
                 .GroupBy(label => label.Identifier.Text, StringComparer.OrdinalIgnoreCase)
@@ -1949,6 +1955,7 @@ internal static class Program
                     ? new BoundLiteralExpression(null, typeof(object), result.SemanticType) : null));
                 bound.Add(new BoundReturnStatement(new BoundNameExpression(result)));
             }
+        BoundTreeCache.Store(cacheKey, bound);
         return bound;
     }
 
