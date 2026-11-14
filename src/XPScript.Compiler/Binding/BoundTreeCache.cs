@@ -11,7 +11,9 @@ namespace XPScript.Compiler.Binding;
 /// </summary>
 public static class BoundTreeCache
 {
-    private static readonly ConcurrentDictionary<string, IReadOnlyList<BoundStatement>> Entries = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, IReadOnlyList<BoundStatement>> Entries = new(StringComparer.Ordinal);
+    private static readonly LinkedList<string> Lru = new();
+    private static readonly object Gate = new();
     private static long _hits;
     private static long _misses;
 
@@ -19,6 +21,8 @@ public static class BoundTreeCache
 
     public static long Hits => Interlocked.Read(ref _hits);
     public static long Misses => Interlocked.Read(ref _misses);
+    public static int Count { get { lock (Gate) return Entries.Count; } }
+    public static int MaxEntries => ReadMaxEntries();
 
     public static string CreateKey(string identity, string procedureSource, string dependencyFingerprint, string signature, bool allowDynamicConversions)
     {
@@ -53,10 +57,14 @@ public static class BoundTreeCache
             return false;
         }
 
-        if (Entries.TryGetValue(key, out tree!))
+        lock (Gate)
         {
-            Interlocked.Increment(ref _hits);
-            return true;
+            if (Entries.TryGetValue(key, out tree!))
+            {
+                Touch(key);
+                Interlocked.Increment(ref _hits);
+                return true;
+            }
         }
 
         Interlocked.Increment(ref _misses);
@@ -67,13 +75,33 @@ public static class BoundTreeCache
     public static void Store(string key, IReadOnlyList<BoundStatement> tree)
     {
         if (Enabled)
-            Entries[key] = tree;
+        {
+            lock (Gate)
+            {
+                Entries[key] = tree;
+                Touch(key);
+                while (Entries.Count > MaxEntries && Lru.Last is { } oldest)
+                {
+                    Entries.Remove(oldest.Value);
+                    Lru.RemoveLast();
+                }
+            }
+        }
     }
 
     public static void Clear()
     {
-        Entries.Clear();
+        lock (Gate) { Entries.Clear(); Lru.Clear(); }
         Interlocked.Exchange(ref _hits, 0);
         Interlocked.Exchange(ref _misses, 0);
     }
+
+    private static void Touch(string key)
+    {
+        Lru.Remove(key);
+        Lru.AddFirst(key);
+    }
+
+    private static int ReadMaxEntries()
+        => int.TryParse(Environment.GetEnvironmentVariable("XPSCRIPT_AST_CACHE_MAX_ENTRIES"), out var value) && value > 0 ? value : 256;
 }
