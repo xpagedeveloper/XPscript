@@ -30,7 +30,6 @@ internal static class AstUiListViewSupport
         .Concat([
             new("UIListView", "SetOnSelect", "void", ["object?"], ["handlerName"], false, false, false),
             new("UIListView", "SetOnDoubleClick", "void", ["object?"], ["handlerName"], false, false, false),
-            new("UIListView", "SetOnSelectCallback", "void", ["object?", "object?"], ["handlerName", "callbackArgument"], false, false, false),
             new("UIListView", "SetOnDoubleClickCallback", "void", ["object?", "object?", "object?"], ["handlerName", "callbackArgument", "callbackArgument2"], false, false, false),
             new("UIListView", "AddRowButton", "void", ["object?", "object?", "object?"], ["name", "label", "handlerName"], false, false, false),
             new("UIListView", "AddRowNavigationButton", "void", ["object?", "object?", "object?"], ["name", "label", "targetScript"], false, false, false),
