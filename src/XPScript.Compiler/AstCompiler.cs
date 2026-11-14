@@ -1854,7 +1854,7 @@ internal static class Program
                 ? transformedSource[procedureStart..procedureEnd]
                 : identity;
             var cacheKey = BoundTreeCache.CreateKey(identity, procedureSource,
-                BoundTreeCache.DependencyFingerprint(dependencies), signature, allowDynamicConversions);
+                BoundTreeCache.DependencyFingerprint(dependencies, sourcePath), signature, allowDynamicConversions);
             if (BoundTreeCache.TryGet(cacheKey, out var cachedTree))
                 return cachedTree;
             var allProcedureStatements = FlattenStatements(procedureStatements).ToArray();

@@ -13,7 +13,7 @@ try
     var include = Path.Combine(root, "shared.xps");
     var source = Path.Combine(root, "main.xps");
     File.WriteAllText(include, "Const SharedValue As Long = 7\n");
-    File.WriteAllText(source, "Include \"shared.xps\"\nSub Main()\nPrint SharedValue\nEnd Sub\n");
+    File.WriteAllText(source, "Include \"shared.xps\"\nSub Main()\nPrint SharedValue\nEnd Sub\nSub Helper()\nPrint 1\nEnd Sub\n");
 
     var stopwatch = System.Diagnostics.Stopwatch.StartNew();
     await AstCompiler.CompileAsync(source, Path.Combine(root, "first"));
@@ -28,6 +28,13 @@ try
         throw new InvalidOperationException("Unchanged source did not reuse a bound tree.");
     if (BoundEmissionCache.Hits == 0)
         throw new InvalidOperationException("Unchanged source did not reuse emitted C#.");
+    var hitsBeforeIndependentEdit = BoundTreeCache.Hits;
+    var missesBeforeIndependentEdit = BoundTreeCache.Misses;
+
+    File.WriteAllText(source, "Include \"shared.xps\"\nSub Main()\nPrint SharedValue\nEnd Sub\nSub Helper()\nPrint 2\nEnd Sub\n");
+    await AstCompiler.CompileAsync(source, Path.Combine(root, "independent-edit"));
+    if (BoundTreeCache.Hits <= hitsBeforeIndependentEdit || BoundTreeCache.Misses <= missesBeforeIndependentEdit)
+        throw new InvalidOperationException("Editing one procedure did not preserve an independent procedure cache hit.");
 
     File.WriteAllText(include, "Const SharedValue As Long = 8\n");
     stopwatch.Restart();

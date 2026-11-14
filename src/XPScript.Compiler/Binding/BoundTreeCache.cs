@@ -30,13 +30,15 @@ public static class BoundTreeCache
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
     }
 
-    public static string DependencyFingerprint(IEnumerable<string>? dependencyPaths)
+    public static string DependencyFingerprint(IEnumerable<string>? dependencyPaths, string? rootPath = null)
     {
         if (dependencyPaths is null) return string.Empty;
+        var root = rootPath is null ? null : Path.GetFullPath(rootPath);
         var builder = new StringBuilder();
         foreach (var path in dependencyPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
             var fullPath = Path.GetFullPath(path);
+            if (root is not null && string.Equals(fullPath, root, StringComparison.OrdinalIgnoreCase)) continue;
             builder.Append(fullPath).Append('\0');
             builder.Append(File.Exists(fullPath) ? File.ReadAllText(fullPath) : "<missing>").Append('\0');
         }
