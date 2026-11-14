@@ -154,11 +154,6 @@ internal static class AstObjectSupportRegistry
 
     public static bool UsesUnsupportedObject(string source, out ObjectDefinition? definition)
     {
-        if (AstHttpSupport.RequiresLegacy(source))
-        {
-            definition = new ObjectDefinition("XPHttpClient callbacks/UIForm", CompilationRoute.LegacyFallback, null);
-            return true;
-        }
         var code = RemoveStringsAndComments(source);
         foreach (var candidate in Objects.Where(item => item.Route != CompilationRoute.Ast))
         {

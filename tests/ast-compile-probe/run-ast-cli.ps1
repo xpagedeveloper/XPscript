@@ -1344,6 +1344,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST HTTP client class-method compilation faile
 $httpClientClassMethodResult = dotnet (Join-Path $httpClientClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($httpClientClassMethodResult -join "`n") -ne '30') { throw 'AST HTTP client class-method execution failed.' }
 Write-Host 'AST_CLASS_METHOD_HTTP_CLIENT_OK'
+$httpAsyncUiFormOutput = Join-Path $output 'http-async-uiform-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'http-async-uiform-next.xps') -o $httpAsyncUiFormOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST HTTP async/UIForm compilation failed.' }
+$httpAsyncUiFormResult = dotnet (Join-Path $httpAsyncUiFormOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($httpAsyncUiFormResult -join "`n") -ne 'AST_HTTP_ASYNC_UIFORM_OK') { throw 'AST HTTP async/UIForm execution failed.' }
+Write-Host 'AST_HTTP_ASYNC_UIFORM_OK'
 $notesHttpClassMethodOutput = Join-Path $output 'class-method-notes-http-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-notes-http-next.xps') -o $notesHttpClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Notes HTTP class-method compilation failed.' }

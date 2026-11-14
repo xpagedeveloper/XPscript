@@ -973,7 +973,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
 {{LegacyPrintFormattingRuntimeSource.Code}}
 {{(Regex.IsMatch(fullSource, @"(?i)\b(ShowDialog|LoadFileDialog|OpenFileDialog|SaveFileDialog)\b") ? UIDialogRuntimeSource.Code : "")}}
-{{(runtimeFeatures.Ui ? UIExtensionRuntimeSource.Code + (AstObjectSupportRegistry.UsesObject(fullSource, "UIListView") ? UIListViewRuntimeSource.Code : "") + (usesJsonSchemaRuntime ? Environment.NewLine + UIFormValidationRuntimeSource.Code : "") : "")}}
+{{(runtimeFeatures.Ui ? UIExtensionRuntimeSource.Code + (AstObjectSupportRegistry.UsesObject(fullSource, "UIListView") ? UIListViewRuntimeSource.Code : "") + ((usesJsonSchemaRuntime || Regex.IsMatch(fullSource, @"(?i)\.\s*(?:LoadForm|SaveForm|PutForm)\s*\(")) ? Environment.NewLine + UIFormValidationRuntimeSource.Code : "") : "")}}
 {{(usesArchive ? ArchiveRuntimeSource.Code + ArchiveMemoryRuntimeSource.Code + ArchiveIteratorRuntimeSource.Code : "")}}
 {{(usesArchive && source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ? ArchiveExtendedReaderRuntimeSource.Code + ArchiveExtendedWriterRuntimeSource.Code + ArchiveExtendedWriterFactoryRuntimeSource.Code : "")}}
 {{(usesNetworkTools ? NetworkToolsRuntimeSource.Code : "")}}
@@ -1713,12 +1713,13 @@ internal static class Program
             generated = new UIFormAdditionalFieldsPostProcessor().Transform(generated);
             generated = new UIFormAdditionalFieldFixupPostProcessor().Transform(generated);
             generated = UIFormBasicStructuralPostProcessor.Transform(generated);
-            if (!generated.Contains("internal sealed class XPScriptHttpClient", StringComparison.Ordinal))
+            if (!generated.Contains("class XPScriptHttpClient", StringComparison.Ordinal))
                 generated += Environment.NewLine + NativeHttpRuntimeSource.Code;
             if (generated.Contains("XPScriptTlsValidationState", StringComparison.Ordinal) &&
                 !generated.Contains("internal sealed class XPScriptTlsValidationState", StringComparison.Ordinal))
                 generated += Environment.NewLine + AstTlsRuntimeCode();
-            if (generated.Contains("XPScriptHttpCoreHelpers", StringComparison.Ordinal))
+            if (generated.Contains("XPScriptHttpCoreHelpers", StringComparison.Ordinal) &&
+                !generated.Contains("internal static class XPScriptHttpCoreHelpers", StringComparison.Ordinal))
                 generated += Environment.NewLine + HttpCoreRuntimeSource.Code + HttpJsonRuntimeSource.Code;
         }
         using var assetScope = UIFormAssetCompileContext.Push(embedAssets);

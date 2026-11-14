@@ -21,8 +21,25 @@ internal static class AstHttpSupport
         "int" => "Integer", "long" => "Long", "double" => "Double", "string" => "String", "bool" => "Boolean",
         "XPScriptJsonDocument" => "XPJsonDocument", _ => type.TrimEnd('?').Replace("XPScriptHttp", "XPHttp", StringComparison.Ordinal)
     };
+    private static readonly AstNativeObjectSurface.Member[] ExtendedMembers =
+    [
+        new("XPHttpClient", "GetAsync", "object?", ["object?", "object?"], ["url", "callbackName"], false, false, false),
+        new("XPHttpClient", "GetAsync", "object?", ["object?", "object?", "object?"], ["url", "callbackName", "callbackArgument"], false, false, false),
+        new("XPHttpClient", "DeleteAsync", "object?", ["object?", "object?"], ["url", "callbackName"], false, false, false),
+        new("XPHttpClient", "DeleteAsync", "object?", ["object?", "object?", "object?"], ["url", "callbackName", "callbackArgument"], false, false, false),
+        new("XPHttpClient", "PostAsync", "object?", ["object?", "object?", "object?"], ["url", "body", "callbackName"], false, false, false),
+        new("XPHttpClient", "PostAsync", "object?", ["object?", "object?", "object?", "object?"], ["url", "body", "callbackName", "callbackArgument"], false, false, false),
+        new("XPHttpClient", "PutAsync", "object?", ["object?", "object?", "object?"], ["url", "body", "callbackName"], false, false, false),
+        new("XPHttpClient", "PutAsync", "object?", ["object?", "object?", "object?", "object?"], ["url", "body", "callbackName", "callbackArgument"], false, false, false),
+        new("XPHttpClient", "PatchAsync", "object?", ["object?", "object?", "object?"], ["url", "body", "callbackName"], false, false, false),
+        new("XPHttpClient", "PatchAsync", "object?", ["object?", "object?", "object?", "object?"], ["url", "body", "callbackName", "callbackArgument"], false, false, false),
+        new("XPHttpClient", "LoadForm", "void", ["object?", "object?"], ["form", "url"], false, false, false),
+        new("XPHttpClient", "SaveForm", "XPScriptHttpResponse", ["object?", "object?"], ["form", "url"], false, false, false),
+        new("XPHttpClient", "PutForm", "XPScriptHttpResponse", ["object?", "object?"], ["form", "url"], false, false, false)
+    ];
     internal static readonly AstNativeObjectSurface.Member[] Members = AstNativeObjectSurface.ReadMembers(Classes, Names, LanguageType)
         .Concat(AstNativeObjectSurface.ReadMembers(Classes, ["XPHttpPart"], LanguageType).Select(m => m with { Owner = "XPHttpFile" }))
+        .Concat(ExtendedMembers)
         .Select(m => m with { Result = LanguageType(m.Result) == "Variant" ? "object?" : m.Result })
         .ToArray();
     internal static IEnumerable<CompilerSymbolDefinition> Catalog => AstNativeObjectSurface.Catalog(Names, Members, LanguageType);
@@ -30,11 +47,18 @@ internal static class AstHttpSupport
     internal static string MemberName(string owner, string name) => Members.FirstOrDefault(m => m.Owner.Equals(owner, StringComparison.OrdinalIgnoreCase) && m.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.Name ?? name;
     internal static bool IsReadOnly(string owner, string name) => Members.Any(m => m.IsProperty && !m.Writable && m.Owner.Equals(owner, StringComparison.OrdinalIgnoreCase) && m.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     internal static bool UsesHttp(string source) => Names.Any(n => AstObjectSupportRegistry.UsesObject(source, n));
-    internal static bool RequiresLegacy(string source) => UsesHttp(source) && System.Text.RegularExpressions.Regex.IsMatch(
-        AstObjectSupportRegistry.RemoveStringsAndComments(source), @"(?i)\.\s*(?:GetAsync|DeleteAsync|PostAsync|PutAsync|PatchAsync|LoadForm|SaveForm|PutForm)\s*\(");
     private static string SharedClass(string name) => CSharpSyntaxTree.ParseText(CoreCompatibilityRuntimeSource.Code).GetRoot()
         .DescendantNodes().OfType<ClassDeclarationSyntax>().Single(c => c.Identifier.ValueText == name).ToFullString();
     internal static string ExceptionCode => SharedClass("XPScriptRuntimeException");
-    internal static string RuntimeCode(string source) => UsesHttp(source)
-        ? NativeHttpRuntimeSource.Code + SharedClass("XPScriptTlsValidationState") + HttpCoreRuntimeSource.Code + HttpJsonRuntimeSource.Code : "";
+    internal static string RuntimeCode(string source)
+    {
+        if (!UsesHttp(source)) return "";
+        var code = NativeHttpRuntimeSource.Code + SharedClass("XPScriptTlsValidationState") + HttpCoreRuntimeSource.Code + HttpJsonRuntimeSource.Code;
+        var cleaned = AstObjectSupportRegistry.RemoveStringsAndComments(source);
+        if (System.Text.RegularExpressions.Regex.IsMatch(cleaned, @"(?i)\.\s*(?:GetAsync|DeleteAsync|PostAsync|PutAsync|PatchAsync)\s*\("))
+            code += "\n\n" + HttpClientExtendedRuntimeSource.Code + "\n\n" + AsyncHttpRuntimeSource.Code;
+        if (System.Text.RegularExpressions.Regex.IsMatch(cleaned, @"(?i)\.\s*(?:LoadForm|SaveForm|PutForm)\s*\("))
+            code += "\n\n" + HttpClientExtendedRuntimeSource.FormCode + "\n\n" + HttpUiFormRuntimeSource.Code;
+        return code;
+    }
 }

@@ -9,7 +9,7 @@ internal static class XPScriptNativeHttp
     public static XPScriptHttpRequest CreateRequest() => new();
 }
 
-internal sealed class XPScriptHttpClient : IDisposable
+internal sealed partial class XPScriptHttpClient : IDisposable
 {
     private const long DefaultMaxRequestBodyBytes = 8L * 1024 * 1024;
     private const int MaxResponseBodyBytes = 64 * 1024 * 1024;
@@ -131,7 +131,6 @@ internal sealed class XPScriptHttpClient : IDisposable
     public XPScriptHttpResponse PutJson(object? url, object? data) => XPScriptHttpJsonHelpers.PutJson(this, url, data);
     public XPScriptHttpResponse PatchJson(object? url, object? data) => XPScriptHttpJsonHelpers.PatchJson(this, url, data);
     public XPScriptHttpResponse PostForm(object? url, object? data) => XPScriptHttpJsonHelpers.PostForm(this, url, data);
-
     public XPScriptHttpResponse Send(object? requestValue)
     {
         EnsureNotDisposed();

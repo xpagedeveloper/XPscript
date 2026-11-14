@@ -45,11 +45,28 @@ internal static class AstNativeObjectSurface
     internal static IEnumerable<Member> ReadMethod(string owner, MethodDeclarationSyntax method, string? name = null, string? nativeTarget = null)
     {
         var parameters = method.ParameterList.Parameters;
-        var required = parameters.Count(p => p.Default is null);
-        for (var count = required; count <= parameters.Count; count++)
+        var paramsIndex = -1;
+        for (var index = 0; index < parameters.Count; index++)
+            if (parameters[index].Modifiers.Any(SyntaxKind.ParamsKeyword))
+            {
+                paramsIndex = index;
+                break;
+            }
+        var hasParams = paramsIndex >= 0 && parameters[paramsIndex].Modifiers.Any(SyntaxKind.ParamsKeyword);
+        var required = hasParams ? paramsIndex : parameters.Count(p => p.Default is null);
+        var maximum = hasParams ? paramsIndex + 4 : parameters.Count;
+        for (var count = required; count <= maximum; count++)
+        {
+            var signatureParameters = parameters.Take(count).Select((parameter, index) =>
+            {
+                if (hasParams && index == paramsIndex && parameter.Type is ArrayTypeSyntax array)
+                    return array.ElementType.ToString();
+                return parameter.Type!.ToString();
+            }).ToArray();
             yield return new(owner, name ?? method.Identifier.ValueText, method.ReturnType.ToString(),
-                parameters.Take(count).Select(p => p.Type!.ToString()).ToArray(), parameters.Take(count).Select(p => p.Identifier.ValueText).ToArray(),
+                signatureParameters, parameters.Take(count).Select(p => p.Identifier.ValueText).ToArray(),
                 method.Modifiers.Any(SyntaxKind.StaticKeyword), false, false, nativeTarget);
+        }
     }
 
     internal static IEnumerable<CompilerSymbolDefinition> Catalog(string[] names, IEnumerable<Member> members, Func<string, string> languageType) =>
