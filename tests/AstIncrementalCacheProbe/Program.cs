@@ -1,8 +1,11 @@
 using XPScript.Compiler;
 using XPScript.Compiler.Binding;
+using XPScript.Compiler.Emission;
 
 Environment.SetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE", "1");
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_EMISSION_CACHE", "1");
 BoundTreeCache.Clear();
+BoundEmissionCache.Clear();
 var root = Path.Combine(Path.GetTempPath(), "xpscript-ast-cache-probe-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 try
@@ -17,6 +20,8 @@ try
     await AstCompiler.CompileAsync(source, Path.Combine(root, "second"));
     if (BoundTreeCache.Hits == 0)
         throw new InvalidOperationException("Unchanged source did not reuse a bound tree.");
+    if (BoundEmissionCache.Hits == 0)
+        throw new InvalidOperationException("Unchanged source did not reuse emitted C#.");
 
     File.WriteAllText(include, "Const SharedValue As Long = 8\n");
     await AstCompiler.CompileAsync(source, Path.Combine(root, "changed-include"));
@@ -33,6 +38,8 @@ try
 finally
 {
     Environment.SetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE", null);
+    Environment.SetEnvironmentVariable("XPSCRIPT_AST_EMISSION_CACHE", null);
     BoundTreeCache.Clear();
+    BoundEmissionCache.Clear();
     if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
 }

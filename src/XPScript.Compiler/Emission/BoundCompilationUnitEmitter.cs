@@ -52,7 +52,11 @@ public sealed class BoundCompilationUnitEmitter
         }
         var emitter = new BoundMethodEmitter();
         foreach (var method in methods)
-            output.Append(emitter.Emit(method.Name, method.ReturnType, method.Parameters, method.Statements, true, source, sourcePath, method.SemanticReturnType));
+        {
+            var key = BoundEmissionCache.CreateKey(method, sourcePath);
+            output.Append(BoundEmissionCache.Emit(key, () =>
+                emitter.Emit(method.Name, method.ReturnType, method.Parameters, method.Statements, true, source, sourcePath, method.SemanticReturnType)));
+        }
         return output.ToString();
     }
 
