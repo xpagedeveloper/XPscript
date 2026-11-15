@@ -16,7 +16,7 @@ internal static partial class BrowserRichMediaHost
             foreach (var field in fields.EnumerateArray())
             {
                 var type = Read(field, "type");
-                if (type is not ("Image" or "WebView" or "Carousel")) continue;
+                if (type is not ("Image" or "WebView" or "Carousel" or "ProgressBar" or "ActivityIndicator")) continue;
                 var name = Read(field, "name");
                 if (name.Length == 0) continue;
                 using var existing = QuerySelector(root, "[data-field-name=\"" + name + "\"] input");
@@ -35,6 +35,11 @@ internal static partial class BrowserRichMediaHost
                 {
                     using var carousel = CreateCarousel(field, name);
                     ReplaceElement(existing, carousel);
+                }
+                else if (type is "ProgressBar" or "ActivityIndicator")
+                {
+                    using var progress = CreateProgress(field, name, type == "ActivityIndicator");
+                    ReplaceElement(existing, progress);
                 }
                 else
                 {
@@ -58,6 +63,22 @@ internal static partial class BrowserRichMediaHost
             using var cancel = QuerySelector(root, "button.btn-secondary:not([data-action-name])");
             if (cancel is not null) RemoveElement(cancel);
         }
+    }
+
+    private static JSObject CreateProgress(JsonElement field, string name, bool activity)
+    {
+        using var progress = CreateElement("progress");
+        progress.SetProperty("className", "xpscript-uiform-progress");
+        progress.SetProperty("data-field-name", name);
+        progress.SetProperty("max", "1");
+        if (!(activity || (field.TryGetProperty("progressIndeterminate", out var indeterminate) && indeterminate.ValueKind == JsonValueKind.True)))
+        {
+            var value = field.TryGetProperty("progressValue", out var progressValue) && progressValue.TryGetDouble(out var number) ? Math.Clamp(number, 0, 1) : 0;
+            progress.SetProperty("value", value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+        if (activity && field.TryGetProperty("activityRunning", out var running) && running.ValueKind == JsonValueKind.False)
+            progress.SetProperty("hidden", true);
+        return progress;
     }
 
     private static string Read(JsonElement root, string name, string fallback = "")

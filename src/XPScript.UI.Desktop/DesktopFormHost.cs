@@ -460,6 +460,14 @@ public static class DesktopFormHost
             case CheckBox checkBox when value is not null:
                 checkBox.IsChecked = value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1";
                 break;
+            case ProgressBar progressBar:
+                if (field.Type == "ProgressBar" && field.ProgressValue is double progressValue)
+                    progressBar.Value = Math.Clamp(progressValue, progressBar.Minimum, progressBar.Maximum);
+                if (field.Type == "ProgressBar" && field.ProgressIndeterminate is bool indeterminate)
+                    progressBar.IsIndeterminate = indeterminate;
+                if (field.Type == "ActivityIndicator" && field.ActivityRunning is bool running)
+                    progressBar.IsVisible = running;
+                break;
             case TextBox textBox when value is not null && !field.Type.Equals("PasswordField", StringComparison.OrdinalIgnoreCase):
                 textBox.Text = value;
                 break;
@@ -478,10 +486,30 @@ public static class DesktopFormHost
             "ListBox" => CreateListBox(field, false),
             "MultiListBox" => CreateListBox(field, true),
             "RadioGroup" => CreateRadioGroup(field),
+            "ProgressBar" => CreateProgressBar(field),
+            "ActivityIndicator" => CreateActivityIndicator(field),
             "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
             _ => new TextBox { Text = value }
         };
     }
+
+    private static ProgressBar CreateProgressBar(DesktopFormField field)
+        => new()
+        {
+            Minimum = 0,
+            Maximum = 1,
+            Value = Math.Clamp(field.ProgressValue ?? 0, 0, 1),
+            IsIndeterminate = field.ProgressIndeterminate ?? false,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+
+    private static ProgressBar CreateActivityIndicator(DesktopFormField field)
+        => new()
+        {
+            IsIndeterminate = true,
+            IsVisible = field.ActivityRunning ?? true,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
 
     private static Control CreateSelect(DesktopFormField field)
     {
