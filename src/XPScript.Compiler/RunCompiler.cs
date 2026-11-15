@@ -412,6 +412,10 @@ internal static class RunCompiler
               "    <AndroidApplication>true</AndroidApplication>\n" +
               $"    <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>\n" +
               "    <AndroidPackageFormat>apk</AndroidPackageFormat>\n" +
+              "    <AndroidUseAapt2FromPackage>false</AndroidUseAapt2FromPackage>\n" +
+              "    <PublishTrimmed>false</PublishTrimmed>\n" +
+              "    <AndroidLinkMode>None</AndroidLinkMode>\n" +
+              "    <RunAOTCompilation>false</RunAOTCompilation>\n" +
               "    <ApplicationId>eu.xpscript.app</ApplicationId>\n"
             : string.Empty;
         var useAppHost = !isAndroid && (CompilePublishLayoutContext.IncludeRuntime || (CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile));

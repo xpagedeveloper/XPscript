@@ -764,6 +764,10 @@ public sealed class CompilerDriver
     <AndroidApplication>true</AndroidApplication>
     <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidUseAapt2FromPackage>false</AndroidUseAapt2FromPackage>
+    <PublishTrimmed>false</PublishTrimmed>
+    <AndroidLinkMode>None</AndroidLinkMode>
+    <RunAOTCompilation>false</RunAOTCompilation>
     <ApplicationId>eu.xpscript.app</ApplicationId>
 """
             : string.Empty;
