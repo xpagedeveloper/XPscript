@@ -1743,6 +1743,13 @@ internal static class Program
             generated = new UIFormAdditionalFieldFixupPostProcessor().Transform(generated);
             generated = new UIFormMediaButtonsPostProcessor(runtimeIdentifier).Transform(generated);
             generated = UIFormBasicStructuralPostProcessor.Transform(generated);
+            if (isAndroidTarget && !generated.Contains("public void Show(object? modalValue)", StringComparison.Ordinal))
+            {
+                const string mobileFormApi = "    public void Show(object? modalValue) { _modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture); XPScriptUI.Activate(this); }\n    public void Hide() => XPScriptUI.Deactivate(this);\n";
+                generated = generated.Replace("internal sealed partial class XPScriptUIForm\n{\n", "internal sealed partial class XPScriptUIForm\n{\n" + mobileFormApi, StringComparison.Ordinal)
+                    .Replace("internal sealed class XPScriptUIForm\n{\n", "internal sealed class XPScriptUIForm\n{\n" + mobileFormApi, StringComparison.Ordinal);
+            }
+            generated = generated.Replace("internal static bool SingleVisibleFormMode { get; set; }", $"internal static bool SingleVisibleFormMode {{ get; set; }} = {isAndroidTarget.ToString().ToLowerInvariant()};", StringComparison.Ordinal);
             generated = generated.Replace("internal sealed class XPScriptUIForm\n{", "internal sealed class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal)
                 .Replace("internal sealed partial class XPScriptUIForm\n{", "internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal)
                 .Replace("internal sealed class XPScriptUITab\n{", "internal sealed class XPScriptUITab : XPScriptUIComponent\n{\n    public XPScriptUITab(XPScriptUIForm? form = null) : base(form, \"Tab\") { }", StringComparison.Ordinal)
@@ -1755,6 +1762,19 @@ internal static class Program
                 .Replace("field.GridName = name;", "field.GridName = name; field.Parent = _grids[name];", StringComparison.Ordinal)
                 .Replace("_modal = false;\n        _visible = true;", "_modal = false;\n        XPScriptUI.Activate(this);", StringComparison.Ordinal)
                 .Replace("public void Hide() => Close();", "public void Hide() { XPScriptUI.Deactivate(this); }", StringComparison.Ordinal);
+            if (isAndroidTarget && !generated.Contains("public void Show(object? modalValue)", StringComparison.Ordinal))
+            {
+                const string mobileFormApi = "    public void Show(object? modalValue) { _modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture); XPScriptUI.Activate(this); }\n    public void Hide() => XPScriptUI.Deactivate(this);\n";
+                generated = generated.Replace("internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{\n", "internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{\n" + mobileFormApi, StringComparison.Ordinal)
+                    .Replace("internal sealed class XPScriptUIForm : XPScriptUIComponent\n{\n", "internal sealed class XPScriptUIForm : XPScriptUIComponent\n{\n" + mobileFormApi, StringComparison.Ordinal);
+                if (!generated.Contains("public void Show(object? modalValue)", StringComparison.Ordinal))
+                {
+                    var formStart = generated.IndexOf("internal sealed partial class XPScriptUIForm", StringComparison.Ordinal);
+                    if (formStart < 0) formStart = generated.IndexOf("internal sealed class XPScriptUIForm\n", StringComparison.Ordinal);
+                    var formBrace = formStart < 0 ? -1 : generated.IndexOf('{', formStart);
+                    if (formBrace >= 0) generated = generated.Insert(formBrace + 1, "\n" + mobileFormApi);
+                }
+            }
             if (!generated.Contains("class XPScriptHttpClient", StringComparison.Ordinal))
                 generated += Environment.NewLine + NativeHttpRuntimeSource.Code;
             if (generated.Contains("XPScriptTlsValidationState", StringComparison.Ordinal) &&

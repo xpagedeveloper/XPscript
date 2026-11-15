@@ -6,6 +6,7 @@ internal static class UIExtensionRuntimeSource
 internal static class XPScriptUI
 {
     private static readonly List<XPScriptUIForm> Forms = [];
+    internal static bool SingleVisibleFormMode { get; set; }
 
     private static XPScriptUIForm Register(XPScriptUIForm form)
     {
@@ -15,7 +16,8 @@ internal static class XPScriptUI
 
     internal static void Activate(XPScriptUIForm form)
     {
-        foreach (var candidate in Forms) candidate.Visible = false;
+        if (SingleVisibleFormMode)
+            foreach (var candidate in Forms) candidate.Visible = false;
         Forms.Remove(form);
         Forms.Add(form);
         form.Visible = true;
@@ -25,7 +27,7 @@ internal static class XPScriptUI
     {
         form.Visible = false;
         Forms.Remove(form);
-        if (Forms.Count > 0) Forms[^1].Visible = true;
+        if (SingleVisibleFormMode && Forms.Count > 0) Forms[^1].Visible = true;
     }
 
     public static XPScriptUIForm CreateForm()
