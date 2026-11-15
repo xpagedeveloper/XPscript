@@ -938,7 +938,7 @@ public static class AndroidFormHost
     private static Control CreateProgressBar(JsonElement field)
     {
         var progress = new Avalonia.Controls.ProgressBar { Minimum = 0, Maximum = 1, HorizontalAlignment = HorizontalAlignment.Stretch };
-        if (field.TryGetProperty("progressValue", out var value) && value.TryGetDouble(out var progressValue))
+        if (field.TryGetProperty("progressValue", out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var progressValue))
             progress.Value = Math.Clamp(progressValue, 0, 1);
         if (field.TryGetProperty("progressIndeterminate", out var indeterminate) && indeterminate.ValueKind == JsonValueKind.True)
             progress.IsIndeterminate = true;
@@ -964,10 +964,22 @@ public static class AndroidFormHost
 
     private static Control CreateRangeField(JsonElement field)
     {
-        var minimum = field.TryGetProperty("minimum", out var minValue) && minValue.TryGetDouble(out var min) ? min : 0;
-        var maximum = field.TryGetProperty("maximum", out var maxValue) && maxValue.TryGetDouble(out var max) ? max : 100;
-        var step = field.TryGetProperty("step", out var stepValue) && stepValue.TryGetDouble(out var stepSize) ? stepSize : 1;
-        return new Slider { Minimum = minimum, Maximum = maximum, TickFrequency = step, IsSnapToTickEnabled = true };
+        var minimum = ReadNumber(field, "minimum", 0);
+        var maximum = ReadNumber(field, "maximum", 100);
+        var step = ReadNumber(field, "step", 1);
+        var slider = new Slider { Minimum = minimum, Maximum = maximum, TickFrequency = step, IsSnapToTickEnabled = true };
+        if (field.TryGetProperty("value", out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var current))
+            slider.Value = Math.Clamp(current, minimum, maximum);
+        return slider;
+    }
+
+    private static double ReadNumber(JsonElement element, string propertyName, double fallback)
+    {
+        return element.TryGetProperty(propertyName, out var value) &&
+               value.ValueKind == JsonValueKind.Number &&
+               value.TryGetDouble(out var number)
+            ? number
+            : fallback;
     }
 
     private static Control CreateIcon(JsonElement field)

@@ -15,6 +15,7 @@ public static class ApplicationDependencyCatalog
     public const string MimeKitVersion = "4.18.2";
     public const string MagickNetVersion = "14.17.1";
     public const string SharpCompressVersion = "0.50.7";
+    public const string CherylUIVersion = "1.5.0";
 
     public static IReadOnlyList<ApplicationPackageReference> Defaults { get; } =
     [

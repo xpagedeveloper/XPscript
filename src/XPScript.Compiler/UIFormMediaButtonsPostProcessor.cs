@@ -241,6 +241,7 @@ internal sealed class UIFormMediaButtonsPostProcessor
         generated = EnsureAccessibilityRuntime(generated);
         generated = ReplacePostHandling(generated);
         generated = ReplaceDefaultButtonRendering(generated);
+        generated = EnsureMediaHelperMethods(generated);
         return string.IsNullOrWhiteSpace(sourcePath) ? generated : UIFormAppAssets.InstallEmbeddedAssets(generated, sourcePath);
     }
 
@@ -369,5 +370,37 @@ if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCas
         if (!source.Contains(marker, StringComparison.Ordinal))
             throw new CompilerException($"Unable to install UIForm media/buttons runtime ({stage}).");
         return source.Replace(marker, replacement, StringComparison.Ordinal);
+    }
+
+    private static string EnsureMediaHelperMethods(string generated)
+    {
+        const string marker = "    private static string NormalizeFieldName(object? value)";
+        if (!generated.Contains(marker, StringComparison.Ordinal)) return generated;
+        var helpers = new System.Text.StringBuilder();
+        if (!generated.Contains("private static string EnsureWebSafeMediaSource(string source, string kind)", StringComparison.Ordinal))
+            helpers.AppendLine("""
+    private static string EnsureWebSafeMediaSource(string source, string kind)
+    {
+        var text = (source ?? string.Empty).Trim();
+        if (text.Length == 0) return text;
+        if (Uri.TryCreate(text, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri &&
+            (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == "data"))
+            return text;
+        if (System.IO.Path.IsPathRooted(text) || text.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries).Any(segment => segment == ".."))
+            throw new XPScriptRuntimeException(5, $"UIForm {kind} source is outside the application asset root.");
+        return text.StartsWith("assets/", StringComparison.OrdinalIgnoreCase) ? text : "assets/" + text;
+    }
+""");
+        if (!generated.Contains("private static string NormalizeMediaText(object? value, string kind, int maximumLength)", StringComparison.Ordinal))
+            helpers.AppendLine("""
+    private static string NormalizeMediaText(object? value, string kind, int maximumLength)
+    {
+        var text = XPScriptRuntime.CStr(value);
+        if (text.Length > maximumLength || text.Any(char.IsControl))
+            throw new XPScriptRuntimeException(5, $"UIForm {kind} contains invalid text.");
+        return text;
+    }
+""");
+        return helpers.Length == 0 ? generated : generated.Replace(marker, helpers + marker, StringComparison.Ordinal);
     }
 }

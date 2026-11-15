@@ -5,6 +5,7 @@ Sub Main()
     Dim data As New XPJsonObject
     Dim form As New UIForm("Android UIForm Expanded Test")
     Dim result As String
+    Dim runtimeImage As XPImage
     Dim progress As Variant
     Dim activity As Variant
     Dim slider As Variant
@@ -24,9 +25,15 @@ Sub Main()
     Call form.AddOption("choice", "Alpha")
     Call form.AddOption("choice", "Beta")
     Call form.AddOption("choice", "Gamma")
+    Call form.AddRangeField("rangeValue", "Range")
+    Call form.SetNumberRange("rangeValue", 0, 100)
     Call form.AddProgressBar("progress", "Progress")
     Call form.AddActivityIndicator("activity", "Activity")
+    Call form.AddSlider("volume", "Volume")
     Call form.AddSwitch("notifications", "Notifications")
+    Set runtimeImage = New XPImage(96, 96, "#663399")
+    Call form.AddImage("fileImage", "assets/android-ui-file.png", "File image")
+    Call form.AddImage("xpImage", runtimeImage, "XPImage source")
     Call form.AddIcon("status", "check", "Status")
     Call form.AddCard("summary", "Summary")
     Call form.AddPanel("details", "Details")

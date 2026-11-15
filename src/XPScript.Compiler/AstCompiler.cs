@@ -1729,6 +1729,7 @@ internal static class Program
             generated = new UIFormAdditionalFieldPreparePostProcessor().Transform(generated);
             generated = new UIFormAdditionalFieldsPostProcessor().Transform(generated);
             generated = new UIFormAdditionalFieldFixupPostProcessor().Transform(generated);
+            generated = new UIFormMediaButtonsPostProcessor(runtimeIdentifier).Transform(generated);
             generated = UIFormBasicStructuralPostProcessor.Transform(generated);
             if (!generated.Contains("class XPScriptHttpClient", StringComparison.Ordinal))
                 generated += Environment.NewLine + NativeHttpRuntimeSource.Code;
