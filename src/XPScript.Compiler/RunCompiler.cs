@@ -151,7 +151,7 @@ internal static class RunCompiler
             var androidUi = isAndroid && UIFormAppAssets.UsesUIForm(sourcePath);
             if (androidUi)
             {
-                foreach (var package in new[] { "Avalonia", "Avalonia.Android", "Avalonia.Themes.Simple" })
+                foreach (var package in new[] { "Avalonia", "Avalonia.Android", "CCSWE.Avalonia.Material" })
                     dependencies.Add(new ApplicationPackageReference(package, "12.1.4", "Android UIForm host"));
                 foreach (var package in new[] { "Xamarin.AndroidX.Media3.ExoPlayer", "Xamarin.AndroidX.Media3.Ui" })
                     dependencies.Add(new ApplicationPackageReference(package, "1.11.1", "Android UIForm media"));

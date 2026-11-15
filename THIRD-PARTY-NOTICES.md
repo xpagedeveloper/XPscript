@@ -35,7 +35,7 @@ The following packages are distributed under the MIT License:
 - [Avalonia](https://github.com/AvaloniaUI/Avalonia), including `Avalonia.Desktop`, `Avalonia.FreeDesktop`, `Avalonia.FreeDesktop.AtSpi`, `Avalonia.HarfBuzz`, `Avalonia.Native`, `Avalonia.Remote.Protocol`, `Avalonia.Skia`, `Avalonia.Themes.Fluent`, `Avalonia.Win32`, and `Avalonia.X11` (`12.1.4`)
 - `Avalonia.Android` (`12.1.4`), distributed under the MIT License as part of Avalonia.
 - [Avalonia.Controls.WebView](https://github.com/AvaloniaUI/Avalonia.Controls.WebView) (`12.1.1`)
-- `Avalonia.Themes.Simple` (`12.1.4`) is distributed under the MIT License as part of Avalonia and is used by the Android UI host.
+- [CCSWE.Avalonia.Material](https://github.com/CCSWE-Avalonia/CCSWE.Avalonia.Material) (`12.1.1`) is distributed under the MIT License and is used only by the Android UI host. Its embedded DM Sans and Plus Jakarta Sans fonts are distributed under the SIL Open Font License 1.1; the package-local OFL notice must be retained with distributed applications.
 - [BouncyCastle.Cryptography](https://github.com/bcgit/bc-csharp) (`2.6.2`)
 - [HarfBuzzSharp](https://github.com/mono/SkiaSharp), including its platform native asset packages (`8.3.1.3`)
 - [MicroCom.Runtime](https://github.com/AvaloniaUI/MicroCom) (`0.11.4`)

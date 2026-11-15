@@ -33,7 +33,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
-using Avalonia.Themes.Simple;
+using CCSWE.Avalonia.Material;
 using Avalonia.Threading;
 
 namespace XPScript.UI.Android;
@@ -47,7 +47,7 @@ public sealed class App : Avalonia.Application
 {
     public override void OnFrameworkInitializationCompleted()
     {
-        Styles.Add(new SimpleTheme());
+        Styles.Add(new MaterialTheme());
         if (ApplicationLifetime is IActivityApplicationLifetime activityLifetime)
             activityLifetime.MainViewFactory = () => new MainView();
         base.OnFrameworkInitializationCompleted();

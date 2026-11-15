@@ -1,7 +1,7 @@
 using Android.App;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Themes.Simple;
+using CCSWE.Avalonia.Material;
 
 [assembly: UsesPermission(global::Android.Manifest.Permission.Camera)]
 [assembly: UsesPermission(global::Android.Manifest.Permission.AccessFineLocation)]
@@ -17,7 +17,7 @@ public sealed class App : Avalonia.Application
 {
     public override void OnFrameworkInitializationCompleted()
     {
-        Styles.Add(new SimpleTheme());
+        Styles.Add(new MaterialTheme());
 
         if (ApplicationLifetime is IActivityApplicationLifetime activityLifetime)
             activityLifetime.MainViewFactory = () => new MainView();

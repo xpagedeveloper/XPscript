@@ -14,7 +14,7 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.4" />
     <PackageReference Include="Avalonia.Android" Version="12.1.4" />
-    <PackageReference Include="Avalonia.Themes.Simple" Version="12.1.4" />
+    <PackageReference Include="CCSWE.Avalonia.Material" Version="12.1.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.11.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.Ui" Version="1.11.1" />
     <PackageReference Include="Xamarin.AndroidX.Camera.Core" Version="1.4.2.1" />
