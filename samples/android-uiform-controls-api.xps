@@ -67,6 +67,29 @@ Sub Main()
     form.SetCarouselLoop("slides", True)
     form.SetCarouselAutoAdvance("slides", 3000)
 
+    Dim audio As UIFormField
+    Set audio = form.AddAudio("audio", "Audio")
+    audio.Source = "assets/intro.mp3"
+    audio.Position = 0
+    audio.Duration = 120
+    audio.Volume = 0.8
+    audio.AutoPlay = False
+    audio.Loop = False
+    audio.Muted = False
+    audio.PlaybackRate = 1
+    Call audio.Play()
+    Call audio.Pause()
+    Call form.PlayMedia("audio")
+    Call form.PauseMedia("audio")
+    Call form.StopMedia("audio")
+
+    Dim video As UIFormField
+    Set video = form.AddVideo("video", "Video")
+    video.Source = "assets/intro.mp4"
+    Call form.PlayMedia("video")
+    Call form.PauseMedia("video")
+    Call form.StopMedia("video")
+
     Call Application.Debug.Info("ANDROID-UIFORM-CONTROLS-API=ready")
     result = form.ShowDialog()
     Print "ANDROID-UIFORM-CONTROLS-API=ready"

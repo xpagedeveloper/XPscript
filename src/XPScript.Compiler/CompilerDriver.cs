@@ -827,6 +827,7 @@ public sealed class CompilerDriver
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="{ApplicationDependencyCatalog.AvaloniaVersion}" />
     <PackageReference Include="Avalonia.Android" Version="{ApplicationDependencyCatalog.AvaloniaVersion}" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="{ApplicationDependencyCatalog.AvaloniaVersion}" />
     <PackageReference Include="Avalonia.Controls.WebView" Version="{ApplicationDependencyCatalog.AvaloniaWebViewVersion}" />
     <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.11.1" />
     <PackageReference Include="Xamarin.AndroidX.Media3.Ui" Version="1.11.1" />

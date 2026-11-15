@@ -99,7 +99,7 @@ foreach (var expected in new[]
     "CornerRadius = new CornerRadius(cornerRadius)",
     "CornerRadius = new CornerRadius(fieldCornerRadius)",
     "\"Select\" => new ComboBox",
-    "\"MultiListBox\" => new ListBox",
+    "\"MultiListBox\" or \"MultiSelect\" or \"CheckBoxGroup\" => new ListBox",
     "\"RadioGroup\" => CreateRadioGroup(options)",
     "\"RangeField\" => CreateRangeField(field)",
     "\"Separator\" => new Separator()",
