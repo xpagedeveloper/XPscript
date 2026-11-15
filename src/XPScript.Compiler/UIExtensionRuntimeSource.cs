@@ -39,6 +39,7 @@ internal static class XPScriptUI
 internal sealed class XPScriptUIField
 {
     private readonly XPScriptUIForm _owner;
+    private readonly string _controlType;
     private string _webViewSource = "about:blank";
     private string _webViewHtml = string.Empty;
     private string _webViewUserAgent = string.Empty;
@@ -53,6 +54,7 @@ internal sealed class XPScriptUIField
     private double _mediaPlaybackRate = 1.0;
     private bool _mediaIsPlaying;
     private double _progressValue;
+    private double _rangeValue;
     private bool _progressIndeterminate;
     private bool _activityRunning;
     private double _step = 1;
@@ -62,12 +64,12 @@ internal sealed class XPScriptUIField
         _owner = owner;
         Name = name;
         Label = label;
-        Type = type;
+        _controlType = type;
     }
 
     public string Name { get; }
     public string Label { get; set; }
-    public string Type { get; }
+    public string Type => _controlType;
     public List<string> CarouselSources { get; } = [];
     public int CarouselIndex { get; set; }
     public bool CarouselLoop { get; set; }
@@ -79,6 +81,28 @@ internal sealed class XPScriptUIField
     public decimal? Maximum { get; set; }
     public double Step { get { EnsureSlider(); return _step; } set { EnsureSlider(); if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0) throw new XPScriptRuntimeException(5, "UIForm Slider Step must be greater than zero."); _step = value; } }
     public List<string> Options { get; } = [];
+    public object? SelectedValue
+    {
+        get => _owner.GetFieldValue(Name);
+        set => _owner.SetFieldValue(Name, value);
+    }
+
+    public void AddOption(object? value)
+    {
+        if (_controlType is not ("Select" or "RadioGroup" or "ListBox" or "ListView" or "MultiListBox" or "MultiSelect" or "CheckBoxGroup" or "LookupField" or "AutoCompleteField"))
+            throw new XPScriptRuntimeException(5, "Options are not supported for this UIForm control.");
+        var option = XPScriptRuntime.CStr(value);
+        if (option.Length is < 1 or > 256)
+            throw new XPScriptRuntimeException(5, "UIForm option must contain between 1 and 256 characters.");
+        if (!Options.Contains(option, StringComparer.Ordinal)) Options.Add(option);
+    }
+
+    public void ClearOptions()
+    {
+        if (_controlType is not ("Select" or "RadioGroup" or "ListBox" or "ListView" or "MultiListBox" or "MultiSelect" or "CheckBoxGroup" or "LookupField" or "AutoCompleteField"))
+            throw new XPScriptRuntimeException(5, "Options are not supported for this UIForm control.");
+        Options.Clear();
+    }
     public bool Focusable { get; set; }
     public bool IsTabStop { get; set; }
     public string RegexPattern { get; set; } = string.Empty;
@@ -178,9 +202,23 @@ internal sealed class XPScriptUIField
     public void Pause() { EnsureMedia(); _mediaIsPlaying = false; TryDesktopMediaCommand("pause", null); }
     public double Value
     {
-        get { EnsureProgress(); return _progressValue; }
+        get
+        {
+            if (string.Equals(_controlType, "RangeField", StringComparison.Ordinal)) return _rangeValue;
+            EnsureProgress();
+            return _progressValue;
+        }
         set
         {
+            if (string.Equals(_controlType, "RangeField", StringComparison.Ordinal))
+            {
+                EnsureSlider();
+                if (double.IsNaN(value) || double.IsInfinity(value)) throw new XPScriptRuntimeException(5, "UIForm Slider Value must be finite.");
+                if (Minimum.HasValue && value < (double)Minimum.Value || Maximum.HasValue && value > (double)Maximum.Value)
+                    throw new XPScriptRuntimeException(5, "UIForm Slider Value is outside its configured range.");
+                _rangeValue = value;
+                return;
+            }
             EnsureProgress();
             if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1)
                 throw new XPScriptRuntimeException(5, "UIForm ProgressBar Value must be between 0 and 1.");
@@ -295,10 +333,10 @@ internal sealed class XPScriptUIField
             throw new XPScriptRuntimeException(5, "UIForm desktop media query failed: " + ex.InnerException.Message);
         }
     }
-    private void EnsureProgress() { if (Type != "ProgressBar") throw new XPScriptRuntimeException(5, "This UIForm field is not a ProgressBar."); }
+    private void EnsureProgress() { if (!string.Equals(_controlType, "ProgressBar", StringComparison.Ordinal)) throw new XPScriptRuntimeException(5, "This UIForm field is not a ProgressBar."); }
     private bool EnsureActivityIndicatorValue() { EnsureActivityIndicator(); return true; }
-    private void EnsureActivityIndicator() { if (Type != "ActivityIndicator") throw new XPScriptRuntimeException(5, "This UIForm field is not an ActivityIndicator."); }
-    private void EnsureSlider() { if (Type != "RangeField") throw new XPScriptRuntimeException(5, "This UIForm field is not a Slider."); }
+    private void EnsureActivityIndicator() { if (!string.Equals(_controlType, "ActivityIndicator", StringComparison.Ordinal)) throw new XPScriptRuntimeException(5, "This UIForm field is not an ActivityIndicator."); }
+    private void EnsureSlider() { if (!string.Equals(_controlType, "RangeField", StringComparison.Ordinal)) throw new XPScriptRuntimeException(5, "This UIForm field is not a Slider."); }
     private static string NormalizeMediaSource(string? value)
     {
         var text = (value ?? string.Empty).Trim();
@@ -538,13 +576,7 @@ internal sealed partial class XPScriptUIForm
     public void AddOption(object? name, object? value)
     {
         var field = FindField(name);
-        if (field.Type is not ("Select" or "RadioGroup" or "ListBox" or "MultiListBox"))
-            throw new XPScriptRuntimeException(5, "UIForm options are only supported for Select, RadioGroup, ListBox and MultiListBox fields.");
-        var option = XPScriptRuntime.CStr(value);
-        if (option.Length is < 1 or > 256)
-            throw new XPScriptRuntimeException(5, "UIForm option must contain between 1 and 256 characters.");
-        if (!field.Options.Contains(option, StringComparer.Ordinal))
-            field.Options.Add(option);
+        field.AddOption(value);
     }
 
     public void SetRequired(object? name, object? required)

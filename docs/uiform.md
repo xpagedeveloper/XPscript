@@ -84,7 +84,9 @@ values = form.GetFieldValues("markets")
 Print CStr(values.Count)
 ```
 
-`AddOption` and `ClearOptions` work with `Select`, `RadioGroup`, `ListBox` and `MultiListBox`. Submitted values are checked against the configured option list before they are written to bound data.
+`AddOption` and `ClearOptions` work with `Select`, `RadioGroup`, `ListBox`, `ListView`, `MultiListBox`, `MultiSelect`, `CheckBoxGroup`, `LookupField` and `AutoCompleteField`. Submitted values are checked against the configured option list before they are written to bound data. Initial/default values are read from the form's bound data for every control type that exposes a value.
+
+Prefer configuring the returned control object directly. `UIFormField.AddOption(value)`, `UIFormField.ClearOptions()` and the read/write `UIFormField.SelectedValue` property keep options and selection attached to the control. The form-level `AddOption(name, value)` and `SetFieldValue(name, value)` calls remain available for compatibility.
 
 The same ListBox APIs are used on desktop, server-rendered web and browser-wasm. Desktop uses native Avalonia list controls. Server-rendered web uses HTML `select` controls. Browser-wasm uses DOM `select` controls and returns multiple selections as an array.
 
