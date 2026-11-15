@@ -153,7 +153,6 @@ internal static class RunCompiler
             {
                 foreach (var package in new[] { "Avalonia", "Avalonia.Android" })
                     dependencies.Add(new ApplicationPackageReference(package, "12.1.4", "Android UIForm host"));
-                dependencies.Add(new ApplicationPackageReference("CCSWE.Avalonia.Material", "12.1.1", "Android UIForm theme"));
                 foreach (var package in new[] { "Xamarin.AndroidX.Media3.ExoPlayer", "Xamarin.AndroidX.Media3.Ui" })
                     dependencies.Add(new ApplicationPackageReference(package, "1.11.1", "Android UIForm media"));
                 foreach (var package in new[] { "Xamarin.AndroidX.Camera.Core", "Xamarin.AndroidX.Camera.Camera2", "Xamarin.AndroidX.Camera.View" })
