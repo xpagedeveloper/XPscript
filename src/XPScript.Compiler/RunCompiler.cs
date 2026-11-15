@@ -166,8 +166,14 @@ internal static class RunCompiler
                 Directory.CreateDirectory(values);
                 await File.WriteAllTextAsync(Path.Combine(values, "styles.xml"), "<resources><style name=\"Theme.AppCompat.DayNight.NoActionBar\" parent=\"Theme.AppCompat.Light.NoActionBar\" /></resources>", cancellationToken).ConfigureAwait(false);
             }
+            dependencies = dependencies
+                .GroupBy(package => package.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .ToList();
             await File.WriteAllTextAsync(projectPath, BuildProject(references, dependencies, runtimeIdentifier, startupObject), cancellationToken).ConfigureAwait(false);
-            if (!IsAndroidRuntime(runtimeIdentifier) && Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selectedFramework)
+            if (IsAndroidRuntime(runtimeIdentifier))
+                await File.WriteAllTextAsync(Path.Combine(tempRoot, "global.json"), DotNetVersionSelection.CreateGlobalJson("net10.0"), cancellationToken).ConfigureAwait(false);
+            else if (Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selectedFramework)
                 await File.WriteAllTextAsync(Path.Combine(tempRoot, "global.json"), DotNetVersionSelection.CreateGlobalJson(selectedFramework), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(programPath,
                 isAndroid && !androidUi ? CombineGeneratedSources(generatedSource, AndroidHostSource.Code) : generatedSource,
@@ -406,6 +412,7 @@ internal static class RunCompiler
               "    <AndroidApplication>true</AndroidApplication>\n" +
               $"    <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>\n" +
               "    <AndroidPackageFormat>apk</AndroidPackageFormat>\n" +
+              "    <AndroidUseAapt2FromPackage>false</AndroidUseAapt2FromPackage>\n" +
               "    <ApplicationId>eu.xpscript.app</ApplicationId>\n"
             : string.Empty;
         var useAppHost = !isAndroid && (CompilePublishLayoutContext.IncludeRuntime || (CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile));

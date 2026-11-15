@@ -18,7 +18,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
         if (!regex.IsMatch(generated))
             throw new CompilerException("Unable to install UIForm event dispatcher runtime.");
 
-        return regex.Replace(generated,
+        var result = regex.Replace(generated,
             """
     [System.Diagnostics.CodeAnalysis.DynamicDependency(
         System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties |
@@ -288,5 +288,8 @@ internal sealed class UIFormEventDispatcherPostProcessor
 
     public object? GetFieldValue(object? name)
 """, 1);
+        return result.Contains("internal static class Program", StringComparison.Ordinal)
+            ? result.Replace("typeof(Script)", "typeof(Program)", StringComparison.Ordinal)
+            : result;
     }
 }
