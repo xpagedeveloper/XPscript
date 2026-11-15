@@ -28,6 +28,11 @@ internal static class TargetPrerequisiteValidator
         var result = Run("dotnet", "--list-sdks");
         if (!result.Success || !result.Output.Split('\n').Any(line => line.TrimStart().StartsWith("10.", StringComparison.Ordinal)))
             throw new CompilerException($"{target} compilation requires the .NET 10 SDK. Install it manually and retry: https://dotnet.microsoft.com/download/dotnet/10.0", "", "configuration");
+
+        var version = Run("dotnet", "--version");
+        var selectedVersion = version.Output.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(selectedVersion))
+            Console.Error.WriteLine($"Using .NET SDK {selectedVersion} for {target} compilation.");
     }
 
     private static void RequireWorkload(string workload)

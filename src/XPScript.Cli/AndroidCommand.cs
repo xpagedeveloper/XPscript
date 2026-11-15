@@ -90,9 +90,18 @@ internal static class AndroidCommand
         Console.WriteLine("Building " + platform + " APK...");
         var compilerArgs = new List<string> { source, "-o", apk, "--platform", platform, "--runtime=false" };
         if (debug) compilerArgs.Add("--debug");
-        var compileResult = await XPScript.Compiler.XPScriptCompilerCommandLine.CompileAsync(compilerArgs.ToArray());
+        var compileResult = await XPScript.Compiler.XPScriptCompilerCommandLine.AstCompileAsync(compilerArgs.ToArray());
         if (compileResult != 0) return compileResult;
-        if (!File.Exists(apk)) throw new InvalidOperationException("Android compilation completed without producing the expected APK: " + apk);
+        if (!File.Exists(apk))
+        {
+            var publishedApks = Directory.Exists(Path.GetDirectoryName(apk))
+                ? Directory.GetFiles(Path.GetDirectoryName(apk)!, "*-Signed.apk", SearchOption.AllDirectories)
+                : Array.Empty<string>();
+            if (publishedApks.Length == 1)
+                apk = publishedApks[0];
+            else
+                throw new InvalidOperationException("Android compilation completed without producing the expected APK: " + apk);
+        }
 
         var install = await ExecuteAsync(adb, ["-s", serial, "install", "-r", apk]);
         var installDiagnostics = install.Error + Environment.NewLine + install.Output;

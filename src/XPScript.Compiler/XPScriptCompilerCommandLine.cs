@@ -333,7 +333,7 @@ public static class XPScriptCompilerCommandLine
         }
     }
 
-    private static async Task<int> AstCompileAsync(string[] args)
+    public static async Task<int> AstCompileAsync(string[] args)
     {
         if (args.Length == 0)
         {

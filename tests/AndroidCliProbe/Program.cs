@@ -88,6 +88,7 @@ foreach (var expected in new[]
 foreach (var expected in new[]
 {
     "ValidateAndroidBuildEnvironment",
+    "XPScript.Compiler.XPScriptCompilerCommandLine.AstCompileAsync",
     "AndroidCompileApiLevel = \"36\"",
     "platforms",
     "android.jar",
