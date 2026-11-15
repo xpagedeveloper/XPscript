@@ -122,6 +122,13 @@ public sealed class XpsBrowserWasmCompiler
         {
             if (!Directory.Exists(searchRoot)) continue;
             var fullSearchRoot = Path.GetFullPath(searchRoot);
+            var bootEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.boot.js", SearchOption.AllDirectories)
+                .FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
+            if (bootEntry is not null)
+            {
+                var bootFrameworkDirectory = Path.GetDirectoryName(bootEntry) ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
+                return Directory.GetParent(bootFrameworkDirectory)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
+            }
             if (File.Exists(Path.Combine(fullSearchRoot, "_framework", "dotnet.js"))) return fullSearchRoot;
             var frameworkEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.js", SearchOption.AllDirectories).FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
             if (frameworkEntry is null) continue;
