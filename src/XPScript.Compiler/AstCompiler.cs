@@ -1722,6 +1722,9 @@ internal static class Program
             generated = generated.Replace("internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{", "internal sealed partial class XPScriptUIForm\n{", StringComparison.Ordinal)
                 .Replace("internal sealed class XPScriptUIForm : XPScriptUIComponent\n{", "internal sealed class XPScriptUIForm\n{", StringComparison.Ordinal);
             var isAndroidTarget = runtimeIdentifier?.StartsWith("android-", StringComparison.OrdinalIgnoreCase) == true;
+            var singleVisibleFormMode = isAndroidTarget ||
+                string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(runtimeIdentifier, "webiis", StringComparison.OrdinalIgnoreCase);
             if (isAndroidTarget)
                 generated = new UIExtensionDesktopPostProcessor().Transform(generated);
             generated = new UIFormActionModelPostProcessor().Transform(generated);
@@ -1749,7 +1752,7 @@ internal static class Program
                 generated = generated.Replace("internal sealed partial class XPScriptUIForm\n{\n", "internal sealed partial class XPScriptUIForm\n{\n" + mobileFormApi, StringComparison.Ordinal)
                     .Replace("internal sealed class XPScriptUIForm\n{\n", "internal sealed class XPScriptUIForm\n{\n" + mobileFormApi, StringComparison.Ordinal);
             }
-            generated = generated.Replace("internal static bool SingleVisibleFormMode { get; set; }", $"internal static bool SingleVisibleFormMode {{ get; set; }} = {isAndroidTarget.ToString().ToLowerInvariant()};", StringComparison.Ordinal);
+            generated = generated.Replace("internal static bool SingleVisibleFormMode { get; set; }", $"internal static bool SingleVisibleFormMode {{ get; set; }} = {singleVisibleFormMode.ToString().ToLowerInvariant()};", StringComparison.Ordinal);
             generated = generated.Replace("internal sealed class XPScriptUIForm\n{", "internal sealed class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal)
                 .Replace("internal sealed partial class XPScriptUIForm\n{", "internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal)
                 .Replace("internal sealed class XPScriptUITab\n{", "internal sealed class XPScriptUITab : XPScriptUIComponent\n{\n    public XPScriptUITab(XPScriptUIForm? form = null) : base(form, \"Tab\") { }", StringComparison.Ordinal)
