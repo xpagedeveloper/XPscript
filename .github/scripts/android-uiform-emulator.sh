@@ -20,6 +20,12 @@ adb wait-for-device
 timeout 120s bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = "1" ]; do sleep 2; done'
 echo "BOOT_OK"
 
+# Always remove the previous test installation so every run verifies the newly
+# built APK and never inherits stale app data or an older generated assembly.
+adb shell am force-stop eu.xpscript.app >/dev/null 2>&1 || true
+adb uninstall eu.xpscript.app >/dev/null 2>&1 || true
+echo "UNINSTALL_PREVIOUS_OK"
+
 installed=false
 for attempt in 1 2 3 4; do
   if timeout 60s adb install --no-streaming -r "$apk"; then

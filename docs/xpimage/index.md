@@ -14,7 +14,7 @@ Experimental AST constructors can mix required scalar ByRef with trailing Option
 
 Experimental AST image setters use snapshot-owned storage: writing a typed XPImage class field clones the incoming image. Replacing or clearing that field recycles its old image; failed cloning leaves the old value intact. ByVal setter parameters clone at entry. ByRef setter parameters borrow the supplied reference: replacing the parameter cannot replace or recycle the caller's variable, but explicit image mutations or Recycle still affect it. Storing either parameter in a typed field creates an independent copy. Nothing clears storage. Release image fields with `Set field = Nothing` or explicit Delete of their owner; GC/scope-exit cleanup is not implemented. Variant fields do not establish image ownership.
 
-XPImage is XPScript's cross-platform raster image object. It uses Magick.NET internally while keeping the public API independent of ImageMagick types. The regression example for the API is [xpimage-runtime.xps](../../samples/xpimage-runtime.xps).
+XPImage is XPScript's raster image object for Windows, Linux and macOS. It uses Magick.NET internally while keeping the public API independent of ImageMagick types. Android compilation rejects XPImage with a platform diagnostic; Android UIForm applications should use a file or URL source with AddImage instead. The regression example for the API is [xpimage-runtime.xps](../../samples/xpimage-runtime.xps).
 
 ## AST compilation
 

@@ -173,6 +173,13 @@ public static class AstCompiler
         if (usesNetworkTools)
             source = new NetworkToolsObjectPreprocessor().Transform(source);
         var fullSource = source;
+        if (runtimeIdentifier?.StartsWith("android-", StringComparison.OrdinalIgnoreCase) == true &&
+            Regex.IsMatch(fullSource, @"(?i)\bXPImage\b"))
+        {
+            RejectPlatformUnsupported(sourcePath, fullSource,
+                @"(?i)\bXPImage\b",
+                "XPImage is not supported on Android. Use a file or URL source with UIForm.AddImage instead.");
+        }
         // Any Notes object can require the generated Notes runtime. In
         // particular, NotesMail is valid without an explicit NotesSession
         // variable, so gating runtime emission on NotesSession alone leaves
@@ -2248,6 +2255,21 @@ internal static class Program
             DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Severity = "error", Category = "semantic"
         };
         throw new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "semantic", [diagnostic]);
+    }
+
+    private static void RejectPlatformUnsupported(string sourcePath, string source, string pattern, string message)
+    {
+        var match = Regex.Match(source, pattern);
+        if (!match.Success) return;
+        var start = SourceTextMap.GetPosition(source, match.Index);
+        var end = SourceTextMap.GetPosition(source, match.Index + match.Length);
+        var diagnostic = new CompileDiagnostic
+        {
+            File = Path.GetFileName(sourcePath), Line = start.Line, Position = start.Column,
+            EndLine = end.Line, EndColumn = end.Column, Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.TargetApiUnavailable, Severity = "error", Category = "platform"
+        };
+        throw new CompilerException(message, CompilerDiagnosticCodes.TargetApiUnavailable, "platform", [diagnostic]);
     }
 
     internal static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch
