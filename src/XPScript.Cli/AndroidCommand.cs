@@ -82,6 +82,10 @@ internal static class AndroidCommand
         if (requestedPlatform is not null && requestedPlatform != detectedPlatform)
             throw new InvalidOperationException("Android --platform '" + requestedPlatform + "' does not match device ABI '" + abi + "' (" + detectedPlatform + ").");
 
+        var androidVersion = await ReadDevicePropertyAsync(adb, serial, "ro.build.version.release");
+        var androidApi = await ReadDevicePropertyAsync(adb, serial, "ro.build.version.sdk");
+        Console.WriteLine("Android device: serial=" + serial + ", version=" + androidVersion + " (API " + androidApi + "), abi=" + abi + ", platform=" + platform);
+
         ValidateAndroidBuildEnvironment(deviceMode == "emulator");
 
         var outputDirectory = Path.Combine(Path.GetTempPath(), "xpscript-android");
@@ -382,7 +386,15 @@ internal static class AndroidCommand
         }
 
         foreach (var device in devices)
-            Console.WriteLine($"{device.Serial}\t{device.State}\t{device.Description}");
+        {
+            if (device.State.Equals("device", StringComparison.OrdinalIgnoreCase))
+            {
+                var properties = await ReadDevicePropertiesAsync(adb, device.Serial);
+                Console.WriteLine($"{device.Serial}\t{device.State}\tandroid={properties.Version} (API {properties.Api})\tabi={properties.Abi}\tplatform={properties.Platform}\t{device.Description}");
+            }
+            else
+                Console.WriteLine($"{device.Serial}\t{device.State}\t{device.Description}");
+        }
 
         if (devices.Any(device => device.State.Equals("unauthorized", StringComparison.OrdinalIgnoreCase)))
             Console.Error.WriteLine("warning: authorize USB debugging on the unauthorized Android device.");
@@ -398,6 +410,26 @@ internal static class AndroidCommand
         if (fields.Length < 2)
             return (line.Trim(), "unknown", string.Empty);
         return (fields[0], fields[1], string.Join(' ', fields.Skip(2)));
+    }
+
+    private static async Task<(string Version, string Api, string Abi, string Platform)> ReadDevicePropertiesAsync(string adb, string serial)
+    {
+        var version = await ReadDevicePropertyAsync(adb, serial, "ro.build.version.release");
+        var api = await ReadDevicePropertyAsync(adb, serial, "ro.build.version.sdk");
+        var abi = await ReadDevicePropertyAsync(adb, serial, "ro.product.cpu.abi");
+        var platform = abi.ToLowerInvariant() switch
+        {
+            "arm64-v8a" => "android-arm64",
+            "x86_64" => "android-x64",
+            _ => "unknown"
+        };
+        return (version, api, abi, platform);
+    }
+
+    private static async Task<string> ReadDevicePropertyAsync(string adb, string serial, string property)
+    {
+        var result = await ExecuteAsync(adb, ["-s", serial, "shell", "getprop", property]);
+        return result.ExitCode == 0 && !string.IsNullOrWhiteSpace(result.Output) ? result.Output.Trim() : "unknown";
     }
 
     private const string AndroidCompileApiLevel = "36";

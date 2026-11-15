@@ -34,6 +34,8 @@ xpscript android run main.xps
 
 The command validates project metadata before selecting a device, detects the device ABI, compiles the matching Android APK and uses the existing --platform option for the target RID. --rid is not a separate Android option. The command then installs the APK, launches it and captures XPScript-tagged log output.
 
+Device discovery and `android run` report the detected Android release, API level, ABI and XPScript platform. An `x86_64` emulator is reported as `android-x64`; an `arm64-v8a` physical device is reported as `android-arm64`.
+
 ## Platform selection
 
 Use the existing compiler --platform option for Android targets:
