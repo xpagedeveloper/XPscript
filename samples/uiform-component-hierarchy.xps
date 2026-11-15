@@ -1,0 +1,17 @@
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("Component hierarchy")
+    Dim panel As UIFormField
+    Dim title As UIFormField
+
+    Set panel = form.AddPanel("details", "Details")
+    Set title = form.AddTextField("title", "Title")
+    Call panel.AddChild(title)
+
+    If title.Parent Is Nothing Then Error 3901, "UIForm child parent was not assigned"
+    If title.Parent.Id <> "details" Then Error 3902, "UIForm child parent id was not preserved"
+    If form.GetComponentById("title") Is Nothing Then Error 3904, "UIForm flat component lookup lost child"
+
+    Print "UIFORM-COMPONENT-HIERARCHY=OK"
+End Sub

@@ -39,6 +39,8 @@ internal static class AstUiFormSupport
             ["object?", "object?", "object?"], ["name", "label", "handlerName"], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "AddButtonCallback", "XPScriptUIButton",
             ["object?", "object?", "object?"], ["name", "label", "handlerName"], false, false, false))
+        .Append(new AstNativeObjectSurface.Member("UIComponent", "AddChild", "void",
+            ["XPScriptUIComponent"], ["component"], false, false, false))
         .Concat(new[]
         {
             new AstNativeObjectSurface.Member("UIForm", "AddCarousel", "XPScriptUIField", ["object?", "object?"], ["name", "source"], false, false, false),

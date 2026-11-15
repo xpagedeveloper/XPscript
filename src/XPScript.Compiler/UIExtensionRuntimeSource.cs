@@ -65,6 +65,7 @@ internal abstract class XPScriptUIComponent
 {
     private string _id = string.Empty;
     private XPScriptUIForm? _owner;
+    private readonly List<XPScriptUIComponent> _children = [];
 
     protected XPScriptUIComponent(XPScriptUIForm? owner = null, string type = "UIComponent")
     {
@@ -89,6 +90,26 @@ internal abstract class XPScriptUIComponent
 
     public virtual string Type { get; }
     public XPScriptUIComponent? Parent { get; internal set; }
+    public XPScriptUIComponent[] Children => _children.ToArray();
+
+    public void AddChild(object? component)
+    {
+        if (component is not XPScriptUIComponent child)
+            throw new XPScriptRuntimeException(13, "UIForm AddChild requires a UI component.");
+        if (ReferenceEquals(child, this))
+            throw new XPScriptRuntimeException(5, "A UIForm component cannot be its own child.");
+        if (child is XPScriptUIForm || _owner is null || child._owner is null || !ReferenceEquals(_owner, child._owner))
+            throw new XPScriptRuntimeException(5, "UIForm child components must belong to the same UIForm.");
+        for (var ancestor = this; ancestor is not null; ancestor = ancestor.Parent)
+            if (ReferenceEquals(ancestor, child))
+                throw new XPScriptRuntimeException(5, "UIForm component hierarchy cannot contain cycles.");
+        if (child.Parent is XPScriptUIComponent oldParent)
+            oldParent._children.Remove(child);
+        child.Parent = this;
+        if (!_children.Contains(child)) _children.Add(child);
+    }
+
+    internal IReadOnlyList<XPScriptUIComponent> ChildComponents => _children;
 
     internal void AttachOwner(XPScriptUIForm owner) => _owner = owner;
     internal XPScriptUIForm? Owner => _owner;

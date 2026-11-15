@@ -722,6 +722,10 @@ if (!completeControlsSample.Contains("Parent.Type", StringComparison.Ordinal)) t
 foreach (var expected in new[] { "AddProgressBar", "AddActivityIndicator", "AddSlider", "SetSliderStep", "AddSwitch", "AddIcon", "AddCard", "AddPanel", "AddScrollView", "AddListView", "AddOption", "AddCameraPreview", "AddCarousel", "SetCarouselIndex", "SetCarouselLoop", "SetCarouselAutoAdvance", "AddAudio", "PlayMedia", "PauseMedia", "StopMedia", "AddVideo", "audio.Source", "audio.Position", "audio.Duration", "audio.Volume", "audio.AutoPlay", "audio.Loop", "audio.Muted", "audio.PlaybackRate", "audio.Play()", "audio.Pause()", "video.Source" })
     if (!completeControlsSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Complete Android UIForm controls sample is missing: " + expected);
+var hierarchySample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "uiform-component-hierarchy.xps"));
+foreach (var expected in new[] { "AddPanel(\"details\"", "AddChild(title)", "title.Parent.Id", "GetComponentById(\"title\")" })
+    if (!hierarchySample.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("UIForm component hierarchy AST sample is incomplete: " + expected);
 
 var layoutRuntimeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormLayoutReactivePostProcessor.cs"));
 foreach (var expected in new[]

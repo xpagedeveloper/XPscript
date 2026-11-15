@@ -43,6 +43,20 @@ Print nameField.Parent.Parent.Type ' UIForm
 Print form.GetComponentById("customer-name").Type
 ```
 
+Container controls can own other components through the same object model. The
+child remains in `UIForm.Components`, while `Parent` points to the container.
+Only components from the same form may be attached, and cycles are rejected.
+
+```xps
+Dim panel As UIFormField
+Dim title As UIFormField
+Set panel = form.AddPanel("details", "Details")
+Set title = form.AddTextField("title", "Title")
+Call panel.AddChild(title)
+Print title.Parent.Id       ' details
+Print panel.Children(0).Id  ' title
+```
+
 Appearance properties are read/write and are applied consistently on Windows, Linux, macOS, server-rendered web and browser-WASM. Set defaults on the form before adding controls; a value assigned directly to a field or button overrides the form default.
 
 ```xpscript
