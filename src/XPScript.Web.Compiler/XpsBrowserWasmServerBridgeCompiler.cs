@@ -121,6 +121,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
                 "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop",
                 "XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser",
                 StringComparison.Ordinal);
+            browserGenerated = AstCompiler.EnsureUiComponentHierarchy(browserGenerated);
             browserGenerated = BrowserWasmServerBridgeTransportInstaller.TransformGenerated(browserGenerated);
             // Browser-WASM uses the restricted transpiler directly, so it does
             // not pass through the normal web compiler's AST runtime injection.

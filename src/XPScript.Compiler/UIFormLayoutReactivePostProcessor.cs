@@ -28,11 +28,14 @@ internal sealed class UIFormLayoutReactivePostProcessor
 """);
 
 LayoutModelFieldsReady:
-        generated = ReplaceRequired(generated,
-            generated.Contains("internal sealed partial class XPScriptUIForm\n{\n", StringComparison.Ordinal)
+        var formDeclaration = generated.Contains("internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{\n", StringComparison.Ordinal)
+            ? "internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{\n"
+            : generated.Contains("internal sealed partial class XPScriptUIForm\n{\n", StringComparison.Ordinal)
                 ? "internal sealed partial class XPScriptUIForm\n{\n"
-                : "internal sealed class XPScriptUIForm\n{\n",
-            """
+                : generated.Contains("internal sealed class XPScriptUIForm : XPScriptUIComponent\n{\n", StringComparison.Ordinal)
+                    ? "internal sealed class XPScriptUIForm : XPScriptUIComponent\n{\n"
+                    : "internal sealed class XPScriptUIForm\n{\n";
+        var layoutRuntime = """
 internal sealed class XPScriptUIGrid
 {
     private readonly XPScriptUIForm _form;
@@ -94,7 +97,12 @@ internal sealed class XPScriptUIGrid
 
 internal sealed partial class XPScriptUIForm
 {
-""");
+""";
+        layoutRuntime = layoutRuntime.Replace(
+            "internal sealed partial class XPScriptUIForm\n{\n",
+            formDeclaration,
+            StringComparison.Ordinal);
+        generated = ReplaceRequired(generated, formDeclaration, layoutRuntime);
 
         generated = ReplaceRequired(generated,
             "    private readonly List<XPScriptUIField> _fields = [];\n",

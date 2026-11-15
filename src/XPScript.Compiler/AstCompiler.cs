@@ -10,6 +10,17 @@ namespace XPScript.Compiler;
 /// <summary>Experimental CLI bridge for the currently supported AST compilation slice.</summary>
 public static class AstCompiler
 {
+    public static string EnsureUiComponentHierarchy(string generated)
+    {
+        ArgumentNullException.ThrowIfNull(generated);
+        return generated
+            .Replace("internal sealed partial class XPScriptUIForm\n{", "internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal)
+            .Replace("internal sealed class XPScriptUIForm\n{", "internal sealed class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal)
+            .Replace("internal sealed class XPScriptUIGrid\n{", "internal sealed class XPScriptUIGrid : XPScriptUIComponent\n{", StringComparison.Ordinal)
+            .Replace("internal sealed class XPScriptUITab\n{", "internal sealed class XPScriptUITab : XPScriptUIComponent\n{", StringComparison.Ordinal)
+            .Replace("internal sealed class XPScriptUIButton\n{", "internal sealed class XPScriptUIButton : XPScriptUIComponent\n{", StringComparison.Ordinal);
+    }
+
     public static string EnsureAttachmentRuntime(string generated, bool includeNativeDatabaseProviders = true)
     {
         ArgumentNullException.ThrowIfNull(generated);
