@@ -35,7 +35,7 @@ The following packages are distributed under the MIT License:
 - [Avalonia](https://github.com/AvaloniaUI/Avalonia), including `Avalonia.Desktop`, `Avalonia.FreeDesktop`, `Avalonia.FreeDesktop.AtSpi`, `Avalonia.HarfBuzz`, `Avalonia.Native`, `Avalonia.Remote.Protocol`, `Avalonia.Skia`, `Avalonia.Themes.Fluent`, `Avalonia.Win32`, and `Avalonia.X11` (`12.1.4`)
 - `Avalonia.Android` (`12.1.4`), distributed under the MIT License as part of Avalonia.
 - [Avalonia.Controls.WebView](https://github.com/AvaloniaUI/Avalonia.Controls.WebView) (`12.1.1`)
-- [CherylUI](https://github.com/kikipoulet/CherylUI) (`1.5.0`) is a mobile-oriented Avalonia UI theme/library distributed under the MIT License. It is included only by Android/mobile UIForm builds; its package-local license and notices must remain with distributed applications.
+- `Avalonia.Themes.Simple` (`12.1.4`) is distributed under the MIT License as part of Avalonia and is used by the Android UI host.
 - [BouncyCastle.Cryptography](https://github.com/bcgit/bc-csharp) (`2.6.2`)
 - [HarfBuzzSharp](https://github.com/mono/SkiaSharp), including its platform native asset packages (`8.3.1.3`)
 - [MicroCom.Runtime](https://github.com/AvaloniaUI/MicroCom) (`0.11.4`)
