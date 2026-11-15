@@ -1,0 +1,42 @@
+' Android AST UIForm expanded control smoke test.
+' The emulator test fills the text field and presses OK after the app starts.
+
+Sub Main()
+    Dim data As New XPJsonObject
+    Dim form As New UIForm("Android UIForm Expanded Test")
+    Dim result As String
+    Dim progress As Variant
+    Dim activity As Variant
+    Dim slider As Variant
+    Dim toggle As Variant
+
+    Call data.Set("name", "")
+    Call data.Set("notes", "")
+    Call data.Set("enabled", False)
+    Call data.Set("choice", "Beta")
+    Call data.Set("rangeValue", 50)
+    Call form.BindData(data)
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddTextArea("notes", "Notes")
+    Call form.AddCheckBox("enabled", "Enabled")
+    Call form.AddSelect("choice", "Choice")
+    Call form.AddOption("choice", "Alpha")
+    Call form.AddOption("choice", "Beta")
+    Call form.AddOption("choice", "Gamma")
+    Call form.AddProgressBar("progress", "Progress")
+    Call form.AddActivityIndicator("activity", "Activity")
+    Call form.AddSwitch("notifications", "Notifications")
+    Call form.AddIcon("status", "check", "Status")
+    Call form.AddCard("summary", "Summary")
+    Call form.AddPanel("details", "Details")
+    Call form.AddSeparator("separator")
+
+    Call Application.Debug.Info("ANDROID-UIFORM-EXPANDED=start")
+    result = form.ShowDialog()
+    Call Application.Debug.Info("ANDROID-UIFORM-EXPANDED=result:" & result)
+    Call Application.Debug.Info("ANDROID-UIFORM-EXPANDED-name:" & form.GetFieldValueString("name"))
+    Call Application.Debug.Info("ANDROID-UIFORM-EXPANDED-choice:" & form.GetFieldValueString("choice"))
+    Call Application.Debug.Info("ANDROID-UIFORM-EXPANDED-enabled:" & form.GetFieldValueString("enabled"))
+    Print "ANDROID-UIFORM-EXPANDED-RESULT=" & result
+End Sub
