@@ -619,8 +619,11 @@ public static class AndroidFormHost
                 AutomationProperties.SetAutomationId(editor, "xps-field-" + name);
                 if (field.TryGetProperty("width", out var widthValue) && widthValue.ValueKind == JsonValueKind.Number && widthValue.TryGetDouble(out var width)) editor.Width = width;
                 if (field.TryGetProperty("height", out var heightValue) && heightValue.ValueKind == JsonValueKind.Number && heightValue.TryGetDouble(out var height)) editor.Height = height;
-                if (field.TryGetProperty("fontSize", out var fontSizeValue) && fontSizeValue.ValueKind == JsonValueKind.Number && fontSizeValue.TryGetDouble(out var fontSize)) editor.FontSize = fontSize;
-                if (field.TryGetProperty("font", out var fontValue) && fontValue.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(fontValue.GetString())) editor.FontFamily = new FontFamily(fontValue.GetString()!);
+                if (editor is TemplatedControl styledEditor)
+                {
+                    if (field.TryGetProperty("fontSize", out var fontSizeValue) && fontSizeValue.ValueKind == JsonValueKind.Number && fontSizeValue.TryGetDouble(out var fontSize)) styledEditor.FontSize = fontSize;
+                    if (field.TryGetProperty("font", out var fontValue) && fontValue.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(fontValue.GetString())) styledEditor.FontFamily = new FontFamily(fontValue.GetString()!);
+                }
                 // Keep the automation id as the resource id; exposing the id as the name makes Android report it as field text.
                 if (field.TryGetProperty("value", out var value) && value.ValueKind != JsonValueKind.Null)
                     SetEditorValue(editor, value);

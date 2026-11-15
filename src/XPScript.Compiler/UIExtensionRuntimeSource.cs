@@ -117,6 +117,14 @@ internal sealed class XPScriptUIField
     public double? FontSize { get => _fontSize; set => _fontSize = NormalizeOptionalDimension(value, "FontSize"); }
     public string Placeholder { get; set; } = string.Empty;
     public string Tooltip { get; set; } = string.Empty;
+
+    private static double? NormalizeOptionalDimension(double? value, string name)
+    {
+        if (!value.HasValue) return null;
+        if (double.IsNaN(value.Value) || double.IsInfinity(value.Value) || value.Value <= 0 || value.Value > 10000)
+            throw new XPScriptRuntimeException(5, $"UIForm control {name} must be greater than 0 and no more than 10000.");
+        return value;
+    }
     public string TabName { get; set; } = string.Empty;
     public string GridName { get; set; } = string.Empty;
     public string IconName { get; set; } = string.Empty;
@@ -370,7 +378,7 @@ internal sealed partial class XPScriptUIForm
             if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
                 throw new XPScriptRuntimeException(5, "UIForm CornerRadius must be between 0 and 1000.");
             _cornerRadius = value;
-            foreach (var field in _fields) field.CornerRadius = value;
+            foreach (var item in _fields) item.CornerRadius = value;
         }
     }
     public double? DefaultControlWidth { get => _defaultControlWidth; set { _defaultControlWidth = NormalizeOptionalDimension(value, "DefaultControlWidth"); ApplyDefaults(); } }
@@ -653,7 +661,7 @@ internal sealed partial class XPScriptUIForm
 
     private void ApplyDefaults()
     {
-        foreach (var field in _fields) ApplyDefaults(field);
+        foreach (var item in _fields) ApplyDefaults(item);
         foreach (var button in _buttons)
         {
             if (_defaultControlWidth.HasValue) button.Width = _defaultControlWidth;
