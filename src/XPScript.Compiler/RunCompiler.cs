@@ -157,7 +157,7 @@ internal static class RunCompiler
                     dependencies.Add(new ApplicationPackageReference(package, "1.11.1", "Android UIForm media"));
                 foreach (var package in new[] { "Xamarin.AndroidX.Camera.Core", "Xamarin.AndroidX.Camera.Camera2", "Xamarin.AndroidX.Camera.View" })
                     dependencies.Add(new ApplicationPackageReference(package, "1.4.2.1", "Android UIForm camera"));
-                dependencies.Add(new ApplicationPackageReference("Xamarin.AndroidX.Lifecycle.LiveData.Core", "2.11.0.1", "Android UIForm lifecycle"));
+                dependencies.Add(new ApplicationPackageReference("Xamarin.AndroidX.Lifecycle.LiveData.Core", "2.10.0.2", "Android UIForm lifecycle"));
                 var host = AndroidUIHostSource.Build(debug)
                     .Replace("Console.AndroidLog =", "Program.Console.AndroidLog =", StringComparison.Ordinal)
                     .Replace("Program.Main(Array.Empty<string>())", "Program.__xps_android_entry(Array.Empty<string>())", StringComparison.Ordinal);
@@ -412,7 +412,6 @@ internal static class RunCompiler
               "    <AndroidApplication>true</AndroidApplication>\n" +
               $"    <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>\n" +
               "    <AndroidPackageFormat>apk</AndroidPackageFormat>\n" +
-              "    <AndroidUseAapt2FromPackage>false</AndroidUseAapt2FromPackage>\n" +
               "    <ApplicationId>eu.xpscript.app</ApplicationId>\n"
             : string.Empty;
         var useAppHost = !isAndroid && (CompilePublishLayoutContext.IncludeRuntime || (CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile));
@@ -446,6 +445,7 @@ internal static class RunCompiler
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;$(WarningsNotAsErrors)</WarningsNotAsErrors>
 {androidProperties}    <RuntimeIdentifier>{runtimeIdentifier ?? string.Empty}</RuntimeIdentifier>
   </PropertyGroup>
+{(isAndroid ? "  <ItemGroup>\n    <AndroidResource Include=\"Resources\\values\\styles.xml\" Condition=\"Exists('Resources\\values\\styles.xml')\" />\n  </ItemGroup>\n" : string.Empty)}
 {packageItems}{items}</Project>
 """;
     }
