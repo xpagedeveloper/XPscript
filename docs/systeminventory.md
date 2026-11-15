@@ -224,6 +224,10 @@ Applications are discovered from `.app` bundles in `/Applications`, `/System/App
 
 Homebrew packages are discovered by inspecting `/opt/homebrew/Cellar` and `/usr/local/Cellar`.
 
+### Android
+
+`GetSystemInfo()` reads the Android runtime build metadata when available. `OperatingSystem` and `OsVersion` use the Android release (for example `Android 11` and `11`), while `Manufacturer`, `Model`, `SerialNumber`, `BiosVendor` and `BiosVersion` use the corresponding Android build fields. Android may restrict serial-number access; restricted values are returned as an empty string.
+
 ## Design and security notes
 
 `SystemInventory` is read-only. It does not install, uninstall or modify software and it does not change hardware or OS configuration.

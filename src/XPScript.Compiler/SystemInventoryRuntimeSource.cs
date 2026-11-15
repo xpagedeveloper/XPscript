@@ -21,8 +21,24 @@ internal sealed class XPScriptSystemInventory
         var serial = "";
         var biosVendor = "";
         var biosVersion = "";
+        var operatingSystem = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
+        var osVersion = Environment.OSVersion.VersionString;
 
-        if (System.OperatingSystem.IsWindows())
+        if (System.OperatingSystem.IsAndroid())
+        {
+            var release = AndroidProperty("Android.OS.Build, Mono.Android", "VERSION", "Release");
+            manufacturer = AndroidProperty("Android.OS.Build, Mono.Android", null, "Manufacturer");
+            model = AndroidProperty("Android.OS.Build, Mono.Android", null, "Model");
+            serial = AndroidProperty("Android.OS.Build, Mono.Android", null, "Serial");
+            biosVendor = AndroidProperty("Android.OS.Build, Mono.Android", null, "Brand");
+            biosVersion = AndroidProperty("Android.OS.Build, Mono.Android", null, "Bootloader");
+            if (release.Length != 0)
+            {
+                operatingSystem = "Android " + release;
+                osVersion = release;
+            }
+        }
+        else if (System.OperatingSystem.IsWindows())
         {
             using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\BIOS");
             manufacturer = RegistryText(key, "SystemManufacturer");
@@ -47,8 +63,8 @@ internal sealed class XPScriptSystemInventory
 
         return new XPScriptSystemInventorySystemInfo(
             Environment.MachineName,
-            System.Runtime.InteropServices.RuntimeInformation.OSDescription,
-            Environment.OSVersion.VersionString,
+            operatingSystem,
+            osVersion,
             System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString(),
             System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
             System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
@@ -498,6 +514,19 @@ internal sealed class XPScriptSystemInventory
 
     private static string GetMap(Dictionary<string, string> values, string key, string fallback) => values.TryGetValue(key, out var value) ? value : fallback;
     private static string ReadTextFile(string path) { try { return System.IO.File.Exists(path) ? System.IO.File.ReadAllText(path).Trim() : ""; } catch { return ""; } }
+
+    private static string AndroidProperty(string typeName, string? nestedTypeName, string propertyName)
+    {
+        try
+        {
+            var type = System.Type.GetType(typeName);
+            if (type is null) return "";
+            var owner = nestedTypeName is null ? type : type.GetNestedType(nestedTypeName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            var value = (owner ?? type).GetProperty(propertyName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance)?.GetValue(null);
+            return value?.ToString()?.Trim() ?? "";
+        }
+        catch { return ""; }
+    }
     private static string RegistryText(Microsoft.Win32.RegistryKey? key, string name) { try { return Convert.ToString(key?.GetValue(name), System.Globalization.CultureInfo.InvariantCulture)?.Trim() ?? ""; } catch { return ""; } }
     private static long RegistryLong(Microsoft.Win32.RegistryKey? key, string name) { try { return Convert.ToInt64(key?.GetValue(name) ?? 0, System.Globalization.CultureInfo.InvariantCulture); } catch { return 0; } }
 
