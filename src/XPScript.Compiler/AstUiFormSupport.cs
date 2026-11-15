@@ -12,6 +12,7 @@ internal static class AstUiFormSupport
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["UIForm"] = "XPScriptUIForm",
+            ["UIComponent"] = "XPScriptUIComponent",
             ["UIFormField"] = "XPScriptUIField",
             ["UIFormGrid"] = "XPScriptUIGrid",
             ["UIFormTab"] = "XPScriptUITab",
@@ -25,11 +26,11 @@ internal static class AstUiFormSupport
     private static string LanguageType(string type) => type.TrimEnd('?') switch
     {
         "object" => "Variant", "int" => "Integer", "double" => "Double", "string" => "String", "bool" => "Boolean",
-        "XPScriptUIForm" => "UIForm", "XPScriptUIField" => "UIFormField", "XPScriptUIGrid" => "UIFormGrid", "XPScriptUITab" => "UIFormTab", "XPScriptUIButton" => "UIButton", _ => type
+        "XPScriptUIForm" => "UIForm", "XPScriptUIComponent" => "UIComponent", "XPScriptUIField" => "UIFormField", "XPScriptUIGrid" => "UIFormGrid", "XPScriptUITab" => "UIFormTab", "XPScriptUIButton" => "UIButton", _ => type
     };
 
     internal static readonly AstNativeObjectSurface.Member[] Members = AstNativeObjectSurface
-        .ReadMembers(Classes, ["XPScriptUI", "XPScriptUIForm", "XPScriptUIField"], LanguageType)
+        .ReadMembers(Classes, ["XPScriptUI", "XPScriptUIComponent", "XPScriptUIForm", "XPScriptUIField"], LanguageType)
         .Append(new AstNativeObjectSurface.Member("UIForm", "Show", "void",
             ["object?"], ["modalValue"], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "Hide", "void",

@@ -36,7 +36,40 @@ internal static class XPScriptUI
     }
 }
 
-internal sealed class XPScriptUIField
+internal abstract class XPScriptUIComponent
+{
+    private string _id = string.Empty;
+    private XPScriptUIForm? _owner;
+
+    protected XPScriptUIComponent(XPScriptUIForm? owner = null, string type = "UIComponent")
+    {
+        _owner = owner;
+        Type = type;
+    }
+
+    public string Id
+    {
+        get => _id;
+        set
+        {
+            var normalized = (value ?? string.Empty).Trim();
+            if (normalized.Length > 128)
+                throw new XPScriptRuntimeException(5, "UIForm component Id must contain at most 128 characters.");
+            if (normalized.Any(ch => !(char.IsLetterOrDigit(ch) || ch is '_' or '-' or '.')))
+                throw new XPScriptRuntimeException(5, "UIForm component Id contains unsupported characters.");
+            _owner?.SetComponentId(this, normalized);
+            _id = normalized;
+        }
+    }
+
+    public virtual string Type { get; }
+    public XPScriptUIComponent? Parent { get; internal set; }
+
+    internal void AttachOwner(XPScriptUIForm owner) => _owner = owner;
+    internal XPScriptUIForm? Owner => _owner;
+}
+
+internal sealed class XPScriptUIField : XPScriptUIComponent
 {
     private readonly XPScriptUIForm _owner;
     private readonly string _controlType;
@@ -60,6 +93,7 @@ internal sealed class XPScriptUIField
     private double _step = 1;
 
     internal XPScriptUIField(XPScriptUIForm owner, string name, string label, string type)
+        : base(owner, type)
     {
         _owner = owner;
         Name = name;
@@ -69,7 +103,7 @@ internal sealed class XPScriptUIField
 
     public string Name { get; }
     public string Label { get; set; }
-    public string Type => _controlType;
+    public override string Type => _controlType;
     public List<string> CarouselSources { get; } = [];
     public int CarouselIndex { get; set; }
     public bool CarouselLoop { get; set; }
@@ -375,7 +409,7 @@ internal sealed class XPScriptUIField
         => NormalizeMediaSource(XPScriptRuntime.CStr(value));
 }
 
-internal sealed partial class XPScriptUIForm
+internal sealed partial class XPScriptUIForm : XPScriptUIComponent
 {
     private string _title;
     private readonly string _instanceId = Guid.NewGuid().ToString("N");
@@ -388,6 +422,7 @@ internal sealed partial class XPScriptUIForm
     private string _bootImage = string.Empty;
     private XPScriptJsonObject _data = XPScriptNativeJson.CreateObject();
     private readonly List<XPScriptUIField> _fields = [];
+    private readonly List<XPScriptUIComponent> _components = [];
     private readonly List<(string Name, string Command)> _mediaCommands = [];
     private int _gridColumns = 1;
     private double _cornerRadius;
@@ -397,7 +432,9 @@ internal sealed partial class XPScriptUIForm
     private double? _defaultFontSize;
 
     internal XPScriptUIForm(string title, int? width, int? height, bool resizable)
+        : base(null, "UIForm")
     {
+        AttachOwner(this);
         _title = title;
         _width = width;
         _height = height;
@@ -447,6 +484,20 @@ internal sealed partial class XPScriptUIForm
     public bool HasExplicitSize => _width.HasValue || _height.HasValue;
     public object Data => _data;
     public int FieldCount => _fields.Count;
+    public XPScriptUIComponent[] Components => _components.ToArray();
+    public XPScriptUIComponent? GetComponentById(object? id)
+    {
+        var value = XPScriptRuntime.CStr(id).Trim();
+        if (value.Length == 0) return null;
+        return this.Id.Equals(value, StringComparison.OrdinalIgnoreCase)
+            ? this
+            : _components.FirstOrDefault(component => component.Id.Equals(value, StringComparison.OrdinalIgnoreCase));
+    }
+    public XPScriptUIComponent[] GetComponentsByType(object? type)
+    {
+        var value = XPScriptRuntime.CStr(type).Trim();
+        return _components.Where(component => component.Type.Equals(value, StringComparison.OrdinalIgnoreCase)).ToArray();
+    }
     public int GridColumns => _gridColumns;
     public void BindData(object? value)
     {
@@ -688,7 +739,23 @@ internal sealed partial class XPScriptUIForm
         field.CornerRadius = _cornerRadius;
         ApplyDefaults(field);
         _fields.Add(field);
+        RegisterComponent(field);
         return field;
+    }
+
+    internal void RegisterComponent(XPScriptUIComponent component, XPScriptUIComponent? parent = null)
+    {
+        component.AttachOwner(this);
+        component.Parent = parent ?? this;
+        _components.Add(component);
+        if (component.Id.Length > 0) SetComponentId(component, component.Id);
+    }
+
+    internal void SetComponentId(XPScriptUIComponent component, string id)
+    {
+        if (id.Length > 0 && _components.Any(other => !ReferenceEquals(other, component) && other.Id.Equals(id, StringComparison.OrdinalIgnoreCase)) ||
+            id.Length > 0 && !ReferenceEquals(component, this) && Id.Equals(id, StringComparison.OrdinalIgnoreCase))
+            throw new XPScriptRuntimeException(5, $"UIForm component Id '{id}' is already in use.");
     }
 
     private void ApplyDefaults()

@@ -1716,6 +1716,11 @@ internal static class Program
         generated += Environment.NewLine + AstHttpSupport.ExceptionCode;
         if (runtimeFeatures.Ui && AstObjectSupportRegistry.UsesObject(fullSource, "UIForm"))
         {
+            // The legacy UIForm postprocessors intentionally keep their historical
+            // class declarations. AST adds the component inheritance after they
+            // have finished so the legacy compiler path remains unchanged.
+            generated = generated.Replace("internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{", "internal sealed partial class XPScriptUIForm\n{", StringComparison.Ordinal)
+                .Replace("internal sealed class XPScriptUIForm : XPScriptUIComponent\n{", "internal sealed class XPScriptUIForm\n{", StringComparison.Ordinal);
             var isAndroidTarget = runtimeIdentifier?.StartsWith("android-", StringComparison.OrdinalIgnoreCase) == true;
             if (isAndroidTarget)
                 generated = new UIExtensionDesktopPostProcessor().Transform(generated);
@@ -1738,6 +1743,16 @@ internal static class Program
             generated = new UIFormAdditionalFieldFixupPostProcessor().Transform(generated);
             generated = new UIFormMediaButtonsPostProcessor(runtimeIdentifier).Transform(generated);
             generated = UIFormBasicStructuralPostProcessor.Transform(generated);
+            generated = generated.Replace("internal sealed class XPScriptUIForm\n{", "internal sealed class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal)
+                .Replace("internal sealed partial class XPScriptUIForm\n{", "internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal)
+                .Replace("internal sealed class XPScriptUITab\n{", "internal sealed class XPScriptUITab : XPScriptUIComponent\n{\n    public XPScriptUITab(XPScriptUIForm? form = null) : base(form, \"Tab\") { }", StringComparison.Ordinal)
+                .Replace("internal sealed class XPScriptUIButton\n{", "internal sealed class XPScriptUIButton : XPScriptUIComponent\n{\n    public XPScriptUIButton(XPScriptUIForm? form = null) : base(form, \"Button\") { }", StringComparison.Ordinal)
+                .Replace("internal sealed class XPScriptUIGrid\n{", "internal sealed class XPScriptUIGrid : XPScriptUIComponent\n{", StringComparison.Ordinal)
+                .Replace("internal XPScriptUIGrid(XPScriptUIForm form, int columns, string name = \"\")\n    {", "internal XPScriptUIGrid(XPScriptUIForm form, int columns, string name = \"\") : base(form, \"Grid\")\n    {", StringComparison.Ordinal)
+                .Replace("_grids.Add(gridName, grid);", "_grids.Add(gridName, grid); RegisterComponent(grid);", StringComparison.Ordinal)
+                .Replace("_tabs.Add(tab);", "_tabs.Add(tab); RegisterComponent(tab);", StringComparison.Ordinal)
+                .Replace("_buttons.Add(button);", "_buttons.Add(button); RegisterComponent(button);", StringComparison.Ordinal)
+                .Replace("field.GridName = name;", "field.GridName = name; field.Parent = _grids[name];", StringComparison.Ordinal);
             if (!generated.Contains("class XPScriptHttpClient", StringComparison.Ordinal))
                 generated += Environment.NewLine + NativeHttpRuntimeSource.Code;
             if (generated.Contains("XPScriptTlsValidationState", StringComparison.Ordinal) &&

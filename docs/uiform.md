@@ -24,6 +24,23 @@ The form title belongs to the top-level form container. On the web it is rendere
 
 ## Shared control appearance
 
+### Component identity and hierarchy
+
+Every UI component exposes a writable `Id`, a read-only `Type`, and a read-only `Parent`. IDs are optional but must be unique within the form. `UIForm.Components` returns all controls registered on the form, while `GetComponentById(id)` returns one component (or `Nothing`) and `GetComponentsByType(type)` returns an array of matching components. A field assigned to a named grid has that grid as its parent; the grid's parent is the form.
+
+```xps
+Dim form As New UIForm("Example")
+Dim grid As UIFormGrid
+Set grid = form.AddGrid("main", 2)
+Dim nameField As UIFormField
+Set nameField = form.AddTextField("name", "Name")
+nameField.Id = "customer-name"
+Call form.SetFieldGrid("name", "main")
+Print nameField.Parent.Type       ' Grid
+Print nameField.Parent.Parent.Type ' UIForm
+Print form.GetComponentById("customer-name").Type
+```
+
 Appearance properties are read/write and are applied consistently on Windows, Linux, macOS, server-rendered web and browser-WASM. Set defaults on the form before adding controls; a value assigned directly to a field or button overrides the form default.
 
 ```xpscript

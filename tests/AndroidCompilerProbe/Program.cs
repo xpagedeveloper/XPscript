@@ -716,6 +716,9 @@ foreach (var expected in new[] { "AddCard(\"summary\"", "AddPanel(\"details\"", 
     if (!cardPanelSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android Card/Panel regression sample is incomplete: " + expected);
 var completeControlsSample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "android-uiform-controls-api.xps"));
+if (!completeControlsSample.Contains("GetComponentById", StringComparison.Ordinal)) throw new Exception("Android controls sample must exercise UIForm.GetComponentById.");
+if (!completeControlsSample.Contains("GetComponentsByType", StringComparison.Ordinal)) throw new Exception("Android controls sample must exercise UIForm.GetComponentsByType.");
+if (!completeControlsSample.Contains("Parent.Type", StringComparison.Ordinal)) throw new Exception("Android controls sample must exercise component Parent traversal.");
 foreach (var expected in new[] { "AddProgressBar", "AddActivityIndicator", "AddSlider", "SetSliderStep", "AddSwitch", "AddIcon", "AddCard", "AddPanel", "AddScrollView", "AddListView", "AddOption", "AddCameraPreview", "AddCarousel", "SetCarouselIndex", "SetCarouselLoop", "SetCarouselAutoAdvance", "AddAudio", "PlayMedia", "PauseMedia", "StopMedia", "AddVideo", "audio.Source", "audio.Position", "audio.Duration", "audio.Volume", "audio.AutoPlay", "audio.Loop", "audio.Muted", "audio.PlaybackRate", "audio.Play()", "audio.Pause()", "video.Source" })
     if (!completeControlsSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Complete Android UIForm controls sample is missing: " + expected);

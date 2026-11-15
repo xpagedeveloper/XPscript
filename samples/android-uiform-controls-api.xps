@@ -36,6 +36,7 @@ Sub Main()
     Call list.AddOption("Second")
     Dim mode As UIFormField
     Set mode = form.AddSelect("mode", "Mode")
+    mode.Id = "mode-select"
     Call mode.AddOption("Standard")
     Call mode.AddOption("Advanced")
     mode.SelectedValue = "Advanced"
@@ -48,6 +49,15 @@ Sub Main()
     Set tags = form.AddMultiSelect("tags", "Tags")
     Call tags.AddOption("One")
     Call tags.AddOption("Two")
+
+    Dim optionsGrid As UIFormGrid
+    Set optionsGrid = form.AddGrid("options", 2)
+    Call form.SetFieldGrid("mode", "options")
+    Print "ANDROID-COMPONENT-ID=" & form.GetComponentById("mode-select").Id
+    Print "ANDROID-COMPONENT-TYPE=" & form.GetComponentById("mode-select").Type
+    Print "ANDROID-COMPONENT-PARENT=" & mode.Parent.Type
+    Print "ANDROID-COMPONENT-PARENT-PARENT=" & mode.Parent.Parent.Type
+    Print "ANDROID-COMPONENTS-BY-TYPE=" & UBound(form.GetComponentsByType("Select")) + 1
 
     Dim camera As UIFormField
     Set camera = form.AddCameraPreview("camera", "Camera")
