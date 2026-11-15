@@ -16,7 +16,7 @@ internal static partial class BrowserRichMediaHost
             foreach (var field in fields.EnumerateArray())
             {
                 var type = Read(field, "type");
-                if (type is not ("Image" or "WebView")) continue;
+                if (type is not ("Image" or "WebView" or "Carousel")) continue;
                 var name = Read(field, "name");
                 if (name.Length == 0) continue;
                 using var existing = QuerySelector(root, "[data-field-name=\"" + name + "\"] input");
@@ -30,6 +30,11 @@ internal static partial class BrowserRichMediaHost
                     image.SetProperty("alt", Read(field, "imageAltText"));
                     image.SetProperty("loading", "lazy");
                     ReplaceElement(existing, image);
+                }
+                else if (type == "Carousel")
+                {
+                    using var carousel = CreateCarousel(field, name);
+                    ReplaceElement(existing, carousel);
                 }
                 else
                 {
@@ -58,6 +63,53 @@ internal static partial class BrowserRichMediaHost
     private static string Read(JsonElement root, string name, string fallback = "")
         => root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? fallback : fallback;
 
+    private static JSObject CreateCarousel(JsonElement field, string name)
+    {
+        var root = CreateElement("div");
+        root.SetProperty("className", "xpscript-uiform-carousel");
+        root.SetProperty("data-field-name", name);
+        var sources = field.TryGetProperty("carouselSources", out var sourceValues) && sourceValues.ValueKind == JsonValueKind.Array
+            ? sourceValues.EnumerateArray().Where(value => value.ValueKind == JsonValueKind.String).Select(value => value.GetString() ?? string.Empty).ToArray()
+            : Array.Empty<string>();
+        var index = field.TryGetProperty("carouselIndex", out var indexValue) && indexValue.TryGetInt32(out var requestedIndex)
+            ? Math.Clamp(requestedIndex, 0, Math.Max(0, sources.Length - 1))
+            : 0;
+        var loop = field.TryGetProperty("carouselLoop", out var loopValue) && loopValue.ValueKind == JsonValueKind.True;
+        foreach (var (source, sourceIndex) in sources.Select((value, position) => (value, position)))
+        {
+            using var image = CreateElement("img");
+            image.SetProperty("className", "xps-carousel-slide");
+            image.SetProperty("src", source);
+            image.SetProperty("alt", Read(field, "label", name));
+            image.SetProperty("style", sourceIndex == index ? "display:block;max-width:100%;max-height:320px;object-fit:contain" : "display:none;max-width:100%;max-height:320px;object-fit:contain");
+            AppendChild(root, image);
+        }
+        using var previous = CreateElement("button");
+        previous.SetProperty("type", "button");
+        previous.SetProperty("className", "xps-carousel-prev");
+        previous.SetProperty("textContent", "‹");
+        previous.SetProperty("ariaLabel", "Previous");
+        previous.SetProperty("onclick", CarouselButtonScript(-1, loop));
+        AppendChild(root, previous);
+        using var next = CreateElement("button");
+        next.SetProperty("type", "button");
+        next.SetProperty("className", "xps-carousel-next");
+        next.SetProperty("textContent", "›");
+        next.SetProperty("ariaLabel", "Next");
+        next.SetProperty("onclick", CarouselButtonScript(1, loop));
+        AppendChild(root, next);
+        if (field.TryGetProperty("carouselAutoAdvance", out var intervalValue) && intervalValue.TryGetInt32(out var interval) && interval > 0)
+            root.SetProperty("data-auto-advance", interval.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return root;
+    }
+
+    private static string CarouselButtonScript(int delta, bool loop)
+    {
+        var direction = delta < 0 ? "-1" : "1";
+        var wrap = loop ? "true" : "false";
+        return "const a=[...this.parentElement.querySelectorAll('.xps-carousel-slide')],i=a.findIndex(x=>x.style.display!=='none');if(!a.length)return;let n=i+" + direction + ";if(n<0)n=" + wrap + "?a.length-1:0;if(n>=a.length)n=" + wrap + "?0:a.length-1;a[i].style.display='none';a[n].style.display='block';";
+    }
+
     [JSImport("globalThis.document.createElement")]
     private static partial JSObject CreateElement(string tagName);
 
@@ -66,6 +118,9 @@ internal static partial class BrowserRichMediaHost
 
     [JSImport("globalThis.Element.prototype.replaceWith.call")]
     private static partial void ReplaceElement(JSObject existing, JSObject replacement);
+
+    [JSImport("globalThis.Node.prototype.appendChild.call")]
+    private static partial JSObject AppendChild(JSObject parent, JSObject child);
 
     [JSImport("globalThis.Element.prototype.remove.call")]
     private static partial void RemoveElement(JSObject element);

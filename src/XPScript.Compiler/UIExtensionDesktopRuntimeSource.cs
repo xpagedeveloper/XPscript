@@ -124,7 +124,7 @@ internal static class XPScriptUIDesktopAdapter
                 minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, step = field.Type == "RangeField" ? field.Step : (double?)null, options = field.Options, cornerRadius = field.CornerRadius, width = field.Width, height = field.Height, font = field.Font, fontSize = field.FontSize, tabName = field.TabName, gridName = field.GridName,
                 webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground, icon = field.IconName,
                 source = field.Type is "Video" or "Audio" ? field.Source : null,
-                carouselSources = field.Type == "Carousel" ? field.CarouselSources : Array.Empty<string>(),
+                carouselSources = field.Type == "Carousel" ? (IReadOnlyList<string>)field.CarouselSources : Array.Empty<string>(),
                 carouselIndex = field.Type == "Carousel" ? field.CarouselIndex : 0,
                 carouselLoop = field.Type == "Carousel" && field.CarouselLoop,
                 carouselAutoAdvance = field.Type == "Carousel" ? field.CarouselAutoAdvanceMilliseconds : null,
