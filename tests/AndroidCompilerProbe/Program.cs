@@ -73,6 +73,7 @@ foreach (var expected in new[]
     "public class AndroidApp : AvaloniaAndroidApplication<App>",
     "global::Android.Runtime.JniHandleOwnership",
     "new Avalonia.Controls.CheckBox()",
+    "new Avalonia.Controls.ToggleSwitch()",
     "Avalonia.Layout.Orientation.Horizontal",
     "new Avalonia.Controls.Button",
     "var labelBlock = new TextBlock { Text = label };",

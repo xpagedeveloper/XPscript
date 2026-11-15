@@ -583,7 +583,8 @@ public static class AndroidFormHost
                     : Array.Empty<string>();
                 Control editor = type switch
                 {
-                    "CheckBox" or "Switch" => new Avalonia.Controls.CheckBox(),
+                    "CheckBox" => new Avalonia.Controls.CheckBox(),
+                    "Switch" => new Avalonia.Controls.ToggleSwitch(),
                     "Video" => CreateVideo(field),
                     "Audio" => CreateAudio(field),
                     "ProgressBar" => CreateProgressBar(field),
@@ -647,6 +648,10 @@ public static class AndroidFormHost
                 }
                 if (editor is Slider slider)
                     slider.ValueChanged += (_, args) => DispatchFieldChange(name, args.NewValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                if (editor is Avalonia.Controls.CheckBox checkBox)
+                    checkBox.IsCheckedChanged += (_, _) => DispatchFieldChange(name, checkBox.IsChecked == true ? "true" : "false");
+                if (editor is Avalonia.Controls.ToggleSwitch toggleSwitch)
+                    toggleSwitch.IsCheckedChanged += (_, _) => DispatchFieldChange(name, toggleSwitch.IsChecked == true ? "true" : "false");
                 if (editor is AndroidColorFieldEditor colorField)
                     colorField.ValueEditor.TextChanged += (_, _) => DispatchFieldChange(name, colorField.ValueEditor.Text ?? string.Empty);
                 if (type == "ListView" && editor is ListBox listView)
@@ -1441,6 +1446,8 @@ public static class AndroidFormHost
         if (editor is TextBox textBox) textBox.Text = text;
         else if (editor is Avalonia.Controls.CheckBox checkBox)
             checkBox.IsChecked = value.ValueKind == JsonValueKind.True || text.Equals("true", StringComparison.OrdinalIgnoreCase);
+        else if (editor is Avalonia.Controls.ToggleSwitch toggleSwitch)
+            toggleSwitch.IsChecked = value.ValueKind == JsonValueKind.True || text.Equals("true", StringComparison.OrdinalIgnoreCase);
         else if (editor is ComboBox comboBox) comboBox.SelectedItem = text;
         else if (editor is ListBox listBox)
         {
@@ -1474,6 +1481,7 @@ public static class AndroidFormHost
         {
         TextBox textBox => textBox.Text ?? string.Empty,
         Avalonia.Controls.CheckBox checkBox => checkBox.IsChecked == true,
+        Avalonia.Controls.ToggleSwitch toggleSwitch => toggleSwitch.IsChecked == true,
         ComboBox comboBox => comboBox.SelectedItem?.ToString() ?? string.Empty,
         ListBox listBox when listBox.SelectionMode.HasFlag(SelectionMode.Multiple) => listBox.SelectedItems?.Cast<object>().Select(item => item?.ToString() ?? string.Empty).ToArray() ?? Array.Empty<string>(),
         ListBox listBox => listBox.SelectedItem?.ToString() ?? string.Empty,
