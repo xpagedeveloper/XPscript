@@ -1,0 +1,23 @@
+' Android SystemInventory property regression: print every SystemInfo property.
+Option Declare
+
+Sub Main()
+    Dim inventory As New SystemInventory
+    Dim info As SystemInventorySystemInfo
+    Set info = inventory.GetSystemInfo()
+
+    Print "MachineName=" & info.MachineName
+    Print "OperatingSystem=" & info.OperatingSystem
+    Print "OsVersion=" & info.OsVersion
+    Print "OsArchitecture=" & info.OsArchitecture
+    Print "ProcessArchitecture=" & info.ProcessArchitecture
+    Print "RuntimeVersion=" & info.RuntimeVersion
+    Print "Manufacturer=" & info.Manufacturer
+    Print "Model=" & info.Model
+    Print "SerialNumber=" & info.SerialNumber
+    Print "BiosVendor=" & info.BiosVendor
+    Print "BiosVersion=" & info.BiosVersion
+    Print "Is64BitOperatingSystem=" & CStr(info.Is64BitOperatingSystem)
+    Print "Is64BitProcess=" & CStr(info.Is64BitProcess)
+    Print "LogicalProcessorCount=" & CStr(info.LogicalProcessorCount)
+End Sub

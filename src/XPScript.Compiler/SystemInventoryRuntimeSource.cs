@@ -26,17 +26,20 @@ internal sealed class XPScriptSystemInventory
 
         if (System.OperatingSystem.IsAndroid())
         {
-            var release = AndroidProperty("Android.OS.Build, Mono.Android", "VERSION", "Release");
-            manufacturer = AndroidProperty("Android.OS.Build, Mono.Android", null, "Manufacturer");
-            model = AndroidProperty("Android.OS.Build, Mono.Android", null, "Model");
-            serial = AndroidProperty("Android.OS.Build, Mono.Android", null, "Serial");
-            biosVendor = AndroidProperty("Android.OS.Build, Mono.Android", null, "Brand");
-            biosVersion = AndroidProperty("Android.OS.Build, Mono.Android", null, "Bootloader");
-            if (release.Length != 0)
-            {
-                operatingSystem = "Android " + release;
-                osVersion = release;
-            }
+            var release = "";
+            var apiLevel = 0;
+#if __ANDROID__
+            release = global::Android.OS.Build.VERSION.Release ?? "";
+            apiLevel = (int)global::Android.OS.Build.VERSION.SdkInt;
+            manufacturer = global::Android.OS.Build.Manufacturer ?? "";
+            model = global::Android.OS.Build.Model ?? "";
+            serial = global::Android.OS.Build.Serial ?? "";
+            biosVendor = global::Android.OS.Build.Brand ?? "";
+            biosVersion = global::Android.OS.Build.Bootloader ?? "";
+#endif
+            var androidVersion = release.Length != 0 ? release : "API " + apiLevel.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            operatingSystem = "Android " + androidVersion;
+            osVersion = androidVersion;
         }
         else if (System.OperatingSystem.IsWindows())
         {
@@ -515,18 +518,6 @@ internal sealed class XPScriptSystemInventory
     private static string GetMap(Dictionary<string, string> values, string key, string fallback) => values.TryGetValue(key, out var value) ? value : fallback;
     private static string ReadTextFile(string path) { try { return System.IO.File.Exists(path) ? System.IO.File.ReadAllText(path).Trim() : ""; } catch { return ""; } }
 
-    private static string AndroidProperty(string typeName, string? nestedTypeName, string propertyName)
-    {
-        try
-        {
-            var type = System.Type.GetType(typeName);
-            if (type is null) return "";
-            var owner = nestedTypeName is null ? type : type.GetNestedType(nestedTypeName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-            var value = (owner ?? type).GetProperty(propertyName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance)?.GetValue(null);
-            return value?.ToString()?.Trim() ?? "";
-        }
-        catch { return ""; }
-    }
     private static string RegistryText(Microsoft.Win32.RegistryKey? key, string name) { try { return Convert.ToString(key?.GetValue(name), System.Globalization.CultureInfo.InvariantCulture)?.Trim() ?? ""; } catch { return ""; } }
     private static long RegistryLong(Microsoft.Win32.RegistryKey? key, string name) { try { return Convert.ToInt64(key?.GetValue(name) ?? 0, System.Globalization.CultureInfo.InvariantCulture); } catch { return 0; } }
 
