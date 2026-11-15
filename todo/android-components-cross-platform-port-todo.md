@@ -188,7 +188,8 @@ För varje komponent:
 
 - [x] `AddCarousel(name, sources...)` med Android ViewPager2-host.
 - [x] Index, loop, auto-advance, indicators och source normalization.
-- [ ] Desktop/web/WASM rendering.
+- [>] Desktop rendering via the existing WebView bridge and server-web HTML rendering;
+  Browser-WASM rendering and runtime current-item event remain.
 - [ ] Swipe, mouse, keyboard, programmatic navigation och current-item event.
 
 ### WebView

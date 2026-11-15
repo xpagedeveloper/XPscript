@@ -224,6 +224,21 @@ internal sealed class UIFormMediaButtonsPostProcessor
                         .Append(System.Net.WebUtility.HtmlEncode(EnsureWebSafeMediaSource(field.Source, "audio"))).Append("\" aria-label=\"")
                         .Append(System.Net.WebUtility.HtmlEncode(field.Label.Length > 0 ? field.Label : field.Name)).Append("\"").Append(required).Append("></audio>");
                     break;
+                case "Carousel":
+                    html.Append("<div id=\"xps_").Append(name).Append("\" class=\"carousel slide xpscript-uiform-carousel\"")
+                        .Append(field.CarouselLoop ? " data-bs-wrap=\"true\"" : " data-bs-wrap=\"false\"");
+                    if (field.CarouselAutoAdvanceMilliseconds is int interval)
+                        html.Append(" data-bs-interval=\"").Append(interval).Append("\"");
+                    html.Append(" data-bs-ride=\"carousel\"><div class=\"carousel-inner\">");
+                    for (var carouselIndex = 0; carouselIndex < field.CarouselSources.Count; carouselIndex++)
+                    {
+                        var active = carouselIndex == field.CarouselIndex ? " active" : string.Empty;
+                        html.Append("<div class=\"carousel-item").Append(active).Append("\"><img class=\"d-block w-100\" src=\"")
+                            .Append(System.Net.WebUtility.HtmlEncode(EnsureWebSafeMediaSource(field.CarouselSources[carouselIndex], "carousel")))
+                            .Append("\" alt=\"").Append(System.Net.WebUtility.HtmlEncode(field.Label.Length > 0 ? field.Label : field.Name)).Append("\"></div>");
+                    }
+                    html.Append("</div><button class=\"carousel-control-prev\" type=\"button\" data-bs-target=\"#xps_").Append(name).Append("\" data-bs-slide=\"prev\"><span class=\"carousel-control-prev-icon\" aria-hidden=\"true\"></span><span class=\"visually-hidden\">Previous</span></button><button class=\"carousel-control-next\" type=\"button\" data-bs-target=\"#xps_").Append(name).Append("\" data-bs-slide=\"next\"><span class=\"carousel-control-next-icon\" aria-hidden=\"true\"></span><span class=\"visually-hidden\">Next</span></button></div>");
+                    break;
                 case "WebView":
                     html.Append("<iframe id=\"xps_").Append(name).Append("\" class=\"xpscript-uiform-webview w-100 border rounded\" title=\"")
                         .Append(System.Net.WebUtility.HtmlEncode(field.Label.Length > 0 ? field.Label : field.Name)).Append("\"").Append(required);

@@ -57,6 +57,10 @@ public sealed record DesktopFormField(
     public string WebViewHtml { get; init; } = string.Empty;
     public string WebViewUserAgent { get; init; } = string.Empty;
     public string WebViewBackground { get; init; } = string.Empty;
+    public IReadOnlyList<string> CarouselSources { get; init; } = Array.Empty<string>();
+    public int CarouselIndex { get; init; }
+    public bool CarouselLoop { get; init; }
+    public int? CarouselAutoAdvance { get; init; }
     public string AccessibleName { get; init; } = string.Empty;
     public string AccessibleDescription { get; init; } = string.Empty;
     public string AccessibleHelpText { get; init; } = string.Empty;
@@ -179,10 +183,30 @@ public static class XpsUIDesktopRuntimeBridge
                 WebViewSource = "about:blank",
                 WebViewHtml = "<html><body style=\"margin:0;display:flex;align-items:center;justify-content:center;background:transparent\"><img src=\"" + System.Net.WebUtility.HtmlEncode(DesktopImageHost.ToWebSource(field.ImageSource, field.ImageCertificateValidation)) + "\" alt=\"" + System.Net.WebUtility.HtmlEncode(field.ImageAltText) + "\" style=\"max-width:100%;max-height:100%;object-fit:contain\"></body></html>"
             },
+            "Carousel" => field with
+            {
+                Type = "WebView",
+                Label = string.Empty,
+                Required = false,
+                ReadOnly = true,
+                WebViewSource = "about:blank",
+                WebViewHtml = CreateCarouselHtml(field)
+            },
             _ => field
         }).ToArray();
 
         return request with { Fields = fields };
+    }
+
+    private static string CreateCarouselHtml(DesktopFormField field)
+    {
+        var sources = field.CarouselSources.Count == 0
+            ? "<div style=\"padding:1rem\">No carousel items</div>"
+            : string.Join("", field.CarouselSources.Select((source, index) =>
+                "<img class=\"slide\" src=\"" + System.Net.WebUtility.HtmlEncode(DesktopImageHost.ToWebSource(source, "Strict")) + "\" style=\"display:" + (index == field.CarouselIndex ? "block" : "none") + ";max-width:100%;max-height:100%;object-fit:contain\" alt=\"" + System.Net.WebUtility.HtmlEncode(field.Label.Length > 0 ? field.Label : field.Name) + "\">"));
+        var interval = field.CarouselAutoAdvance is int milliseconds && milliseconds > 0 ? milliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0";
+        var loop = field.CarouselLoop ? "true" : "false";
+        return "<html><body style=\"margin:0;display:flex;align-items:center;justify-content:center;background:transparent\"><div id=\"carousel\" style=\"width:100%;height:100%;text-align:center\">" + sources + "<button onclick=\"move(-1)\">‹</button><button onclick=\"move(1)\">›</button></div><script>let i=" + field.CarouselIndex + ", slides=[...document.querySelectorAll('.slide')], loop=" + loop + ";function move(d){let n=i+d;if(n<0)n=loop?slides.length-1:0;if(n>=slides.length)n=loop?0:slides.length-1;slides[i].style.display='none';i=n;slides[i].style.display='block'}let ms=" + interval + ";if(ms>0)setInterval(()=>move(1),ms);</script></body></html>";
     }
 
     private static void ApplyTheme(string theme)
