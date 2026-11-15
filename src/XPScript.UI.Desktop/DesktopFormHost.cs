@@ -488,6 +488,7 @@ public static class DesktopFormHost
             "RadioGroup" => CreateRadioGroup(field),
             "ProgressBar" => CreateProgressBar(field),
             "ActivityIndicator" => CreateActivityIndicator(field),
+            "Icon" => new TextBlock { Text = string.IsNullOrWhiteSpace(field.Icon) ? field.Label : field.Icon, FontSize = field.FontSize ?? 20 },
             "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
             _ => new TextBox { Text = value }
         };

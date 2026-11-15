@@ -16,7 +16,7 @@ internal static partial class BrowserRichMediaHost
             foreach (var field in fields.EnumerateArray())
             {
                 var type = Read(field, "type");
-                if (type is not ("Image" or "WebView" or "Carousel" or "ProgressBar" or "ActivityIndicator")) continue;
+                if (type is not ("Image" or "WebView" or "Carousel" or "ProgressBar" or "ActivityIndicator" or "Icon")) continue;
                 var name = Read(field, "name");
                 if (name.Length == 0) continue;
                 using var existing = QuerySelector(root, "[data-field-name=\"" + name + "\"] input");
@@ -40,6 +40,13 @@ internal static partial class BrowserRichMediaHost
                 {
                     using var progress = CreateProgress(field, name, type == "ActivityIndicator");
                     ReplaceElement(existing, progress);
+                }
+                else if (type == "Icon")
+                {
+                    using var icon = CreateElement("span");
+                    icon.SetProperty("className", "xpscript-uiform-icon");
+                    icon.SetProperty("textContent", Read(field, "icon", Read(field, "label", name)));
+                    ReplaceElement(existing, icon);
                 }
                 else
                 {

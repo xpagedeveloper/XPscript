@@ -97,7 +97,7 @@ För varje komponent:
 ### Icon
 
 - [x] `AddIcon(name, icon[, label])` och Android built-in glyph fallback.
-- [ ] Portabelt icon-set/fallback på desktop, web och WASM.
+- [x] Portabelt glyph/fallback på desktop, server-web och Browser-WASM.
 - [ ] Theme, high contrast, sizing, semantics och accessibility.
 
 ### Card / Panel
