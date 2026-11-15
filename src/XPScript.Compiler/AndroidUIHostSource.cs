@@ -32,6 +32,7 @@ using Avalonia.Platform;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Controls.Primitives;
+using Avalonia.Themes.Fluent;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 
@@ -46,6 +47,7 @@ public sealed class App : Avalonia.Application
 {
     public override void OnFrameworkInitializationCompleted()
     {
+        Styles.Add(new FluentTheme());
         if (ApplicationLifetime is IActivityApplicationLifetime activityLifetime)
             activityLifetime.MainViewFactory = () => new MainView();
         base.OnFrameworkInitializationCompleted();
