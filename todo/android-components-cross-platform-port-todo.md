@@ -44,7 +44,8 @@ För varje komponent:
 - [x] `AddSlider(name, label)` med `Value` och validerad `Step`.
 - [ ] Minimum, maximum, step, programmatisk uppdatering och change event.
 - [ ] Keyboard/touch, tick/snap, focus och accessibility.
-- [ ] Cross-platform runtime-regression; Android sample/regression finns.
+- [x] Cross-platform runtime-regression; Android sample/regression finns och
+  desktop/Browser-WASM renderar Slider/RangeField.
 
 ### CheckBox / Switch
 

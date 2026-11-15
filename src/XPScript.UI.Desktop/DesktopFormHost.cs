@@ -256,6 +256,7 @@ public static class DesktopFormHost
                     case ComboBox comboBox: comboBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, comboBox); break;
                     case ListBox listBox: listBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, listBox); break;
                     case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, checkBox); break;
+                    case Slider slider: slider.PropertyChanged += (_, e) => { if (e.Property == RangeBase.ValueProperty) TriggerEvent(eventKind + sourceField.Name, sourceField, slider); }; break;
                     case StackPanel radioPanel:
                         foreach (var radio in radioPanel.Children.OfType<RadioButton>()) radio.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, radioPanel);
                         break;
@@ -488,6 +489,7 @@ public static class DesktopFormHost
             "RadioGroup" => CreateRadioGroup(field),
             "ProgressBar" => CreateProgressBar(field),
             "ActivityIndicator" => CreateActivityIndicator(field),
+            "RangeField" or "Slider" => CreateSlider(field),
             "Icon" => new TextBlock { Text = string.IsNullOrWhiteSpace(field.Icon) ? field.Label : field.Icon, FontSize = field.FontSize ?? 20 },
             "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
             _ => new TextBox { Text = value }
@@ -511,6 +513,23 @@ public static class DesktopFormHost
             IsVisible = field.ActivityRunning ?? true,
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
+
+    private static Slider CreateSlider(DesktopFormField field)
+    {
+        var minimum = Convert.ToDouble(field.Minimum ?? 0, CultureInfo.InvariantCulture);
+        var maximum = Convert.ToDouble(field.Maximum ?? 1, CultureInfo.InvariantCulture);
+        if (maximum <= minimum) maximum = minimum + 1;
+        var value = double.TryParse(field.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) ? parsed : minimum;
+        return new Slider
+        {
+            Minimum = minimum,
+            Maximum = maximum,
+            Value = Math.Clamp(value, minimum, maximum),
+            TickFrequency = field.Step ?? 1,
+            IsSnapToTickEnabled = field.Step is > 0,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+    }
 
     private static Control CreateSelect(DesktopFormField field)
     {
@@ -645,6 +664,7 @@ public static class DesktopFormHost
     private static string ReadEditorText(DesktopFormField field, Control editor)
     {
         if (editor is TextBox textBox) return textBox.Text ?? string.Empty;
+        if (editor is Slider slider) return slider.Value.ToString(CultureInfo.InvariantCulture);
         if (editor is CheckBox checkBox) return checkBox.IsChecked == true ? "true" : string.Empty;
         if (editor is ComboBox comboBox) return comboBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is ListBox listBox) return listBox.SelectedItem?.ToString() ?? string.Empty;
@@ -661,6 +681,7 @@ public static class DesktopFormHost
             if (field.Type == "ColorField" && text.Length > 0) return JsonSerializer.SerializeToElement(text.ToLowerInvariant());
             return JsonSerializer.SerializeToElement(text);
         }
+        if (editor is Slider slider) return JsonSerializer.SerializeToElement(slider.Value);
         if (editor is CheckBox checkBox) return JsonSerializer.SerializeToElement(checkBox.IsChecked == true);
         if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.SelectedItem?.ToString() ?? string.Empty);
         if (editor is ListBox listBox)
