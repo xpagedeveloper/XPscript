@@ -256,6 +256,7 @@ public static class DesktopFormHost
                     case ComboBox comboBox: comboBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, comboBox); break;
                     case ListBox listBox: listBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, listBox); break;
                     case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, checkBox); break;
+                    case ToggleSwitch toggleSwitch: toggleSwitch.IsCheckedChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, toggleSwitch); break;
                     case Slider slider: slider.PropertyChanged += (_, e) => { if (e.Property == RangeBase.ValueProperty) TriggerEvent(eventKind + sourceField.Name, sourceField, slider); }; break;
                     case StackPanel radioPanel:
                         foreach (var radio in radioPanel.Children.OfType<RadioButton>()) radio.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, radioPanel);
@@ -461,6 +462,9 @@ public static class DesktopFormHost
             case CheckBox checkBox when value is not null:
                 checkBox.IsChecked = value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1";
                 break;
+            case ToggleSwitch toggleSwitch when value is not null:
+                toggleSwitch.IsChecked = value.Equals("true", StringComparison.OrdinalIgnoreCase) || value == "1";
+                break;
             case ProgressBar progressBar:
                 if (field.Type == "ProgressBar" && field.ProgressValue is double progressValue)
                     progressBar.Value = Math.Clamp(progressValue, progressBar.Minimum, progressBar.Maximum);
@@ -483,6 +487,7 @@ public static class DesktopFormHost
             "TextArea" => new TextBox { Text = value, AcceptsReturn = true, MinHeight = 96, TextWrapping = TextWrapping.Wrap },
             "PasswordField" => new TextBox { Text = string.Empty, PasswordChar = '•' },
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
+            "Switch" => new ToggleSwitch { IsChecked = bool.TryParse(value, out var switchValue) && switchValue, Content = field.Label },
             "Select" => CreateSelect(field),
             "ListBox" => CreateListBox(field, false),
             "MultiListBox" => CreateListBox(field, true),
@@ -666,6 +671,7 @@ public static class DesktopFormHost
         if (editor is TextBox textBox) return textBox.Text ?? string.Empty;
         if (editor is Slider slider) return slider.Value.ToString(CultureInfo.InvariantCulture);
         if (editor is CheckBox checkBox) return checkBox.IsChecked == true ? "true" : string.Empty;
+        if (editor is ToggleSwitch toggleSwitch) return toggleSwitch.IsChecked == true ? "true" : string.Empty;
         if (editor is ComboBox comboBox) return comboBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is ListBox listBox) return listBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is StackPanel radioPanel) return radioPanel.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true)?.Content?.ToString() ?? string.Empty;
@@ -683,6 +689,7 @@ public static class DesktopFormHost
         }
         if (editor is Slider slider) return JsonSerializer.SerializeToElement(slider.Value);
         if (editor is CheckBox checkBox) return JsonSerializer.SerializeToElement(checkBox.IsChecked == true);
+        if (editor is ToggleSwitch toggleSwitch) return JsonSerializer.SerializeToElement(toggleSwitch.IsChecked == true);
         if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.SelectedItem?.ToString() ?? string.Empty);
         if (editor is ListBox listBox)
         {
