@@ -579,8 +579,10 @@ public sealed class CompilerDriver
     private static string CreateCompilerTempRoot()
     {
         var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var defaultRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(defaultRoot)) defaultRoot = Path.GetTempPath();
         var baseRoot = string.IsNullOrWhiteSpace(configuredRoot)
-            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            ? Path.Combine(defaultRoot, "XPScript")
             : Path.Combine(Path.GetFullPath(configuredRoot), "XPScript");
         var tempRoot = Path.Combine(baseRoot, Guid.NewGuid().ToString("N")[..12]);
         Directory.CreateDirectory(tempRoot);

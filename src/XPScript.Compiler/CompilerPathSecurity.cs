@@ -128,8 +128,10 @@ public static class CompilerPathSecurity
     private static string GetLogicalTemporaryRoot()
     {
         var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var defaultRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(defaultRoot)) defaultRoot = Path.GetTempPath();
         return string.IsNullOrWhiteSpace(configuredRoot)
-            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            ? Path.Combine(defaultRoot, "XPScript")
             : Path.Combine(Path.GetFullPath(configuredRoot), "XPScript");
     }
 

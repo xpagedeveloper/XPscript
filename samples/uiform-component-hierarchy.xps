@@ -7,6 +7,8 @@ Sub Main()
 
     Set panel = form.AddPanel("details", "Details")
     Set title = form.AddTextField("title", "Title")
+    panel.Id = "details"
+    title.Id = "title"
     Call panel.AddChild(title)
 
     If title.Parent Is Nothing Then Error 3901, "UIForm child parent was not assigned"
