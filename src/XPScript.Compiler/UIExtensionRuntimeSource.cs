@@ -5,17 +5,40 @@ internal static class UIExtensionRuntimeSource
     public const string Code = """
 internal static class XPScriptUI
 {
+    private static readonly List<XPScriptUIForm> Forms = [];
+
+    private static XPScriptUIForm Register(XPScriptUIForm form)
+    {
+        Forms.Add(form);
+        return form;
+    }
+
+    internal static void Activate(XPScriptUIForm form)
+    {
+        foreach (var candidate in Forms) candidate.Visible = false;
+        Forms.Remove(form);
+        Forms.Add(form);
+        form.Visible = true;
+    }
+
+    internal static void Deactivate(XPScriptUIForm form)
+    {
+        form.Visible = false;
+        Forms.Remove(form);
+        if (Forms.Count > 0) Forms[^1].Visible = true;
+    }
+
     public static XPScriptUIForm CreateForm()
-        => new(string.Empty, null, null, true);
+        => Register(new(string.Empty, null, null, true));
 
     public static XPScriptUIForm CreateForm(object? title)
-        => new(XPScriptRuntime.CStr(title), null, null, true);
+        => Register(new(XPScriptRuntime.CStr(title), null, null, true));
 
     public static XPScriptUIForm CreateForm(object? title, object? width, object? height)
-        => new(XPScriptRuntime.CStr(title), ToOptionalPositiveInt(width, "width"), ToOptionalPositiveInt(height, "height"), true);
+        => Register(new(XPScriptRuntime.CStr(title), ToOptionalPositiveInt(width, "width"), ToOptionalPositiveInt(height, "height"), true));
 
     public static XPScriptUIForm CreateForm(object? title, object? width, object? height, object? resizable)
-        => new(XPScriptRuntime.CStr(title), ToOptionalPositiveInt(width, "width"), ToOptionalPositiveInt(height, "height"), Convert.ToBoolean(resizable, System.Globalization.CultureInfo.CurrentCulture));
+        => Register(new(XPScriptRuntime.CStr(title), ToOptionalPositiveInt(width, "width"), ToOptionalPositiveInt(height, "height"), Convert.ToBoolean(resizable, System.Globalization.CultureInfo.CurrentCulture)));
 
     private static int? ToOptionalPositiveInt(object? value, string name)
     {

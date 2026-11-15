@@ -1752,7 +1752,9 @@ internal static class Program
                 .Replace("_grids.Add(gridName, grid);", "_grids.Add(gridName, grid); RegisterComponent(grid);", StringComparison.Ordinal)
                 .Replace("_tabs.Add(tab);", "_tabs.Add(tab); RegisterComponent(tab);", StringComparison.Ordinal)
                 .Replace("_buttons.Add(button);", "_buttons.Add(button); RegisterComponent(button);", StringComparison.Ordinal)
-                .Replace("field.GridName = name;", "field.GridName = name; field.Parent = _grids[name];", StringComparison.Ordinal);
+                .Replace("field.GridName = name;", "field.GridName = name; field.Parent = _grids[name];", StringComparison.Ordinal)
+                .Replace("_modal = false;\n        _visible = true;", "_modal = false;\n        XPScriptUI.Activate(this);", StringComparison.Ordinal)
+                .Replace("public void Hide() => Close();", "public void Hide() { XPScriptUI.Deactivate(this); }", StringComparison.Ordinal);
             if (!generated.Contains("class XPScriptHttpClient", StringComparison.Ordinal))
                 generated += Environment.NewLine + NativeHttpRuntimeSource.Code;
             if (generated.Contains("XPScriptTlsValidationState", StringComparison.Ordinal) &&

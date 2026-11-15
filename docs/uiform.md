@@ -28,6 +28,8 @@ The form title belongs to the top-level form container. On the web it is rendere
 
 Every UI component exposes a writable `Id`, a read-only `Type`, and a read-only `Parent`. IDs are optional but must be unique within the form. `UIForm.Components` returns all controls registered on the form, while `GetComponentById(id)` returns one component (or `Nothing`) and `GetComponentsByType(type)` returns an array of matching components. A field assigned to a named grid has that grid as its parent; the grid's parent is the form.
 
+An application can create multiple forms. `Show` activates the form and hides the other registered forms; the most recently shown form is the top form. Hiding the top form reveals the previous form in the stack.
+
 ```xps
 Dim form As New UIForm("Example")
 Dim grid As UIFormGrid
