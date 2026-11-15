@@ -257,6 +257,8 @@ public static class DesktopFormHost
                     case ListBox listBox: listBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, listBox); break;
                     case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, checkBox); break;
                     case ToggleSwitch toggleSwitch: toggleSwitch.IsCheckedChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, toggleSwitch); break;
+                    case DatePicker datePicker: datePicker.SelectedDateChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, datePicker); break;
+                    case TimePicker timePicker: timePicker.SelectedTimeChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, timePicker); break;
                     case Slider slider: slider.PropertyChanged += (_, e) => { if (e.Property == RangeBase.ValueProperty) TriggerEvent(eventKind + sourceField.Name, sourceField, slider); }; break;
                     case StackPanel radioPanel:
                         foreach (var radio in radioPanel.Children.OfType<RadioButton>()) radio.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, radioPanel);
@@ -485,6 +487,8 @@ public static class DesktopFormHost
         return field.Type switch
         {
             "TextArea" => new TextBox { Text = value, AcceptsReturn = true, MinHeight = 96, TextWrapping = TextWrapping.Wrap },
+            "DateField" => CreateDatePicker(field),
+            "TimeField" => CreateTimePicker(field),
             "PasswordField" => new TextBox { Text = string.Empty, PasswordChar = '•' },
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
             "Switch" => new ToggleSwitch { IsChecked = bool.TryParse(value, out var switchValue) && switchValue, Content = field.Label },
@@ -534,6 +538,22 @@ public static class DesktopFormHost
             IsSnapToTickEnabled = field.Step is > 0,
             HorizontalAlignment = HorizontalAlignment.Stretch
         };
+    }
+
+    private static DatePicker CreateDatePicker(DesktopFormField field)
+    {
+        var picker = new DatePicker { HorizontalAlignment = HorizontalAlignment.Stretch };
+        if (DateTime.TryParseExact(field.Value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            picker.SelectedDate = new DateTimeOffset(date.Date);
+        return picker;
+    }
+
+    private static TimePicker CreateTimePicker(DesktopFormField field)
+    {
+        var picker = new TimePicker { HorizontalAlignment = HorizontalAlignment.Stretch };
+        if (TimeSpan.TryParseExact(field.Value, new[] { "hh\\:mm", "hh\\:mm\\:ss" }, CultureInfo.InvariantCulture, out var time))
+            picker.SelectedTime = time;
+        return picker;
     }
 
     private static Control CreateSelect(DesktopFormField field)
@@ -672,6 +692,8 @@ public static class DesktopFormHost
         if (editor is Slider slider) return slider.Value.ToString(CultureInfo.InvariantCulture);
         if (editor is CheckBox checkBox) return checkBox.IsChecked == true ? "true" : string.Empty;
         if (editor is ToggleSwitch toggleSwitch) return toggleSwitch.IsChecked == true ? "true" : string.Empty;
+        if (editor is DatePicker datePicker) return datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
+        if (editor is TimePicker timePicker) return timePicker.SelectedTime?.ToString("hh\\:mm\\:ss", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is ComboBox comboBox) return comboBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is ListBox listBox) return listBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is StackPanel radioPanel) return radioPanel.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true)?.Content?.ToString() ?? string.Empty;
@@ -690,6 +712,8 @@ public static class DesktopFormHost
         if (editor is Slider slider) return JsonSerializer.SerializeToElement(slider.Value);
         if (editor is CheckBox checkBox) return JsonSerializer.SerializeToElement(checkBox.IsChecked == true);
         if (editor is ToggleSwitch toggleSwitch) return JsonSerializer.SerializeToElement(toggleSwitch.IsChecked == true);
+        if (editor is DatePicker datePicker) return JsonSerializer.SerializeToElement(datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty);
+        if (editor is TimePicker timePicker) return JsonSerializer.SerializeToElement(timePicker.SelectedTime?.ToString("hh\\:mm\\:ss", CultureInfo.InvariantCulture) ?? string.Empty);
         if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.SelectedItem?.ToString() ?? string.Empty);
         if (editor is ListBox listBox)
         {
