@@ -761,8 +761,8 @@ foreach (var expected in new[]
     "browser.Source = \"https://example.com\"",
     "AddImage(\"testImage\", \"Android/test-image.png\"",
     "AddImage(\"xpImage\", runtimeImage",
-    "SetFieldCornerRadius(\"name\", 12)",
-    "SetButtonCornerRadius(\"verify\", 12)",
+    "nameField.CornerRadius = 12",
+    "verifyButton.CornerRadius = 12",
     "XPSCRIPT-LIFECYCLE"
 })
 {

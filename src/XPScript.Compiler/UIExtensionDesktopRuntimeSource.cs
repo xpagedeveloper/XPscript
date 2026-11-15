@@ -121,7 +121,7 @@ internal static class XPScriptUIDesktopAdapter
                 regexPattern = field.RegexPattern, schemaValidationError = ReadValidationError(form, field.Name),
                 value = field.Type is "PasswordField" or "MultiListBox" ? null : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
                 values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
-                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, step = field.Type == "RangeField" ? field.Step : (double?)null, options = field.Options, cornerRadius = field.CornerRadius, tabName = field.TabName, gridName = field.GridName,
+                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, step = field.Type == "RangeField" ? field.Step : (double?)null, options = field.Options, cornerRadius = field.CornerRadius, width = field.Width, height = field.Height, font = field.Font, fontSize = field.FontSize, tabName = field.TabName, gridName = field.GridName,
                 webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground, icon = field.IconName,
                 source = field.Type is "Video" or "Audio" ? field.Source : null,
                 progressValue = field.Type == "ProgressBar" ? (double?)field.Value : null,
@@ -133,7 +133,7 @@ internal static class XPScriptUIDesktopAdapter
             activeTab = form.ActiveTab,
             buttons = form.Buttons.Select(button => new
             {
-                name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style, icon = button.Icon, image = button.Image, cornerRadius = button.CornerRadius,
+                name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style, icon = button.Icon, image = button.Image, cornerRadius = button.CornerRadius, width = button.Width, height = button.Height, font = button.Font, fontSize = button.FontSize,
                 layoutRow = button.LayoutRow, layoutColumn = button.LayoutColumn, columnSpan = button.ColumnSpan, rowSpan = button.RowSpan
             }).ToArray()
         };

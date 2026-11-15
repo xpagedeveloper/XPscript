@@ -617,6 +617,10 @@ public static class AndroidFormHost
                 };
 
                 AutomationProperties.SetAutomationId(editor, "xps-field-" + name);
+                if (field.TryGetProperty("width", out var widthValue) && widthValue.ValueKind == JsonValueKind.Number && widthValue.TryGetDouble(out var width)) editor.Width = width;
+                if (field.TryGetProperty("height", out var heightValue) && heightValue.ValueKind == JsonValueKind.Number && heightValue.TryGetDouble(out var height)) editor.Height = height;
+                if (field.TryGetProperty("fontSize", out var fontSizeValue) && fontSizeValue.ValueKind == JsonValueKind.Number && fontSizeValue.TryGetDouble(out var fontSize)) editor.FontSize = fontSize;
+                if (field.TryGetProperty("font", out var fontValue) && fontValue.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(fontValue.GetString())) editor.FontFamily = new FontFamily(fontValue.GetString()!);
                 // Keep the automation id as the resource id; exposing the id as the name makes Android report it as field text.
                 if (field.TryGetProperty("value", out var value) && value.ValueKind != JsonValueKind.Null)
                     SetEditorValue(editor, value);
@@ -672,6 +676,10 @@ public static class AndroidFormHost
                     var buttonImage = buttonValue.TryGetProperty("image", out var buttonImageValue) ? buttonImageValue.GetString() ?? string.Empty : string.Empty;
                     var cornerRadius = buttonValue.TryGetProperty("cornerRadius", out var cornerRadiusValue) && cornerRadiusValue.TryGetDouble(out var radius) ? radius : 0;
                     var actionButton = new Avalonia.Controls.Button { Content = CreateButtonContent(buttonIcon, buttonImage, buttonLabel), Tag = new[] { buttonIcon, buttonImage }, MinWidth = 100, CornerRadius = new CornerRadius(cornerRadius) };
+                    if (buttonValue.TryGetProperty("width", out var buttonWidthValue) && buttonWidthValue.ValueKind == JsonValueKind.Number && buttonWidthValue.TryGetDouble(out var buttonWidth)) actionButton.Width = buttonWidth;
+                    if (buttonValue.TryGetProperty("height", out var buttonHeightValue) && buttonHeightValue.ValueKind == JsonValueKind.Number && buttonHeightValue.TryGetDouble(out var buttonHeight)) actionButton.Height = buttonHeight;
+                    if (buttonValue.TryGetProperty("fontSize", out var buttonFontSizeValue) && buttonFontSizeValue.ValueKind == JsonValueKind.Number && buttonFontSizeValue.TryGetDouble(out var buttonFontSize)) actionButton.FontSize = buttonFontSize;
+                    if (buttonValue.TryGetProperty("font", out var buttonFontValue) && buttonFontValue.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(buttonFontValue.GetString())) actionButton.FontFamily = new FontFamily(buttonFontValue.GetString()!);
                     actionButton.IsEnabled = !buttonValue.TryGetProperty("enabled", out var buttonEnabled) || buttonEnabled.ValueKind != JsonValueKind.False;
                     actionButtons[buttonName] = actionButton;
                     actionButton.Click += (_, _) =>

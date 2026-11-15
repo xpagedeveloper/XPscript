@@ -19,7 +19,25 @@ internal sealed class UIFormActionModelPostProcessor
     public bool Visible { get; set; } = true;
     public bool Enabled { get; set; } = true;
     public bool ReadOnly { get; set; }
-    public double CornerRadius { get; set; }
+    private double _cornerRadius;
+    private double? _width;
+    private double? _height;
+    private string _font = string.Empty;
+    private double? _fontSize;
+    public double CornerRadius
+    {
+        get => _cornerRadius;
+        set
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+                throw new XPScriptRuntimeException(5, "UIForm control CornerRadius must be between 0 and 1000.");
+            _cornerRadius = value;
+        }
+    }
+    public double? Width { get => _width; set => _width = value; }
+    public double? Height { get => _height; set => _height = value; }
+    public string Font { get => _font; set => _font = value ?? string.Empty; }
+    public double? FontSize { get => _fontSize; set => _fontSize = value; }
     public string Placeholder { get; set; } = string.Empty;
     public string Tooltip { get; set; } = string.Empty;
     public string TabName { get; set; } = string.Empty;
@@ -53,7 +71,21 @@ internal sealed class XPScriptUIButton
     public string Style { get; set; } = "Default";
     public string Icon { get; set; } = string.Empty;
     public string Image { get; set; } = string.Empty;
-    public double CornerRadius { get; set; }
+    private double _cornerRadius;
+    public double? Width { get; set; }
+    public double? Height { get; set; }
+    public string Font { get; set; } = string.Empty;
+    public double? FontSize { get; set; }
+    public double CornerRadius
+    {
+        get => _cornerRadius;
+        set
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+                throw new XPScriptRuntimeException(5, "UIForm control CornerRadius must be between 0 and 1000.");
+            _cornerRadius = value;
+        }
+    }
     public int LayoutRow { get; set; }
     public int LayoutColumn { get; set; }
     public int ColumnSpan { get; set; } = 1;
@@ -73,6 +105,11 @@ internal sealed partial class XPScriptUIForm
                 @"private\s+int\s+_gridColumns\s*=\s*1\s*;",
                 """
     private int _gridColumns = 1;
+    private double _cornerRadius;
+    private double? _defaultControlWidth;
+    private double? _defaultControlHeight;
+    private string _defaultFont = string.Empty;
+    private double? _defaultFontSize;
     private string _theme = "System";
     private readonly List<XPScriptUIButton> _buttons = [];
     private readonly List<XPScriptUITab> _tabs = [];
@@ -92,13 +129,55 @@ internal sealed partial class XPScriptUIForm
                 """
     public int GridColumns => _gridColumns;
     public string Theme => _theme;
+    public double CornerRadius
+    {
+        get => _cornerRadius;
+        set
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+                throw new XPScriptRuntimeException(5, "UIForm CornerRadius must be between 0 and 1000.");
+            _cornerRadius = value;
+            foreach (var field in _fields) field.CornerRadius = value;
+            foreach (var button in _buttons) button.CornerRadius = value;
+        }
+    }
     public bool ShowValidationErrors { get; set; } = true;
+    public double? DefaultControlWidth { get => _defaultControlWidth; set { _defaultControlWidth = NormalizeOptionalDimension(value, "DefaultControlWidth"); ApplyDefaults(); } }
+    public double? DefaultControlHeight { get => _defaultControlHeight; set { _defaultControlHeight = NormalizeOptionalDimension(value, "DefaultControlHeight"); ApplyDefaults(); } }
+    public string DefaultFont { get => _defaultFont; set { _defaultFont = value ?? string.Empty; ApplyDefaults(); } }
+    public double? DefaultFontSize { get => _defaultFontSize; set { _defaultFontSize = NormalizeOptionalDimension(value, "DefaultFontSize"); ApplyDefaults(); } }
     public int ButtonCount => _buttons.Count;
     internal IReadOnlyList<XPScriptUIButton> Buttons => _buttons;
     internal IReadOnlyList<XPScriptUITab> Tabs => _tabs;
     public string ActiveTab { get => _activeTab; set => SetActiveTab(value); }
     public object GetData() => _data;
     public void SetData(object? value) => BindData(value);
+    private void ApplyDefaults()
+    {
+        foreach (var field in _fields)
+        {
+            if (_defaultControlWidth.HasValue) field.Width = _defaultControlWidth;
+            if (_defaultControlHeight.HasValue) field.Height = _defaultControlHeight;
+            if (_defaultFont.Length > 0) field.Font = _defaultFont;
+            if (_defaultFontSize.HasValue) field.FontSize = _defaultFontSize;
+            field.CornerRadius = _cornerRadius;
+        }
+        foreach (var button in _buttons)
+        {
+            if (_defaultControlWidth.HasValue) button.Width = _defaultControlWidth;
+            if (_defaultControlHeight.HasValue) button.Height = _defaultControlHeight;
+            if (_defaultFont.Length > 0) button.Font = _defaultFont;
+            if (_defaultFontSize.HasValue) button.FontSize = _defaultFontSize;
+            button.CornerRadius = _cornerRadius;
+        }
+    }
+    private static double? NormalizeOptionalDimension(double? value, string name)
+    {
+        if (!value.HasValue) return null;
+        if (double.IsNaN(value.Value) || double.IsInfinity(value.Value) || value.Value <= 0 || value.Value > 10000)
+            throw new XPScriptRuntimeException(5, $"UIForm {name} must be greater than 0 and no more than 10000.");
+        return value;
+    }
 """, "form-api");
         }
 
@@ -165,22 +244,6 @@ internal sealed partial class XPScriptUIForm
         FindField(name).ReadOnly = Convert.ToBoolean(readOnly, System.Globalization.CultureInfo.CurrentCulture);
     }
 
-    public void SetFieldCornerRadius(object? name, object? radius)
-    {
-        var field = FindField(name);
-        if (field.Type is not ("TextField" or "TextArea" or "PasswordField" or "EmailField" or "UrlField"))
-            throw new XPScriptRuntimeException(5, "UIForm field corner radius is only supported for text-entry fields.");
-        double value;
-        try { value = Convert.ToDouble(radius, System.Globalization.CultureInfo.InvariantCulture); }
-        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
-        {
-            throw new XPScriptRuntimeException(13, "UIForm field corner radius must be numeric.");
-        }
-        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
-            throw new XPScriptRuntimeException(5, "UIForm field corner radius must be between 0 and 1000.");
-        field.CornerRadius = value;
-    }
-
     public void SetFieldPlaceholder(object? name, object? placeholder)
     {
         var field = FindField(name);
@@ -212,8 +275,13 @@ internal sealed partial class XPScriptUIForm
         {
             Name = buttonName,
             Label = XPScriptRuntime.CStr(label),
-            Handler = NormalizeHandlerName(handlerName)
+            Handler = NormalizeHandlerName(handlerName),
+            CornerRadius = _cornerRadius
         };
+        if (_defaultControlWidth.HasValue) button.Width = _defaultControlWidth;
+        if (_defaultControlHeight.HasValue) button.Height = _defaultControlHeight;
+        if (_defaultFont.Length > 0) button.Font = _defaultFont;
+        if (_defaultFontSize.HasValue) button.FontSize = _defaultFontSize;
         _buttons.Add(button);
         return button;
     }
@@ -252,19 +320,6 @@ internal sealed partial class XPScriptUIForm
 
     public void SetButtonImage(object? name, object? image)
         => FindButton(name).Image = XPScriptRuntime.CStr(image).Trim();
-
-    public void SetButtonCornerRadius(object? name, object? radius)
-    {
-        double value;
-        try { value = Convert.ToDouble(radius, System.Globalization.CultureInfo.InvariantCulture); }
-        catch (Exception ex) when (ex is InvalidCastException or FormatException or OverflowException)
-        {
-            throw new XPScriptRuntimeException(13, "UIForm button corner radius must be numeric.");
-        }
-        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
-            throw new XPScriptRuntimeException(5, "UIForm button corner radius must be between 0 and 1000.");
-        FindButton(name).CornerRadius = value;
-    }
 
     public void SetButtonVisible(object? name, object? visible)
     {

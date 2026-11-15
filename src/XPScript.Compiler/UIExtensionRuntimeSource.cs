@@ -96,7 +96,25 @@ internal sealed class XPScriptUIField
     public bool Visible { get; set; } = true;
     public bool Enabled { get; set; } = true;
     public bool ReadOnly { get; set; }
-    public double CornerRadius { get; set; }
+    private double _cornerRadius;
+    private double? _width;
+    private double? _height;
+    private string _font = string.Empty;
+    private double? _fontSize;
+    public double CornerRadius
+    {
+        get => _cornerRadius;
+        set
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+                throw new XPScriptRuntimeException(5, "UIForm control CornerRadius must be between 0 and 1000.");
+            _cornerRadius = value;
+        }
+    }
+    public double? Width { get => _width; set => _width = NormalizeOptionalDimension(value, "Width"); }
+    public double? Height { get => _height; set => _height = NormalizeOptionalDimension(value, "Height"); }
+    public string Font { get => _font; set => _font = value ?? string.Empty; }
+    public double? FontSize { get => _fontSize; set => _fontSize = NormalizeOptionalDimension(value, "FontSize"); }
     public string Placeholder { get; set; } = string.Empty;
     public string Tooltip { get; set; } = string.Empty;
     public string TabName { get; set; } = string.Empty;
@@ -326,6 +344,11 @@ internal sealed partial class XPScriptUIForm
     private readonly List<XPScriptUIField> _fields = [];
     private readonly List<(string Name, string Command)> _mediaCommands = [];
     private int _gridColumns = 1;
+    private double _cornerRadius;
+    private double? _defaultControlWidth;
+    private double? _defaultControlHeight;
+    private string _defaultFont = string.Empty;
+    private double? _defaultFontSize;
 
     internal XPScriptUIForm(string title, int? width, int? height, bool resizable)
     {
@@ -339,6 +362,21 @@ internal sealed partial class XPScriptUIForm
     public int Width { get => _width ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm width must be greater than zero."); _width = value; } }
     public int Height { get => _height ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm height must be greater than zero."); _height = value; } }
     public bool Resizable { get => _resizable; set => _resizable = value; }
+    public double CornerRadius
+    {
+        get => _cornerRadius;
+        set
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+                throw new XPScriptRuntimeException(5, "UIForm CornerRadius must be between 0 and 1000.");
+            _cornerRadius = value;
+            foreach (var field in _fields) field.CornerRadius = value;
+        }
+    }
+    public double? DefaultControlWidth { get => _defaultControlWidth; set { _defaultControlWidth = NormalizeOptionalDimension(value, "DefaultControlWidth"); ApplyDefaults(); } }
+    public double? DefaultControlHeight { get => _defaultControlHeight; set { _defaultControlHeight = NormalizeOptionalDimension(value, "DefaultControlHeight"); ApplyDefaults(); } }
+    public string DefaultFont { get => _defaultFont; set { _defaultFont = value ?? string.Empty; ApplyDefaults(); } }
+    public double? DefaultFontSize { get => _defaultFontSize; set { _defaultFontSize = NormalizeOptionalDimension(value, "DefaultFontSize"); ApplyDefaults(); } }
     public bool ShowDefaultButtons { get; set; } = true;
     public double? DefaultButtonCornerRadius { get; private set; }
     public bool Visible { get => _visible; set => _visible = value; }
@@ -607,8 +645,40 @@ internal sealed partial class XPScriptUIForm
         if (_fields.Any(field => field.Name.Equals(fieldName, StringComparison.OrdinalIgnoreCase)))
             throw new XPScriptRuntimeException(5, $"UIForm field '{fieldName}' already exists.");
         var field = new XPScriptUIField(this, fieldName, XPScriptRuntime.CStr(label), type);
+        field.CornerRadius = _cornerRadius;
+        ApplyDefaults(field);
         _fields.Add(field);
         return field;
+    }
+
+    private void ApplyDefaults()
+    {
+        foreach (var field in _fields) ApplyDefaults(field);
+        foreach (var button in _buttons)
+        {
+            if (_defaultControlWidth.HasValue) button.Width = _defaultControlWidth;
+            if (_defaultControlHeight.HasValue) button.Height = _defaultControlHeight;
+            if (_defaultFont.Length > 0) button.Font = _defaultFont;
+            if (_defaultFontSize.HasValue) button.FontSize = _defaultFontSize;
+            button.CornerRadius = _cornerRadius;
+        }
+    }
+
+    private void ApplyDefaults(XPScriptUIField field)
+    {
+        field.CornerRadius = _cornerRadius;
+        if (_defaultControlWidth.HasValue) field.Width = _defaultControlWidth;
+        if (_defaultControlHeight.HasValue) field.Height = _defaultControlHeight;
+        if (_defaultFont.Length > 0) field.Font = _defaultFont;
+        if (_defaultFontSize.HasValue) field.FontSize = _defaultFontSize;
+    }
+
+    private static double? NormalizeOptionalDimension(double? value, string name)
+    {
+        if (!value.HasValue) return null;
+        if (double.IsNaN(value.Value) || double.IsInfinity(value.Value) || value.Value <= 0 || value.Value > 10000)
+            throw new XPScriptRuntimeException(5, $"UIForm control {name} must be greater than zero and at most 10000.");
+        return value;
     }
 
     private XPScriptUIField FindField(object? name)
@@ -777,14 +847,15 @@ internal sealed partial class XPScriptUIForm
 
             var label = System.Net.WebUtility.HtmlEncode(field.Label);
             var required = field.Required ? " required" : string.Empty;
+            var controlStyle = BuildWebControlStyle(field);
             var length = (field.MinLength.HasValue ? $" minlength=\"{field.MinLength.Value}\"" : string.Empty)
                 + (field.MaxLength.HasValue ? $" maxlength=\"{field.MaxLength.Value}\"" : string.Empty);
             var range = (field.Minimum.HasValue ? $" min=\"{field.Minimum.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}\"" : string.Empty)
                 + (field.Maximum.HasValue ? $" max=\"{field.Maximum.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}\"" : string.Empty);
-            html.Append("<div class=\"xpscript-uiform-field\"><label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
+            html.Append("<div class=\"xpscript-uiform-field\"").Append(controlStyle).Append(">").Append("<label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
             switch (field.Type)
             {
-                case "TextArea": html.Append("<textarea id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(length).Append(">").Append(value).Append("</textarea>"); break;
+                case "TextArea": html.Append("<textarea id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(controlStyle).Append(required).Append(length).Append(">").Append(value).Append("</textarea>"); break;
                 case "NumberField": html.Append("<input type=\"number\" step=\"any\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(range).Append(">"); break;
                 case "RangeField": html.Append("<input type=\"range\" step=\"any\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(range).Append(">"); break;
                 case "CheckBox":
@@ -838,12 +909,23 @@ internal sealed partial class XPScriptUIForm
                         html.Append(required).Append(">").Append(encodedOption).Append("</label>");
                     }
                     break;
-                default: html.Append("<input type=\"text\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
+                default: html.Append("<input type=\"text\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(controlStyle).Append(required).Append(length).Append(">"); break;
             }
             html.Append("</div>");
         }
         html.Append("<button type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
         return html.ToString();
+    }
+
+    private static string BuildWebControlStyle(XPScriptUIField field)
+    {
+        var css = new System.Text.StringBuilder();
+        if (field.CornerRadius > 0) css.Append("border-radius:").Append(field.CornerRadius.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append("px;");
+        if (field.Width is > 0) css.Append("width:").Append(field.Width.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append("px;");
+        if (field.Height is > 0) css.Append("height:").Append(field.Height.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append("px;");
+        if (field.FontSize is > 0) css.Append("font-size:").Append(field.FontSize.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append("px;");
+        if (field.Font.Length > 0) css.Append("font-family:").Append(field.Font.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal)).Append(";");
+        return css.Length == 0 ? string.Empty : " style=\"" + css + "\"";
     }
 
     private static string NormalizeFieldName(object? value)

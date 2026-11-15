@@ -20,6 +20,10 @@ Sub Main()
     Call data.Set("phone", "+46 70 123 45 67")
     Call data.Set("richText", "Android rich text")
     Call form.BindData(data)
+    form.CornerRadius = 14
+    form.DefaultControlWidth = 320
+    form.DefaultControlHeight = 48
+    form.DefaultFontSize = 16
 
     Call form.AddTextField("name", "Name")
     Call form.AddTextArea("notes", "Notes")

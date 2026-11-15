@@ -7,6 +7,7 @@ using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Themes.Fluent;
@@ -73,12 +74,14 @@ public static class DesktopFormHost
             if (!string.IsNullOrWhiteSpace(field.Label))
             {
                 var label = new TextBlock { Text = field.Label };
+                ApplyTypography(field, label);
                 fieldLabels[field.Name] = label;
                 fieldPanel.Children.Add(label);
             }
             var editor = CreateEditor(request.InstanceId, field);
             ApplyEditorState(field, editor);
             ApplyFieldHints(field, editor);
+            ApplyControlStyle(field, editor);
             DesktopAccessibilityHost.ApplyField(field, editor);
             editors[field.Name] = editor;
             fieldPanel.Children.Add(editor);
@@ -268,6 +271,7 @@ public static class DesktopFormHost
             foreach (var definition in request.Buttons)
             {
                 var button = new Button { Content = definition.Label, MinWidth = 80, IsVisible = definition.Visible, IsEnabled = definition.Enabled };
+                ApplyButtonStyle(definition, button);
                 customButtons[definition.Name] = button;
                 button.Click += (_, _) => TriggerEvent("button:" + definition.Name);
                 actionButtons.Children.Add(button);
@@ -391,6 +395,33 @@ public static class DesktopFormHost
         editor.IsEnabled = field.Enabled;
         if (editor is TextBox textBox) textBox.IsReadOnly = field.ReadOnly;
         else if (field.ReadOnly) editor.IsEnabled = false;
+    }
+
+    private static void ApplyControlStyle(DesktopFormField field, Control control)
+    {
+        if (field.Width is > 0) control.Width = field.Width.Value;
+        if (field.Height is > 0) control.Height = field.Height.Value;
+        ApplyTypography(field, control);
+        if (field.CornerRadius > 0 && control is TemplatedControl templated)
+            templated.CornerRadius = new CornerRadius(field.CornerRadius);
+    }
+
+    private static void ApplyButtonStyle(DesktopFormButton definition, Button button)
+    {
+        if (definition.Width is > 0) button.Width = definition.Width.Value;
+        if (definition.Height is > 0) button.Height = definition.Height.Value;
+        ApplyTypography(definition.Font, definition.FontSize, button);
+        if (definition.CornerRadius > 0) button.CornerRadius = new CornerRadius(definition.CornerRadius);
+    }
+
+    private static void ApplyTypography(DesktopFormField field, Control control)
+        => ApplyTypography(field.Font, field.FontSize, control);
+
+    private static void ApplyTypography(string font, double? fontSize, Control control)
+    {
+        if (control is not TemplatedControl styled) return;
+        if (fontSize is > 0) styled.FontSize = fontSize.Value;
+        if (font.Length > 0) styled.FontFamily = new FontFamily(font);
     }
 
     private static void ApplyFieldHints(DesktopFormField field, Control editor)

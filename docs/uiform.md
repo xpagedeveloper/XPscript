@@ -22,6 +22,30 @@ result = form.ShowDialog()
 
 The form title belongs to the top-level form container. On the web it is rendered before the field grid.
 
+## Shared control appearance
+
+Appearance properties are read/write and are applied consistently on Windows, Linux, macOS, server-rendered web and browser-WASM. Set defaults on the form before adding controls; a value assigned directly to a field or button overrides the form default.
+
+```xpscript
+Dim nameField As UIFormField
+Dim saveButton As UIButton
+Dim form As New UIForm("Customer")
+
+form.CornerRadius = 12
+form.DefaultControlWidth = 320
+form.DefaultControlHeight = 48
+form.DefaultFont = "Arial"
+form.DefaultFontSize = 16
+
+Set nameField = form.AddTextField("name", "Name")
+nameField.CornerRadius = 20
+nameField.Width = 400
+Set saveButton = form.AddButton("save", "Save", "Save")
+saveButton.Height = 56
+```
+
+`UIForm.CornerRadius` is propagated to existing and subsequently added fields and buttons. `DefaultControlWidth`, `DefaultControlHeight`, `DefaultFont` and `DefaultFontSize` work the same way. `UIFormField` and `UIButton` expose `CornerRadius`, `Width`, `Height`, `Font` and `FontSize` as read/write properties. Dimensions and font sizes must be greater than 0 and no greater than 10000; `CornerRadius` must be between 0 and 1000. `Nothing` clears an optional dimension or font size.
+
 ## Fields
 
 Core field APIs include `AddTextField(name, label)`, `AddTextArea(name, label)`, `AddNumberField(name, label)`, `AddCheckBox(name, label)`, `AddDateField(name, label)`, `AddSelect(name, label)`, `AddRadioGroup(name, label)`, `AddListBox(name, label)` and `AddMultiListBox(name, label)`. `SetRequired(name, True)` marks a field required.

@@ -9,6 +9,15 @@ Sub Main()
     Dim browser As Variant
     Dim result As String
     Dim runtimeImage As XPImage
+    Dim nameField As UIFormField
+    Dim notesField As UIFormField
+    Dim passwordField As UIFormField
+    Dim emailField As UIFormField
+    Dim urlField As UIFormField
+    Dim verifyButton As UIButton
+    Dim touchButton As UIButton
+    Dim layoutButton As UIButton
+    Dim keyboardButton As UIButton
 
     Call Application.Debug.Info("TEST STARTUP: PASS")
     Call Application.Debug.Info("TEST INSTRUCTION: Fill Name and Notes, toggle Enabled, select the requested option/list/radio values, set Range to 75, enter a password, then press Verify Input.")
@@ -38,11 +47,11 @@ Sub Main()
     Call form.AddTab("more", "More")
     detailsGrid = form.AddGrid("detailsGrid", 2)
     Call detailsGrid.SetTab("more")
-    Call form.AddTextField("name", "1. Name - type MANUAL-ANDROID")
-    Call form.AddTextArea("notes", "2. Notes - type two lines")
+    Set nameField = form.AddTextField("name", "1. Name - type MANUAL-ANDROID")
+    Set notesField = form.AddTextArea("notes", "2. Notes - type two lines")
     Call form.AddCheckBox("enabled", "3. Enabled - toggle this")
-    Call form.SetFieldCornerRadius("name", 12)
-    Call form.SetFieldCornerRadius("notes", 12)
+    nameField.CornerRadius = 12
+    notesField.CornerRadius = 12
     Call form.SetFieldTab("name", "basic")
     Call form.SetFieldTab("notes", "basic")
     Call form.SetFieldTab("enabled", "basic")
@@ -65,11 +74,11 @@ Sub Main()
     Call form.AddOption("radioChoice", "Right")
     Call form.AddRangeField("rangeValue", "8. Range - set to 75")
     Call form.SetNumberRange("rangeValue", 0, 100)
-    Call form.AddPasswordField("password", "9. Password - type android-secret")
+    Set passwordField = form.AddPasswordField("password", "9. Password - type android-secret")
     Call form.AddNumberField("numberValue", "10. Number - keep 42")
     Call form.SetNumberRange("numberValue", 0, 100)
-    Call form.AddEmailField("emailValue", "11. Email - keep android@example.com")
-    Call form.AddUrlField("urlValue", "12. URL - keep https://example.com")
+    Set emailField = form.AddEmailField("emailValue", "11. Email - keep android@example.com")
+    Set urlField = form.AddUrlField("urlValue", "12. URL - keep https://example.com")
     Call form.AddDateField("dateValue", "13. Date - keep 2026-10-03")
     Call form.AddTimeField("timeValue", "14. Time - keep 19:30")
     Call form.AddDateTimeField("dateTimeValue", "15. DateTime - keep 2026-10-03 19:30")
@@ -77,9 +86,9 @@ Sub Main()
     Call form.AddColorField("colorValue", "17. Color - keep #336699")
     browser = form.AddWebView("webPreview", "18. WebView - example.com")
     browser.Source = "https://example.com"
-    Call form.SetFieldCornerRadius("password", 12)
-    Call form.SetFieldCornerRadius("emailValue", 12)
-    Call form.SetFieldCornerRadius("urlValue", 12)
+    passwordField.CornerRadius = 12
+    emailField.CornerRadius = 12
+    urlField.CornerRadius = 12
     Call form.AddSpacer("space1")
     Call form.AddImage("testImage", "Android/test-image.png", "Android UIForm asset image")
     Call form.AddImage("xpImage", runtimeImage, "Android UIForm XPImage")
@@ -104,14 +113,14 @@ Sub Main()
     Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""name"":{""type"":""string"",""minLength"":3,""x-errorMessages"":{""minLength"":""Name must contain at least 3 characters""}}},""required"":[""name""],""x-requiredMessages"":{""name"":""Please enter your name""}}")
     Call form.SetValidationSchema(schema)
 
-    Call form.AddButtonCallback("verify", "Verify Input", "VerifyInput", "manual")
-    Call form.AddButtonCallback("touch", "Touch PASS", "TouchPass", "manual")
-    Call form.AddButtonCallback("layout", "Layout PASS", "LayoutPass", "manual")
-    Call form.AddButtonCallback("keyboard", "Keyboard PASS", "KeyboardPass", "manual")
-    Call form.SetButtonCornerRadius("verify", 12)
-    Call form.SetButtonCornerRadius("touch", 12)
-    Call form.SetButtonCornerRadius("layout", 12)
-    Call form.SetButtonCornerRadius("keyboard", 12)
+    Set verifyButton = form.AddButtonCallback("verify", "Verify Input", "VerifyInput", "manual")
+    Set touchButton = form.AddButtonCallback("touch", "Touch PASS", "TouchPass", "manual")
+    Set layoutButton = form.AddButtonCallback("layout", "Layout PASS", "LayoutPass", "manual")
+    Set keyboardButton = form.AddButtonCallback("keyboard", "Keyboard PASS", "KeyboardPass", "manual")
+    verifyButton.CornerRadius = 12
+    touchButton.CornerRadius = 12
+    layoutButton.CornerRadius = 12
+    keyboardButton.CornerRadius = 12
     result = form.ShowDialog()
 
     Call Application.Debug.Info("TEST DIALOG RESULT: " & result)

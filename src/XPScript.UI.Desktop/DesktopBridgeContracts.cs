@@ -30,6 +30,10 @@ public sealed record DesktopFormField(
     public bool Enabled { get; init; } = true;
     public bool ReadOnly { get; init; }
     public double CornerRadius { get; init; }
+    public double? Width { get; init; }
+    public double? Height { get; init; }
+    public string Font { get; init; } = string.Empty;
+    public double? FontSize { get; init; }
     public string Placeholder { get; init; } = string.Empty;
     public string Tooltip { get; init; } = string.Empty;
     public string TabName { get; init; } = string.Empty;
@@ -86,6 +90,10 @@ public sealed record DesktopFormButton(
     bool Enabled)
 {
     public double CornerRadius { get; init; }
+    public double? Width { get; init; }
+    public double? Height { get; init; }
+    public string Font { get; init; } = string.Empty;
+    public double? FontSize { get; init; }
 }
 
 public sealed record DesktopFormTab(string Name, string Label);
