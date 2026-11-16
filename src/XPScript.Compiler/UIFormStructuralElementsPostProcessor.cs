@@ -146,6 +146,11 @@ foreach (var field in _fields)
                 Console.Error.WriteLine("[XPScript UIForm] placeholder-state anchor was already transformed; continuing with the existing renderer.");
                 return source;
             }
+            if (stage == "web-render")
+            {
+                Console.Error.WriteLine("[XPScript UIForm] structural web-render anchor was already transformed; continuing with the existing renderer.");
+                return source;
+            }
             throw new CompilerException($"Unable to install UIForm structural element runtime ({stage}).");
         }
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
