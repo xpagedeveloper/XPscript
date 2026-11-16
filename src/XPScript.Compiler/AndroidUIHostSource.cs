@@ -682,10 +682,19 @@ public static class AndroidFormHost
                     toggleSwitch.IsCheckedChanged += (_, _) => DispatchFieldChange(name, toggleSwitch.IsChecked == true ? "true" : "false");
                 if (editor is AndroidColorFieldEditor colorField)
                     colorField.ValueEditor.TextChanged += (_, _) => DispatchFieldChange(name, colorField.ValueEditor.Text ?? string.Empty);
-                if (editor is ComboBox comboBox && (type is "LookupField" or "AutoCompleteField"))
-                    comboBox.PropertyChanged += (_, args) => { if (args.Property == ComboBox.TextProperty) DispatchFieldChange(name, comboBox.Text ?? string.Empty); };
-                if (type == "ListView" && editor is ListBox listView)
-                    listView.SelectionChanged += (_, _) => DispatchFieldChange(name, listView.SelectedItem?.ToString() ?? string.Empty);
+                if (editor is ComboBox comboBox)
+                {
+                    comboBox.SelectionChanged += (_, _) => DispatchFieldChange(name, comboBox.IsEditable ? comboBox.Text ?? string.Empty : comboBox.SelectedItem?.ToString() ?? string.Empty);
+                    if (type is "LookupField" or "AutoCompleteField")
+                        comboBox.PropertyChanged += (_, args) => { if (args.Property == ComboBox.TextProperty) DispatchFieldChange(name, comboBox.Text ?? string.Empty); };
+                }
+                if (editor is ListBox listBox)
+                    listBox.SelectionChanged += (_, _) => DispatchFieldChange(name, listBox.SelectionMode.HasFlag(SelectionMode.Multiple)
+                        ? string.Join('\u001f', listBox.SelectedItems?.Cast<object>().Select(item => item?.ToString() ?? string.Empty) ?? Array.Empty<string>())
+                        : listBox.SelectedItem?.ToString() ?? string.Empty);
+                if (editor is StackPanel radioPanel)
+                    foreach (var radio in radioPanel.Children.OfType<Avalonia.Controls.RadioButton>())
+                        radio.Click += (_, _) => DispatchFieldChange(name, radio.Tag?.ToString() ?? string.Empty);
                 var validationBlock = new TextBlock
                 {
                     Text = string.Empty,
