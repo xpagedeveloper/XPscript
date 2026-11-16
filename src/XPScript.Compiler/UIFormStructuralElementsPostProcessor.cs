@@ -146,9 +146,9 @@ foreach (var field in _fields)
                 Console.Error.WriteLine("[XPScript UIForm] placeholder-state anchor was already transformed; continuing with the existing renderer.");
                 return source;
             }
-            if (stage == "web-render")
+            if (stage is "web-render" or "tooltip-render")
             {
-                Console.Error.WriteLine("[XPScript UIForm] structural web-render anchor was already transformed; continuing with the existing renderer.");
+                Console.Error.WriteLine($"[XPScript UIForm] structural {stage} anchor was already transformed; continuing with the existing renderer.");
                 return source;
             }
             throw new CompilerException($"Unable to install UIForm structural element runtime ({stage}).");
