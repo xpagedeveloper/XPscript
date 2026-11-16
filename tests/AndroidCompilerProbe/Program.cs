@@ -583,6 +583,13 @@ if (!desktopFormSource.Contains("DesktopImageHost.Create(request.BootImage", Str
 if (!desktopFormSource.Contains("request.BootText", StringComparison.Ordinal))
     throw new Exception("Desktop UIForm must render BootText persistently with BootImage.");
 
+foreach (var expected in new[] { "ParentId", "GetContainerContent(editor)", "field.ParentId", "CreatePanelContainer", "CreateScrollContainer" })
+    if (!desktopFormSource.Contains(expected, StringComparison.Ordinal) && expected != "ParentId")
+        throw new Exception("Desktop nested UIForm container regression is missing: " + expected);
+var desktopBridgeSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Desktop", "DesktopBridgeContracts.cs"));
+if (!desktopBridgeSource.Contains("ParentId", StringComparison.Ordinal))
+    throw new Exception("Desktop UIForm bridge must carry component parent identity.");
+
 if (!desktopFormSource.Contains("request.DefaultButtonCornerRadius is double defaultButtonRadius", StringComparison.Ordinal))
     throw new Exception("Desktop default OK/Cancel radius must only override the platform theme when explicitly configured.");
 
