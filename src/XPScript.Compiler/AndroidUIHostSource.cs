@@ -680,6 +680,20 @@ public static class AndroidFormHost
                     checkBox.IsCheckedChanged += (_, _) => DispatchFieldChange(name, checkBox.IsChecked == true ? "true" : "false");
                 if (editor is Avalonia.Controls.ToggleSwitch toggleSwitch)
                     toggleSwitch.IsCheckedChanged += (_, _) => DispatchFieldChange(name, toggleSwitch.IsChecked == true ? "true" : "false");
+                if (editor is Avalonia.Controls.DatePicker datePicker)
+                    datePicker.SelectedDateChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(datePicker) ?? string.Empty);
+                if (editor is Avalonia.Controls.TimePicker timePicker)
+                    timePicker.SelectedTimeChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(timePicker) ?? string.Empty);
+                if (editor is AndroidDateTimeFieldEditor dateTimeEditor)
+                {
+                    dateTimeEditor.DateEditor.SelectedDateChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(dateTimeEditor) ?? string.Empty);
+                    dateTimeEditor.TimeEditor.SelectedTimeChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(dateTimeEditor) ?? string.Empty);
+                }
+                if (editor is AndroidMonthFieldEditor monthEditor)
+                {
+                    monthEditor.YearEditor.ValueChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(monthEditor) ?? string.Empty);
+                    monthEditor.MonthEditor.SelectionChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(monthEditor) ?? string.Empty);
+                }
                 if (editor is AndroidColorFieldEditor colorField)
                     colorField.ValueEditor.TextChanged += (_, _) => DispatchFieldChange(name, colorField.ValueEditor.Text ?? string.Empty);
                 if (editor is ComboBox comboBox)
