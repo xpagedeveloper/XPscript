@@ -92,6 +92,9 @@ Sub Main()
 
     Dim localProduct As UIFormField
     Set localProduct = form.AddAutoCompleteField("localProduct", "Local product", "https://invalid.local/autocomplete")
+    Call form.AddOption("localProduct", "Keyboard")
+    Call form.ClearOptions("localProduct")
+    Call localProduct.AddOption("Mouse")
     Call form.SetAutoCompleteProvider("localProduct", "FindLocalProducts")
 
     Dim optionsGrid As UIFormGrid
