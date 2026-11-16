@@ -31,4 +31,7 @@ jobs:
         run: pwsh -NoProfile -File ./tests/cli-compiler-benchmark/run-cli-compiler-benchmark.ps1
       - name: Verify incremental AST cache and include invalidation
         shell: pwsh
-        run: dotnet run --project ./tests/AstIncrementalCacheProbe/AstIncrementalCacheProbe.csproj -c Release --no-restore -p:UseSharedCompilation=false -p:BuildInParallel=false -m:1
+        run: |
+          dotnet restore ./tests/AstIncrementalCacheProbe/AstIncrementalCacheProbe.csproj --force-evaluate
+          dotnet build ./tests/AstIncrementalCacheProbe/AstIncrementalCacheProbe.csproj -c Release --no-restore -p:UseSharedCompilation=false -p:BuildInParallel=false -m:1
+          dotnet run --project ./tests/AstIncrementalCacheProbe/AstIncrementalCacheProbe.csproj -c Release --no-build --no-restore -p:UseSharedCompilation=false -p:BuildInParallel=false -m:1

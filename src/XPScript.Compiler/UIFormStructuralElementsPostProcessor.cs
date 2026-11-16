@@ -9,6 +9,7 @@ internal sealed class UIFormStructuralElementsPostProcessor
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
+
         if (generated.Contains(InstalledSentinel, StringComparison.Ordinal) &&
             generated.Contains("var placeholder = field.Placeholder.Length > 0", StringComparison.Ordinal) &&
             generated.Contains("if (field.Tooltip.Length > 0)", StringComparison.Ordinal) &&
@@ -31,7 +32,7 @@ internal sealed class UIFormStructuralElementsPostProcessor
             generated = ReplaceRequired(
                 generated,
                 """
-            html.Append("><label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
+            html.Append(controlStyle).Append(">").Append("<label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
 """,
                 """
             html.Append(">");

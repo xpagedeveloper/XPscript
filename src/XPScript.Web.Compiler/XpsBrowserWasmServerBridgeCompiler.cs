@@ -368,7 +368,9 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         {
             if (operation.Contains("browser-wasm", StringComparison.OrdinalIgnoreCase))
             {
-                throw new XpsWebCompilationException("Browser WASM build failed. Verify that the matching .NET WASM workload is installed; XPScript does not install workloads.");
+                throw new XpsWebCompilationException(
+                    "Browser WASM build failed. Verify that the matching .NET WASM workload is installed; " +
+                    "XPScript does not install workloads." + Environment.NewLine + Redact(output, workingDirectory));
             }
             throw new XpsWebCompilationException(operation + " failed with exit code " + process.ExitCode + "." + Environment.NewLine + Redact(output, workingDirectory));
         }
