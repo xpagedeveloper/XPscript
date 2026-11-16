@@ -632,7 +632,7 @@ if (!uiExtensionSource.Contains("xpscript-uiform-boot-image", StringComparison.O
 var browserWasmSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Web.Compiler", "XpsBrowserWasmCompiler.cs"));
 if (!browserWasmSource.Contains("UIFormAppAssets.CopyAssetsToDirectory(sourcePath, appRoot)", StringComparison.Ordinal))
     throw new Exception("Browser-WASM UIForm bundles must publish the shared assets directory.");
-foreach (var expected in new[] { "if(type==='filefield')", "e.type='file'", "editor.files[0].name", "applyLookupOptions", "autocompletefield" })
+foreach (var expected in new[] { "if(type==='filefield')", "e.type='file'", "editor.files[0].name", "applyLookupOptions", "autocompletefield", "componentContainers", "xpscript-uiform-container", "field.parentId" })
     if (!browserWasmSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Browser-WASM FileField upload rendering is incomplete: " + expected);
 var browserRichMediaSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Browser", "BrowserRichMediaHost.cs"));
