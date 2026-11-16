@@ -576,6 +576,7 @@ public static class AndroidFormHost
             }
 
             var namedGrids = new Dictionary<string, Grid>(StringComparer.OrdinalIgnoreCase);
+            var componentPanels = new Dictionary<string, StackPanel>(StringComparer.OrdinalIgnoreCase);
             var fileFieldButtons = new Dictionary<string, Avalonia.Controls.Button>(StringComparer.OrdinalIgnoreCase);
             if (request.TryGetProperty("grids", out var grids) && grids.ValueKind == JsonValueKind.Array)
             {
@@ -595,6 +596,7 @@ public static class AndroidFormHost
             foreach (var field in fields)
             {
                 var name = field.GetProperty("name").GetString() ?? string.Empty;
+                var componentId = field.TryGetProperty("id", out var componentIdValue) ? componentIdValue.GetString() ?? string.Empty : string.Empty;
                 var label = field.TryGetProperty("label", out var labelValue) ? labelValue.GetString() ?? name : name;
                 var type = field.GetProperty("type").GetString() ?? "TextField";
 
@@ -602,6 +604,12 @@ public static class AndroidFormHost
                 var gridName = field.TryGetProperty("gridName", out var gridNameValue) ? gridNameValue.GetString() ?? string.Empty : string.Empty;
                 var targetPanel = tabName.Length > 0 && tabPanels.TryGetValue(tabName, out var fieldTabPanel) ? fieldTabPanel : panel;
                 var targetGrid = gridName.Length > 0 && namedGrids.TryGetValue(gridName, out var fieldGrid) ? fieldGrid : null;
+                var parentId = field.TryGetProperty("parentId", out var parentIdValue) ? parentIdValue.GetString() ?? string.Empty : string.Empty;
+                if (parentId.Length > 0 && componentPanels.TryGetValue(parentId, out var parentPanel))
+                {
+                    targetPanel = parentPanel;
+                    targetGrid = null;
+                }
                 var fieldContainer = new StackPanel { Spacing = 4, Margin = new Thickness(4) };
                 fieldContainer.IsVisible = !field.TryGetProperty("visible", out var fieldVisible) || fieldVisible.ValueKind != JsonValueKind.False;
                 fieldContainers[name] = fieldContainer;
@@ -670,6 +678,11 @@ public static class AndroidFormHost
                 editor.IsEnabled = !field.TryGetProperty("enabled", out var enabled) || enabled.ValueKind != JsonValueKind.False;
                 ApplyEditorReadOnly(editor, field.TryGetProperty("readOnly", out var readOnly) && readOnly.ValueKind == JsonValueKind.True);
                 fieldContainer.Children.Add(editor);
+                if (componentId.Length > 0)
+                {
+                    if (editor is Border { Child: StackPanel cardPanel }) componentPanels[componentId] = cardPanel;
+                    else if (editor is ScrollViewer { Content: StackPanel scrollPanel }) componentPanels[componentId] = scrollPanel;
+                }
 
                 if (editor is Avalonia.Controls.ProgressBar progressControl) progressControls[name] = progressControl;
                 if (type == "FileField" && editor is Avalonia.Controls.Button fileButton)
@@ -1133,23 +1146,27 @@ public static class AndroidFormHost
     private static Control CreateCard(JsonElement field)
     {
         var label = field.TryGetProperty("label", out var labelValue) ? labelValue.GetString() ?? string.Empty : string.Empty;
+        var content = new StackPanel { Spacing = 6 };
+        if (label.Length > 0) content.Children.Add(new TextBlock { Text = label, FontWeight = FontWeight.SemiBold });
         return new Border
         {
             Padding = new Thickness(12),
             Margin = new Thickness(2),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
-            Child = new TextBlock { Text = label, FontWeight = FontWeight.SemiBold }
+            Child = content
         };
     }
 
     private static Control CreateScrollView(JsonElement field)
     {
         var label = field.TryGetProperty("label", out var labelValue) ? labelValue.GetString() ?? string.Empty : string.Empty;
+        var content = new StackPanel { Spacing = 6 };
+        if (label.Length > 0) content.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap });
         return new ScrollViewer
         {
             MaxHeight = 240,
-            Content = new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap }
+            Content = content
         };
     }
 

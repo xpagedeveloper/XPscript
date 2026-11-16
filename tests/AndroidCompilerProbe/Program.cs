@@ -564,6 +564,9 @@ var androidHostSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, 
 foreach (var expected in new[] { "GeneratedAndroidAudioControl", "\"Audio\" => CreateAudio(field)", "UIForm Video source must be an absolute supported media URI" })
     if (!androidHostSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Generated Android Audio host regression is missing: " + expected);
+foreach (var expected in new[] { "var componentPanels = new Dictionary<string, StackPanel>", "parentId", "componentId", "Border { Child: StackPanel cardPanel }", "ScrollViewer { Content: StackPanel scrollPanel }" })
+    if (!androidHostSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Generated Android nested component rendering regression is missing: " + expected);
 foreach (var expected in new[] { "public bool IsPlaying", "public long Position", "public long Duration", "public float Volume", "public void Play()", "public void Pause()", "public void Stop()", "public void SeekTo(long position)" })
     if (!androidHostSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Generated Android media playback control regression is missing: " + expected);
