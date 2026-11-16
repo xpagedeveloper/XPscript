@@ -502,6 +502,7 @@ public static class DesktopFormHost
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
             "Switch" => new ToggleSwitch { IsChecked = bool.TryParse(value, out var switchValue) && switchValue, Content = field.Label },
             "Select" => CreateSelect(field),
+            "LookupField" or "AutoCompleteField" => CreateLookup(field),
             "ListBox" => CreateListBox(field, false),
             "MultiListBox" => CreateListBox(field, true),
             "MultiSelect" => CreateListBox(field, true),
@@ -570,6 +571,13 @@ public static class DesktopFormHost
     private static Control CreateSelect(DesktopFormField field)
     {
         var box = new ComboBox { ItemsSource = field.Options };
+        if (!string.IsNullOrEmpty(field.Value)) box.SelectedItem = field.Value;
+        return box;
+    }
+
+    private static ComboBox CreateLookup(DesktopFormField field)
+    {
+        var box = new ComboBox { ItemsSource = field.Options, IsEditable = true, Text = field.Value ?? string.Empty };
         if (!string.IsNullOrEmpty(field.Value)) box.SelectedItem = field.Value;
         return box;
     }
