@@ -1789,6 +1789,13 @@ internal static class Program
                     if (formBrace >= 0) generated = generated.Insert(formBrace + 1, "\n" + mobileFormApi);
                 }
             }
+            if (isAndroidTarget)
+            {
+                generated = generated.Replace(
+                    "    public void RefreshForm()\n    {\n        XPScriptUI.Activate(this);\n        if (XPScriptUIDesktopAdapter.IsAvailable)\n        {\n            XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);\n            return;\n        }\n        if (XPScriptUIWebAdapter.IsAvailable)\n            XPScriptUIWebAdapter.WriteHtml(RenderWebForm(false));\n    }",
+                    "    public void RefreshForm() => XPScriptUI.Activate(this);",
+                    StringComparison.Ordinal);
+            }
             if (!generated.Contains("class XPScriptHttpClient", StringComparison.Ordinal))
                 generated += Environment.NewLine + NativeHttpRuntimeSource.Code;
             if (generated.Contains("XPScriptTlsValidationState", StringComparison.Ordinal) &&
