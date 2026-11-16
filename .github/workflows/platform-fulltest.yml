@@ -88,21 +88,27 @@ jobs:
           if (-not (Test-Path (Join-Path $output 'Generated.dll'))) { throw 'AST target compilation did not produce Generated.dll.' }
 
   browser-wasm:
-    name: Browser WASM and server-side Notes boundary (${{ matrix.os }})
+    name: Browser WASM and server-side Notes boundary (.NET ${{ matrix.framework }}, ${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        framework: ['10', '11']
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '10.0.x'
-      - name: Install browser-WASM workload
+          dotnet-version: '${{ matrix.framework }}.0.x'
+      - name: Check browser-WASM workload
         shell: pwsh
-        run: dotnet workload install wasm-tools
+        run: |
+          dotnet workload list
+          $workloads = dotnet workload list | Out-String
+          if ($workloads -notmatch '(?m)^\s*wasm-tools\s') {
+            Write-Warning ".NET ${{ matrix.framework }} wasm-tools is not installed; native WASM compilation is skipped by design."
+          }
       - name: Run browser-WASM and Notes server-boundary smoke test
         shell: pwsh
         run: |
@@ -114,11 +120,12 @@ jobs:
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $controlsOutput 'Generated.dll'))) { throw 'Browser-WASM AST UIForm controls compilation failed.' }
           dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
           if ($LASTEXITCODE -ne 0) { throw 'Browser-WASM or Notes server-boundary smoke test failed.' }
-          dotnet restore tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj --force-evaluate
-          dotnet build tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-restore -p:UseSharedCompilation=false
-          & (Join-Path $PWD 'tests/WebBrowserWasmServerSideBrowserSmoke/bin/Release/net10.0/playwright.ps1') install chromium
+          $framework = 'net${{ matrix.framework }}.0'
+          dotnet restore tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj --force-evaluate -p:TargetFramework=$framework
+          dotnet build tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-restore -p:TargetFramework=$framework -p:UseSharedCompilation=false
+          & (Join-Path $PWD "tests/WebBrowserWasmServerSideBrowserSmoke/bin/Release/$framework/playwright.ps1") install chromium
           if ($LASTEXITCODE -ne 0) { throw 'Playwright Chromium installation failed.' }
-          dotnet run --project tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-build
+          dotnet run --project tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-build -p:TargetFramework=$framework
           Write-Host 'BEGIN WASM UIForm browser interaction'
           dotnet run --project tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release -p:UseSharedCompilation=false
           if ($LASTEXITCODE -ne 0) { throw 'WASM UIForm browser interaction failed.' }
