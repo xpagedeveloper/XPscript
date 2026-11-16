@@ -35,6 +35,7 @@ För varje komponent:
 ### NumberField
 
 - [ ] `AddNumberField(name, label)`
+- [x] Android AST-host använder `NumericUpDown` för Number/Decimal/Currency med min/max/step, initialvärde och change-event.
 - [ ] Numerisk parsing, precision, min/max och invalid input.
 - [ ] Locale, keyboard/input mode och binding.
 
@@ -92,6 +93,7 @@ För varje komponent:
 - [ ] `AddUrlField` med URL-validering och rätt input mode.
 - [ ] `AddPasswordField` med masking, reveal-policy och accessibility.
 - [ ] `AddHiddenField` utan visuellt editor-state men med binding/transport.
+- [x] Android AST-host renderar WeekField som ISO-år/vecka-editor och bevarar HiddenField vid submit.
 
 ## Layout-, visual- och container-komponenter
 
