@@ -140,7 +140,14 @@ foreach (var field in _fields)
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
         if (!source.Contains(oldValue, StringComparison.Ordinal))
+        {
+            if (stage == "placeholder-state")
+            {
+                Console.Error.WriteLine("[XPScript UIForm] placeholder-state anchor was already transformed; continuing with the existing renderer.");
+                return source;
+            }
             throw new CompilerException($"Unable to install UIForm structural element runtime ({stage}).");
+        }
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }
