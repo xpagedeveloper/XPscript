@@ -325,9 +325,12 @@ internal sealed partial class XPScriptUIForm
 
     private static string ReplaceRequired(string source, string oldValue, string newValue)
     {
-        if (oldValue == "internal sealed partial class XPScriptUIForm\n{\n" &&
+        if (oldValue.Contains("XPScriptUIForm", StringComparison.Ordinal) &&
             source.Contains("internal sealed class XPScriptUIGrid", StringComparison.Ordinal))
+        {
+            Console.Error.WriteLine("[XPScript UIForm] layout model runtime already installed; skipping duplicate model transform.");
             return source;
+        }
         if (!source.Contains(oldValue, StringComparison.Ordinal))
         {
             if (oldValue.Contains("html.Append(controlStyle)", StringComparison.Ordinal))
