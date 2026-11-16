@@ -32,7 +32,7 @@ internal sealed class UIFormStructuralElementsPostProcessor
             generated = ReplaceRequired(
                 generated,
                 """
-            html.Append(controlStyle).Append(">").Append("<label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
+            html.Append(controlStyle).Append("><label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
 """,
                 """
             html.Append(">");
