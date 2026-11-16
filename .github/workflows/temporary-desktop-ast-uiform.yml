@@ -30,6 +30,7 @@ jobs:
         run: |
           dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
           dotnet build src/XPScript.UI.Desktop/XPScript.UI.Desktop.csproj -c Release
+          dotnet build tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release
       - name: Run desktop bridge contract probe
         run: dotnet run --project tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release --no-build --no-restore
       - name: Compile complete UIForm control sample through AST
