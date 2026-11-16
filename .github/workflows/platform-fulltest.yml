@@ -149,4 +149,7 @@ jobs:
           dotnet run --project tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-debug-print.xps --output "$RUNNER_TEMP/ast-android-arm64" --runtime=false --platform android-arm64 --debug
           test -f "$RUNNER_TEMP/ast-android-arm64/Generated.dll"
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-uiform-controls-api.xps --output "$RUNNER_TEMP/ast-android-x64-controls" --runtime=false --platform android-x64 --debug
+          test -f "$RUNNER_TEMP/ast-android-x64-controls/Generated.dll"
+          echo 'AST_ANDROID_X64_CONTROLS_BUILD=OK'
           echo 'AST_ANDROID_TARGET_BUILD=OK'
