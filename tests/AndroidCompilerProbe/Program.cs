@@ -629,6 +629,10 @@ if (!uiExtensionSource.Contains("xpscript-uiform-boot-image", StringComparison.O
 foreach (var expected in new[] { "data-component-id", "data-parent-id", "xpscript-uiform-container-children" })
     if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Server-rendered nested UIForm container support is missing: " + expected);
+var uiFormLayoutReactiveSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "UIFormLayoutReactivePostProcessor.cs"));
+if (!uiFormLayoutReactiveSource.Contains("\"ListView\" or \"MultiListBox\" or \"MultiSelect\" or \"CheckBoxGroup\" or \"LookupField\" or \"AutoCompleteField\"", StringComparison.Ordinal) ||
+    !uiFormLayoutReactiveSource.Contains("UIForm.ClearOptions is only supported for UIForm controls with options.", StringComparison.Ordinal))
+    throw new Exception("UIForm.ClearOptions compatibility surface is incomplete.");
 
 
 
