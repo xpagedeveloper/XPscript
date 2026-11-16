@@ -240,10 +240,14 @@ if (!androidFormHostSource.Contains("defaultButtonCornerRadiusValue.TryGetDouble
 if (System.Text.RegularExpressions.Regex.IsMatch(uiHostCode, @"(?<!Avalonia\.Controls\.)\bRadioButton\b"))
     throw new Exception("Android UIForm host must fully qualify Avalonia RadioButton references to avoid Android.Widget ambiguity.");
 
-var structuralBranchIndex = uiHostCode.IndexOf("if (type is \"Separator\" or \"Spacer\" or \"Image\" or \"Icon\" or \"Card\" or \"Panel\" or \"ScrollView\" or \"WebView\" or \"CameraPreview\" or \"ProgressBar\" or \"ActivityIndicator\")", StringComparison.Ordinal);
+var structuralBranchIndex = uiHostCode.IndexOf("if (type is \"Separator\" or \"Spacer\" or \"Image\" or \"Icon\" or \"Card\" or \"Panel\" or \"ScrollView\" or \"WebView\" or \"CameraPreview\" or \"FileField\" or \"ProgressBar\" or \"ActivityIndicator\")", StringComparison.Ordinal);
 var editorRegistrationIndex = uiHostCode.IndexOf("editors[name] = editor;", StringComparison.Ordinal);
 if (structuralBranchIndex < 0 || editorRegistrationIndex < 0 || editorRegistrationIndex < structuralBranchIndex)
     throw new Exception("Android structural/media controls must bypass editor-state registration so they cannot overwrite bound data during submission.");
+
+foreach (var expected in new[] { "OpenFileField(string fieldName)", "ActionOpenDocument", "OnActivityResult", "FilePicked", "\"FileField\" => new Avalonia.Controls.Button" })
+    if (!uiHostCode.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android FileField picker integration is incomplete: " + expected);
 
 var defaultOkStart = uiHostCode.IndexOf("ok.Click += (_, _) =>", StringComparison.Ordinal);
 var defaultOkEnd = defaultOkStart >= 0 ? uiHostCode.IndexOf("};", defaultOkStart, StringComparison.Ordinal) : -1;

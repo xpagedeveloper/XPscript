@@ -62,6 +62,26 @@ public sealed class App : Avalonia.Application
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
 public sealed class MainActivity : AvaloniaMainActivity
 {
+    internal static event Action<string, string>? FilePicked;
+    private static string _pendingFileField = string.Empty;
+
+    internal void OpenFileField(string fieldName)
+    {
+        _pendingFileField = fieldName ?? string.Empty;
+        var intent = new global::Android.Content.Intent(global::Android.Content.Intent.ActionOpenDocument)
+            .AddCategory(global::Android.Content.Intent.CategoryOpenable)
+            .SetType("*/*");
+        StartActivityForResult(intent, 7102);
+    }
+
+    protected override void OnActivityResult(int requestCode, int resultCode, global::Android.Content.Intent? data)
+    {
+        base.OnActivityResult(requestCode, resultCode, data);
+        if (requestCode != 7102 || resultCode != Result.Ok || data?.Data is null || _pendingFileField.Length == 0) return;
+        FilePicked?.Invoke(_pendingFileField, data.Data.ToString() ?? string.Empty);
+        _pendingFileField = string.Empty;
+    }
+
     internal void RequestCameraPermission()
     {
         if (OperatingSystem.IsAndroidVersionAtLeast(23) && ContextCompat.CheckSelfPermission(this, global::Android.Manifest.Permission.Camera) != global::Android.Content.PM.Permission.Granted)
@@ -542,6 +562,7 @@ public static class AndroidFormHost
             }
 
             var namedGrids = new Dictionary<string, Grid>(StringComparer.OrdinalIgnoreCase);
+            var fileFieldButtons = new Dictionary<string, Avalonia.Controls.Button>(StringComparer.OrdinalIgnoreCase);
             if (request.TryGetProperty("grids", out var grids) && grids.ValueKind == JsonValueKind.Array)
             {
                 foreach (var gridDefinition in grids.EnumerateArray())
@@ -591,6 +612,7 @@ public static class AndroidFormHost
                     "ActivityIndicator" => CreateActivityIndicator(field),
                     "WebView" => CreateWebView(field, instanceId, name),
                     "CameraPreview" => CreateCameraPreview(),
+                    "FileField" => new Avalonia.Controls.Button { Content = label.Length == 0 ? "Choose file" : label, HorizontalAlignment = HorizontalAlignment.Left },
                     "DateField" => new Avalonia.Controls.DatePicker(),
                     "TimeField" => new Avalonia.Controls.TimePicker(),
                     "DateTimeField" => new AndroidDateTimeFieldEditor(),
@@ -634,7 +656,12 @@ public static class AndroidFormHost
                 fieldContainer.Children.Add(editor);
 
                 if (editor is Avalonia.Controls.ProgressBar progressControl) progressControls[name] = progressControl;
-                if (type is "Separator" or "Spacer" or "Image" or "Icon" or "Card" or "Panel" or "ScrollView" or "WebView" or "CameraPreview" or "ProgressBar" or "ActivityIndicator")
+                if (type == "FileField" && editor is Avalonia.Controls.Button fileButton)
+                {
+                    fileFieldButtons[name] = fileButton;
+                    fileButton.Click += (_, _) => MainActivity.Current?.OpenFileField(name);
+                }
+                if (type is "Separator" or "Spacer" or "Image" or "Icon" or "Card" or "Panel" or "ScrollView" or "WebView" or "CameraPreview" or "FileField" or "ProgressBar" or "ActivityIndicator")
                 {
                     AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
                     continue;
@@ -666,6 +693,14 @@ public static class AndroidFormHost
                 fieldContainer.Children.Add(validationBlock);
                 AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
             }
+
+            MainActivity.FilePicked += (name, uri) =>
+            {
+                if (!fileFieldButtons.TryGetValue(name, out var button)) return;
+                button.Tag = uri;
+                button.Content = uri.Length == 0 ? "Choose file" : uri;
+                DispatchFieldChange(name, uri);
+            };
 
             var actions = new WrapPanel
             {
