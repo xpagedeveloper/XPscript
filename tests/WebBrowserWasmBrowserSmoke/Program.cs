@@ -14,8 +14,9 @@ try
         .FirstOrDefault(path => path is not null &&
             File.Exists(Path.Combine(path, "index.html")) &&
             File.Exists(Path.Combine(path, "_framework", "dotnet.js")) &&
-            File.Exists(Path.Combine(path, "_framework", "dotnet.boot.js")) &&
-            File.Exists(Path.Combine(path, "_framework", "System.Runtime.InteropServices.JavaScript.wasm")))
+            (File.Exists(Path.Combine(path, "_framework", "dotnet.boot.js")) ||
+             File.Exists(Path.Combine(path, "_framework", "dotnet.js"))) &&
+            File.Exists(Path.Combine(path, "_framework", "dotnet.native.wasm")))
         ?? throw new InvalidOperationException("WASM publish root was not found.");
     var port = Random.Shared.Next(18000, 28000);
     var python = new[] { "python.exe", "python3", "py.exe" }
@@ -32,7 +33,7 @@ try
     }
     using var server = Process.Start(new ProcessStartInfo(python, $"-m http.server {port} --bind 127.0.0.1 --directory \"{serverRoot}\"")
     {
-        WorkingDirectory = appRoot,
+        WorkingDirectory = Environment.CurrentDirectory,
         RedirectStandardError = true,
         RedirectStandardOutput = true,
         UseShellExecute = false
