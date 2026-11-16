@@ -525,6 +525,7 @@ public static class DesktopFormHost
             "Spacer" => new Border { Height = 16 },
             "Card" or "Panel" => CreatePanelContainer(field),
             "ScrollView" => CreateScrollContainer(),
+            "CameraPreview" => new TextBlock { Text = "Camera preview is unavailable on this desktop backend.", TextWrapping = TextWrapping.Wrap },
             "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
             _ => new TextBox { Text = value }
         };

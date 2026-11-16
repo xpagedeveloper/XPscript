@@ -16,7 +16,7 @@ internal static partial class BrowserRichMediaHost
             foreach (var field in fields.EnumerateArray())
             {
                 var type = Read(field, "type");
-                if (type is not ("Image" or "WebView" or "Carousel" or "ProgressBar" or "ActivityIndicator" or "Icon")) continue;
+                if (type is not ("Image" or "WebView" or "Carousel" or "ProgressBar" or "ActivityIndicator" or "Icon" or "CameraPreview")) continue;
                 var name = Read(field, "name");
                 if (name.Length == 0) continue;
                 using var existing = QuerySelector(root, "[data-field-name=\"" + name + "\"] input");
@@ -47,6 +47,14 @@ internal static partial class BrowserRichMediaHost
                     icon.SetProperty("className", "xpscript-uiform-icon");
                     icon.SetProperty("textContent", Read(field, "icon", Read(field, "label", name)));
                     ReplaceElement(existing, icon);
+                }
+                else if (type == "CameraPreview")
+                {
+                    using var unavailable = CreateElement("div");
+                    unavailable.SetProperty("className", "xpscript-uiform-camera-unavailable");
+                    unavailable.SetProperty("role", "status");
+                    unavailable.SetProperty("textContent", "Camera preview requires a device camera backend and permission.");
+                    ReplaceElement(existing, unavailable);
                 }
                 else
                 {

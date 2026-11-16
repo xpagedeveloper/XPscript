@@ -213,8 +213,9 @@ För varje komponent:
 
 - [x] `AddCameraPreview(name[, label])` och Android unavailable-state fallback.
 - [ ] Android camera service, permissions, lifecycle, capture och privacy.
-- [ ] Desktop capability fallback.
-- [ ] Server-web/WASM permission/user-gesture behavior.
+- [x] Desktop capability fallback.
+- [x] Server-web/WASM deterministic capability response; native camera remains
+  unavailable without a device permission/backend integration.
 
 ### Map
 
