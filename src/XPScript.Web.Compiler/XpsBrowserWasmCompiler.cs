@@ -164,7 +164,7 @@ public sealed class XpsBrowserWasmCompiler
         File.Exists(Path.Combine(frameworkDirectory, "dotnet.js")) &&
         File.Exists(Path.Combine(frameworkDirectory, "dotnet.native.wasm"));
 
-    private static void EnsureBrowserRuntimeBundle(string appRoot, string targetFramework)
+    internal static void EnsureBrowserRuntimeBundle(string appRoot, string targetFramework)
     {
         var framework = Path.Combine(appRoot, "_framework");
         if (!Directory.Exists(framework) || File.Exists(Path.Combine(framework, "dotnet.boot.js"))) return;
@@ -290,6 +290,9 @@ public sealed class XpsBrowserWasmCompiler
             "root.appendChild(actions);}return JSON.stringify({result:'Pending',values:{}});}",
             "root.appendChild(actions);}applyLookupOptions(request);return JSON.stringify({result:'Pending',values:{}});}",
             StringComparison.Ordinal);
+        source = source.Replace("renderForm(requestJson){", "renderForm(requestJson, targetRoot = null){", StringComparison.Ordinal)
+            .Replace("const root=document.getElementById('xpscript-app');", "const root=targetRoot||document.getElementById('xpscript-app');", StringComparison.Ordinal)
+            .Replace("renderForm(JSON.stringify(request));", "renderForm(JSON.stringify(request),root);", StringComparison.Ordinal);
         return source;
     }
 
@@ -303,9 +306,9 @@ import { applyApplicationMetadata, consumeRequestState, navigate, renderForm, se
 dotnet.withModuleConfig({ config });
 const { setModuleImports, getAssemblyExports, runMain } = await dotnet.create();
 setModuleImports('xpscript-browser', { applyApplicationMetadata, consumeRequestState, navigate, renderForm, stageRequestState });
-await runMain('XPScript.BrowserApp');
 const browserExports = await getAssemblyExports('XPScript.UI.Browser.dll');
 setEventDispatcher((eventToken, submittedValue) => browserExports.XPScript.UI.Browser.BrowserFormHost.DispatchEventAsync(eventToken, submittedValue));
+await runMain('XPScript.BrowserApp');
 """;
     private const string BrowserModuleJs = """
 let eventDispatcher = null;

@@ -21,29 +21,59 @@ Sub Main()
     Dim form As New UIForm("WASM ServerSide")
     Call form.AddTextField("status", "Status")
     Call form.SetFieldValue("status", "CLIENT")
-    Call form.AddButtonCallback("send", "Send to server", "SendToServer")
+    Call form.AddButtonCallback("send", "Send to server", "HandleSend")
     Call form.Show(False)
 End Sub
-Sub SendToServer(evt As Variant)
-    Call ContinueOnClient(evt)
+Sub HandleSend(evt As Variant)
+    Print "WASM_TRACE callback HandleSend"
+    Call ContinueAfterServer(evt)
 End Sub
-Sub ContinueOnClient(evt As Variant)
-    Dim currentForm As Variant
-    currentForm = evt.Form
+Sub ContinueAfterServer(evt As Variant)
+    Print "WASM_TRACE client helper entered"
+    Print "WASM_TRACE event type=" & TypeName(evt)
     Dim serverValue As String
+    Print "WASM_TRACE before ServerSide"
     serverValue = ServerTransform("wasm")
-    Call currentForm.SetFieldValue("status", serverValue & "-CLIENT")
+    Print "WASM_TRACE after ServerSide"
+    Call evt.SetFieldValue("status", serverValue & "-CLIENT")
+    Print "WASM_TRACE field updated"
 End Sub
 """);
     await using var dispatcher = new XpsWebDispatcher(root, new XpsWebCompilationCacheOptions { EnablePersistentCache = false, ConfigurationIdentity = "wasm-serverside-browser" });
-    await using var app = XpsKestrelAdapter.Build(new XpsKestrelOptions { Address = System.Net.IPAddress.Loopback, Port = 0, AllowedHosts = ["127.0.0.1"] }, new XpsServerInfo("wasm-serverside-browser", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"), dispatcher);
+    await using var app = XpsKestrelAdapter.Build(new XpsKestrelOptions { Address = System.Net.IPAddress.Loopback, Port = 0, AllowedHosts = ["127.0.0.1"] }, new XpsServerInfo("wasm-serverside-browser", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"), dispatcher, sessions: new XpsSessionStore());
     await app.StartAsync();
     var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()?.Addresses.Single() ?? throw new Exception("Kestrel address missing.");
     using var playwright = await Playwright.CreateAsync();
-    await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+    var chromiumPath = new[]
+    {
+        Environment.GetEnvironmentVariable("PLAYWRIGHT_CHROMIUM_EXECUTABLE"),
+        @"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        @"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        "/usr/bin/google-chrome-stable",
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium"
+    }.FirstOrDefault(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path));
+    await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true, ExecutablePath = chromiumPath });
     var page = await browser.NewPageAsync();
     var errors = new List<string>();
-    page.Console += (_, message) => { if (message.Type == "error") errors.Add(message.Text); };
+    page.Console += (_, message) => { Console.WriteLine($"BROWSER_{message.Type}: {message.Text}"); if (message.Type == "error") errors.Add(message.Text); };
+    await page.AddInitScriptAsync("""
+        document.addEventListener('click', e => console.log('WASM_TRACE DOM click ' + e.target.tagName), true);
+        """);
+    await page.RouteAsync("**/xpscript-browser.js", async route =>
+    {
+        var response = await route.FetchAsync();
+        var module = await response.TextAsync();
+        Console.WriteLine("WASM_TRACE browser module fetched");
+        module = module.Replace("const dispatchUiEvent=async(eventToken,submittedValue)=>{", "const dispatchUiEvent=async(eventToken,submittedValue)=>{console.log('WASM_TRACE JS dispatch',eventToken,typeof eventDispatcher);")
+            .Replace("const resultJson=await eventDispatcher(eventToken,submittedValue);", "console.log('WASM_TRACE invoking managed dispatcher');const resultJson=await eventDispatcher(eventToken,submittedValue);console.log('WASM_TRACE managed result',resultJson);")
+            .Replace("catch{root.dataset.xpscriptError", "catch(error){console.error('WASM_TRACE dispatch failed',String(error),error?.stack);root.dataset.xpscriptError")
+            .Replace("xhr.send(safeMethod", "console.log('WASM_TRACE bridge request',safeMethod,url);xhr.send(safeMethod")
+            .Replace("let xhr = perform(null);", "let xhr = perform(null);console.log('WASM_TRACE bridge response',xhr.status);");
+        await route.FulfillAsync(new() { Response = response, Body = module });
+    });
+    page.Request += (_, request) => { if (request.Url.Contains("__xpscript_bridge")) Console.WriteLine($"WASM_TRACE HTTP {request.Method} bridge"); };
     page.PageError += (_, error) => errors.Add(error);
     page.RequestFailed += (_, request) => Console.WriteLine($"REQUEST_FAILED {request.Method} {request.Url} {request.Failure}");
     page.Response += (_, response) => { if (response.Status >= 400) Console.WriteLine($"HTTP_ERROR {response.Status} {response.Url}"); };
@@ -54,7 +84,7 @@ End Sub
     var status = page.Locator("input[name='status']");
     try
     {
-        await status.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 120000 });
+        await status.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30000 });
     }
     catch
     {
@@ -64,7 +94,17 @@ End Sub
     }
     if (await status.InputValueAsync() != "CLIENT") throw new Exception("Initial WASM state missing.");
     await page.GetByRole(AriaRole.Button, new() { Name = "Send to server" }).ClickAsync();
-    await Assertions.Expect(status).ToHaveValueAsync("WASM-SERVER-CLIENT", new() { Timeout = 120000 });
+    try
+    {
+        await Assertions.Expect(status).ToHaveValueAsync("WASM-SERVER-CLIENT", new() { Timeout = 30000 });
+    }
+    catch
+    {
+        Console.WriteLine("BROWSER_ERRORS=" + string.Join(" | ", errors));
+        Console.WriteLine("FORM_ERROR=" + await page.Locator("#xpscript-app").GetAttributeAsync("data-xpscript-error"));
+        Console.WriteLine("FORM_RESULT=" + await page.Locator("#xpscript-app").GetAttributeAsync("data-xpscript-result"));
+        throw;
+    }
     if (errors.Count != 0) throw new Exception("Browser errors: " + string.Join(" | ", errors));
     Console.WriteLine("WASM_PLAYWRIGHT_PAGE_OK");
     Console.WriteLine("WASM_SERVERSIDE_EVENT_OK");

@@ -147,7 +147,13 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             NormalizePublishedLayout(browserPublishRoot);
 
             var builtAppRoot = ResolveBuiltAppRoot(browserPublishRoot, workspace);
+            XpsBrowserWasmCompiler.EnsureBrowserRuntimeBundle(builtAppRoot, targetFramework);
             CopyDirectory(builtAppRoot, appRoot);
+            var frameworkSource = Path.Combine(builtAppRoot, "_framework");
+            var frameworkTarget = Path.Combine(appRoot, "_framework");
+            if (!Directory.Exists(frameworkSource))
+                throw new XpsWebCompilationException("browser-wasm build output did not contain a complete _framework directory.");
+            CopyDirectory(frameworkSource, frameworkTarget);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "main.js"), BrowserRuntimeConstant("MainJs"), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
@@ -157,7 +163,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             var serverGenerated = new XPScriptTranspiler().TranspileRestricted(
                 serverSource,
                 sourcePath,
-                CompilerDriver.CurrentRuntimeIdentifier(),
+                "browser-wasm-server",
                 [webRoot]);
             LogBuildStep("server transpile: done");
             serverGenerated = XPScriptTranspiler.ApplyWebUiFormModelExtensions(serverGenerated);
@@ -385,7 +391,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         return path;
     }
 
-    private static bool IsValidAppRoot(string appRoot) => Directory.Exists(appRoot) && File.Exists(Path.Combine(appRoot, "main.js")) && File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js"));
+    private static bool IsValidAppRoot(string appRoot) => Directory.Exists(appRoot) && File.Exists(Path.Combine(appRoot, "main.js")) && File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js")) && File.Exists(Path.Combine(appRoot, "_framework", "dotnet.boot.js"));
     private static void NormalizePublishedLayout(string root)
     {
         var framework = Path.Combine(root, "_framework");
@@ -408,20 +414,33 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             if (!Directory.Exists(searchRoot)) continue;
             var fullSearchRoot = Path.GetFullPath(searchRoot);
             var bootEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.boot.js", SearchOption.AllDirectories)
-                .FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(path =>
+                {
+                    var framework = Path.GetDirectoryName(path);
+                    return framework is not null &&
+                        string.Equals(Path.GetFileName(framework), "_framework", StringComparison.OrdinalIgnoreCase) &&
+                        File.Exists(Path.Combine(framework, "dotnet.js"));
+                });
             if (bootEntry is not null)
             {
                 var bootFrameworkDirectory = Path.GetDirectoryName(bootEntry) ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
                 return Directory.GetParent(bootFrameworkDirectory)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
             }
-            if (File.Exists(Path.Combine(fullSearchRoot, "_framework", "dotnet.js"))) return fullSearchRoot;
+            if (File.Exists(Path.Combine(fullSearchRoot, "_framework", "dotnet.js")) &&
+                File.Exists(Path.Combine(fullSearchRoot, "_framework", "dotnet.native.wasm"))) return fullSearchRoot;
             var frameworkEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.js", SearchOption.AllDirectories)
-                .FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(path =>
+                {
+                    var framework = Path.GetDirectoryName(path);
+                    return framework is not null &&
+                        string.Equals(Path.GetFileName(framework), "_framework", StringComparison.OrdinalIgnoreCase) &&
+                        File.Exists(Path.Combine(framework, "dotnet.native.wasm"));
+                });
             if (frameworkEntry is null) continue;
             var frameworkDirectory = Path.GetDirectoryName(frameworkEntry) ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
             return Directory.GetParent(frameworkDirectory)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
         }
-        throw new XpsWebCompilationException("browser-wasm build output did not contain _framework/dotnet.js.");
+        throw new XpsWebCompilationException("browser-wasm build output did not contain a complete _framework (dotnet.js and dotnet.boot.js).");
     }
 
     private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
