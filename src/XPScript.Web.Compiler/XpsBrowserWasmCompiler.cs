@@ -80,6 +80,15 @@ public sealed class XpsBrowserWasmCompiler
             NormalizePublishedLayout(publishRoot);
             var builtAppRoot = ResolveBuiltAppRoot(publishRoot, workspace);
             CopyDirectory(builtAppRoot, appRoot);
+            // Some SDK versions emit the complete AppBundle beside a partial
+            // publish layout. Copy the framework directory explicitly from
+            // the resolved complete root so the browser never receives a
+            // mixed bundle (for example dotnet.js from pub and only one wasm).
+            var frameworkSource = Path.Combine(builtAppRoot, "_framework");
+            var frameworkTarget = Path.Combine(appRoot, "_framework");
+            if (!Directory.Exists(frameworkSource))
+                throw new XpsWebCompilationException("browser-wasm AppBundle is missing its _framework directory.");
+            CopyDirectory(frameworkSource, frameworkTarget);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "main.js"), MainJs, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), BrowserModuleSource(), cancellationToken).ConfigureAwait(false);
@@ -101,7 +110,11 @@ public sealed class XpsBrowserWasmCompiler
         Directory.CreateDirectory(path);
         return path;
     }
-    private static bool IsValidAppRoot(string appRoot) => Directory.Exists(appRoot) && File.Exists(Path.Combine(appRoot, "main.js")) && File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js"));
+    private static bool IsValidAppRoot(string appRoot) =>
+        Directory.Exists(appRoot) &&
+        File.Exists(Path.Combine(appRoot, "main.js")) &&
+        File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js")) &&
+        File.Exists(Path.Combine(appRoot, "_framework", "dotnet.boot.js"));
     private static void NormalizePublishedLayout(string root)
     {
         var framework = Path.Combine(root, "_framework");
@@ -123,15 +136,24 @@ public sealed class XpsBrowserWasmCompiler
             if (!Directory.Exists(searchRoot)) continue;
             var fullSearchRoot = Path.GetFullPath(searchRoot);
             var bootEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.boot.js", SearchOption.AllDirectories)
-                .FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
+                .FirstOrDefault(path =>
+                {
+                    var framework = Path.GetDirectoryName(path);
+                    return framework is not null &&
+                        string.Equals(Path.GetFileName(framework), "_framework", StringComparison.OrdinalIgnoreCase) &&
+                        File.Exists(Path.Combine(framework, "dotnet.js"));
+                });
             if (bootEntry is not null)
             {
                 var bootFrameworkDirectory = Path.GetDirectoryName(bootEntry) ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
                 return Directory.GetParent(bootFrameworkDirectory)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
             }
-            if (File.Exists(Path.Combine(fullSearchRoot, "_framework", "dotnet.js"))) return fullSearchRoot;
+            if (File.Exists(Path.Combine(fullSearchRoot, "_framework", "dotnet.js")) &&
+                File.Exists(Path.Combine(fullSearchRoot, "_framework", "dotnet.boot.js")))
+                return fullSearchRoot;
             var frameworkEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.js", SearchOption.AllDirectories).FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
-            if (frameworkEntry is null) continue;
+            if (frameworkEntry is null ||
+                !File.Exists(Path.Combine(Path.GetDirectoryName(frameworkEntry)!, "dotnet.boot.js"))) continue;
             var frameworkDirectory = Path.GetDirectoryName(frameworkEntry) ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
             return Directory.GetParent(frameworkDirectory)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
         }
@@ -181,6 +203,15 @@ public sealed class XpsBrowserWasmCompiler
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
         var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workingDirectory, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true }; foreach (var argument in arguments) psi.ArgumentList.Add(argument);
+        // Keep generated SDK invocations isolated from the host profile. In
+        // restricted Windows environments the default CLI telemetry lookup
+        // touches HKCU and aborts before the WASM build even starts.
+        var cliHome = Path.Combine(workingDirectory, "dotnet-home");
+        Directory.CreateDirectory(cliHome);
+        psi.Environment["DOTNET_CLI_HOME"] = cliHome;
+        psi.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
+        psi.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
+        psi.Environment["DOTNET_NOLOGO"] = "1";
         using var process = Process.Start(psi) ?? throw new XpsWebCompilationException("Unable to start dotnet for browser-wasm compilation."); var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken); var stderr = process.StandardError.ReadToEndAsync(cancellationToken); await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false); var output = await stdout.ConfigureAwait(false) + Environment.NewLine + await stderr.ConfigureAwait(false); if (process.ExitCode != 0) { var details = Redact(output, workingDirectory); if (details.Contains("browser-wasm", StringComparison.OrdinalIgnoreCase) || details.Contains("wasm-tools", StringComparison.OrdinalIgnoreCase) || details.Contains("Microsoft.NETCore.App.Runtime.Mono.browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new XpsWebCompilationException("Browser WASM requires the matching .NET WASM workload, but it is not available. XPScript does not install workloads; install it separately and retry." + Environment.NewLine + details); throw new XpsWebCompilationException("browser-wasm build failed." + Environment.NewLine + details); }
     }
     private static string Redact(string value, string workspace) { var result = value.Replace(workspace, "<wasm-build>", StringComparison.OrdinalIgnoreCase); return result.Length <= 16_384 ? result : result[..16_384] + Environment.NewLine + "<diagnostics truncated>"; }

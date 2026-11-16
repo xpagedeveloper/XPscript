@@ -85,7 +85,7 @@ internal sealed class UIExtensionDesktopPostProcessor
 
 """;
 
-    public string Transform(string generated)
+    public string Transform(string generated, bool browserWasm = false)
     {
         ArgumentNullException.ThrowIfNull(generated);
 
@@ -134,6 +134,13 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = NormalizeLineEndings(replaced);
         if (!replaced.Contains("class XPScriptUIForm", StringComparison.Ordinal))
             return replaced;
+
+        // Browser/WASM has a dedicated JavaScript/component renderer. The
+        // desktop post-processors below splice methods into the retired
+        // desktop renderer and are not valid against the browser runtime's
+        // component model.
+        if (browserWasm)
+            return HardenWebBridgeLookup(replaced);
 
         replaced = new UIFormWindowLifecyclePostProcessor().Transform(replaced);
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);

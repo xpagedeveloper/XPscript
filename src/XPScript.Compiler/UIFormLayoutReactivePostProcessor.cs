@@ -9,6 +9,7 @@ internal sealed class UIFormLayoutReactivePostProcessor
     private string Transform(string generated, bool includeRendering)
     {
         ArgumentNullException.ThrowIfNull(generated);
+        generated = generated.Replace("\r\n", "\n", StringComparison.Ordinal);
 
         if (generated.Contains("public int LayoutRow { get; set; }", StringComparison.Ordinal))
             goto LayoutModelFieldsReady;

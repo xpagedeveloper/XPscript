@@ -119,6 +119,10 @@ jobs:
           & (Join-Path $PWD 'tests/WebBrowserWasmServerSideBrowserSmoke/bin/Release/net10.0/playwright.ps1') install chromium
           if ($LASTEXITCODE -ne 0) { throw 'Playwright Chromium installation failed.' }
           dotnet run --project tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-build
+          Write-Host 'BEGIN WASM UIForm browser interaction'
+          dotnet run --project tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release -p:UseSharedCompilation=false
+          if ($LASTEXITCODE -ne 0) { throw 'WASM UIForm browser interaction failed.' }
+          Write-Host 'END WASM UIForm browser interaction'
           if ($LASTEXITCODE -ne 0) { throw 'Browser-WASM client/server/client event smoke test failed.' }
 
   android-ast:

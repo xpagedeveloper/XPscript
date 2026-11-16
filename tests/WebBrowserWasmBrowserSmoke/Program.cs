@@ -11,19 +11,36 @@ try
     await using var unit = await new XpsWebCompiler().CompileAsync(source, root);
     var appRoot = Directory.EnumerateFiles(root, "main.js", SearchOption.AllDirectories)
         .Select(Path.GetDirectoryName)
-        .FirstOrDefault(path => path is not null && File.Exists(Path.Combine(path, "index.html")))
+        .FirstOrDefault(path => path is not null &&
+            File.Exists(Path.Combine(path, "index.html")) &&
+            File.Exists(Path.Combine(path, "_framework", "dotnet.js")) &&
+            File.Exists(Path.Combine(path, "_framework", "dotnet.boot.js")) &&
+            File.Exists(Path.Combine(path, "_framework", "System.Runtime.InteropServices.JavaScript.wasm")))
         ?? throw new InvalidOperationException("WASM publish root was not found.");
     var port = Random.Shared.Next(18000, 28000);
     var python = new[] { "python.exe", "python3", "py.exe" }
         .FirstOrDefault(command => command is "python3" || File.Exists(command) || Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator).Any(path => File.Exists(Path.Combine(path, command))) == true)
         ?? throw new InvalidOperationException("Could not find Python for the local WASM static server.");
-    using var server = Process.Start(new ProcessStartInfo(python, $"-m http.server {port} --bind 127.0.0.1")
+    // Serve from a short deployment path: Python normalizes URL paths and
+    // cannot reliably serve Windows extended-path cache directories.
+    var serverRoot = Path.Combine(root, "site");
+    foreach (var file in Directory.EnumerateFiles(appRoot, "*", SearchOption.AllDirectories))
+    {
+        var target = Path.Combine(serverRoot, Path.GetRelativePath(appRoot, file));
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        File.Copy(file, target);
+    }
+    using var server = Process.Start(new ProcessStartInfo(python, $"-m http.server {port} --bind 127.0.0.1 --directory \"{serverRoot}\"")
     {
         WorkingDirectory = appRoot,
         RedirectStandardError = true,
         RedirectStandardOutput = true,
         UseShellExecute = false
     }) ?? throw new InvalidOperationException("Could not start static WASM server.");
+    // Drain request logs continuously: a WASM app requests enough assemblies
+    // to fill the redirected pipe and otherwise stall the Python server.
+    server.BeginErrorReadLine();
+    server.BeginOutputReadLine();
     await Task.Delay(500);
     using var playwright = await Playwright.CreateAsync();
     var browserErrors = new List<string>();

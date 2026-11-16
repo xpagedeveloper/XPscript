@@ -278,7 +278,9 @@ public sealed partial class XPScriptTranspiler
         generated += "\n\n" + LegacyPrintFormattingRuntimeSource.Code + "\n";
         generated += "\n\n" + LegacyIsDefinedCompatibilityRuntimeSource.Code + "\n";
         if (usesAi) { generated = new AiSessionRuntimePostProcessor().Transform(generated); generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated); }
-        generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures).Transform(generated);
+        generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures).Transform(
+            generated,
+            browserWasm: runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase));
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase) &&
             generated.Contains("class XPScriptUIForm", StringComparison.Ordinal))
             generated = ApplyWebUiFormModelExtensions(generated);
