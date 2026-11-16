@@ -272,6 +272,14 @@ public static class DesktopFormHost
                     case ToggleSwitch toggleSwitch: toggleSwitch.IsCheckedChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, toggleSwitch); break;
                     case DatePicker datePicker: datePicker.SelectedDateChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, datePicker); break;
                     case TimePicker timePicker: timePicker.SelectedTimeChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, timePicker); break;
+                    case DesktopDateTimeFieldEditor dateTimeEditor:
+                        dateTimeEditor.DateEditor.SelectedDateChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, dateTimeEditor);
+                        dateTimeEditor.TimeEditor.SelectedTimeChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, dateTimeEditor);
+                        break;
+                    case DesktopMonthFieldEditor monthEditor:
+                        monthEditor.YearEditor.ValueChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, monthEditor);
+                        monthEditor.MonthEditor.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, monthEditor);
+                        break;
                     case Button fileButton when sourceField.Type is "CameraPreview" or "FileField":
                         fileButton.Click += (_, _) =>
                         {
@@ -529,6 +537,8 @@ public static class DesktopFormHost
             "TextArea" => new TextBox { Text = value, AcceptsReturn = true, MinHeight = 96, TextWrapping = TextWrapping.Wrap },
             "DateField" => CreateDatePicker(field),
             "TimeField" => CreateTimePicker(field),
+            "DateTimeField" => CreateDateTimePicker(field),
+            "MonthField" => CreateMonthPicker(field),
             "PasswordField" => new TextBox { Text = string.Empty, PasswordChar = '•' },
             "CheckBox" => new CheckBox { IsChecked = bool.TryParse(value, out var b) && b },
             "Switch" => new ToggleSwitch { IsChecked = bool.TryParse(value, out var switchValue) && switchValue, Content = field.Label },
@@ -624,6 +634,29 @@ public static class DesktopFormHost
         if (TimeSpan.TryParseExact(field.Value, new[] { "hh\\:mm", "hh\\:mm\\:ss" }, CultureInfo.InvariantCulture, out var time))
             picker.SelectedTime = time;
         return picker;
+    }
+
+    private static DesktopDateTimeFieldEditor CreateDateTimePicker(DesktopFormField field)
+    {
+        var editor = new DesktopDateTimeFieldEditor();
+        if (DateTime.TryParseExact(field.Value, "yyyy-MM-dd'T'HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var value) ||
+            DateTime.TryParseExact(field.Value, "yyyy-MM-dd'T'HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out value))
+        {
+            editor.DateEditor.SelectedDate = new DateTimeOffset(value.Date);
+            editor.TimeEditor.SelectedTime = value.TimeOfDay;
+        }
+        return editor;
+    }
+
+    private static DesktopMonthFieldEditor CreateMonthPicker(DesktopFormField field)
+    {
+        var editor = new DesktopMonthFieldEditor();
+        if (DateTime.TryParseExact(field.Value, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var value))
+        {
+            editor.YearEditor.Value = value.Year;
+            editor.MonthEditor.SelectedIndex = value.Month - 1;
+        }
+        return editor;
     }
 
     private static Control CreateSelect(DesktopFormField field)
@@ -779,6 +812,18 @@ public static class DesktopFormHost
         if (editor is ToggleSwitch toggleSwitch) return toggleSwitch.IsChecked == true ? "true" : string.Empty;
         if (editor is DatePicker datePicker) return datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is TimePicker timePicker) return timePicker.SelectedTime?.ToString("hh\\:mm\\:ss", CultureInfo.InvariantCulture) ?? string.Empty;
+        if (editor is DesktopDateTimeFieldEditor dateTimeEditor)
+        {
+            if (dateTimeEditor.DateEditor.SelectedDate is not DateTimeOffset date) return string.Empty;
+            return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + "T" +
+                   (dateTimeEditor.TimeEditor.SelectedTime ?? TimeSpan.Zero).ToString(@"hh\:mm", CultureInfo.InvariantCulture);
+        }
+        if (editor is DesktopMonthFieldEditor monthEditor)
+        {
+            var year = Convert.ToInt32(monthEditor.YearEditor.Value ?? DateTime.Now.Year, CultureInfo.InvariantCulture);
+            var month = monthEditor.MonthEditor.SelectedIndex >= 0 ? monthEditor.MonthEditor.SelectedIndex + 1 : DateTime.Now.Month;
+            return year.ToString("0000", CultureInfo.InvariantCulture) + "-" + month.ToString("00", CultureInfo.InvariantCulture);
+        }
         if (editor is Button button && field.Type is "CameraPreview" or "FileField") return button.Tag?.ToString() ?? string.Empty;
         if (editor is ComboBox comboBox) return comboBox.IsEditable ? comboBox.Text ?? string.Empty : comboBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is ListBox listBox) return listBox.SelectedItem?.ToString() ?? string.Empty;
@@ -801,6 +846,8 @@ public static class DesktopFormHost
         if (editor is ToggleSwitch toggleSwitch) return JsonSerializer.SerializeToElement(toggleSwitch.IsChecked == true);
         if (editor is DatePicker datePicker) return JsonSerializer.SerializeToElement(datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty);
         if (editor is TimePicker timePicker) return JsonSerializer.SerializeToElement(timePicker.SelectedTime?.ToString("hh\\:mm\\:ss", CultureInfo.InvariantCulture) ?? string.Empty);
+        if (editor is DesktopDateTimeFieldEditor dateTimeEditor) return JsonSerializer.SerializeToElement(ReadEditorText(field, dateTimeEditor));
+        if (editor is DesktopMonthFieldEditor monthEditor) return JsonSerializer.SerializeToElement(ReadEditorText(field, monthEditor));
         if (editor is Button button && field.Type is "CameraPreview" or "FileField") return JsonSerializer.SerializeToElement(button.Tag?.ToString() ?? string.Empty);
         if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.IsEditable ? comboBox.Text ?? string.Empty : comboBox.SelectedItem?.ToString() ?? string.Empty);
         if (editor is ListBox listBox)
@@ -846,6 +893,38 @@ public static class DesktopFormHost
 
     private static DesktopFormResult EmptyResult(string result) => new(result, new ReadOnlyDictionary<string, JsonElement>(new Dictionary<string, JsonElement>()));
     private static string LabelOrName(this DesktopFormField field) => string.IsNullOrWhiteSpace(field.Label) ? field.Name : field.Label;
+}
+
+internal sealed class DesktopDateTimeFieldEditor : StackPanel
+{
+    public DatePicker DateEditor { get; } = new();
+    public TimePicker TimeEditor { get; } = new();
+
+    public DesktopDateTimeFieldEditor()
+    {
+        Orientation = Orientation.Horizontal;
+        Spacing = 8;
+        Children.Add(DateEditor);
+        Children.Add(TimeEditor);
+    }
+}
+
+internal sealed class DesktopMonthFieldEditor : StackPanel
+{
+    public NumericUpDown YearEditor { get; } = new() { Minimum = 1, Maximum = 9999, Width = 120 };
+    public ComboBox MonthEditor { get; } = new()
+    {
+        ItemsSource = Enumerable.Range(1, 12).Select(month => month.ToString("00", CultureInfo.InvariantCulture)).ToArray(),
+        Width = 100
+    };
+
+    public DesktopMonthFieldEditor()
+    {
+        Orientation = Orientation.Horizontal;
+        Spacing = 8;
+        Children.Add(YearEditor);
+        Children.Add(MonthEditor);
+    }
 }
 
 internal sealed class XpsDesktopApplication : Application
