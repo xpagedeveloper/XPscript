@@ -27,6 +27,10 @@ Sub Main()
     Set card = form.AddCard("summary", "Summary")
     Dim panel As UIFormField
     Set panel = form.AddPanel("details", "Details")
+    panel.Id = "details-panel"
+    Dim panelTitle As UIFormField
+    Set panelTitle = form.AddTextField("detailsTitle", "Details title")
+    Call panel.AddChild(panelTitle)
     Dim scroll As UIFormField
     Set scroll = form.AddScrollView("content", "Content")
 
