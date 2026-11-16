@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Threading;
@@ -49,6 +50,25 @@ public static class DesktopFormLifecycleHost
         var visible = false;
         Dispatcher.UIThread.Invoke(() => visible = window.IsVisible);
         return visible;
+    }
+
+    public static void BringToFront(string instanceId)
+    {
+        if (Windows.TryGetValue(instanceId, out var window))
+            Dispatcher.UIThread.Invoke(() => { window.Activate(); window.Topmost = true; window.Topmost = false; });
+    }
+
+    public static void Center(string instanceId)
+    {
+        if (Windows.TryGetValue(instanceId, out var window))
+            Dispatcher.UIThread.Invoke(() =>
+            {
+                var area = window.Screens.Primary?.WorkingArea;
+                if (area is null) { window.WindowStartupLocation = WindowStartupLocation.CenterScreen; return; }
+                var bounds = area.Value;
+                window.WindowStartupLocation = WindowStartupLocation.Manual;
+                window.Position = new PixelPoint(bounds.X + (bounds.Width - (int)window.Width) / 2, bounds.Y + (bounds.Height - (int)window.Height) / 2);
+            });
     }
 
     // Test-only seam for in-process Avalonia.Headless interaction. The public
@@ -106,6 +126,7 @@ public static class DesktopFormLifecycleHost
             Height = ReadInt(root, "height", 480),
             Content = new ScrollViewer { Content = panel }
         };
+        ApplyPosition(window, root);
         Windows[instanceId] = window;
         close.Click += (_, _) => window.Close();
         window.Closed += (_, _) =>
@@ -145,6 +166,27 @@ public static class DesktopFormLifecycleHost
 
         window.Show();
         DesktopApplicationHost.SetProcessKeepAlive(true);
+    }
+
+    private static void ApplyPosition(Window window, JsonElement root)
+    {
+        var center = ReadBool(root, "center", false);
+        var top = ReadInt(root, "top", -1);
+        var left = ReadInt(root, "left", -1);
+        var right = ReadInt(root, "right", -1);
+        var bottom = ReadInt(root, "bottom", -1);
+        if (center || (top < 0 && left < 0 && right < 0 && bottom < 0))
+        {
+            window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            return;
+        }
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        var area = window.Screens.Primary?.WorkingArea;
+        if (area is null) return;
+        var bounds = area.Value;
+        var x = left >= 0 ? bounds.X + left : right >= 0 ? bounds.Right - (int)window.Width - right : bounds.X;
+        var y = top >= 0 ? bounds.Y + top : bottom >= 0 ? bounds.Bottom - (int)window.Height - bottom : bounds.Y;
+        window.Position = new PixelPoint(x, y);
     }
 
     private static Control CreateEditor(string instanceId, JsonElement field, string type, string name, string label)

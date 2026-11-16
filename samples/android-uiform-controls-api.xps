@@ -102,6 +102,9 @@ Sub Main()
     map.Source = "https://www.openstreetmap.org/"
     Dim document As UIFormField
     Set document = form.AddDocumentViewer("document", "PDF", "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
+    Dim youtube As UIFormField
+    Set youtube = form.AddYouTube("youtube", "YouTube", "dQw4w9WgXcQ")
+    youtube.RunOnLoad = True
 
     Dim optionsGrid As UIFormGrid
     Set optionsGrid = form.AddGrid("options", 2)

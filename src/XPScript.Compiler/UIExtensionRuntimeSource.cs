@@ -137,6 +137,8 @@ internal sealed class XPScriptUIField : XPScriptUIComponent
     private bool _progressIndeterminate;
     private bool _activityRunning;
     private double _step = 1;
+    private string _youTubeVideoId = string.Empty;
+    private bool _runOnLoad;
 
     internal XPScriptUIField(XPScriptUIForm owner, string name, string label, string type)
         : base(owner, type)
@@ -234,6 +236,25 @@ internal sealed class XPScriptUIField : XPScriptUIComponent
     public string TabName { get; set; } = string.Empty;
     public string GridName { get; set; } = string.Empty;
     public string IconName { get; set; } = string.Empty;
+    public string YouTubeVideoId
+    {
+        get => _youTubeVideoId;
+        internal set => _youTubeVideoId = value ?? string.Empty;
+    }
+    public bool RunOnLoad
+    {
+        get => _runOnLoad;
+        set
+        {
+            EnsureWebView();
+            _runOnLoad = value;
+            if (_youTubeVideoId.Length > 0)
+            {
+                _webViewSource = YouTubeSource(_youTubeVideoId, value);
+                if (_owner.Visible) _ = WebViewCommand("navigate", _webViewSource);
+            }
+        }
+    }
 
     public string Source
     {
@@ -260,6 +281,9 @@ internal sealed class XPScriptUIField : XPScriptUIComponent
             if (_owner.Visible) _ = WebViewCommand("navigate", _webViewSource);
         }
     }
+
+    private static string YouTubeSource(string id, bool runOnLoad)
+        => "https://www.youtube.com/embed/" + id + (runOnLoad ? "?autoplay=1" : string.Empty);
     public long Position
     {
         get { EnsureMedia(); return ReadDesktopMediaLong("position", _mediaPosition); }
@@ -503,6 +527,11 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
     private int? _width;
     private int? _height;
     private bool _resizable;
+    private int _top = -1;
+    private int _left = -1;
+    private int _right = -1;
+    private int _bottom = -1;
+    private bool _center;
     private string _bootText = string.Empty;
     private string _bootImage = string.Empty;
     private XPScriptJsonObject _data = XPScriptNativeJson.CreateObject();
@@ -539,6 +568,21 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
     public int Width { get => _width ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm width must be greater than zero."); _width = value; } }
     public int Height { get => _height ?? 0; set { if (value <= 0) throw new XPScriptRuntimeException(5, "UIForm height must be greater than zero."); _height = value; } }
     public bool Resizable { get => _resizable; set => _resizable = value; }
+    public int Top { get => _top; set => _top = SetWindowEdge(value, _bottom, "Top", "Bottom"); }
+    public int Left { get => _left; set => _left = SetWindowEdge(value, _right, "Left", "Right"); }
+    public int Right { get => _right; set => _right = SetWindowEdge(value, _left, "Right", "Left"); }
+    public int Bottom { get => _bottom; set => _bottom = SetWindowEdge(value, _top, "Bottom", "Top"); }
+    public void Center()
+    {
+        _top = _left = _right = _bottom = -1;
+        _center = true;
+        if (_visible) XPScriptUIDesktopAdapter.Center(_instanceId);
+    }
+    public void BringToFront()
+    {
+        XPScriptUI.Activate(this);
+        if (_visible) XPScriptUIDesktopAdapter.BringToFront(_instanceId);
+    }
     public double CornerRadius
     {
         get => _cornerRadius;
@@ -576,6 +620,7 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         }
     }
     public bool HasExplicitSize => _width.HasValue || _height.HasValue;
+    internal bool Centered => _center;
     public object Data => _data;
     public int FieldCount => _fields.Count;
     public XPScriptUIComponent[] Components => _components.ToArray();
@@ -666,6 +711,17 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
     public XPScriptUIField AddWebView(object? name) => AddField(name, string.Empty, "WebView");
     public XPScriptUIField AddVideo(object? name) => AddField(name, name, "Video");
     public XPScriptUIField AddVideo(object? name, object? label) => AddField(name, label, "Video");
+    public XPScriptUIField AddYouTube(object? name, object? videoId) => AddYouTube(name, name, videoId);
+    public XPScriptUIField AddYouTube(object? name, object? label, object? videoId)
+    {
+        var id = XPScriptRuntime.CStr(videoId).Trim();
+        if (id.Length == 0 || id.Any(char.IsWhiteSpace) || id.Contains('/', StringComparison.Ordinal) || id.Contains('?', StringComparison.Ordinal))
+            throw new XPScriptRuntimeException(5, "UIForm YouTube video id is invalid.");
+        var field = AddField(name, label, "WebView");
+        field.YouTubeVideoId = id;
+        field.Source = "https://www.youtube.com/embed/" + id;
+        return field;
+    }
     public XPScriptUIField AddCarousel(object? name, params object?[] sources)
     {
         var field = AddField(name, name, "Carousel");
@@ -893,6 +949,13 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         if (!value.HasValue) return null;
         if (double.IsNaN(value.Value) || double.IsInfinity(value.Value) || value.Value <= 0 || value.Value > 10000)
             throw new XPScriptRuntimeException(5, $"UIForm control {name} must be greater than zero and at most 10000.");
+        return value;
+    }
+
+    private static int SetWindowEdge(int value, int opposite, string name, string oppositeName)
+    {
+        if (value < -1) throw new XPScriptRuntimeException(5, $"UIForm {name} must be -1 or greater.");
+        if (value >= 0 && opposite >= 0) throw new XPScriptRuntimeException(5, $"UIForm {name} and {oppositeName} cannot both be set.");
         return value;
     }
 

@@ -341,6 +341,7 @@ public static class DesktopFormHost
             Height = request.Height is > 0 ? request.Height.Value : 480,
             Content = new ScrollViewer { Content = panel }
         };
+        ApplyPosition(window, request);
 
         var loop = new DispatcherFrame();
         ok.Click += (_, _) =>
@@ -417,6 +418,22 @@ public static class DesktopFormHost
         window.Show();
         Dispatcher.UIThread.PushFrame(loop);
         return result ?? EmptyResult("Cancel");
+    }
+
+    private static void ApplyPosition(Window window, DesktopFormRequest request)
+    {
+        if (request.Center || (request.Top < 0 && request.Left < 0 && request.Right < 0 && request.Bottom < 0))
+        {
+            window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            return;
+        }
+        window.WindowStartupLocation = WindowStartupLocation.Manual;
+        var area = window.Screens.Primary?.WorkingArea;
+        if (area is null) return;
+        var bounds = area.Value;
+        var x = request.Left >= 0 ? bounds.X + request.Left : request.Right >= 0 ? bounds.Right - (int)window.Width - request.Right : bounds.X;
+        var y = request.Top >= 0 ? bounds.Y + request.Top : request.Bottom >= 0 ? bounds.Bottom - (int)window.Height - request.Bottom : bounds.Y;
+        window.Position = new PixelPoint(x, y);
     }
 
     private static Grid CreateFieldsGrid(int requestedColumns)

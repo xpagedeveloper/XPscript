@@ -347,6 +347,7 @@ See [UIForm](uiform.md) and [extended fields](uiform-fields.md).
 | `AddDateField` | `form.AddDateField(name, label)` | name and label. | Adds date field. | [ui-form-core.xps](../samples/ui-form-core.xps) |
 | `AddMap` | `form.AddMap(name, label)` | name and label. | Adds a WebView-backed OpenStreetMap control. | [android-uiform-controls-api.xps](../samples/android-uiform-controls-api.xps) |
 | `AddDocumentViewer` | `form.AddDocumentViewer(name, label, source)` | name, label and document URL. | Adds a WebView-backed document/PDF viewer. | [android-uiform-controls-api.xps](../samples/android-uiform-controls-api.xps) |
+| `AddYouTube` | `form.AddYouTube(name, videoId)` | control name and YouTube video id. | Adds a WebView-backed YouTube player; set the returned field's `RunOnLoad` property to request autoplay. | [android-uiform-controls-api.xps](../samples/android-uiform-controls-api.xps) |
 | `AddSelect` | `form.AddSelect(name, label)` | name and label. | Adds single-select control. | [ui-form-listboxes.xps](../samples/ui-form-listboxes.xps) |
 | `AddRadioGroup` | `form.AddRadioGroup(name, label)` | name and label. | Adds radio group. | [ui-form-core.xps](../samples/ui-form-core.xps) |
 | `AddListBox` | `form.AddListBox(name, label)` | name and label. | Adds single-selection list box. | [ui-form-listboxes.xps](../samples/ui-form-listboxes.xps) |

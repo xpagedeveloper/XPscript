@@ -111,6 +111,11 @@ public sealed record DesktopFormRequest(
     bool Resizable,
     IReadOnlyList<DesktopFormField> Fields)
 {
+    public int Top { get; init; } = -1;
+    public int Left { get; init; } = -1;
+    public int Right { get; init; } = -1;
+    public int Bottom { get; init; } = -1;
+    public bool Center { get; init; }
     public string Theme { get; init; } = "System";
     public string BootText { get; init; } = string.Empty;
     public string BootImage { get; init; } = string.Empty;

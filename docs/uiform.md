@@ -276,6 +276,8 @@ End Sub
 
 ## Web rendering
 
+Desktop UIForms support `Top`, `Left`, `Right` and `Bottom` positions in pixels. Each defaults to `-1` (ignored); setting both edges of one axis is rejected. Use `Call form.Center()` to center a form, and `Call form.BringToFront()` to activate and raise it above other UIForm windows.
+
 Web UIForm uses Bootstrap 5.3.8 styling. The runtime loads the Bootstrap stylesheet once per response and applies Bootstrap form, grid and button classes. The title is outside the field grid so explicit field layout cannot move it below the controls.
 
 On GET, `ShowDialog()` renders the form and returns `Pending`. On POST, it reads submitted values, performs form validation, updates the bound data and returns `OK` when accepted.

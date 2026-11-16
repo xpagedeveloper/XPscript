@@ -75,6 +75,17 @@ internal static class XPScriptUIDesktopAdapter
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "UIForm.Close failed: " + ex.InnerException.Message); }
     }
 
+    public static void BringToFront(string instanceId) => InvokeLifecycle("BringToFront", instanceId);
+    public static void Center(string instanceId) => InvokeLifecycle("Center", instanceId);
+
+    private static void InvokeLifecycle(string methodName, string instanceId)
+    {
+        var method = LifecycleHostType?.GetMethod(methodName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(string)], null);
+        if (method is null) return;
+        try { method.Invoke(null, [instanceId]); }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "UIForm " + methodName + " failed: " + ex.InnerException.Message); }
+    }
+
     public static bool TryIsVisible(string instanceId, bool fallback)
     {
         var type = LifecycleHostType;
@@ -105,6 +116,11 @@ internal static class XPScriptUIDesktopAdapter
             title = form.Title,
             width = form.Width > 0 ? form.Width : (int?)null,
             height = form.Height > 0 ? form.Height : (int?)null,
+            top = form.Top,
+            left = form.Left,
+            right = form.Right,
+            bottom = form.Bottom,
+            center = form.Centered,
             resizable = form.Resizable,
             theme = form.Theme,
             showValidationErrors = form.ShowValidationErrors,
