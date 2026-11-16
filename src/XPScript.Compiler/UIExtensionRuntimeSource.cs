@@ -1010,6 +1010,7 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
                 + (field.Maximum.HasValue ? $" max=\"{field.Maximum.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}\"" : string.Empty);
             html.Append("<div id=\"xps_field_").Append(name).Append("\" class=\"xpscript-uiform-field\"");
             if (parentId.Length > 0) html.Append(" data-parent-id=\"").Append(parentId).Append("\"");
+            if (field.Id.Length > 0) html.Append(" data-component-id=\"").Append(System.Net.WebUtility.HtmlEncode(field.Id)).Append("\"");
             html.Append(controlStyle).Append(">").Append("<label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
             switch (field.Type)
             {
@@ -1085,7 +1086,7 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
             }
             html.Append("</div>");
         }
-        html.Append("<script>(function(){for(const child of document.querySelectorAll('[data-parent-id]')){const id=child.dataset.parentId;const parent=document.getElementById('xps_field_'+CSS.escape(id));const target=parent?.querySelector('.xpscript-uiform-container-children');if(target)target.appendChild(child);}})();</script>");
+        html.Append("<script>(function(){for(const child of document.querySelectorAll('[data-parent-id]')){const id=child.dataset.parentId;const parent=document.querySelector('[data-component-id=\"'+CSS.escape(id)+'\"]')||document.getElementById('xps_field_'+CSS.escape(id));const target=parent?.querySelector('.xpscript-uiform-container-children');if(target)target.appendChild(child);}})();</script>");
         html.Append("<button type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
         return html.ToString();
     }
