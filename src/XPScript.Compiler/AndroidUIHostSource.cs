@@ -632,6 +632,7 @@ public static class AndroidFormHost
                     "TimeField" => new Avalonia.Controls.TimePicker(),
                     "DateTimeField" => new AndroidDateTimeFieldEditor(),
                     "MonthField" => new AndroidMonthFieldEditor(),
+                    "WeekField" => new AndroidWeekFieldEditor(),
                     "ColorField" => new AndroidColorFieldEditor(),
                     "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120, CornerRadius = new CornerRadius(fieldCornerRadius) },
                     "RichTextField" => new TextBox { AcceptsReturn = true, MinHeight = 120, CornerRadius = new CornerRadius(fieldCornerRadius) },
@@ -707,6 +708,11 @@ public static class AndroidFormHost
                 {
                     monthEditor.YearEditor.ValueChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(monthEditor) ?? string.Empty);
                     monthEditor.MonthEditor.SelectionChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(monthEditor) ?? string.Empty);
+                }
+                if (editor is AndroidWeekFieldEditor weekEditor)
+                {
+                    weekEditor.YearEditor.ValueChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(weekEditor) ?? string.Empty);
+                    weekEditor.WeekEditor.ValueChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(weekEditor) ?? string.Empty);
                 }
                 if (editor is NumericUpDown numericEditor)
                     numericEditor.ValueChanged += (_, _) => DispatchFieldChange(name, numericEditor.Value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty);
@@ -1430,6 +1436,20 @@ public static class AndroidFormHost
         }
     }
 
+    private sealed class AndroidWeekFieldEditor : StackPanel
+    {
+        public NumericUpDown YearEditor { get; } = new NumericUpDown { Minimum = 1, Maximum = 9999, Width = 120 };
+        public NumericUpDown WeekEditor { get; } = new NumericUpDown { Minimum = 1, Maximum = 53, Width = 100 };
+
+        public AndroidWeekFieldEditor()
+        {
+            Spacing = 8;
+            Orientation = Avalonia.Layout.Orientation.Horizontal;
+            Children.Add(YearEditor);
+            Children.Add(WeekEditor);
+        }
+    }
+
     private sealed class AndroidColorFieldEditor : StackPanel
     {
         public TextBox ValueEditor { get; } = new TextBox { PlaceholderText = "#RRGGBB", MinWidth = 180 };
@@ -1524,6 +1544,25 @@ public static class AndroidFormHost
             }
             return true;
         }
+        if (editor is AndroidWeekFieldEditor weekEditor)
+        {
+            var weekParts = text.Split('-');
+            if (weekParts.Length == 2 && int.TryParse(weekParts[0], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var weekYear) &&
+                weekParts[1].StartsWith("W", StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(weekParts[1][1..], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var weekNumber) &&
+                weekNumber is >= 1 and <= 53)
+            {
+                weekEditor.YearEditor.Value = weekYear;
+                weekEditor.WeekEditor.Value = weekNumber;
+            }
+            else
+            {
+                var now = DateTime.Now;
+                weekEditor.YearEditor.Value = System.Globalization.ISOWeek.GetYear(now);
+                weekEditor.WeekEditor.Value = System.Globalization.ISOWeek.GetWeekOfYear(now);
+            }
+            return true;
+        }
         if (editor is AndroidColorFieldEditor colorEditor)
         {
             colorEditor.ValueEditor.Text = text;
@@ -1551,6 +1590,12 @@ public static class AndroidFormHost
             var month = monthEditor.MonthEditor.SelectedIndex >= 0 ? monthEditor.MonthEditor.SelectedIndex + 1 : DateTime.Now.Month;
             return year.ToString("0000", System.Globalization.CultureInfo.InvariantCulture) + "-" +
                    month.ToString("00", System.Globalization.CultureInfo.InvariantCulture);
+        }
+        if (editor is AndroidWeekFieldEditor weekEditor)
+        {
+            var year = Convert.ToInt32(weekEditor.YearEditor.Value ?? System.Globalization.ISOWeek.GetYear(DateTime.Now), System.Globalization.CultureInfo.InvariantCulture);
+            var week = Convert.ToInt32(weekEditor.WeekEditor.Value ?? System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now), System.Globalization.CultureInfo.InvariantCulture);
+            return year.ToString("0000", System.Globalization.CultureInfo.InvariantCulture) + "-W" + week.ToString("00", System.Globalization.CultureInfo.InvariantCulture);
         }
         if (editor is AndroidColorFieldEditor colorEditor)
             return colorEditor.ValueEditor.Text ?? string.Empty;
@@ -1594,7 +1639,7 @@ public static class AndroidFormHost
 
     private static object? GetEditorValue(Control editor)
     {
-        if (editor is Avalonia.Controls.DatePicker or Avalonia.Controls.TimePicker or AndroidDateTimeFieldEditor or AndroidMonthFieldEditor or AndroidColorFieldEditor)
+        if (editor is Avalonia.Controls.DatePicker or Avalonia.Controls.TimePicker or AndroidDateTimeFieldEditor or AndroidMonthFieldEditor or AndroidWeekFieldEditor or AndroidColorFieldEditor)
             return GetTemporalEditorValue(editor);
 
         if (editor is Avalonia.Controls.Button fileButton)

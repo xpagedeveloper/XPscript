@@ -54,6 +54,9 @@ Sub Main()
     Set tags = form.AddMultiSelect("tags", "Tags")
     Call tags.AddOption("One")
     Call tags.AddOption("Two")
+    Dim week As UIFormField
+    Set week = form.AddWeekField("week", "Week")
+    week.SelectedValue = "2026-W34"
 
     Dim localProduct As UIFormField
     Set localProduct = form.AddAutoCompleteField("localProduct", "Local product", "https://invalid.local/autocomplete")
