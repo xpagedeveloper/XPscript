@@ -226,7 +226,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         var escaped = SecurityElement.Escape(browserRuntimeAssemblyPath) ?? throw new XpsWebCompilationException("Unable to encode browser runtime path.");
         var targetFramework = SelectedTargetFramework();
         return $$"""
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.WebAssembly">
   <PropertyGroup>
     <TargetFramework>{targetFramework}</TargetFramework>
     <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
@@ -338,20 +338,30 @@ internal static class XpsBrowserWasmServerBridgeCompiler
 
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, string operation, CancellationToken cancellationToken)
     {
-        var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workingDirectory, UseShellExecute = false, RedirectStandardOutput = false, RedirectStandardError = false, CreateNoWindow = true };
+        var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workingDirectory, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
         foreach (var argument in arguments) psi.ArgumentList.Add(argument);
+        var cliHome = Path.Combine(workingDirectory, "dotnet-home");
+        Directory.CreateDirectory(cliHome);
+        psi.Environment["DOTNET_CLI_HOME"] = cliHome;
+        psi.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] = "1";
+        psi.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
+        psi.Environment["DOTNET_NOLOGO"] = "1";
         LogBuildStep($"{operation}: start {string.Join(' ', arguments)}");
         using var process = Process.Start(psi) ?? throw new XpsWebCompilationException("Unable to start dotnet for " + operation + ".");
-        try
-        {
-            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            TryKillProcessTree(process);
-            try { await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false); } catch { }
-            throw;
-        }
+        // Drain both pipes independently of the request token. The browser
+        // publish can outlive the initiating request during server startup;
+        // cancelling a pipe read here can terminate an otherwise successful
+        // SDK publish without a diagnostic.
+        var stdout = process.StandardOutput.ReadToEndAsync();
+        var stderr = process.StandardError.ReadToEndAsync();
+        var output = string.Empty;
+        // A browser bundle is an atomic compiler artifact. Do not let the
+        // request-aborted token terminate the SDK publish halfway through;
+        // the caller can discard the resulting bundle after completion.
+        await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+        output = await stdout.ConfigureAwait(false) + Environment.NewLine + await stderr.ConfigureAwait(false);
+        if (output.Length > 16_384) output = output[..16_384] + Environment.NewLine + "<diagnostics truncated>";
+        if (output.Length > 0) LogBuildStep($"{operation}: output\n{output}");
         LogBuildStep($"{operation}: exit {process.ExitCode}");
         if (process.ExitCode != 0)
         {
@@ -359,7 +369,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             {
                 throw new XpsWebCompilationException("Browser WASM build failed. Verify that the matching .NET WASM workload is installed; XPScript does not install workloads.");
             }
-            throw new XpsWebCompilationException(operation + " failed with exit code " + process.ExitCode + ".");
+            throw new XpsWebCompilationException(operation + " failed with exit code " + process.ExitCode + "." + Environment.NewLine + Redact(output, workingDirectory));
         }
     }
 
@@ -439,6 +449,14 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             if (frameworkEntry is null) continue;
             var frameworkDirectory = Path.GetDirectoryName(frameworkEntry) ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
             return Directory.GetParent(frameworkDirectory)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
+        }
+        foreach (var searchRoot in searchRoots)
+        {
+            var framework = Directory.Exists(searchRoot)
+                ? Directory.EnumerateDirectories(Path.GetFullPath(searchRoot), "_framework", SearchOption.AllDirectories).FirstOrDefault()
+                : null;
+            if (framework is not null)
+                return Directory.GetParent(framework)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
         }
         throw new XpsWebCompilationException("browser-wasm build output did not contain a complete _framework (dotnet.js and dotnet.boot.js).");
     }

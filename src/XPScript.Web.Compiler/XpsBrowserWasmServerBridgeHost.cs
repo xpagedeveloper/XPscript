@@ -51,7 +51,20 @@ internal static class XpsBrowserWasmServerBridgeHost
         }
 
         PruneIdleSessions();
-        var state = GetOrCreateSession(bundle, session.Id);
+        // The browser bridge performs a synchronous GET followed by a POST.
+        // Use the stable client-correlation id when available so both requests
+        // share one companion even when an embedding host rotates its session
+        // cookie between the two requests.
+        var bridgeSessionKey = string.IsNullOrWhiteSpace(context.ClientSessionId)
+            ? session.Id
+            : context.ClientSessionId;
+        var state = GetOrCreateSession(bundle, bridgeSessionKey);
+        if (relativePath.Equals(InvokePath, StringComparison.OrdinalIgnoreCase))
+        {
+            var suppliedCapability = context.Request.HeaderFirst(CapabilityHeader);
+            if (!FixedTimeEquals(suppliedCapability, state.Capability) && FindByCapability(bundle, suppliedCapability) is { } capabilityState)
+                state = capabilityState;
+        }
         state.Touch();
 
         if (relativePath.Equals(CapabilityPath, StringComparison.OrdinalIgnoreCase))
@@ -71,13 +84,14 @@ internal static class XpsBrowserWasmServerBridgeHost
             return true;
         }
 
-        if (!XpsWebSecurity.ValidateCsrf(context))
+        var hasValidBridgeCapability = FixedTimeEquals(context.Request.HeaderFirst(CapabilityHeader), state.Capability);
+        if (!hasValidBridgeCapability && !XpsWebSecurity.ValidateCsrf(context))
         {
             XpsWebSecurity.WriteCsrfFailure(context);
             return true;
         }
 
-        if (!FixedTimeEquals(context.Request.HeaderFirst(CapabilityHeader), state.Capability))
+        if (!hasValidBridgeCapability)
         {
             WriteProblem(context, 403, "Forbidden");
             return true;
@@ -168,6 +182,14 @@ internal static class XpsBrowserWasmServerBridgeHost
         return winner;
     }
 
+    private static SessionCompanion? FindByCapability(XpsBrowserWasmServerBridgeBundle bundle, string? capability)
+    {
+        if (string.IsNullOrWhiteSpace(capability)) return null;
+        return Sessions.Where(pair => pair.Key.StartsWith(bundle.SourceHash + "\0", StringComparison.Ordinal))
+            .Select(pair => pair.Value)
+            .FirstOrDefault(candidate => FixedTimeEquals(capability, candidate.Capability));
+    }
+
     private static object? Invoke(
         SessionCompanion state,
         BrowserWasmServerBridgeProcedure procedure,
@@ -210,7 +232,18 @@ internal static class XpsBrowserWasmServerBridgeHost
 
     private static object? ConvertArgument(Assembly companion, JsonElement value, Type targetType)
     {
-        if (targetType == typeof(object))
+        var conversionType = targetType.IsByRef ? targetType.GetElementType() ?? typeof(object) : targetType;
+        // Older generated bridge stubs can wrap a scalar argument in the
+        // transport array one extra time. Bridge signatures explicitly reject
+        // collection parameters, so unwrap that single scalar here before
+        // converting it to the companion method parameter type.
+        if (value.ValueKind == JsonValueKind.Array &&
+            value.GetArrayLength() == 1 &&
+            conversionType != typeof(object[]) &&
+            !typeof(System.Collections.IEnumerable).IsAssignableFrom(conversionType))
+            value = value[0];
+
+        if (conversionType == typeof(object))
         {
             var node = JsonNode.Parse(value.GetRawText());
             var nativeJson = companion.GetType("XPScriptNativeJson", throwOnError: true, ignoreCase: false)
@@ -222,11 +255,11 @@ internal static class XpsBrowserWasmServerBridgeHost
 
         if (value.ValueKind == JsonValueKind.Null)
         {
-            if (!targetType.IsValueType || Nullable.GetUnderlyingType(targetType) is not null) return null;
+            if (!conversionType.IsValueType || Nullable.GetUnderlyingType(conversionType) is not null) return null;
             throw new InvalidOperationException("Null cannot be assigned to a non-nullable bridge parameter.");
         }
 
-        return JsonSerializer.Deserialize(value.GetRawText(), targetType, XpsRestJson.Options)
+        return JsonSerializer.Deserialize(value.GetRawText(), conversionType, XpsRestJson.Options)
             ?? throw new InvalidOperationException("Bridge argument could not be converted to the compiled parameter type.");
     }
 
@@ -251,13 +284,23 @@ internal static class XpsBrowserWasmServerBridgeHost
         if (root.ValueKind != JsonValueKind.Object) throw new JsonException();
         if (!root.TryGetProperty("procedure", out var procedureElement) || procedureElement.ValueKind != JsonValueKind.String)
             throw new JsonException();
-        if (!root.TryGetProperty("arguments", out var argumentsElement) || argumentsElement.ValueKind != JsonValueKind.Array)
+        if (!root.TryGetProperty("arguments", out var argumentsElement))
             throw new JsonException();
+        JsonDocument? encodedArguments = null;
+        if (argumentsElement.ValueKind == JsonValueKind.String)
+        {
+            encodedArguments = JsonDocument.Parse(argumentsElement.GetString() ?? string.Empty);
+            argumentsElement = encodedArguments.RootElement;
+        }
+        using (encodedArguments)
+        {
+            if (argumentsElement.ValueKind != JsonValueKind.Array) throw new JsonException();
 
-        var procedure = procedureElement.GetString() ?? string.Empty;
-        if (procedure.Length is < 16 or > 64 || !procedure.All(c => char.IsAsciiHexDigit(c))) throw new JsonException();
-        if (argumentsElement.GetArrayLength() > MaxArguments) throw new JsonException();
-        return new BridgeRequest(procedure, argumentsElement.EnumerateArray().Select(item => item.Clone()).ToArray());
+            var procedure = procedureElement.GetString() ?? string.Empty;
+            if (procedure.Length is < 16 or > 64 || !procedure.All(c => char.IsAsciiHexDigit(c))) throw new JsonException();
+            if (argumentsElement.GetArrayLength() > MaxArguments) throw new JsonException();
+            return new BridgeRequest(procedure, argumentsElement.EnumerateArray().Select(item => item.Clone()).ToArray());
+        }
     }
 
     private static bool ValidateBrowserRequest(XpsWebContext context)
@@ -283,6 +326,7 @@ internal static class XpsBrowserWasmServerBridgeHost
         var b = Encoding.UTF8.GetBytes(expected);
         return CryptographicOperations.FixedTimeEquals(a, b);
     }
+
 
     private static void PruneIdleSessions(bool forceOldest = false)
     {

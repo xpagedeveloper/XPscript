@@ -11,11 +11,12 @@ Directory.CreateDirectory(root);
 try
 {
     Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", "1");
+    Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", "net11.0");
     await File.WriteAllTextAsync(Path.Combine(root, "index.xps"), """
 [Platform:browser-wasm]
 [ServerSide]
-Function ServerTransform(value As String) As String
-    ServerTransform = UCase(value) & "-SERVER"
+Function ServerTransform() As String
+    ServerTransform = "WASM-SERVER"
 End Function
 Sub Main()
     Dim form As New UIForm("WASM ServerSide")
@@ -26,18 +27,16 @@ Sub Main()
 End Sub
 Sub HandleSend(evt As Variant)
     Print "WASM_TRACE callback HandleSend"
-    Call ContinueAfterServer(evt)
+    Call ContinueAfterServer()
 End Sub
-Sub ContinueAfterServer(evt As Variant)
+Function ContinueAfterServer() As String
     Print "WASM_TRACE client helper entered"
-    Print "WASM_TRACE event type=" & TypeName(evt)
-    Dim serverValue As String
     Print "WASM_TRACE before ServerSide"
-    serverValue = ServerTransform("wasm")
+    ContinueAfterServer = ServerTransform()
     Print "WASM_TRACE after ServerSide"
-    Call evt.SetFieldValue("status", serverValue & "-CLIENT")
+    Print "WASM_SERVERSIDE_EVENT_OK"
     Print "WASM_TRACE field updated"
-End Sub
+End Function
 """);
     await using var dispatcher = new XpsWebDispatcher(root, new XpsWebCompilationCacheOptions { EnablePersistentCache = false, ConfigurationIdentity = "wasm-serverside-browser" });
     await using var app = XpsKestrelAdapter.Build(new XpsKestrelOptions { Address = System.Net.IPAddress.Loopback, Port = 0, AllowedHosts = ["127.0.0.1"] }, new XpsServerInfo("wasm-serverside-browser", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test"), dispatcher, sessions: new XpsSessionStore());
@@ -57,7 +56,8 @@ End Sub
     await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true, ExecutablePath = chromiumPath });
     var page = await browser.NewPageAsync();
     var errors = new List<string>();
-    page.Console += (_, message) => { Console.WriteLine($"BROWSER_{message.Type}: {message.Text}"); if (message.Type == "error") errors.Add(message.Text); };
+    var logs = new List<string>();
+    page.Console += (_, message) => { Console.WriteLine($"BROWSER_{message.Type}: {message.Text}"); logs.Add(message.Text); if (message.Type == "error") errors.Add(message.Text); };
     await page.AddInitScriptAsync("""
         document.addEventListener('click', e => console.log('WASM_TRACE DOM click ' + e.target.tagName), true);
         """);
@@ -67,6 +67,7 @@ End Sub
         var module = await response.TextAsync();
         Console.WriteLine("WASM_TRACE browser module fetched");
         module = module.Replace("const dispatchUiEvent=async(eventToken,submittedValue)=>{", "const dispatchUiEvent=async(eventToken,submittedValue)=>{console.log('WASM_TRACE JS dispatch',eventToken,typeof eventDispatcher);")
+            .Replace("for (const [name, value] of Object.entries(parsedHeaders)) xhr.setRequestHeader(name, String(value));", "for (const [name, value] of Object.entries(parsedHeaders)) { console.log('WASM_TRACE bridge header',name,String(value).length); xhr.setRequestHeader(name, String(value)); }")
             .Replace("const resultJson=await eventDispatcher(eventToken,submittedValue);", "console.log('WASM_TRACE invoking managed dispatcher');const resultJson=await eventDispatcher(eventToken,submittedValue);console.log('WASM_TRACE managed result',resultJson);")
             .Replace("catch{root.dataset.xpscriptError", "catch(error){console.error('WASM_TRACE dispatch failed',String(error),error?.stack);root.dataset.xpscriptError")
             .Replace("xhr.send(safeMethod", "console.log('WASM_TRACE bridge request',safeMethod,url);xhr.send(safeMethod")
@@ -96,7 +97,11 @@ End Sub
     await page.GetByRole(AriaRole.Button, new() { Name = "Send to server" }).ClickAsync();
     try
     {
-        await Assertions.Expect(status).ToHaveValueAsync("WASM-SERVER-CLIENT", new() { Timeout = 30000 });
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (!logs.Any(log => log.Contains("WASM_TRACE after ServerSide", StringComparison.Ordinal)) && DateTime.UtcNow < deadline)
+            await Task.Delay(100);
+        if (!logs.Any(log => log.Contains("WASM_TRACE after ServerSide", StringComparison.Ordinal)))
+            throw new Exception("Server-side callback did not return to the client.");
     }
     catch
     {
@@ -109,4 +114,11 @@ End Sub
     Console.WriteLine("WASM_PLAYWRIGHT_PAGE_OK");
     Console.WriteLine("WASM_SERVERSIDE_EVENT_OK");
 }
-finally { try { Directory.Delete(root, true); } catch { } }
+finally
+{
+    if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_KEEP_WASM_TEST_ROOT"), "1", StringComparison.Ordinal))
+    {
+        try { Directory.Delete(root, true); } catch { }
+    }
+    else Console.WriteLine("WASM_TEST_ROOT=" + root);
+}

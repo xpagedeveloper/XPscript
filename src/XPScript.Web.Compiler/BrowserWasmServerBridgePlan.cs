@@ -356,7 +356,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         output.AppendLine("    " + CapabilityFunction + " = " + CapabilityVariable);
         output.AppendLine("End Function");
         output.AppendLine();
-        output.AppendLine("Private Function " + InvokeFunction + "(procedureId As String, arguments As Variant, spinnerDelay As Integer) As Variant");
+        output.AppendLine("Private Function " + InvokeFunction + "(procedureId As String, bridgeArgs As XPJsonArray, spinnerDelay As Integer) As Variant");
         output.AppendLine("    Dim http As New XPHttpClient");
         output.AppendLine("    Dim payload As New XPJsonObject");
         output.AppendLine("    Dim response As XPHttpResponse");
@@ -366,11 +366,16 @@ internal sealed record BrowserWasmServerBridgePlan(
         output.AppendLine("    Call http.SetHeader(\"X-XPS-WASM-Spinner-Delay\", CStr(spinnerDelay))");
         output.AppendLine("    Call http.SetHeader(\"X-XPS-WASM-Capability\", " + CapabilityFunction + "(spinnerDelay))");
         output.AppendLine("    Call payload.Set(\"procedure\", procedureId)");
-        output.AppendLine("    Call payload.Set(\"arguments\", arguments)");
+        output.AppendLine("    Call payload.Set(\"arguments\", bridgeArgs)");
         output.AppendLine("    Set response = http.PostJson(\"__xpscript_bridge\", payload)");
         output.AppendLine("    Set document = response.Json()");
         output.AppendLine("    root = document.Root.AsObject()");
-        output.AppendLine("    " + InvokeFunction + " = root.Get(\"result\")");
+        output.AppendLine("    Dim bridgeResult As Variant");
+        output.AppendLine("    bridgeResult = root.Get(\"result\")");
+        output.AppendLine("    If TypeName(bridgeResult) = \"XPScriptJsonArray\" Then");
+        output.AppendLine("        If bridgeResult.Count = 1 Then bridgeResult = bridgeResult.Get(0)");
+        output.AppendLine("    End If");
+        output.AppendLine("    " + InvokeFunction + " = bridgeResult");
         output.AppendLine("    Call http.Dispose()");
         output.AppendLine("End Function");
     }

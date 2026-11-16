@@ -174,6 +174,7 @@ internal sealed class XPScriptJsonObject
         Node.Clear(); foreach (var pair in other.Node) Node[pair.Key] = pair.Value?.DeepClone(); _cursor = -1;
     }
     public void Set(object? name, object? value) { var key = XPScriptRuntime.CStr(name); var hadPrevious = Node.TryGetPropertyValue(key, out var previous); var previousCopy = previous?.DeepClone(); Node[key] = XPScriptNativeJson.ToNode(value); try { XPScriptNativeJson.ValidateBudget(Node); } catch { if (hadPrevious) Node[key] = previousCopy; else Node.Remove(key); throw; } }
+    public void SetArray(object? name, XPScriptJsonArray value) => Set(name, value);
     public void Remove(object? name) => Node.Remove(XPScriptRuntime.CStr(name));
     public bool Contains(object? name) => Node.ContainsKey(XPScriptRuntime.CStr(name));
     public string Stringify() => XPScriptNativeJson.Stringify(this);
@@ -192,6 +193,7 @@ internal sealed class XPScriptJsonArray : System.Collections.IEnumerable
     internal System.Text.Json.Nodes.JsonArray Node { get; }
     public int Count => Node.Count;
     public int Size => Node.Count;
+    public string Value => Stringify();
     public XPScriptJsonElement? GetFirstElement() { _cursor = 0; return ElementAt(_cursor, true); }
     public XPScriptJsonElement? GetNextElement() { _cursor++; return ElementAt(_cursor, true); }
     public XPScriptJsonElement? GetNthElement(object? indexValue, object? suppressErrors = null)

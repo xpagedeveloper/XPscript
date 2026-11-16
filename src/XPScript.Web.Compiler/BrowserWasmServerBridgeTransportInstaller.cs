@@ -181,6 +181,8 @@ globalThis.__xpscriptWasmBridgeRequest = function(method, relativeUrl, headersJs
         const perform = (csrfToken) => {
             const xhr = new XMLHttpRequest();
             xhr.open(safeMethod, url, false);
+            xhr.withCredentials = true;
+            xhr.withCredentials = true;
             for (const [name, value] of Object.entries(parsedHeaders)) xhr.setRequestHeader(name, String(value));
             if (csrfToken) xhr.setRequestHeader('X-XPS-CSRF-Token', csrfToken);
             xhr.send(safeMethod === 'GET' ? null : String(body || ''));
