@@ -250,6 +250,9 @@ if (structuralBranchIndex < 0 || editorRegistrationIndex < 0 || editorRegistrati
 foreach (var expected in new[] { "OpenFileField(string fieldName)", "ActionOpenDocument", "OnActivityResult", "FilePicked", "\"FileField\" => new Avalonia.Controls.Button", "\"Carousel\" => CreateCarousel(field)", "private static Control CreateCarousel(JsonElement field)" })
     if (!uiHostCode.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Android FileField picker integration is incomplete: " + expected);
+foreach (var expected in new[] { "if (type == \"FileField\")", "fileButton.Tag?.ToString()" })
+    if (!uiHostCode.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Android FileField submission state is incomplete: " + expected);
 
 var defaultOkStart = uiHostCode.IndexOf("ok.Click += (_, _) =>", StringComparison.Ordinal);
 var defaultOkEnd = defaultOkStart >= 0 ? uiHostCode.IndexOf("};", defaultOkStart, StringComparison.Ordinal) : -1;

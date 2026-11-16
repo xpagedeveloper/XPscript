@@ -695,6 +695,8 @@ public static class AndroidFormHost
                 if (editor is StackPanel radioPanel)
                     foreach (var radio in radioPanel.Children.OfType<Avalonia.Controls.RadioButton>())
                         radio.Click += (_, _) => DispatchFieldChange(name, radio.Tag?.ToString() ?? string.Empty);
+                if (type == "FileField")
+                    editors[name] = editor;
                 var validationBlock = new TextBlock
                 {
                     Text = string.Empty,
@@ -1539,6 +1541,9 @@ public static class AndroidFormHost
     {
         if (editor is Avalonia.Controls.DatePicker or Avalonia.Controls.TimePicker or AndroidDateTimeFieldEditor or AndroidMonthFieldEditor or AndroidColorFieldEditor)
             return GetTemporalEditorValue(editor);
+
+        if (editor is Avalonia.Controls.Button fileButton)
+            return fileButton.Tag?.ToString() ?? string.Empty;
 
         return editor switch
         {
