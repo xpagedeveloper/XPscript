@@ -613,6 +613,7 @@ public static class AndroidFormHost
                     "WebView" => CreateWebView(field, instanceId, name),
                     "CameraPreview" => CreateCameraPreview(),
                     "FileField" => new Avalonia.Controls.Button { Content = label.Length == 0 ? "Choose file" : label, HorizontalAlignment = HorizontalAlignment.Left },
+                    "Carousel" => CreateCarousel(field),
                     "DateField" => new Avalonia.Controls.DatePicker(),
                     "TimeField" => new Avalonia.Controls.TimePicker(),
                     "DateTimeField" => new AndroidDateTimeFieldEditor(),
@@ -661,7 +662,7 @@ public static class AndroidFormHost
                     fileFieldButtons[name] = fileButton;
                     fileButton.Click += (_, _) => MainActivity.Current?.OpenFileField(name);
                 }
-                if (type is "Separator" or "Spacer" or "Image" or "Icon" or "Card" or "Panel" or "ScrollView" or "WebView" or "CameraPreview" or "FileField" or "ProgressBar" or "ActivityIndicator")
+                if (type is "Separator" or "Spacer" or "Image" or "Icon" or "Card" or "Panel" or "ScrollView" or "WebView" or "CameraPreview" or "FileField" or "Carousel" or "ProgressBar" or "ActivityIndicator")
                 {
                     AddFieldContainer(field, fieldContainer, targetPanel, targetGrid);
                     continue;
@@ -1233,6 +1234,22 @@ public static class AndroidFormHost
             return new TextBlock { Text = "Camera permission is required. Grant permission and reopen the form.", TextWrapping = TextWrapping.Wrap };
         }
         return new GeneratedAndroidCameraPreviewControl { MinHeight = 180 };
+    }
+
+    private static Control CreateCarousel(JsonElement field)
+    {
+        var carousel = new TabControl { MinHeight = 220, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+        var sources = field.TryGetProperty("carouselSources", out var sourceValues) && sourceValues.ValueKind == JsonValueKind.Array
+            ? sourceValues.EnumerateArray().Select(source => source.GetString() ?? string.Empty).Where(source => source.Length > 0).ToArray()
+            : Array.Empty<string>();
+        foreach (var source in sources)
+        {
+            var imageField = JsonSerializer.SerializeToElement(new { imageSource = source });
+            carousel.Items.Add(new TabItem { Header = (carousel.Items.Count + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), Content = CreateImage(imageField) });
+        }
+        if (field.TryGetProperty("carouselIndex", out var indexValue) && indexValue.TryGetInt32(out var index))
+            carousel.SelectedIndex = Math.Clamp(index, 0, Math.Max(0, carousel.Items.Count - 1));
+        return carousel;
     }
 
     private static Control CreateImage(JsonElement field)
