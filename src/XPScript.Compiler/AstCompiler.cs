@@ -1759,7 +1759,7 @@ internal static class Program
             generated = UIFormBasicStructuralPostProcessor.Transform(generated);
             if (isAndroidTarget && !generated.Contains("public void Show(object? modalValue)", StringComparison.Ordinal))
             {
-                const string mobileFormApi = "    public void Show(object? modalValue) { _modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture); XPScriptUI.Activate(this); }\n    public void Hide() => XPScriptUI.Deactivate(this);\n";
+                const string mobileFormApi = "    public void Show(object? modalValue) { _modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture); XPScriptUI.Activate(this); }\n    public void RefreshForm() => XPScriptUI.Activate(this);\n    public void Hide() => XPScriptUI.Deactivate(this);\n";
                 generated = generated.Replace("internal sealed partial class XPScriptUIForm\n{\n", "internal sealed partial class XPScriptUIForm\n{\n" + mobileFormApi, StringComparison.Ordinal)
                     .Replace("internal sealed class XPScriptUIForm\n{\n", "internal sealed class XPScriptUIForm\n{\n" + mobileFormApi, StringComparison.Ordinal);
             }
@@ -1778,7 +1778,7 @@ internal static class Program
                 .Replace("public void Hide() => Close();", "public void Hide() { XPScriptUI.Deactivate(this); }", StringComparison.Ordinal);
             if (isAndroidTarget && !generated.Contains("public void Show(object? modalValue)", StringComparison.Ordinal))
             {
-                const string mobileFormApi = "    public void Show(object? modalValue) { _modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture); XPScriptUI.Activate(this); }\n    public void Hide() => XPScriptUI.Deactivate(this);\n";
+                const string mobileFormApi = "    public void Show(object? modalValue) { _modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture); XPScriptUI.Activate(this); }\n    public void RefreshForm() => XPScriptUI.Activate(this);\n    public void Hide() => XPScriptUI.Deactivate(this);\n";
                 generated = generated.Replace("internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{\n", "internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{\n" + mobileFormApi, StringComparison.Ordinal)
                     .Replace("internal sealed class XPScriptUIForm : XPScriptUIComponent\n{\n", "internal sealed class XPScriptUIForm : XPScriptUIComponent\n{\n" + mobileFormApi, StringComparison.Ordinal);
                 if (!generated.Contains("public void Show(object? modalValue)", StringComparison.Ordinal))
