@@ -512,6 +512,8 @@ public static class DesktopFormHost
             "ActivityIndicator" => CreateActivityIndicator(field),
             "RangeField" or "Slider" => CreateSlider(field),
             "Icon" => new TextBlock { Text = string.IsNullOrWhiteSpace(field.Icon) ? field.Label : field.Icon, FontSize = field.FontSize ?? 20 },
+            "Separator" => new Separator { HorizontalAlignment = HorizontalAlignment.Stretch },
+            "Spacer" => new Border { Height = 16 },
             "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
             _ => new TextBox { Text = value }
         };
