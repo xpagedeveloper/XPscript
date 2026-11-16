@@ -18,6 +18,7 @@ public sealed record DesktopFormField(
     decimal? Maximum,
     IReadOnlyList<string> Options)
 {
+    public string ParentId { get; init; } = string.Empty;
     public int LayoutRow { get; init; }
     public int LayoutColumn { get; init; }
     public int ColumnSpan { get; init; } = 1;

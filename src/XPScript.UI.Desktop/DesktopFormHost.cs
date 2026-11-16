@@ -55,6 +55,7 @@ public static class DesktopFormHost
         var fieldPanels = new Dictionary<string, StackPanel>(StringComparer.OrdinalIgnoreCase);
         var fieldLabels = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
         var fieldValidationTexts = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
+        var containerContents = new Dictionary<string, StackPanel>(StringComparer.OrdinalIgnoreCase);
         var currentValidationErrors = request.Fields.ToDictionary(field => field.Name, field => field.ValidationError.Length > 0 ? field.ValidationError : field.SchemaValidationError, StringComparer.OrdinalIgnoreCase);
         var optionOverrides = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         var customButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
@@ -79,6 +80,8 @@ public static class DesktopFormHost
                 fieldPanel.Children.Add(label);
             }
             var editor = CreateEditor(request.InstanceId, field);
+            if (GetContainerContent(editor) is { } containerContent)
+                containerContents[field.Name] = containerContent;
             ApplyEditorState(field, editor);
             ApplyFieldHints(field, editor);
             ApplyControlStyle(field, editor);
@@ -102,6 +105,12 @@ public static class DesktopFormHost
                 DesktopAccessibilityHost.SetValidationError(editor, initialValidationError);
             }
             fieldPanel.Children.Add(fieldValidation);
+
+            if (field.ParentId.Length > 0 && containerContents.TryGetValue(field.ParentId, out var parentContent))
+            {
+                parentContent.Children.Add(fieldPanel);
+                continue;
+            }
 
             var row = field.LayoutRow > 0 ? field.LayoutRow - 1 : automaticRow++;
             var column = field.LayoutColumn > 0 ? field.LayoutColumn - 1 : 0;
@@ -514,6 +523,8 @@ public static class DesktopFormHost
             "Icon" => new TextBlock { Text = string.IsNullOrWhiteSpace(field.Icon) ? field.Label : field.Icon, FontSize = field.FontSize ?? 20 },
             "Separator" => new Separator { HorizontalAlignment = HorizontalAlignment.Stretch },
             "Spacer" => new Border { Height = 16 },
+            "Card" or "Panel" => CreatePanelContainer(field),
+            "ScrollView" => CreateScrollContainer(),
             "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
             _ => new TextBox { Text = value }
         };
@@ -527,6 +538,27 @@ public static class DesktopFormHost
             Value = Math.Clamp(field.ProgressValue ?? 0, 0, 1),
             IsIndeterminate = field.ProgressIndeterminate ?? false,
             HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+
+    private static Border CreatePanelContainer(DesktopFormField field)
+        => new()
+        {
+            BorderBrush = Brushes.Gray,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(field.CornerRadius),
+            Padding = new Thickness(8),
+            Child = new StackPanel { Spacing = 4 }
+        };
+
+    private static ScrollViewer CreateScrollContainer()
+        => new() { Content = new StackPanel { Spacing = 4 }, MaxHeight = 320 };
+
+    private static StackPanel? GetContainerContent(Control editor)
+        => editor switch
+        {
+            Border { Child: StackPanel panel } => panel,
+            ScrollViewer { Content: StackPanel panel } => panel,
+            _ => null
         };
 
     private static ProgressBar CreateActivityIndicator(DesktopFormField field)
