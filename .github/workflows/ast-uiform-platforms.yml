@@ -112,14 +112,27 @@ jobs:
         run: |
           set -euo pipefail
           dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
-          echo 'BEGIN AST UIForm lifecycle probe'
-          timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only
-          echo 'BEGIN AST host probe'
-          timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
-          echo 'BEGIN AST generated probe'
-          timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-ast-generated
-          echo 'BEGIN AST UIListView probe'
-          timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uilistview
+          run_probe() {
+            name="$1"
+            shift
+            echo "BEGIN $name"
+            set +e
+            timeout --kill-after=5s 180s xvfb-run -a "$@" 2>&1 | tee "$name.log"
+            status=${PIPESTATUS[0]}
+            set -e
+            test "$status" -eq 0
+          }
+          run_probe AST_UIFORM_LIFECYCLE dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only
+          run_probe AST_HOST dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
+          run_probe AST_GENERATED dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-ast-generated
+          run_probe AST_UILISTVIEW dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uilistview
+      - name: Upload Linux desktop probe logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ast-linux-desktop-probe-logs
+          path: '*.log'
+          if-no-files-found: ignore
 
   desktop-macos:
     needs: changes
@@ -227,6 +240,15 @@ jobs:
       - name: Build browser WASM smoke probe
         run: dotnet build tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
       - name: Run browser WASM probe
-        run: timeout 900s dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release --no-build --no-restore
+        run: |
+          set -o pipefail
+          timeout 900s dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release --no-build --no-restore 2>&1 | tee wasm-smoke.log
+      - name: Upload WASM smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ast-wasm-smoke-log-${{ matrix.os }}
+          path: wasm-smoke.log
+          if-no-files-found: ignore
       - name: Run browser interaction probe
         run: dotnet run --project tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release --no-build
