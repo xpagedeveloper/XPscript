@@ -74,7 +74,7 @@ public sealed class MainActivity : AvaloniaMainActivity
         StartActivityForResult(intent, 7102);
     }
 
-    protected override void OnActivityResult(int requestCode, int resultCode, global::Android.Content.Intent? data)
+    protected override void OnActivityResult(int requestCode, global::Android.App.Result resultCode, global::Android.Content.Intent? data)
     {
         base.OnActivityResult(requestCode, resultCode, data);
         if (requestCode != 7102 || resultCode != Result.Ok || data?.Data is null || _pendingFileField.Length == 0) return;
@@ -647,7 +647,6 @@ public static class AndroidFormHost
                     "PasswordField" => new TextBox { PasswordChar = '•', CornerRadius = new CornerRadius(fieldCornerRadius) },
                     "NumberField" or "DecimalField" or "CurrencyField" => CreateNumberField(field),
                     "EmailField" or "UrlField" or "TelField" => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) },
-                    "WeekField" => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) },
                     "Select" => new ComboBox { ItemsSource = options },
                     "ListBox" or "ListView" => new ListBox { ItemsSource = options, MinHeight = 112, SelectionMode = SelectionMode.Single },
                     "MultiListBox" or "MultiSelect" or "CheckBoxGroup" => new ListBox { ItemsSource = options, MinHeight = 112, SelectionMode = SelectionMode.Multiple | SelectionMode.Toggle },

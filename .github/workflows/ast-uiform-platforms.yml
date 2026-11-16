@@ -192,8 +192,12 @@ jobs:
   browser-wasm:
     needs: changes
     if: needs.changes.outputs.all == 'true' || needs.changes.outputs.wasm == 'true'
-    name: AST browser WASM probe (Linux)
-    runs-on: ubuntu-latest
+    name: AST browser WASM probe (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
@@ -208,8 +212,14 @@ jobs:
             ~/.dotnet/packs
             ~/.dotnet/sdk-manifests
           key: wasm-${{ runner.os }}-${{ hashFiles('global.json', '**/*.csproj', '**/packages.lock.json') }}
-      - name: Install browser WASM workload
-        run: dotnet workload install wasm-tools --skip-manifest-update
+      - name: Check browser WASM workload
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet workload list
+          if ! dotnet workload list | grep -Eq '^wasm-tools[[:space:]]'; then
+            echo "WARNING: wasm-tools is not installed on $RUNNER_OS; native WASM compilation remains disabled by policy."
+          fi
       - name: Build browser interaction probe
         run: dotnet build tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release
       - name: Run browser WASM probe

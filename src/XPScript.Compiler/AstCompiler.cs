@@ -1736,8 +1736,11 @@ internal static class Program
             var singleVisibleFormMode = isAndroidTarget ||
                 string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(runtimeIdentifier, "webiis", StringComparison.OrdinalIgnoreCase);
-            if (isAndroidTarget)
-                generated = new UIExtensionDesktopPostProcessor().Transform(generated);
+            // Android has its own Avalonia form host. The desktop postprocessor
+            // installs desktop window/layout rendering and assumes the legacy
+            // desktop renderer is present, which is not true for the Android
+            // AST runtime. Android receives the shared model/runtime extensions
+            // below without applying the desktop rendering pipeline.
             generated = new UIFormActionModelPostProcessor().Transform(generated);
             generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
             generated = new UIFormCallbackModelPostProcessor().Transform(generated);
@@ -1746,8 +1749,11 @@ internal static class Program
                 generated += Environment.NewLine + UIExtensionDesktopRuntimeSource.Code;
                 generated = new UIFormWindowLifecyclePostProcessor().Transform(generated);
             }
-            generated = new UIFormDateRangeValidationPostProcessor().Transform(generated);
-            generated = new UIFormTemporalRangeValidationPostProcessor().Transform(generated);
+            if (!isAndroidTarget)
+            {
+                generated = new UIFormDateRangeValidationPostProcessor().Transform(generated);
+                generated = new UIFormTemporalRangeValidationPostProcessor().Transform(generated);
+            }
             generated = new UIFormAdditionalFieldPreparePostProcessor().Transform(generated);
             generated = new UIFormAdditionalFieldsPostProcessor().Transform(generated);
             generated = new UIFormAdditionalFieldFixupPostProcessor().Transform(generated);
