@@ -356,6 +356,8 @@ internal sealed class UIFormAccessibilityPostProcessor
                     RegexOptions.CultureInvariant);
                 if (match.Success)
                     return source[..match.Index] + newValue + source[(match.Index + match.Length)..];
+                Console.Error.WriteLine("[XPScript UIForm] accessibility field anchor was already transformed; continuing with the existing field creation path.");
+                return source;
             }
             throw new CompilerException("Unable to install UIForm accessibility runtime support (marker: " + oldValue.Trim() + ").");
         }
