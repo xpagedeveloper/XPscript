@@ -57,6 +57,34 @@ Sub Main()
     Dim week As UIFormField
     Set week = form.AddWeekField("week", "Week")
     week.SelectedValue = "2026-W34"
+    Dim dateValue As UIFormField
+    Set dateValue = form.AddDateField("dateValue", "Date")
+    dateValue.SelectedValue = "2026-10-03"
+    Dim timeValue As UIFormField
+    Set timeValue = form.AddTimeField("timeValue", "Time")
+    timeValue.SelectedValue = "19:30"
+    Dim dateTimeValue As UIFormField
+    Set dateTimeValue = form.AddDateTimeField("dateTimeValue", "DateTime")
+    dateTimeValue.SelectedValue = "2026-10-03T19:30"
+    Dim monthValue As UIFormField
+    Set monthValue = form.AddMonthField("monthValue", "Month")
+    monthValue.SelectedValue = "2026-10"
+    Dim colorValue As UIFormField
+    Set colorValue = form.AddColorField("colorValue", "Color")
+    colorValue.SelectedValue = "#336699"
+    Dim notes As UIFormField
+    Set notes = form.AddTextArea("notes", "Notes")
+    Dim secret As UIFormField
+    Set secret = form.AddPasswordField("secret", "Password")
+    Dim quantity As UIFormField
+    Set quantity = form.AddNumberField("quantity", "Quantity")
+    quantity.SelectedValue = 3
+    Dim amount As UIFormField
+    Set amount = form.AddDecimalField("amount", "Amount")
+    amount.SelectedValue = 12.5
+    Dim price As UIFormField
+    Set price = form.AddCurrencyField("price", "Price", "SEK")
+    price.SelectedValue = 99.95
 
     Dim localProduct As UIFormField
     Set localProduct = form.AddAutoCompleteField("localProduct", "Local product", "https://invalid.local/autocomplete")
