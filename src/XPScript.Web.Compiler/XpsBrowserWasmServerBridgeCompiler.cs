@@ -237,6 +237,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     <StartupObject>Program</StartupObject>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <WasmMainJSPath>main.js</WasmMainJSPath>
+    <WasmBuildNative>false</WasmBuildNative>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <NoWarn>CA1416;CS8600;CS8601;CS8603;CS8618;$(NoWarn)</NoWarn>
@@ -401,7 +402,17 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         return path;
     }
 
-    private static bool IsValidAppRoot(string appRoot) => Directory.Exists(appRoot) && File.Exists(Path.Combine(appRoot, "main.js")) && File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js")) && File.Exists(Path.Combine(appRoot, "_framework", "dotnet.boot.js"));
+    private static bool IsValidAppRoot(string appRoot)
+    {
+        var framework = Path.Combine(appRoot, "_framework");
+        var hasRuntime = File.Exists(Path.Combine(framework, "dotnet.native.wasm")) ||
+                         Directory.Exists(framework) && Directory.EnumerateFiles(framework, "dotnet.native.*.wasm", SearchOption.TopDirectoryOnly).Any();
+        var dotnet = Path.Combine(framework, "dotnet.js");
+        var hasInlineBoot = File.Exists(dotnet) && File.ReadAllText(dotnet).Contains("/*json-start*/", StringComparison.Ordinal);
+        return Directory.Exists(appRoot) && File.Exists(Path.Combine(appRoot, "main.js")) &&
+               File.Exists(dotnet) && hasRuntime &&
+               (File.Exists(Path.Combine(framework, "dotnet.boot.js")) || hasInlineBoot);
+    }
     private static void NormalizePublishedLayout(string root)
     {
         var framework = Path.Combine(root, "_framework");
@@ -437,14 +448,16 @@ internal static class XpsBrowserWasmServerBridgeCompiler
                 return Directory.GetParent(bootFrameworkDirectory)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
             }
             if (File.Exists(Path.Combine(fullSearchRoot, "_framework", "dotnet.js")) &&
-                File.Exists(Path.Combine(fullSearchRoot, "_framework", "dotnet.native.wasm"))) return fullSearchRoot;
+                (File.Exists(Path.Combine(fullSearchRoot, "_framework", "dotnet.native.wasm")) ||
+                 Directory.EnumerateFiles(Path.Combine(fullSearchRoot, "_framework"), "dotnet.native.*.wasm", SearchOption.TopDirectoryOnly).Any())) return fullSearchRoot;
             var frameworkEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.js", SearchOption.AllDirectories)
                 .FirstOrDefault(path =>
                 {
                     var framework = Path.GetDirectoryName(path);
                     return framework is not null &&
                         string.Equals(Path.GetFileName(framework), "_framework", StringComparison.OrdinalIgnoreCase) &&
-                        File.Exists(Path.Combine(framework, "dotnet.native.wasm"));
+                        (File.Exists(Path.Combine(framework, "dotnet.native.wasm")) ||
+                         Directory.EnumerateFiles(framework, "dotnet.native.*.wasm", SearchOption.TopDirectoryOnly).Any());
                 });
             if (frameworkEntry is null) continue;
             var frameworkDirectory = Path.GetDirectoryName(frameworkEntry) ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
