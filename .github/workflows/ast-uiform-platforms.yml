@@ -112,9 +112,13 @@ jobs:
         run: |
           set -euo pipefail
           dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+          echo 'BEGIN AST UIForm lifecycle probe'
           timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only
+          echo 'BEGIN AST host probe'
           timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
+          echo 'BEGIN AST generated probe'
           timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-ast-generated
+          echo 'BEGIN AST UIListView probe'
           timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uilistview
 
   desktop-macos:
@@ -220,7 +224,9 @@ jobs:
         run: dotnet workload install wasm-tools --skip-manifest-update
       - name: Build browser interaction probe
         run: dotnet build tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release
+      - name: Build browser WASM smoke probe
+        run: dotnet build tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
       - name: Run browser WASM probe
-        run: dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
+        run: timeout 900s dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release --no-build --no-restore
       - name: Run browser interaction probe
         run: dotnet run --project tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release --no-build
