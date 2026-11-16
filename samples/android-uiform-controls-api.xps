@@ -97,6 +97,12 @@ Sub Main()
     Call localProduct.AddOption("Mouse")
     Call form.SetAutoCompleteProvider("localProduct", "FindLocalProducts")
 
+    Dim map As UIFormField
+    Set map = form.AddMap("map", "Map")
+    map.Source = "https://www.openstreetmap.org/"
+    Dim document As UIFormField
+    Set document = form.AddDocumentViewer("document", "PDF", "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
+
     Dim optionsGrid As UIFormGrid
     Set optionsGrid = form.AddGrid("options", 2)
     Call form.SetFieldGrid("mode", "options")

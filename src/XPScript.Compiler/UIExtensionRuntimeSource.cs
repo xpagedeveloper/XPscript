@@ -509,10 +509,16 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
     private readonly List<XPScriptUIField> _fields = [];
     private readonly List<XPScriptUIComponent> _components = [];
     private readonly List<(string Name, string Command)> _mediaCommands = [];
-    // Keep the base UIForm runtime self-contained: ApplyDefaults() touches
-    // buttons before the action-model postprocessor adds the public API.
     private readonly List<XPScriptUIButton> _buttons = [];
     private int _gridColumns = 1;
+    private string _theme = "System";
+    private readonly List<XPScriptUITab> _tabs = [];
+    private string _activeTab = string.Empty;
+    private readonly HashSet<string> _requestedRefreshRegions = new(StringComparer.Ordinal);
+    private bool _refreshAllRequested;
+    private string _navigationTarget = string.Empty;
+    private string _navigationParameterName = string.Empty;
+    private string _navigationParameterValue = string.Empty;
     private double _cornerRadius;
     private double? _defaultControlWidth;
     private double? _defaultControlHeight;
@@ -709,6 +715,20 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         _mediaCommands.Add((field.Name, command));
     }
     public XPScriptUIField AddWebView(object? name, object? label) => AddField(name, label, "WebView");
+    public XPScriptUIField AddMap(object? name) => AddMap(name, name);
+    public XPScriptUIField AddMap(object? name, object? label)
+    {
+        var field = AddField(name, label, "WebView");
+        field.Source = "https://www.openstreetmap.org/";
+        return field;
+    }
+    public XPScriptUIField AddDocumentViewer(object? name, object? source) => AddDocumentViewer(name, name, source);
+    public XPScriptUIField AddDocumentViewer(object? name, object? label, object? source)
+    {
+        var field = AddField(name, label, "WebView");
+        field.Source = XPScriptRuntime.CStr(source);
+        return field;
+    }
     public XPScriptUIField AddCameraPreview(object? name) => AddField(name, name, "CameraPreview");
     public XPScriptUIField AddCameraPreview(object? name, object? label) => AddField(name, label, "CameraPreview");
 

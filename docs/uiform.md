@@ -2,6 +2,16 @@
 
 Desktop UIForms also support an embedded native browser control. See [UIForm WebView](uiform-webview.md).
 
+`form.AddMap(name, label)` is a portable WebView-backed map control. It opens
+`https://www.openstreetmap.org/` by default and therefore uses the existing
+WebView backend on desktop, server-rendered web and Browser-WASM. Use the
+returned field's `Source` property when a different map URL is required.
+
+`form.AddDocumentViewer(name, label, source)` is likewise WebView-backed. For
+PDF sources, the client WebView's built-in PDF support is used when available;
+otherwise the client may hand the URL to its default PDF viewer. No additional
+PDF NuGet package is required.
+
 `UIForm` is the shared XPScript form model for desktop, server-rendered web and browser WebAssembly applications. Fields can bind to a `XPJsonObject` or object-root `XPJsonDocument`. The same form definition is rendered by the active UI backend.
 
 ## Basic form

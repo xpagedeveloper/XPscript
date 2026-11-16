@@ -215,7 +215,8 @@ internal sealed class UIFormAdditionalFieldsPostProcessor
                     html.Append("<input list=\"xps_list_").Append(name).Append("\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append("><datalist id=\"xps_list_").Append(name).Append("\">"); foreach (var option in field.RemoteOptions) { html.Append("<option value=\"").Append(System.Net.WebUtility.HtmlEncode(option.Value)).Append("\" label=\"").Append(System.Net.WebUtility.HtmlEncode(option.Label)).Append("\"></option>"); } html.Append("</datalist>"); break;
 """;
         if (!generated.Contains(caseMarker, StringComparison.Ordinal)) throw new CompilerException("Unable to extend UIForm web renderer.");
-        generated = generated.Replace(caseMarker, cases + caseMarker, StringComparison.Ordinal);
+        if (!generated.Contains("case \"MultiSelect\":", StringComparison.Ordinal))
+            generated = generated.Replace(caseMarker, cases + caseMarker, StringComparison.Ordinal);
 
         const string returnMarker = "        html.Append(\"<button type=\\\"submit\\\" name=\\\"__xps_uiform_submit\\\" value=\\\"1\\\">OK</button></form>\");\n        return html.ToString();";
         const string returnReplacement = """

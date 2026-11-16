@@ -8,10 +8,25 @@ public sealed partial class XPScriptTranspiler
     {
         ArgumentNullException.ThrowIfNull(generated);
         if (!generated.Contains("class XPScriptUIForm", StringComparison.Ordinal)) return generated;
+        var hasComponentBase = generated.Contains("internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal) ||
+                               generated.Contains("internal sealed class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal);
+        if (hasComponentBase)
+        {
+            generated = generated
+                .Replace("internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{", "internal sealed partial class XPScriptUIForm\n{", StringComparison.Ordinal)
+                .Replace("internal sealed class XPScriptUIForm : XPScriptUIComponent\n{", "internal sealed class XPScriptUIForm\n{", StringComparison.Ordinal);
+        }
         generated = new UIFormWindowLifecyclePostProcessor().Transform(generated);
         generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
         generated = new UIFormActionModelPostProcessor().Transform(generated);
-        return new UIFormCallbackModelPostProcessor().Transform(generated);
+        generated = new UIFormCallbackModelPostProcessor().Transform(generated);
+        if (hasComponentBase)
+        {
+            generated = generated
+                .Replace("internal sealed partial class XPScriptUIForm\n{", "internal sealed partial class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal)
+                .Replace("internal sealed class XPScriptUIForm\n{", "internal sealed class XPScriptUIForm : XPScriptUIComponent\n{", StringComparison.Ordinal);
+        }
+        return generated;
     }
 
     public string Transpile(string source, string sourceName) =>
