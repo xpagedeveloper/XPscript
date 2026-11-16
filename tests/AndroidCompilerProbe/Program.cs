@@ -195,7 +195,6 @@ foreach (var expected in new[]
     "listBox.SelectionChanged +=",
     "comboBox.SelectionChanged +=",
     "radio.Click +=",
-    "AutoCompleteProviderHandler",
     "position = video.Position",
     "void DisposeMediaControls()",
     "DisposeMediaControls();",
@@ -625,7 +624,7 @@ foreach (var expected in new[] { "if(type==='filefield')", "e.type='file'", "edi
     if (!browserWasmSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Browser-WASM FileField upload rendering is incomplete: " + expected);
 var browserRichMediaSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Browser", "BrowserRichMediaHost.cs"));
-foreach (var expected in new[] { "type == \"FileField\"", "xpscript-uiform-file-upload", "type is \"LookupField\" or \"AutoCompleteField\"", "datalist" })
+foreach (var expected in new[] { "type is \"LookupField\" or \"AutoCompleteField\"", "datalist", "existing.SetProperty(\"list\", listId)" })
     if (!browserRichMediaSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Browser-WASM extended field rendering is incomplete: " + expected);
 

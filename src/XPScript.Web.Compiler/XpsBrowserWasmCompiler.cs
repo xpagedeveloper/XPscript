@@ -72,7 +72,7 @@ public sealed class XpsBrowserWasmCompiler
             var usesExtendedArchive = generated.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
             await File.WriteAllTextAsync(Path.Combine(workspace, "BrowserApp.csproj"), BuildProjectForWebAssemblySdk(typeof(BrowserFormHost).Assembly.Location, usesExtendedArchive), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "main.js"), MainJs, cancellationToken).ConfigureAwait(false);
-            await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), BrowserModuleJs, cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(workspace, "xpscript-browser.js"), BrowserModuleSource(), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
             var targetFramework = SelectedTargetFramework();
             await RunDotNetAsync(workspace, ["restore", "BrowserApp.csproj", "--nologo", $"-p:TargetFramework={targetFramework}", "-p:UseMonoRuntime=true", "-p:GenerateRuntimeConfigurationFiles=true", "-p:WasmGenerateAppBundle=true", "-p:NuGetAudit=false", "-p:RestoreIgnoreFailedSources=true"], cancellationToken).ConfigureAwait(false);
@@ -82,7 +82,7 @@ public sealed class XpsBrowserWasmCompiler
             CopyDirectory(builtAppRoot, appRoot);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "main.js"), MainJs, cancellationToken).ConfigureAwait(false);
-            await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), BrowserModuleJs, cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), BrowserModuleSource(), cancellationToken).ConfigureAwait(false);
             if (UIFormAppAssets.UsesUIForm(sourcePath)) UIFormAppAssets.CopyAssetsToDirectory(sourcePath, appRoot);
             if (!IsValidAppRoot(appRoot)) throw new XpsWebCompilationException("browser-wasm persisted app bundle is incomplete.");
             await File.WriteAllTextAsync(marker, hash, cancellationToken).ConfigureAwait(false);
@@ -185,6 +185,10 @@ public sealed class XpsBrowserWasmCompiler
     }
     private static string Redact(string value, string workspace) { var result = value.Replace(workspace, "<wasm-build>", StringComparison.OrdinalIgnoreCase); return result.Length <= 16_384 ? result : result[..16_384] + Environment.NewLine + "<diagnostics truncated>"; }
     private static void TryDelete(string path) { try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch { } }
+    private static string BrowserModuleSource() => BrowserModuleJs.Replace(
+        "editor.addEventListener('change',async()=>{",
+        "editor.addEventListener((type==='lookupfield'||type==='autocompletefield')?'input':'change',async()=>{",
+        StringComparison.Ordinal);
 
     private const string IndexHtml = """
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="__XPSCRIPT_BASE_HREF__"><title>XPScript</title>__XPSCRIPT_BOOTSTRAP__</head><body><main id="xpscript-app"></main><script type="module" src="./main.js"></script></body></html>

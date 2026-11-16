@@ -472,7 +472,11 @@ public static class DesktopFormHost
         {
             case ComboBox comboBox:
                 comboBox.ItemsSource = options;
-                if (value is not null) comboBox.SelectedItem = value;
+                if (value is not null)
+                {
+                    if (comboBox.IsEditable) comboBox.Text = value;
+                    else comboBox.SelectedItem = value;
+                }
                 break;
             case ListBox listBox:
                 listBox.ItemsSource = options;

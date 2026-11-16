@@ -16,7 +16,7 @@ internal static partial class BrowserRichMediaHost
             foreach (var field in fields.EnumerateArray())
             {
                 var type = Read(field, "type");
-                if (type is not ("Image" or "WebView" or "Carousel" or "ProgressBar" or "ActivityIndicator" or "Icon" or "CameraPreview" or "FileField" or "LookupField" or "AutoCompleteField")) continue;
+                if (type is not ("Image" or "WebView" or "Carousel" or "ProgressBar" or "ActivityIndicator" or "Icon" or "CameraPreview" or "LookupField" or "AutoCompleteField")) continue;
                 var name = Read(field, "name");
                 if (name.Length == 0) continue;
                 using var existing = QuerySelector(root, "[data-field-name=\"" + name + "\"] input");
@@ -57,20 +57,10 @@ internal static partial class BrowserRichMediaHost
                     camera.SetProperty("className", "form-control xpscript-uiform-camera-upload");
                     ReplaceElement(existing, camera);
                 }
-                else if (type == "FileField")
-                {
-                    using var file = CreateElement("input");
-                    file.SetProperty("type", "file");
-                    file.SetProperty("className", "form-control xpscript-uiform-file-upload");
-                    ReplaceElement(existing, file);
-                }
                 else if (type is "LookupField" or "AutoCompleteField")
                 {
-                    using var lookup = CreateElement("input");
-                    lookup.SetProperty("type", "text");
-                    lookup.SetProperty("className", "form-control");
                     var listId = "xps_" + name + "_options";
-                    lookup.SetProperty("list", listId);
+                    existing.SetProperty("list", listId);
                     using var list = CreateElement("datalist");
                     list.SetProperty("id", listId);
                     if (field.TryGetProperty("options", out var options) && options.ValueKind == JsonValueKind.Array)
@@ -82,10 +72,7 @@ internal static partial class BrowserRichMediaHost
                             AppendChild(list, item);
                         }
                     }
-                    using var wrapper = CreateElement("div");
-                    AppendChild(wrapper, lookup);
-                    AppendChild(wrapper, list);
-                    ReplaceElement(existing, wrapper);
+                    AppendChild(root, list);
                 }
                 else
                 {
