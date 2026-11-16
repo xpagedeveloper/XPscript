@@ -291,7 +291,7 @@ internal sealed partial class XPScriptUIForm
 """);
 
         generated = ReplaceRequired(generated,
-            "            html.Append(controlStyle).Append(\">\").Append(\"<label for=\\\"xps_\").Append(name).Append(\"\\\">\").Append(label).Append(\"</label>\");\n",
+            "            html.Append(controlStyle).Append(\"><label for=\\\"xps_\").Append(name).Append(\"\\\">\").Append(label).Append(\"</label>\");\n",
             """
             if (field.GridName.Length > 0)
                 html.Append(" data-xps-grid-field=\"").Append(System.Net.WebUtility.HtmlEncode(field.GridName)).Append("\"");
