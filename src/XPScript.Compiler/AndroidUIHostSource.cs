@@ -451,6 +451,14 @@ public static class AndroidFormHost
                     .Where(x => !x.GetProperty("type").GetString()!.Equals("HiddenField", StringComparison.OrdinalIgnoreCase))
                     .ToArray()
                 : Array.Empty<JsonElement>();
+            var hiddenValues = request.TryGetProperty("fields", out var allFieldArray) && allFieldArray.ValueKind == JsonValueKind.Array
+                ? allFieldArray.EnumerateArray()
+                    .Where(x => x.GetProperty("type").GetString()!.Equals("HiddenField", StringComparison.OrdinalIgnoreCase))
+                    .Where(x => x.TryGetProperty("value", out _))
+                    .ToDictionary(x => x.GetProperty("name").GetString() ?? string.Empty,
+                        x => x.GetProperty("value").Clone(),
+                        StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
 
             var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
             var mediaControls = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
@@ -768,7 +776,9 @@ public static class AndroidFormHost
                         if (eventCallback is null) return;
                         try
                         {
-                            var submittedValues = JsonSerializer.Serialize(editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase));
+                            var submitted = editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase);
+                            foreach (var hidden in hiddenValues) submitted[hidden.Key] = hidden.Value;
+                            var submittedValues = JsonSerializer.Serialize(submitted);
                             var actionState = eventCallback("button:" + buttonName, submittedValues);
                             ApplyActionState(actionState, editors, mediaControls, progressControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
                         }
@@ -815,6 +825,8 @@ public static class AndroidFormHost
                 var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
                 foreach (var pair in editors)
                     values[pair.Key] = GetEditorValue(pair.Value);
+                foreach (var hidden in hiddenValues)
+                    values[hidden.Key] = hidden.Value;
 
                 var submittedValues = JsonSerializer.Serialize(values);
                 var result = JsonSerializer.Serialize(new { result = "OK", values });
