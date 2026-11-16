@@ -2,6 +2,8 @@
 
 XPScript UIForm supports additional data-entry fields for web and desktop applications.
 
+All field objects support `Clear()`. Choice fields (`Select`, `RadioGroup`, `ListBox`, `MultiSelect`, `CheckBoxGroup`, `LookupField` and `AutoCompleteField`) additionally support `ClearOptions()` and `AddOption(value)`. Use `form.RefreshForm()` after changing a displayed form when the new state must be visible immediately.
+
 ## FileField
 
 ```xpscript

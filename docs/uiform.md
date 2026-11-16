@@ -22,6 +22,24 @@ result = form.ShowDialog()
 
 The form title belongs to the top-level form container. On the web it is rendered before the field grid.
 
+## Clearing fields and forcing a refresh
+
+Every `UIFormField` has `Clear()`, which removes its current value. Controls that support choices also expose `AddOption(value)` and `ClearOptions()`. These methods change the shared AST form model; call `RefreshForm()` when an already displayed form must be rendered again immediately with the new value or option list.
+
+```xps
+Dim country As UIFormField
+Set country = form.AddSelect("country", "Country")
+Call country.AddOption("SE")
+Call country.AddOption("NO")
+country.SelectedValue = "SE"
+Call country.Clear()
+Call country.ClearOptions()
+Call country.AddOption("DK")
+Call form.RefreshForm()
+```
+
+`RefreshForm()` is available through the AST UIForm route on Android, desktop, server-rendered web and browser-WASM. It does not submit the form or invoke a change handler; it only re-renders the current model.
+
 ## Shared control appearance
 
 ### Component identity and hierarchy

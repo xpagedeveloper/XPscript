@@ -167,6 +167,8 @@ internal sealed class XPScriptUIField : XPScriptUIComponent
         set => _owner.SetFieldValue(Name, value);
     }
 
+    public void Clear() => _owner.SetFieldValue(Name, string.Empty);
+
     public void AddOption(object? value)
     {
         if (_controlType is not ("Select" or "RadioGroup" or "ListBox" or "ListView" or "MultiListBox" or "MultiSelect" or "CheckBoxGroup" or "LookupField" or "AutoCompleteField"))

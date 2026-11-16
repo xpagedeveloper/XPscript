@@ -39,7 +39,12 @@ Sub Main()
     mode.Id = "mode-select"
     Call mode.AddOption("Standard")
     Call mode.AddOption("Advanced")
+    Call form.RefreshForm()
     mode.SelectedValue = "Advanced"
+    Call mode.Clear()
+    Call mode.ClearOptions()
+    Call mode.AddOption("Standard")
+    Call mode.AddOption("Advanced")
     Dim layout As UIFormField
     Set layout = form.AddRadioGroup("layout", "Layout")
     Call layout.AddOption("Compact")

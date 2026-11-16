@@ -41,6 +41,15 @@ internal sealed class UIFormWindowLifecyclePostProcessor
                 "    private string RenderWebClose()\n    {\n        var id = System.Net.WebUtility.HtmlEncode(_instanceId);\n        return \"<script>(function(){var e=document.getElementById('xps_uiform_\" + id + \"');if(!e)return;if(window.bootstrap&&bootstrap.Modal){var m=bootstrap.Modal.getInstance(e);if(m)m.hide();}e.remove();})();</script>\";\n    }\n\n    private static string NormalizeFieldName(object? value)",
                 "web-close-script");
 
+        if (!generated.Contains("public void RefreshForm()", StringComparison.Ordinal))
+        {
+            const string marker = "    public void Close()\n";
+            const string refresh = "    public void RefreshForm()\n    {\n        XPScriptUI.Activate(this);\n        if (XPScriptUIDesktopAdapter.IsAvailable)\n        {\n            XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);\n            return;\n        }\n        if (XPScriptUIWebAdapter.IsAvailable)\n            XPScriptUIWebAdapter.WriteHtml(RenderWebForm(false));\n    }\n\n";
+            if (!generated.Contains(marker, StringComparison.Ordinal))
+                throw new CompilerException("Unable to install UIForm window lifecycle (form-refresh-api).");
+            generated = generated.Replace(marker, refresh + marker, StringComparison.Ordinal);
+        }
+
         return generated;
     }
 
