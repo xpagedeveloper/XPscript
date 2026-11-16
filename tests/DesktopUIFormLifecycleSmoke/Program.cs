@@ -341,7 +341,7 @@ async Task RunHeadlessAstGeneratedProbe()
         WorkingDirectory = root,
         RedirectStandardOutput = true,
         RedirectStandardError = true,
-        ArgumentList = { compilerPath, "ast-compile", sourcePath, "-o", output, "--single-file=false", "--runtime=false", "--debug" }
+        ArgumentList = { compilerPath, "ast-compile", sourcePath, "-o", output, "--target-framework", "10", "--single-file=false", "--runtime=false", "--debug" }
     }) ?? throw new InvalidOperationException("Could not start AST compiler.");
     var compilerStdout = compiler.StandardOutput.ReadToEndAsync();
     var compilerStderr = compiler.StandardError.ReadToEndAsync();

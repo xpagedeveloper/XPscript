@@ -291,9 +291,8 @@ internal sealed partial class XPScriptUIForm
 """);
 
         generated = ReplaceRequired(generated,
-            "            html.Append(\"<div class=\\\"xpscript-uiform-field\\\"><label for=\\\"xps_\").Append(name).Append(\"\\\">\").Append(label).Append(\"</label>\");\n",
+            "            html.Append(controlStyle).Append(\">\").Append(\"<label for=\\\"xps_\").Append(name).Append(\"\\\">\").Append(label).Append(\"</label>\");\n",
             """
-            html.Append("<div class=\"xpscript-uiform-field\"");
             if (field.GridName.Length > 0)
                 html.Append(" data-xps-grid-field=\"").Append(System.Net.WebUtility.HtmlEncode(field.GridName)).Append("\"");
             if (field.TabName.Length > 0)
@@ -307,7 +306,7 @@ internal sealed partial class XPScriptUIForm
             if (field.LayoutColumn > 0)
                 html.Append(field.TabName.Length > 0 && !field.TabName.Equals(_activeTab, StringComparison.OrdinalIgnoreCase) ? ";" : " style=\"").Append("grid-column:").Append(field.LayoutColumn).Append(" / span ").Append(field.ColumnSpan)
                     .Append(";grid-row:").Append(field.LayoutRow).Append(" / span ").Append(field.RowSpan).Append("\"");
-            html.Append("><label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
+            html.Append(controlStyle).Append("><label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
 """);
 
         generated = ReplaceRequired(generated,
