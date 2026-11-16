@@ -333,6 +333,12 @@ internal sealed partial class XPScriptUIForm
         }
         if (!source.Contains(oldValue, StringComparison.Ordinal))
         {
+            if (oldValue.Contains("public object? GetFieldValue(object? name)", StringComparison.Ordinal) &&
+                source.Contains("public XPScriptUIGrid AddGridColumns(object? columns)", StringComparison.Ordinal))
+            {
+                Console.Error.WriteLine("[XPScript UIForm] layout API anchor was already transformed; continuing with the existing layout API.");
+                return source;
+            }
             if (oldValue.Contains("html.Append(controlStyle)", StringComparison.Ordinal))
             {
                 Console.Error.WriteLine("[XPScript UIForm] layout-render anchor was already transformed; continuing with the existing renderer.");
