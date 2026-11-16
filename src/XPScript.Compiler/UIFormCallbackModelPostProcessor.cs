@@ -20,6 +20,7 @@ internal sealed class UIFormCallbackModelPostProcessor
     public string OnPauseHandler { get; set; } = string.Empty;
     public string OnEndedHandler { get; set; } = string.Empty;
     public string OnErrorHandler { get; set; } = string.Empty;
+    public string AutoCompleteProviderHandler { get; set; } = string.Empty;
     public bool UseEventCallback { get; set; }
     public object?[] EventCallbackArguments { get; set; } = [];
 """,
@@ -119,6 +120,17 @@ internal sealed partial class XPScriptUIForm
         field.OnChangeHandler = NormalizeHandlerName(handlerName);
         field.UseEventCallback = true;
         field.EventCallbackArguments = CopyEventCallbackArguments(callbackArguments);
+    }
+
+    public void SetAutoCompleteProvider(object? name, object? handlerName)
+    {
+        var field = FindField(name);
+        if (field.Type is not ("AutoCompleteField" or "LookupField"))
+            throw new XPScriptRuntimeException(5, "UIForm autocomplete providers require an AutoCompleteField or LookupField.");
+        field.AutoCompleteProviderHandler = NormalizeHandlerName(handlerName);
+        field.OnChangeHandler = field.AutoCompleteProviderHandler;
+        field.UseEventCallback = false;
+        field.EventCallbackArguments = [];
     }
 
     public void SetOnPlay(object? name, object? handlerName)

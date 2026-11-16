@@ -62,6 +62,7 @@ internal static class AstUiFormSupport
             new AstNativeObjectSurface.Member("UIForm", "SetFieldTooltip", "void", ["object?", "object?"], ["name", "tooltip"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetOnChange", "void", ["object?", "object?"], ["name", "handlerName"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetOnChangeCallback", "void", ["object?", "object?", "object?"], ["name", "handlerName", "callbackArgument"], false, false, false),
+            new AstNativeObjectSurface.Member("UIForm", "SetAutoCompleteProvider", "void", ["object?", "object?"], ["name", "handlerName"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetOnPlay", "void", ["object?", "object?"], ["name", "handlerName"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetOnPause", "void", ["object?", "object?"], ["name", "handlerName"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetOnEnded", "void", ["object?", "object?"], ["name", "handlerName"], false, false, false),

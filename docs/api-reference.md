@@ -379,6 +379,7 @@ See [UIForm](uiform.md) and [extended fields](uiform-fields.md).
 | `AddLookupField` | `form.AddLookupField(name, label, url [, valueField, labelField, remote])` | field metadata, endpoint, optional property names and remote-search flag. | Adds endpoint-backed lookup field. | [ui-form-lookup-fields.xps](../samples/ui-form-lookup-fields.xps) |
 | `AddAutoCompleteField` | `form.AddAutoCompleteField(name, label, url [, valueField, labelField, remote])` | field metadata and endpoint configuration. | Adds endpoint-backed autocomplete. | [ui-form-lookup-fields.xps](../samples/ui-form-lookup-fields.xps) |
 | `SetRemoteSearchOptions` | `form.SetRemoteSearchOptions(field, searchParam, valueParam, minChars, maxResults)` | lookup field and remote-search settings. | Configures server-side lookup/autocomplete search. | [ui-form-lookup-fields.xps](../samples/ui-form-lookup-fields.xps) |
+| `SetAutoCompleteProvider` | `form.SetAutoCompleteProvider(field, handler)` | an `AutoCompleteField`/`LookupField` and a function returning `XPJsonArray`. | Calls a local provider with the current type-ahead text and replaces the field options. | [android-uiform-controls-api.xps](../samples/android-uiform-controls-api.xps) |
 | `IsDirty` | `form.IsDirty` | none | Reports whether bound field data differs from clean baseline. | [ui-form-additional-fields.xps](../samples/ui-form-additional-fields.xps) |
 | `DirtyFields` | `form.DirtyFields` | none | Returns names of currently dirty fields. | [ui-form-additional-fields.xps](../samples/ui-form-additional-fields.xps) |
 

@@ -262,7 +262,11 @@ public static class DesktopFormHost
                 var eventKind = sourceField.OnChangeHandler.Length > 0 || sourceField.RefreshHandler.Length > 0 ? "change:" : "validate:";
                 switch (sourceEditor)
                 {
-                    case ComboBox comboBox: comboBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, comboBox); break;
+                    case ComboBox comboBox:
+                        comboBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, comboBox);
+                        if (sourceField.Type is "LookupField" or "AutoCompleteField")
+                            comboBox.PropertyChanged += (_, args) => { if (args.Property == ComboBox.TextProperty) TriggerEvent(eventKind + sourceField.Name, sourceField, comboBox); };
+                        break;
                     case ListBox listBox: listBox.SelectionChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, listBox); break;
                     case CheckBox checkBox: checkBox.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, checkBox); break;
                     case ToggleSwitch toggleSwitch: toggleSwitch.IsCheckedChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, toggleSwitch); break;
@@ -772,7 +776,7 @@ public static class DesktopFormHost
         if (editor is DatePicker datePicker) return datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is TimePicker timePicker) return timePicker.SelectedTime?.ToString("hh\\:mm\\:ss", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is Button button && field.Type is "CameraPreview" or "FileField") return button.Tag?.ToString() ?? string.Empty;
-        if (editor is ComboBox comboBox) return comboBox.SelectedItem?.ToString() ?? string.Empty;
+        if (editor is ComboBox comboBox) return comboBox.IsEditable ? comboBox.Text ?? string.Empty : comboBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is ListBox listBox) return listBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is StackPanel radioPanel) return radioPanel.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true)?.Content?.ToString() ?? string.Empty;
         if (editor is StackPanel checkBoxPanel) return string.Join('\u001f', checkBoxPanel.Children.OfType<CheckBox>().Where(x => x.IsChecked == true).Select(x => x.Content?.ToString() ?? string.Empty));
@@ -794,7 +798,7 @@ public static class DesktopFormHost
         if (editor is DatePicker datePicker) return JsonSerializer.SerializeToElement(datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty);
         if (editor is TimePicker timePicker) return JsonSerializer.SerializeToElement(timePicker.SelectedTime?.ToString("hh\\:mm\\:ss", CultureInfo.InvariantCulture) ?? string.Empty);
         if (editor is Button button && field.Type is "CameraPreview" or "FileField") return JsonSerializer.SerializeToElement(button.Tag?.ToString() ?? string.Empty);
-        if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.SelectedItem?.ToString() ?? string.Empty);
+        if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.IsEditable ? comboBox.Text ?? string.Empty : comboBox.SelectedItem?.ToString() ?? string.Empty);
         if (editor is ListBox listBox)
         {
             if (field.Type == "MultiListBox")

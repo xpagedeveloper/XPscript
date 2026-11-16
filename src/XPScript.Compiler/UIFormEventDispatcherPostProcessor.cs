@@ -72,6 +72,15 @@ internal sealed class UIFormEventDispatcherPostProcessor
             {
                 ApplySubmittedValue(field, submittedValue);
             }
+            if (field.AutoCompleteProviderHandler.Length > 0)
+            {
+                var providerResult = XPScriptCallbackRuntime.Invoke(
+                    field.AutoCompleteProviderHandler,
+                    "UIForm autocomplete provider",
+                    submittedValue);
+                ApplyAutoCompleteProviderOptions(field, providerResult);
+                return SerializeActionState();
+            }
             handlerName = field.OnChangeHandler.Length > 0 ? field.OnChangeHandler : field.RefreshHandler;
             if (handlerName.Length == 0)
                 throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' has no registered change handler.");
@@ -235,6 +244,18 @@ internal sealed class UIFormEventDispatcherPostProcessor
         }
 
         throw new XPScriptRuntimeException(5, $"UIForm handler '{handlerName}' must accept zero parameters or the current UIForm as one parameter.");
+    }
+
+    private static void ApplyAutoCompleteProviderOptions(XPScriptUIField field, object? providerResult)
+    {
+        field.Options.Clear();
+        if (providerResult is string || providerResult is not System.Collections.IEnumerable values) return;
+        foreach (var value in values)
+        {
+            var option = XPScriptRuntime.CStr(value).Trim();
+            if (option.Length > 0 && !field.Options.Contains(option, StringComparer.Ordinal))
+                field.Options.Add(option);
+        }
     }
 
     private string SerializeActionState()

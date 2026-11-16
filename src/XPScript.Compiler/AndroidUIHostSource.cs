@@ -682,6 +682,8 @@ public static class AndroidFormHost
                     toggleSwitch.IsCheckedChanged += (_, _) => DispatchFieldChange(name, toggleSwitch.IsChecked == true ? "true" : "false");
                 if (editor is AndroidColorFieldEditor colorField)
                     colorField.ValueEditor.TextChanged += (_, _) => DispatchFieldChange(name, colorField.ValueEditor.Text ?? string.Empty);
+                if (editor is ComboBox comboBox && (type is "LookupField" or "AutoCompleteField"))
+                    comboBox.PropertyChanged += (_, args) => { if (args.Property == ComboBox.TextProperty) DispatchFieldChange(name, comboBox.Text ?? string.Empty); };
                 if (type == "ListView" && editor is ListBox listView)
                     listView.SelectionChanged += (_, _) => DispatchFieldChange(name, listView.SelectedItem?.ToString() ?? string.Empty);
                 var validationBlock = new TextBlock
@@ -1500,7 +1502,7 @@ public static class AndroidFormHost
             checkBox.IsChecked = value.ValueKind == JsonValueKind.True || text.Equals("true", StringComparison.OrdinalIgnoreCase);
         else if (editor is Avalonia.Controls.ToggleSwitch toggleSwitch)
             toggleSwitch.IsChecked = value.ValueKind == JsonValueKind.True || text.Equals("true", StringComparison.OrdinalIgnoreCase);
-        else if (editor is ComboBox comboBox) comboBox.SelectedItem = text;
+        else if (editor is ComboBox comboBox) { if (comboBox.IsEditable) comboBox.Text = text; else comboBox.SelectedItem = text; }
         else if (editor is ListBox listBox)
         {
             if (value.ValueKind == JsonValueKind.Array)
@@ -1534,7 +1536,7 @@ public static class AndroidFormHost
         TextBox textBox => textBox.Text ?? string.Empty,
         Avalonia.Controls.CheckBox checkBox => checkBox.IsChecked == true,
         Avalonia.Controls.ToggleSwitch toggleSwitch => toggleSwitch.IsChecked == true,
-        ComboBox comboBox => comboBox.SelectedItem?.ToString() ?? string.Empty,
+        ComboBox comboBox => comboBox.IsEditable ? comboBox.Text ?? string.Empty : comboBox.SelectedItem?.ToString() ?? string.Empty,
         ListBox listBox when listBox.SelectionMode.HasFlag(SelectionMode.Multiple) => listBox.SelectedItems?.Cast<object>().Select(item => item?.ToString() ?? string.Empty).ToArray() ?? Array.Empty<string>(),
         ListBox listBox => listBox.SelectedItem?.ToString() ?? string.Empty,
         Slider slider => slider.Value,

@@ -50,6 +50,10 @@ Sub Main()
     Call tags.AddOption("One")
     Call tags.AddOption("Two")
 
+    Dim localProduct As UIFormField
+    Set localProduct = form.AddAutoCompleteField("localProduct", "Local product", "https://invalid.local/autocomplete")
+    Call form.SetAutoCompleteProvider("localProduct", "FindLocalProducts")
+
     Dim optionsGrid As UIFormGrid
     Set optionsGrid = form.AddGrid("options", 2)
     Call form.SetFieldGrid("mode", "options")
@@ -94,3 +98,14 @@ Sub Main()
     result = form.ShowDialog()
     Print "ANDROID-UIFORM-CONTROLS-API=ready"
 End Sub
+
+Function FindLocalProducts(query As String) As XPJsonArray
+    Dim result As New XPJsonArray
+    If Len(query) = 0 Then
+        Call result.Add("Keyboard")
+        Call result.Add("Monitor")
+    Else
+        Call result.Add(query & " result")
+    End If
+    Set FindLocalProducts = result
+End Function

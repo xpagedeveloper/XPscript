@@ -621,6 +621,10 @@ if (!browserWasmSource.Contains("UIFormAppAssets.CopyAssetsToDirectory(sourcePat
 foreach (var expected in new[] { "if(type==='filefield')", "e.type='file'", "editor.files[0].name" })
     if (!browserWasmSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Browser-WASM FileField upload rendering is incomplete: " + expected);
+var browserRichMediaSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Browser", "BrowserRichMediaHost.cs"));
+foreach (var expected in new[] { "type == \"FileField\"", "xpscript-uiform-file-upload", "type is \"LookupField\" or \"AutoCompleteField\"", "datalist" })
+    if (!browserRichMediaSource.Contains(expected, StringComparison.Ordinal))
+        throw new Exception("Browser-WASM extended field rendering is incomplete: " + expected);
 
 var compilerSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.Compiler", "CompilerDriver.cs"));
 if (!uiProject.Contains($"<PackageReference Include=\"Avalonia.Controls.WebView\" Version=\"{ApplicationDependencyCatalog.AvaloniaWebViewVersion}\" />", StringComparison.Ordinal))
@@ -734,7 +738,7 @@ var completeControlsSample = File.ReadAllText(Path.Combine(AppContext.BaseDirect
 if (!completeControlsSample.Contains("GetComponentById", StringComparison.Ordinal)) throw new Exception("Android controls sample must exercise UIForm.GetComponentById.");
 if (!completeControlsSample.Contains("GetComponentsByType", StringComparison.Ordinal)) throw new Exception("Android controls sample must exercise UIForm.GetComponentsByType.");
 if (!completeControlsSample.Contains("Parent.Type", StringComparison.Ordinal)) throw new Exception("Android controls sample must exercise component Parent traversal.");
-foreach (var expected in new[] { "AddProgressBar", "AddActivityIndicator", "AddSlider", "SetSliderStep", "AddSwitch", "AddIcon", "AddCard", "AddPanel", "AddScrollView", "AddListView", "AddOption", "AddCameraPreview", "AddCarousel", "SetCarouselIndex", "SetCarouselLoop", "SetCarouselAutoAdvance", "AddAudio", "PlayMedia", "PauseMedia", "StopMedia", "AddVideo", "audio.Source", "audio.Position", "audio.Duration", "audio.Volume", "audio.AutoPlay", "audio.Loop", "audio.Muted", "audio.PlaybackRate", "audio.Play()", "audio.Pause()", "video.Source" })
+foreach (var expected in new[] { "AddProgressBar", "AddActivityIndicator", "AddSlider", "SetSliderStep", "AddSwitch", "AddIcon", "AddCard", "AddPanel", "AddScrollView", "AddListView", "AddOption", "AddCameraPreview", "AddCarousel", "SetCarouselIndex", "SetCarouselLoop", "SetCarouselAutoAdvance", "AddAutoCompleteField", "SetAutoCompleteProvider", "FindLocalProducts", "AddAudio", "PlayMedia", "PauseMedia", "StopMedia", "AddVideo", "audio.Source", "audio.Position", "audio.Duration", "audio.Volume", "audio.AutoPlay", "audio.Loop", "audio.Muted", "audio.PlaybackRate", "audio.Play()", "audio.Pause()", "video.Source" })
     if (!completeControlsSample.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Complete Android UIForm controls sample is missing: " + expected);
 var hierarchySample = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "samples", "uiform-component-hierarchy.xps"));

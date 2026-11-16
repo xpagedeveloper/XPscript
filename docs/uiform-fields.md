@@ -222,6 +222,21 @@ Call form.SetRemoteSearchOptions("productId", "q", "value", 3, 20)
 
 The web renderer performs a debounced search after the configured minimum number of characters. The visible label and stored value remain separate. The posted value is validated server-side using the exact-value lookup before it is accepted.
 
+For a local provider on WASM, Android or desktop, register a function that receives the current type-ahead text and returns an `XPJsonArray` of option values:
+
+```xpscript
+Call form.AddAutoCompleteField("product", "Product", "https://unused.local/provider")
+Call form.SetAutoCompleteProvider("product", "FindProducts")
+
+Function FindProducts(query As String) As XPJsonArray
+    Dim result As New XPJsonArray
+    Call result.Add(query & " result")
+    Set FindProducts = result
+End Function
+```
+
+The provider is called on each change event with the text currently typed. Its returned list replaces the field options and is sent back to the control. This local provider can also be used with `LookupField`; remote endpoint search remains available for server-rendered web and WASM forms.
+
 ## Example XPS lookup endpoint
 
 The endpoint can use any existing XPScript database or HTTP client. For server-side mode, inspect `Request.Query` and apply the filter to the backend instead of loading the complete table.
