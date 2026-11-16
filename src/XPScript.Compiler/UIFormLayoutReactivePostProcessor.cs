@@ -329,7 +329,14 @@ internal sealed partial class XPScriptUIForm
             source.Contains("internal sealed class XPScriptUIGrid", StringComparison.Ordinal))
             return source;
         if (!source.Contains(oldValue, StringComparison.Ordinal))
+        {
+            if (oldValue.Contains("html.Append(controlStyle)", StringComparison.Ordinal))
+            {
+                Console.Error.WriteLine("[XPScript UIForm] layout-render anchor was already transformed; continuing with the existing renderer.");
+                return source;
+            }
             throw new CompilerException("Unable to install UIForm layout/reactive runtime extension.");
+        }
         if (oldValue.Contains("XPScriptUIForm", StringComparison.Ordinal))
         {
             var index = source.IndexOf(oldValue, StringComparison.Ordinal);
