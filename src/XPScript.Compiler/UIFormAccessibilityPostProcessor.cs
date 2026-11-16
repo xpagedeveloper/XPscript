@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace XPScript.Compiler;
 
 internal sealed class UIFormAccessibilityPostProcessor
@@ -345,7 +347,18 @@ internal sealed class UIFormAccessibilityPostProcessor
     {
         var index = source.IndexOf(oldValue, StringComparison.Ordinal);
         if (index < 0)
+        {
+            if (oldValue.Contains("new XPScriptUIField", StringComparison.Ordinal))
+            {
+                var match = Regex.Match(
+                    source,
+                    @"var\s+field\s*=\s*new\s+XPScriptUIField\(this,\s*fieldName,\s*XPScriptRuntime\.CStr\(label\),\s*type\);\s*_fields\.Add\(field\);",
+                    RegexOptions.CultureInvariant);
+                if (match.Success)
+                    return source[..match.Index] + newValue + source[(match.Index + match.Length)..];
+            }
             throw new CompilerException("Unable to install UIForm accessibility runtime support (marker: " + oldValue.Trim() + ").");
+        }
         return source[..index] + newValue + source[(index + oldValue.Length)..];
     }
 }
