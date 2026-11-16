@@ -261,7 +261,10 @@ public static class DesktopFormHost
                     case TimePicker timePicker: timePicker.SelectedTimeChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, timePicker); break;
                     case Slider slider: slider.PropertyChanged += (_, e) => { if (e.Property == RangeBase.ValueProperty) TriggerEvent(eventKind + sourceField.Name, sourceField, slider); }; break;
                     case StackPanel radioPanel:
-                        foreach (var radio in radioPanel.Children.OfType<RadioButton>()) radio.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, radioPanel);
+                        if (sourceField.Type == "CheckBoxGroup")
+                            foreach (var checkBox in radioPanel.Children.OfType<CheckBox>()) checkBox.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, radioPanel);
+                        else
+                            foreach (var radio in radioPanel.Children.OfType<RadioButton>()) radio.Click += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, radioPanel);
                         break;
                     case TextBox textBox: textBox.LostFocus += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, textBox); break;
                 }
@@ -452,7 +455,13 @@ public static class DesktopFormHost
                     listBox.SelectedItem = value;
                 break;
             case StackPanel radioPanel:
-                if (options.Count > 0)
+                if (field.Type == "CheckBoxGroup")
+                {
+                    radioPanel.Children.Clear();
+                    foreach (var option in options)
+                        radioPanel.Children.Add(new CheckBox { Content = option, IsChecked = selectedValues.Contains(option, StringComparer.Ordinal) });
+                }
+                else if (options.Count > 0)
                 {
                     radioPanel.Children.Clear();
                     foreach (var option in options)
@@ -495,6 +504,8 @@ public static class DesktopFormHost
             "Select" => CreateSelect(field),
             "ListBox" => CreateListBox(field, false),
             "MultiListBox" => CreateListBox(field, true),
+            "MultiSelect" => CreateListBox(field, true),
+            "CheckBoxGroup" => CreateCheckBoxGroup(field),
             "RadioGroup" => CreateRadioGroup(field),
             "ProgressBar" => CreateProgressBar(field),
             "ActivityIndicator" => CreateActivityIndicator(field),
@@ -582,6 +593,14 @@ public static class DesktopFormHost
     {
         var panel = new StackPanel { Spacing = 4 };
         foreach (var option in field.Options) panel.Children.Add(new RadioButton { Content = option, GroupName = field.Name, IsChecked = string.Equals(option, field.Value, StringComparison.Ordinal) });
+        return panel;
+    }
+
+    private static Control CreateCheckBoxGroup(DesktopFormField field)
+    {
+        var panel = new StackPanel { Spacing = 4 };
+        foreach (var option in field.Options)
+            panel.Children.Add(new CheckBox { Content = option, IsChecked = field.Values.Contains(option, StringComparer.Ordinal) });
         return panel;
     }
 
@@ -697,6 +716,7 @@ public static class DesktopFormHost
         if (editor is ComboBox comboBox) return comboBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is ListBox listBox) return listBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is StackPanel radioPanel) return radioPanel.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true)?.Content?.ToString() ?? string.Empty;
+        if (editor is StackPanel checkBoxPanel) return string.Join('\u001f', checkBoxPanel.Children.OfType<CheckBox>().Where(x => x.IsChecked == true).Select(x => x.Content?.ToString() ?? string.Empty));
         return string.Empty;
     }
 
@@ -732,6 +752,8 @@ public static class DesktopFormHost
             var selected = radioPanel.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true)?.Content?.ToString() ?? string.Empty;
             return JsonSerializer.SerializeToElement(selected);
         }
+        if (editor is StackPanel checkBoxPanel)
+            return JsonSerializer.SerializeToElement(checkBoxPanel.Children.OfType<CheckBox>().Where(x => x.IsChecked == true).Select(x => x.Content?.ToString() ?? string.Empty).ToArray());
         return null;
     }
 
