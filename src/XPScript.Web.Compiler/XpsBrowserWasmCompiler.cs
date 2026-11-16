@@ -185,10 +185,22 @@ public sealed class XpsBrowserWasmCompiler
     }
     private static string Redact(string value, string workspace) { var result = value.Replace(workspace, "<wasm-build>", StringComparison.OrdinalIgnoreCase); return result.Length <= 16_384 ? result : result[..16_384] + Environment.NewLine + "<diagnostics truncated>"; }
     private static void TryDelete(string path) { try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch { } }
-    private static string BrowserModuleSource() => BrowserModuleJs.Replace(
-        "editor.addEventListener('change',async()=>{",
-        "editor.addEventListener((type==='lookupfield'||type==='autocompletefield')?'input':'change',async()=>{",
-        StringComparison.Ordinal);
+    private static string BrowserModuleSource()
+    {
+        var source = BrowserModuleJs.Replace(
+            "editor.addEventListener('change',async()=>{",
+            "editor.addEventListener((type==='lookupfield'||type==='autocompletefield')?'input':'change',async()=>{",
+            StringComparison.Ordinal);
+        source = source.Replace(
+            "export function renderForm(requestJson){",
+            "function applyLookupOptions(request){for(const f of request.fields||[]){const t=fieldType(f);if(t!=='lookupfield'&&t!=='autocompletefield')continue;const e=document.querySelector('[name=\\\"'+CSS.escape(String(f.name||''))+'\\\"]');if(!e)continue;const id='xps_'+String(f.name||'')+'_options';let d=document.getElementById(id);if(!d){d=document.createElement('datalist');d.id=id;document.body.appendChild(d);}e.setAttribute('list',id);d.replaceChildren();for(const v of f.options||[]){const o=document.createElement('option');o.value=String(v);d.appendChild(o);}}}\nexport function renderForm(requestJson){",
+            StringComparison.Ordinal);
+        source = source.Replace(
+            "root.appendChild(actions);}return JSON.stringify({result:'Pending',values:{}});}",
+            "root.appendChild(actions);}applyLookupOptions(request);return JSON.stringify({result:'Pending',values:{}});}",
+            StringComparison.Ordinal);
+        return source;
+    }
 
     private const string IndexHtml = """
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="__XPSCRIPT_BASE_HREF__"><title>XPScript</title>__XPSCRIPT_BOOTSTRAP__</head><body><main id="xpscript-app"></main><script type="module" src="./main.js"></script></body></html>
