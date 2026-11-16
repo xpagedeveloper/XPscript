@@ -13,8 +13,10 @@ try
         var assembly = await AstCompiler.CompileAsync(source, output, rid);
         if (!File.Exists(assembly))
             throw new Exception($"AST {rid} compilation did not produce Generated.dll.");
-        if (!Directory.EnumerateFiles(output, "*.apk", SearchOption.TopDirectoryOnly).Any())
+        var apk = Directory.EnumerateFiles(output, "*.apk", SearchOption.TopDirectoryOnly).FirstOrDefault();
+        if (apk is null)
             throw new Exception($"AST {rid} compilation did not produce an APK.");
+        Console.WriteLine($"ANDROID_AST_APK_OK rid={rid} apk={Path.GetFileName(apk)}");
     }
 
     Console.WriteLine("ANDROID_AST_BACKEND_OK");
