@@ -1,0 +1,44 @@
+name: Temporary desktop AST UIForm verification
+
+on:
+  push:
+    branches: [investigate-ast-compiler]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: AST UIForm desktop (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: macos-latest
+            rid: osx-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build compiler and desktop host
+        run: |
+          dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          dotnet build src/XPScript.UI.Desktop/XPScript.UI.Desktop.csproj -c Release
+      - name: Run desktop bridge contract probe
+        run: dotnet run --project tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release --no-build --no-restore
+      - name: Compile complete UIForm control sample through AST
+        shell: bash
+        run: |
+          set -euo pipefail
+          export XPSCRIPT_TEMP_ROOT="$GITHUB_WORKSPACE/out/temporary-desktop-ast-temp"
+          mkdir -p "$XPSCRIPT_TEMP_ROOT"
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- \
+            ast-compile samples/android-uiform-controls-api.xps \
+            -o "$GITHUB_WORKSPACE/out/temporary-desktop-ast-$RUNNER_OS" \
+            --platform "${{ matrix.rid }}" --runtime=false
