@@ -767,7 +767,7 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         {
             foreach (var field in _fields)
             {
-                if (field.Type == "MultiListBox") ApplySubmittedValues(field, XPScriptUIWebAdapter.FormValues(field.Name));
+                if (IsMultiValueType(field.Type)) ApplySubmittedValues(field, XPScriptUIWebAdapter.FormValues(field.Name));
                 else ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
             }
             return "OK";
@@ -861,8 +861,8 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
 
     private void ApplySubmittedValues(XPScriptUIField field, IReadOnlyList<string> submitted)
     {
-        if (field.Type != "MultiListBox")
-            throw new XPScriptRuntimeException(5, "UIForm multi-value submission is only supported for MultiListBox fields.");
+        if (!IsMultiValueType(field.Type))
+            throw new XPScriptRuntimeException(5, "UIForm multi-value submission is not supported for this field.");
 
         var selected = submitted
             .Where(value => !string.IsNullOrEmpty(value))
@@ -991,7 +991,7 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         foreach (var field in _fields)
         {
             var name = System.Net.WebUtility.HtmlEncode(field.Name);
-            var value = field.Type == "MultiListBox" ? string.Empty : System.Net.WebUtility.HtmlEncode(GetFieldValueString(field.Name));
+            var value = IsMultiValueType(field.Type) ? string.Empty : System.Net.WebUtility.HtmlEncode(GetFieldValueString(field.Name));
             if (field.Type == "HiddenField")
             {
                 html.Append("<input type=\"hidden\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\">");
@@ -1042,6 +1042,8 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
                     html.Append("</select>");
                     break;
                 case "MultiListBox":
+                case "MultiSelect":
+                case "CheckBoxGroup":
                     var selectedValues = ReadSelectedValues(field.Name);
                     html.Append("<select multiple size=\"6\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(">");
                     foreach (var option in field.Options)
@@ -1052,6 +1054,14 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
                         html.Append(">").Append(encodedOption).Append("</option>");
                     }
                     html.Append("</select>");
+                    break;
+                case "LookupField":
+                case "AutoCompleteField":
+                    var listId = "xps_options_" + name;
+                    html.Append("<input type=\"text\" list=\"").Append(listId).Append("\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">");
+                    html.Append("<datalist id=\"").Append(listId).Append("\">");
+                    foreach (var option in field.Options) html.Append("<option value=\"").Append(System.Net.WebUtility.HtmlEncode(option)).Append("\">");
+                    html.Append("</datalist>");
                     break;
                 case "RadioGroup":
                     foreach (var option in field.Options)
@@ -1088,6 +1098,9 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         if (name.Any(c => !(char.IsLetterOrDigit(c) || c is '_' or '-' or '.'))) throw new XPScriptRuntimeException(5, "UIForm field name contains unsupported characters.");
         return name;
     }
+
+    private static bool IsMultiValueType(string type)
+        => type is "MultiListBox" or "MultiSelect" or "CheckBoxGroup";
 }
 
 internal static class XPScriptUIWebAdapter
