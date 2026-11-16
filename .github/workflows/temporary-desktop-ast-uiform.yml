@@ -32,7 +32,14 @@ jobs:
           dotnet build src/XPScript.UI.Desktop/XPScript.UI.Desktop.csproj -c Release
           dotnet build tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release
       - name: Run desktop bridge contract probe
-        run: dotnet run --project tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release --no-build --no-restore
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a dotnet run --project tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release --no-build --no-restore
+          else
+            dotnet run --project tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release --no-build --no-restore
+          fi
       - name: Compile complete UIForm control sample through AST
         shell: bash
         run: |
