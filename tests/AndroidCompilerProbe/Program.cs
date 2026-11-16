@@ -626,6 +626,8 @@ if (!uiExtensionSource.Contains("SetDefaultButtonCornerRadius", StringComparison
 if (!uiExtensionSource.Contains("xpscript-uiform-boot-image", StringComparison.Ordinal) ||
     !uiExtensionSource.Contains("xpscript-uiform-boot-text", StringComparison.Ordinal))
     throw new Exception("Server-rendered UIForm must render persistent boot image/text content.");
+if (!uiExtensionSource.Contains("private readonly List<XPScriptUIButton> _buttons = [];", StringComparison.Ordinal))
+    throw new Exception("UIForm base runtime must declare its button collection before ApplyDefaults.");
 foreach (var expected in new[] { "data-component-id", "data-parent-id", "xpscript-uiform-container-children" })
     if (!uiExtensionSource.Contains(expected, StringComparison.Ordinal))
         throw new Exception("Server-rendered nested UIForm container support is missing: " + expected);

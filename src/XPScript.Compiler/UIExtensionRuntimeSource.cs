@@ -457,6 +457,43 @@ internal sealed class XPScriptUIField : XPScriptUIComponent
         => NormalizeMediaSource(XPScriptRuntime.CStr(value));
 }
 
+internal sealed class XPScriptUITab
+{
+    public required string Name { get; init; }
+    public required string Label { get; set; }
+}
+
+internal sealed class XPScriptUIButton
+{
+    public required string Name { get; init; }
+    public required string Label { get; set; }
+    public required string Handler { get; set; }
+    public string Style { get; set; } = "Default";
+    public string Icon { get; set; } = string.Empty;
+    public string Image { get; set; } = string.Empty;
+    private double _cornerRadius;
+    public double? Width { get; set; }
+    public double? Height { get; set; }
+    public string Font { get; set; } = string.Empty;
+    public double? FontSize { get; set; }
+    public double CornerRadius
+    {
+        get => _cornerRadius;
+        set
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+                throw new XPScriptRuntimeException(5, "UIForm control CornerRadius must be between 0 and 1000.");
+            _cornerRadius = value;
+        }
+    }
+    public int LayoutRow { get; set; }
+    public int LayoutColumn { get; set; }
+    public int ColumnSpan { get; set; } = 1;
+    public int RowSpan { get; set; } = 1;
+    public bool Visible { get; set; } = true;
+    public bool Enabled { get; set; } = true;
+}
+
 internal sealed partial class XPScriptUIForm : XPScriptUIComponent
 {
     private string _title;
@@ -472,6 +509,9 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
     private readonly List<XPScriptUIField> _fields = [];
     private readonly List<XPScriptUIComponent> _components = [];
     private readonly List<(string Name, string Command)> _mediaCommands = [];
+    // Keep the base UIForm runtime self-contained: ApplyDefaults() touches
+    // buttons before the action-model postprocessor adds the public API.
+    private readonly List<XPScriptUIButton> _buttons = [];
     private int _gridColumns = 1;
     private double _cornerRadius;
     private double? _defaultControlWidth;
