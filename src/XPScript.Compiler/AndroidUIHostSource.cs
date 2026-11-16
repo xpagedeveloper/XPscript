@@ -461,6 +461,7 @@ public static class AndroidFormHost
             var actionButtons = new Dictionary<string, Avalonia.Controls.Button>(StringComparer.OrdinalIgnoreCase);
             var panel = new StackPanel { Spacing = 12, Margin = new Thickness(16), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Stretch };
             TabControl? tabControl = null;
+            var dispatchingFieldChange = false;
 
             void DispatchMediaEvent(string fieldName, string eventKind, string submittedValue = "")
             {
@@ -495,15 +496,20 @@ public static class AndroidFormHost
 
             void DispatchFieldChange(string fieldName, string value)
             {
-                if (eventCallback is null) return;
+                if (eventCallback is null || dispatchingFieldChange) return;
                 try
                 {
+                    dispatchingFieldChange = true;
                     var actionState = eventCallback("change:" + fieldName, value);
                     ApplyActionState(actionState, editors, mediaControls, progressControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
                 }
                 catch (Exception exception)
                 {
                     Log.Error("XPScript", "UIForm field change callback failed: " + exception);
+                }
+                finally
+                {
+                    dispatchingFieldChange = false;
                 }
             }
 
@@ -698,6 +704,8 @@ public static class AndroidFormHost
                     numericEditor.ValueChanged += (_, _) => DispatchFieldChange(name, numericEditor.Value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty);
                 if (editor is AndroidColorFieldEditor colorField)
                     colorField.ValueEditor.TextChanged += (_, _) => DispatchFieldChange(name, colorField.ValueEditor.Text ?? string.Empty);
+                if (editor is TextBox textEditor)
+                    textEditor.TextChanged += (_, _) => DispatchFieldChange(name, textEditor.Text ?? string.Empty);
                 if (editor is ComboBox comboBox)
                 {
                     comboBox.SelectionChanged += (_, _) => DispatchFieldChange(name, comboBox.IsEditable ? comboBox.Text ?? string.Empty : comboBox.SelectedItem?.ToString() ?? string.Empty);
