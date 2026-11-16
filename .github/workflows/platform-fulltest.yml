@@ -101,14 +101,9 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '${{ matrix.framework }}.0.x'
-      - name: Check browser-WASM workload
+      - name: Install browser-WASM workload
         shell: pwsh
-        run: |
-          dotnet workload list
-          $workloads = dotnet workload list | Out-String
-          if ($workloads -notmatch '(?m)^\s*wasm-tools\s') {
-            Write-Warning ".NET ${{ matrix.framework }} wasm-tools is not installed; native WASM compilation is skipped by design."
-          }
+        run: dotnet workload install wasm-tools --skip-manifest-update
       - name: Run browser-WASM and Notes server-boundary smoke test
         shell: pwsh
         run: |
