@@ -196,6 +196,22 @@ public sealed class XpsBrowserWasmCompiler
             "function applyLookupOptions(request){for(const f of request.fields||[]){const t=fieldType(f);if(t!=='lookupfield'&&t!=='autocompletefield')continue;const e=document.querySelector('[name=\\\"'+CSS.escape(String(f.name||''))+'\\\"]');if(!e)continue;const id='xps_'+String(f.name||'')+'_options';let d=document.getElementById(id);if(!d){d=document.createElement('datalist');d.id=id;document.body.appendChild(d);}e.setAttribute('list',id);d.replaceChildren();for(const v of f.options||[]){const o=document.createElement('option');o.value=String(v);d.appendChild(o);}}}\nexport function renderForm(requestJson){",
             StringComparison.Ordinal);
         source = source.Replace(
+            "if(type==='spacer'){const e=document.createElement('div');e.className='xpscript-uiform-spacer';e.style.height='1rem';return e;}",
+            "if(type==='spacer'){const e=document.createElement('div');e.className='xpscript-uiform-spacer';e.style.height='1rem';return e;}if(type==='card'||type==='panel'||type==='scrollview'){const e=document.createElement('div');e.className='xpscript-uiform-container xpscript-uiform-'+type;e.style.padding='0.75rem';e.style.border='1px solid currentColor';e.style.borderRadius='0.5rem';if(type==='scrollview'){e.style.maxHeight='15rem';e.style.overflow='auto';}if(field.label){const h=document.createElement('div');h.textContent=String(field.label);h.style.fontWeight='600';e.appendChild(h);}return e;}",
+            StringComparison.Ordinal);
+        source = source.Replace(
+            "const editors=new Map();",
+            "const editors=new Map();const componentContainers=new Map();",
+            StringComparison.Ordinal);
+        source = source.Replace(
+            "if(type!=='radiogroup'&&type!=='separator'&&type!=='spacer')editor.name=field.name||'';",
+            "if(field.id&&(type==='card'||type==='panel'||type==='scrollview'))componentContainers.set(String(field.id),editor);if(type!=='radiogroup'&&type!=='separator'&&type!=='spacer')editor.name=field.name||'';",
+            StringComparison.Ordinal);
+        source = source.Replace(
+            "form.appendChild(wrap);if(field.schemaValidationError)",
+            "(field.parentId&&componentContainers.get(String(field.parentId))||form).appendChild(wrap);if(field.schemaValidationError)",
+            StringComparison.Ordinal);
+        source = source.Replace(
             "root.appendChild(actions);}return JSON.stringify({result:'Pending',values:{}});}",
             "root.appendChild(actions);}applyLookupOptions(request);return JSON.stringify({result:'Pending',values:{}});}",
             StringComparison.Ordinal);
