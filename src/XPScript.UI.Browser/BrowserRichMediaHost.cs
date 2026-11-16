@@ -50,11 +50,12 @@ internal static partial class BrowserRichMediaHost
                 }
                 else if (type == "CameraPreview")
                 {
-                    using var unavailable = CreateElement("div");
-                    unavailable.SetProperty("className", "xpscript-uiform-camera-unavailable");
-                    unavailable.SetProperty("role", "status");
-                    unavailable.SetProperty("textContent", "Camera preview requires a device camera backend and permission.");
-                    ReplaceElement(existing, unavailable);
+                    using var camera = CreateElement("input");
+                    camera.SetProperty("type", "file");
+                    camera.SetProperty("accept", "image/*");
+                    camera.SetProperty("capture", "environment");
+                    camera.SetProperty("className", "form-control xpscript-uiform-camera-upload");
+                    ReplaceElement(existing, camera);
                 }
                 else
                 {

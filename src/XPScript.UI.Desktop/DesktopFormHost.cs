@@ -268,6 +268,15 @@ public static class DesktopFormHost
                     case ToggleSwitch toggleSwitch: toggleSwitch.IsCheckedChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, toggleSwitch); break;
                     case DatePicker datePicker: datePicker.SelectedDateChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, datePicker); break;
                     case TimePicker timePicker: timePicker.SelectedTimeChanged += (_, _) => TriggerEvent(eventKind + sourceField.Name, sourceField, timePicker); break;
+                    case Button fileButton when sourceField.Type == "CameraPreview":
+                        fileButton.Click += (_, _) =>
+                        {
+                            var path = DesktopDialogHost.ShowOpenFileDialog(JsonSerializer.Serialize(new { title = sourceField.Label.Length == 0 ? "Choose image" : sourceField.Label, filter = "Images|*.png;*.jpg;*.jpeg;*.webp" }));
+                            fileButton.Tag = path;
+                            fileButton.Content = path.Length == 0 ? "Choose image" : path;
+                            TriggerEvent(eventKind + sourceField.Name, sourceField, fileButton);
+                        };
+                        break;
                     case Slider slider: slider.PropertyChanged += (_, e) => { if (e.Property == RangeBase.ValueProperty) TriggerEvent(eventKind + sourceField.Name, sourceField, slider); }; break;
                     case StackPanel radioPanel:
                         if (sourceField.Type == "CheckBoxGroup")
@@ -525,7 +534,7 @@ public static class DesktopFormHost
             "Spacer" => new Border { Height = 16 },
             "Card" or "Panel" => CreatePanelContainer(field),
             "ScrollView" => CreateScrollContainer(),
-            "CameraPreview" => new TextBlock { Text = "Camera preview is unavailable on this desktop backend.", TextWrapping = TextWrapping.Wrap },
+            "CameraPreview" => new Button { Content = field.Label.Length == 0 ? "Choose image" : field.Label, HorizontalAlignment = HorizontalAlignment.Left },
             "WebView" => DesktopWebViewHost.Create(instanceId, field.Name, field.WebViewSource, field.WebViewHtml, field.WebViewUserAgent, field.WebViewBackground),
             _ => new TextBox { Text = value }
         };
@@ -756,6 +765,7 @@ public static class DesktopFormHost
         if (editor is ToggleSwitch toggleSwitch) return toggleSwitch.IsChecked == true ? "true" : string.Empty;
         if (editor is DatePicker datePicker) return datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty;
         if (editor is TimePicker timePicker) return timePicker.SelectedTime?.ToString("hh\\:mm\\:ss", CultureInfo.InvariantCulture) ?? string.Empty;
+        if (editor is Button button && field.Type == "CameraPreview") return button.Tag?.ToString() ?? string.Empty;
         if (editor is ComboBox comboBox) return comboBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is ListBox listBox) return listBox.SelectedItem?.ToString() ?? string.Empty;
         if (editor is StackPanel radioPanel) return radioPanel.Children.OfType<RadioButton>().FirstOrDefault(x => x.IsChecked == true)?.Content?.ToString() ?? string.Empty;
@@ -777,6 +787,7 @@ public static class DesktopFormHost
         if (editor is ToggleSwitch toggleSwitch) return JsonSerializer.SerializeToElement(toggleSwitch.IsChecked == true);
         if (editor is DatePicker datePicker) return JsonSerializer.SerializeToElement(datePicker.SelectedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? string.Empty);
         if (editor is TimePicker timePicker) return JsonSerializer.SerializeToElement(timePicker.SelectedTime?.ToString("hh\\:mm\\:ss", CultureInfo.InvariantCulture) ?? string.Empty);
+        if (editor is Button button && field.Type == "CameraPreview") return JsonSerializer.SerializeToElement(button.Tag?.ToString() ?? string.Empty);
         if (editor is ComboBox comboBox) return JsonSerializer.SerializeToElement(comboBox.SelectedItem?.ToString() ?? string.Empty);
         if (editor is ListBox listBox)
         {

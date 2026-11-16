@@ -991,6 +991,7 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         foreach (var field in _fields)
         {
             var name = System.Net.WebUtility.HtmlEncode(field.Name);
+            var parentId = System.Net.WebUtility.HtmlEncode(field.Parent?.Id ?? string.Empty);
             var value = IsMultiValueType(field.Type) ? string.Empty : System.Net.WebUtility.HtmlEncode(GetFieldValueString(field.Name));
             if (field.Type == "HiddenField")
             {
@@ -1005,7 +1006,9 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
                 + (field.MaxLength.HasValue ? $" maxlength=\"{field.MaxLength.Value}\"" : string.Empty);
             var range = (field.Minimum.HasValue ? $" min=\"{field.Minimum.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}\"" : string.Empty)
                 + (field.Maximum.HasValue ? $" max=\"{field.Maximum.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}\"" : string.Empty);
-            html.Append("<div class=\"xpscript-uiform-field\"").Append(controlStyle).Append(">").Append("<label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
+            html.Append("<div id=\"xps_field_").Append(name).Append("\" class=\"xpscript-uiform-field\"");
+            if (parentId.Length > 0) html.Append(" data-parent-id=\"").Append(parentId).Append("\"");
+            html.Append(controlStyle).Append(">").Append("<label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
             switch (field.Type)
             {
                 case "TextArea": html.Append("<textarea id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(controlStyle).Append(required).Append(length).Append(">").Append(value).Append("</textarea>"); break;
@@ -1023,7 +1026,10 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
                 case "DateTimeField": html.Append("<input type=\"datetime-local\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
                 case "MonthField": html.Append("<input type=\"month\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
                 case "ColorField": html.Append("<input type=\"color\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(">"); break;
-                case "CameraPreview": html.Append("<div class=\"xpscript-uiform-camera-unavailable\" role=\"status\">").Append(System.Net.WebUtility.HtmlEncode(field.Label.Length == 0 ? "Camera preview requires a device camera backend and permission." : field.Label + ": camera preview requires a device camera backend and permission.")).Append("</div>"); break;
+                case "CameraPreview": html.Append("<input type=\"file\" accept=\"image/*\" capture=\"environment\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(">"); break;
+                case "Card":
+                case "Panel": html.Append("<div class=\"xpscript-uiform-container xpscript-uiform-").Append(field.Type.ToLowerInvariant()).Append("\"><div class=\"xpscript-uiform-container-children\"></div></div>"); break;
+                case "ScrollView": html.Append("<div class=\"xpscript-uiform-container xpscript-uiform-scrollview\" style=\"max-height:320px;overflow:auto\"><div class=\"xpscript-uiform-container-children\"></div></div>"); break;
                 case "EmailField": html.Append("<input type=\"email\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
                 case "UrlField": html.Append("<input type=\"url\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append(length).Append(">"); break;
                 case "PasswordField": html.Append("<input type=\"password\" autocomplete=\"new-password\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\"").Append(required).Append(length).Append(">"); break;
@@ -1077,6 +1083,7 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
             }
             html.Append("</div>");
         }
+        html.Append("<script>(function(){for(const child of document.querySelectorAll('[data-parent-id]')){const id=child.dataset.parentId;const parent=document.getElementById('xps_field_'+CSS.escape(id));const target=parent?.querySelector('.xpscript-uiform-container-children');if(target)target.appendChild(child);}})();</script>");
         html.Append("<button type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
         return html.ToString();
     }
