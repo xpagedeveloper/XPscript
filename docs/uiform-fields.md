@@ -20,7 +20,7 @@ On web forms this uses multipart/form-data. A single file is stored in `form.Dat
 }
 ```
 
-The configured per-file maximum is enforced before the value is exposed to the form. The supported maximum configuration is 64 MiB per file. Desktop currently presents FileField as a text/path field. Use the existing desktop file-dialog API when a native picker is required.
+The configured per-file maximum is enforced before the value is exposed to the form. The supported maximum configuration is 64 MiB per file. On web/WASM this is an HTML upload field; on desktop it is a native file-picker button whose value is the selected path. Android remains capability-dependent until the picker result is connected to the generated UI host.
 
 ## MultiSelect
 
