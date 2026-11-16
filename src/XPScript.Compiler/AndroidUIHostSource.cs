@@ -622,7 +622,7 @@ public static class AndroidFormHost
                     "TextArea" => new TextBox { AcceptsReturn = true, MinHeight = 120, CornerRadius = new CornerRadius(fieldCornerRadius) },
                     "RichTextField" => new TextBox { AcceptsReturn = true, MinHeight = 120, CornerRadius = new CornerRadius(fieldCornerRadius) },
                     "PasswordField" => new TextBox { PasswordChar = '•', CornerRadius = new CornerRadius(fieldCornerRadius) },
-                    "NumberField" or "DecimalField" or "CurrencyField" => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) },
+                    "NumberField" or "DecimalField" or "CurrencyField" => CreateNumberField(field),
                     "EmailField" or "UrlField" or "TelField" => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) },
                     "WeekField" => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) },
                     "Select" => new ComboBox { ItemsSource = options },
@@ -694,6 +694,8 @@ public static class AndroidFormHost
                     monthEditor.YearEditor.ValueChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(monthEditor) ?? string.Empty);
                     monthEditor.MonthEditor.SelectionChanged += (_, _) => DispatchFieldChange(name, GetTemporalEditorValue(monthEditor) ?? string.Empty);
                 }
+                if (editor is NumericUpDown numericEditor)
+                    numericEditor.ValueChanged += (_, _) => DispatchFieldChange(name, numericEditor.Value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty);
                 if (editor is AndroidColorFieldEditor colorField)
                     colorField.ValueEditor.TextChanged += (_, _) => DispatchFieldChange(name, colorField.ValueEditor.Text ?? string.Empty);
                 if (editor is ComboBox comboBox)
@@ -1055,6 +1057,23 @@ public static class AndroidFormHost
         if (field.TryGetProperty("value", out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var current))
             slider.Value = Math.Clamp(current, minimum, maximum);
         return slider;
+    }
+
+    private static Control CreateNumberField(JsonElement field)
+    {
+        var minimum = ReadNumber(field, "minimum", -double.MaxValue);
+        var maximum = ReadNumber(field, "maximum", double.MaxValue);
+        if (maximum <= minimum) maximum = minimum + 1;
+        var editor = new NumericUpDown
+        {
+            Minimum = (decimal)Math.Max(minimum, (double)decimal.MinValue),
+            Maximum = (decimal)Math.Min(maximum, (double)decimal.MaxValue),
+            Increment = (decimal)Math.Max(ReadNumber(field, "step", 1), double.Epsilon),
+            CornerRadius = new CornerRadius(field.TryGetProperty("cornerRadius", out var radius) && radius.TryGetDouble(out var value) ? value : 0)
+        };
+        if (field.TryGetProperty("value", out var currentValue) && currentValue.TryGetDecimal(out var current))
+            editor.Value = Math.Clamp(current, editor.Minimum, editor.Maximum);
+        return editor;
     }
 
     private static double ReadNumber(JsonElement element, string propertyName, double fallback)
@@ -1523,6 +1542,8 @@ public static class AndroidFormHost
         var text = value.ValueKind == JsonValueKind.String ? value.GetString() ?? string.Empty : value.ToString();
         if (SetTemporalEditorValue(editor, text)) return;
         if (editor is TextBox textBox) textBox.Text = text;
+        else if (editor is NumericUpDown numericEditor && decimal.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var numericValue))
+            numericEditor.Value = Math.Clamp(numericValue, numericEditor.Minimum, numericEditor.Maximum);
         else if (editor is Avalonia.Controls.CheckBox checkBox)
             checkBox.IsChecked = value.ValueKind == JsonValueKind.True || text.Equals("true", StringComparison.OrdinalIgnoreCase);
         else if (editor is Avalonia.Controls.ToggleSwitch toggleSwitch)
@@ -1562,6 +1583,7 @@ public static class AndroidFormHost
         return editor switch
         {
         TextBox textBox => textBox.Text ?? string.Empty,
+        NumericUpDown numericEditor => numericEditor.Value,
         Avalonia.Controls.CheckBox checkBox => checkBox.IsChecked == true,
         Avalonia.Controls.ToggleSwitch toggleSwitch => toggleSwitch.IsChecked == true,
         ComboBox comboBox => comboBox.IsEditable ? comboBox.Text ?? string.Empty : comboBox.SelectedItem?.ToString() ?? string.Empty,
