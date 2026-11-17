@@ -122,16 +122,16 @@ jobs:
       - name: Run browser-WASM and Notes server-boundary smoke test
         shell: pwsh
         run: |
+          $framework = 'net${{ matrix.framework }}.0'
+          $env:XPSCRIPT_TARGET_FRAMEWORK = $framework
           $astOutput = Join-Path $env:RUNNER_TEMP 'browser-wasm-ast-attachments'
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/browser-wasm-attachment-download.xps --output $astOutput --platform browser-wasm --runtime=false --debug
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/browser-wasm-attachment-download.xps --output $astOutput --platform browser-wasm --target-framework $framework --runtime=false --debug
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $astOutput 'Generated.dll'))) { throw 'Browser-WASM AST XPHttpDbSupabase.Attachments compilation failed.' }
           $controlsOutput = Join-Path $env:RUNNER_TEMP 'browser-wasm-uiform-controls'
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/android-uiform-controls-api.xps --output $controlsOutput --platform browser-wasm --runtime=false --debug
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/android-uiform-controls-api.xps --output $controlsOutput --platform browser-wasm --target-framework $framework --runtime=false --debug
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $controlsOutput 'Generated.dll'))) { throw 'Browser-WASM AST UIForm controls compilation failed.' }
           dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
           if ($LASTEXITCODE -ne 0) { throw 'Browser-WASM or Notes server-boundary smoke test failed.' }
-          $framework = 'net${{ matrix.framework }}.0'
-          $env:XPSCRIPT_TARGET_FRAMEWORK = $framework
           dotnet restore tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj --force-evaluate -p:TargetFramework=$framework
           dotnet build tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-restore -p:TargetFramework=$framework -p:UseSharedCompilation=false
           & (Join-Path $PWD "tests/WebBrowserWasmServerSideBrowserSmoke/bin/Release/$framework/playwright.ps1") install chromium
