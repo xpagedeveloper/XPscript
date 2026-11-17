@@ -4,6 +4,8 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $source = Join-Path $PSScriptRoot 'string-number-array-500.xps'
 $resultRoot = Join-Path $root 'out/cli-compiler-benchmark'
 New-Item -ItemType Directory -Force -Path $resultRoot | Out-Null
+$env:XPSCRIPT_TEMP_ROOT = Join-Path $resultRoot 'temp'
+New-Item -ItemType Directory -Force -Path $env:XPSCRIPT_TEMP_ROOT | Out-Null
 
 $lines = [System.Collections.Generic.List[string]]::new()
 $lines.Add('Function AddNumber(ByVal value As Long) As Long')
@@ -36,13 +38,13 @@ if ($lines.Count -ne 500) { throw "Benchmark source has $($lines.Count) lines, e
 Set-Content -LiteralPath $source -Value $lines -Encoding utf8
 Write-Host "CLI_BENCHMARK_SOURCE_LINES=$($lines.Count)"
 
-function Invoke-Compile([string] $mode, [string] $output) {
+function Invoke-AstCompile([string] $output) {
     $timer = [System.Diagnostics.Stopwatch]::StartNew()
-    $outputText = @(& dotnet $compiler $mode $source --output $output --runtime=false --single-file=false --rid win-x64 --security=off 2>&1)
+    $outputText = @(& dotnet $compiler ast-compile $source --output $output --runtime=false --single-file=false --rid win-x64 --security=off 2>&1)
     $timer.Stop()
     $exitCode = $LASTEXITCODE
     $outputText | ForEach-Object { Write-Host $_ }
-    if ($exitCode -ne 0) { throw "$mode failed with exit code $exitCode" }
+    if ($exitCode -ne 0) { throw "ast-compile failed with exit code $exitCode" }
     $outputItem = Get-Item -LiteralPath $output -ErrorAction SilentlyContinue
     $artifact = if ($outputItem -and -not $outputItem.PSIsContainer) {
         $outputItem
@@ -52,20 +54,18 @@ function Invoke-Compile([string] $mode, [string] $output) {
             Get-ChildItem -LiteralPath $output -Recurse -File -Filter '*.exe' | Select-Object -First 1
         }
     }
-    if ($null -eq $artifact) { throw "$mode produced no executable artifact." }
+    if ($null -eq $artifact) { throw "ast-compile produced no executable artifact." }
     $totalBytes = if ($outputItem -and $outputItem.PSIsContainer) {
         (Get-ChildItem -LiteralPath $output -Recurse -File | Measure-Object -Property Length -Sum).Sum
     } else { $artifact.Length }
-    [pscustomobject]@{ Mode = $mode; Seconds = [math]::Round($timer.Elapsed.TotalSeconds, 3); Bytes = $artifact.Length; TotalBytes = $totalBytes; Artifact = $artifact.FullName }
+    [pscustomobject]@{ Mode = 'ast-compile'; Seconds = [math]::Round($timer.Elapsed.TotalSeconds, 3); Bytes = $artifact.Length; TotalBytes = $totalBytes; Artifact = $artifact.FullName }
 }
 
-$legacy = Invoke-Compile 'legacy-compile' (Join-Path $resultRoot 'legacy')
-$ast = Invoke-Compile 'ast-compile' (Join-Path $resultRoot 'ast')
-$legacy | Format-List
+$ast = Invoke-AstCompile (Join-Path $resultRoot 'ast')
+$astCached = Invoke-AstCompile (Join-Path $resultRoot 'ast-second')
 $ast | Format-List
-Write-Host "CLI_BENCHMARK_LEGACY_SECONDS=$($legacy.Seconds)"
 Write-Host "CLI_BENCHMARK_AST_SECONDS=$($ast.Seconds)"
-Write-Host "CLI_BENCHMARK_LEGACY_BYTES=$($legacy.Bytes)"
 Write-Host "CLI_BENCHMARK_AST_BYTES=$($ast.Bytes)"
-Write-Host "CLI_BENCHMARK_LEGACY_TOTAL_BYTES=$($legacy.TotalBytes)"
 Write-Host "CLI_BENCHMARK_AST_TOTAL_BYTES=$($ast.TotalBytes)"
+Write-Host "CLI_BENCHMARK_AST_SECOND_SECONDS=$($astCached.Seconds)"
+Write-Host "CLI_BENCHMARK_AST_SECOND_BYTES=$($astCached.Bytes)"
