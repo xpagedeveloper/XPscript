@@ -4,7 +4,8 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, test-openapi-import-class-skeletons]
+    # Temporary AST migration verification trigger; remove after native gates pass.
+    branches: [main, test-openapi-import-class-skeletons, investigate-ast-compiler]
   workflow_dispatch:
 
 permissions:
@@ -92,7 +93,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         framework: ['10', '11']
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
