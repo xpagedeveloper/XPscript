@@ -337,7 +337,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
     {
         var template = BrowserRuntimeConstant("IndexHtml");
         return template
-            .Replace("__XPSCRIPT_BASE_HREF__", "./", StringComparison.Ordinal)
+            .Replace("__XPSCRIPT_BASE_HREF__", Uri.EscapeDataString(Path.GetFileName(sourcePath)) + "/", StringComparison.Ordinal)
             .Replace("__XPSCRIPT_BOOTSTRAP__", UIFormAppAssets.UsesUIForm(sourcePath) ? "<link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css\" rel=\"stylesheet\">" : string.Empty, StringComparison.Ordinal);
     }
 
