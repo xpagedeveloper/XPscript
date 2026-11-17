@@ -95,6 +95,7 @@ internal sealed class AdvancedXPScriptTranspiler
 
     public string Transpile(string source, string sourceName)
     {
+        LegacyCompilationGuard.Reject(sourceName);
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         AnalyzeSource(lines);
         var entryPoint = FindEntryPoint(lines);

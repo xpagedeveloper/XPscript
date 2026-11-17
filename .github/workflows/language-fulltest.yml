@@ -70,9 +70,14 @@ jobs:
         shell: pwsh
         run: dotnet run --project ./tests/WebIisPackageProbe/WebIisPackageProbe.csproj -c Release
       - name: Verify CLI command-line compatibility
+        # Legacy guard coverage remains active while parity suites migrate.
         if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.webiis_only || inputs.ast_lexer_only)) }}
         shell: pwsh
         run: ./tests/cli-compatibility/run-cli-compatibility.ps1
+      - name: Verify disabled legacy compiler and generated-code guards
+        shell: pwsh
+        timeout-minutes: 5
+        run: dotnet run --project tests/ast-compile-probe -c Release -- --legacy-guards-only
       - name: Verify MCP protocol, concurrent requests and AST compilation
         if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.webiis_only || inputs.ast_lexer_only)) }}
         timeout-minutes: 10

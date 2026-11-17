@@ -12,7 +12,6 @@ internal static class AstObjectSupportRegistry
     public enum CompilationRoute
     {
         Ast,
-        LegacyFallback,
         Unsupported
     }
 
@@ -142,7 +141,7 @@ internal static class AstObjectSupportRegistry
         return names
             .Select(name => AstObjectNames.Contains(name) || NotesRuntimeTypes.ContainsKey(name)
                 ? new ObjectDefinition(name, CompilationRoute.Ast, null)
-                : new ObjectDefinition(name, CompilationRoute.LegacyFallback, null))
+                : new ObjectDefinition(name, CompilationRoute.Unsupported, null))
             .ToArray();
     }
 

@@ -5,6 +5,41 @@ using XPScript.Compiler.Binding;
 using XPScript.Compiler.Emission;
 using XPScript.Compiler.Syntax;
 
+var runtimeGuard = typeof(DeclarationParser).Assembly.GetType("XPScript.Compiler.AstRuntimeDependencyGuard", true)!.GetMethod("Validate")!;
+runtimeGuard.Invoke(null, ["// XPScriptTranspiler\nclass Program { string text = \"NotesSAXParser\"; }", "guard.xps"]);
+foreach (var forbidden in new[] { "XPScriptTranspiler", "AdvancedXPScriptTranspiler", "CoreCompatibilityTranspiler", "ExtendedCompatibilityTranspiler", "NotesSAXParser", "NotesSAXAttributeList", "NotesSAXException" })
+{
+    try
+    {
+        runtimeGuard.Invoke(null, [$"class Program {{ {forbidden} value; }}", "guard.xps"]);
+        throw new Exception("Legacy code guard accepted " + forbidden);
+    }
+    catch (TargetInvocationException ex) when (ex.InnerException is XPScript.Compiler.CompilerException error && error.Category == "generated-legacy-code") { }
+}
+try
+{
+    new XPScript.Compiler.XPScriptTranspiler().Transpile("Sub Main()\nEnd Sub", "legacy-disabled.xps");
+    throw new Exception("Legacy compiler remained enabled.");
+}
+catch (XPScript.Compiler.CompilerException ex) when (ex.Message.Contains("Legacy compilation is disabled")) { }
+Console.WriteLine("AST_LEGACY_DISABLED_GUARDS_OK");
+if (args.Contains("--legacy-guards-only")) return;
+
+{
+    var registry = typeof(DeclarationParser).Assembly.GetType("XPScript.Compiler.AstObjectSupportRegistry", throwOnError: true)!;
+    var objects = (System.Collections.IEnumerable)registry.GetField("Objects")!.GetValue(null)!;
+    foreach (var item in objects)
+    {
+        var type = item.GetType();
+        var name = type.GetProperty("Name")!.GetValue(item);
+        var route = type.GetProperty("Route")!.GetValue(item)!.ToString();
+        if (route != "Ast") throw new InvalidOperationException($"Registered object lacks AST support: {name} ({route}).");
+        if (args.Contains("--audit-object-routes")) Console.WriteLine($"AST_OBJECT_ROUTE={name}:{route}");
+    }
+    Console.WriteLine("AST_OBJECT_ROUTES_OK");
+    if (args.Contains("--audit-object-routes")) return;
+}
+
 const string source = "Sub Main()\nDim message As String\nmessage = \"AST_XPS_COMPILE_OK\"\nPrint message\nExit Sub\nEnd Sub\n";
 var declaration = new DeclarationParser(source).ParseDeclaration();
 if (declaration is not SubDeclarationSyntax sub || declaration is null)

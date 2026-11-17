@@ -20,6 +20,17 @@ internal static class AstRuntimeDependencyGuard
 
     public static void Validate(string generated, string sourcePath)
     {
+        var forbidden = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "XPScriptTranspiler", "AdvancedXPScriptTranspiler", "CoreCompatibilityTranspiler",
+            "ExtendedCompatibilityTranspiler", "NotesSAXParser", "NotesSAXAttributeList", "NotesSAXException"
+        };
+        var legacyToken = Microsoft.CodeAnalysis.CSharp.CSharpSyntaxTree.ParseText(generated)
+            .GetRoot().DescendantTokens().FirstOrDefault(token => forbidden.Contains(token.ValueText) &&
+                token.RawKind == (int)Microsoft.CodeAnalysis.CSharp.SyntaxKind.IdentifierToken);
+        if (legacyToken.RawKind != 0)
+            throw new CompilerException($"AST generated code contains forbidden legacy identifier '{legacyToken.ValueText}' (source: {sourcePath}).",
+                "XPS1012", "generated-legacy-code");
         foreach (var (typeName, providerMarker) in Providers)
         {
             if (!Regex.IsMatch(generated, $@"\b{Regex.Escape(typeName)}\b") ||

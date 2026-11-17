@@ -92,6 +92,7 @@ public sealed partial class XPScriptTranspiler
 
     private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
+        LegacyCompilationGuard.Reject(sourceName);
         // Detect the object in code, not in string literals or comments.  A
         // message such as "NO-XPIMAGE=OK" must not pull the Magick-backed
         // XPImage array/runtime types into an otherwise image-free program.

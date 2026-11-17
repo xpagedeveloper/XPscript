@@ -218,15 +218,9 @@ public static class AstCompiler
             AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonValidationResult");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
-            if (definition!.Route == AstObjectSupportRegistry.CompilationRoute.LegacyFallback)
-                return await CompileWithLegacyFallbackAsync(sourcePath, outputDirectory, cancellationToken).ConfigureAwait(false);
-
-            RejectUnsupported(sourcePath, source, $@"(?i)\b{Regex.Escape(definition.Name)}\b", definition.Message ?? "The XP object is not implemented by the AST compiler.");
+            RejectUnsupported(sourcePath, source, $@"(?i)\b{Regex.Escape(definition!.Name)}\b", definition.Message ?? "The XP object is not implemented by the AST compiler.");
         }
-        // Acquire the AST output lock only after legacy-fallback routing. The
-        // legacy compiler acquires the same directory lock for its own build;
-        // holding it here would make an intentional fallback fail as a false
-        // concurrent compilation.
+        // Unsupported objects are diagnosed before acquiring the output lock.
         using var outputLock = CompilerDirectoryLock.Acquire(outputDirectory);
         var optionBase = 0;
         var optionBaseMatch = Regex.Match(source, @"(?im)^\s*Option\s+Base\s+(?<base>[01])\s*(?:\r?$)");
@@ -1846,20 +1840,6 @@ internal static class Program
             outputResult = await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
         new NativeDependencyPackager(runtimeIdentifier ?? CompilerDriver.CurrentRuntimeIdentifier()).Stage(sourcePath, outputDirectory, nativeDependencies);
         return outputResult;
-    }
-
-    private static async Task<string> CompileWithLegacyFallbackAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        var outputPath = Path.Combine(outputDirectory, OperatingSystem.IsWindows() ? "Generated.exe" : "Generated");
-        var result = await new CompilerDriver().CompileWithResultAsync(
-            sourcePath,
-            outputPath,
-            selfContained: false,
-            CompilerDriver.CurrentRuntimeIdentifier()).ConfigureAwait(false);
-        if (!result.Success)
-            throw new CompilerException("Legacy compilation failed.", result.Errors);
-        return outputPath;
     }
 
     private static string AstArrayRuntimeCode()

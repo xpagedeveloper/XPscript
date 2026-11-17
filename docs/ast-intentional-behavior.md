@@ -43,3 +43,15 @@ AST image ownership also covers exception exits and evaluates replacements befor
 recycling old images. The legacy image preprocessor's end-of-procedure cleanup
 does not guarantee cleanup on thrown errors. `xpimage-runtime.xps` tests AST cleanup
 independently; `xpimage-parity.xps` compares the shared image API and normal exits.
+# Legacy compiler disabled
+
+Legacy transpilation is disabled, including explicit legacy commands and calls
+from web/WASM paths that still reach a legacy transpiler. Such calls fail with
+XPS1012 rather than compiling through a fallback. These failures identify paths
+that still need migration; cross-platform compatibility is not yet proven.
+
+The final AST-generated C# is checked for legacy compiler and removed SAX type
+identifiers before backend compilation. Comments and string literals are ignored.
+Shared runtime implementations remain permitted. Language FullTest exercises the
+disabled-transpiler and generated-code checks through `--legacy-guards-only`.
+
