@@ -1,0 +1,90 @@
+Option Declare
+
+Sub Main()
+    Dim doc As New XPXmlDocument
+    Dim root As XPXmlElement
+    Dim node As XPXmlNode
+    Dim clone As XPXmlNode
+    Dim attr As XPXmlAttribute
+    Dim attrs As XPXmlAttributeCollection
+    Dim nodes As XPXmlNodeCollection
+    Dim validation As XPXmlValidationResult
+
+    doc.Indent = False
+    doc.OmitXmlDeclaration = True
+    If doc.HasRoot Then Error 9940, "empty document has a root"
+    Set root = doc.AddRoot("root")
+    If doc.DocumentElement.Name <> "root" Then Error 9941, "DocumentElement failed"
+    Call root.Rename("renamed")
+    If root.Name <> "renamed" Then Error 9942, "Rename failed"
+    Call root.SetAttribute("id", "1")
+    If Not root.HasAttribute("id") Or root.AttributeCount <> 1 Then Error 9943, "attribute helpers failed"
+    Set attrs = root.Attributes
+    If attrs.Count <> 1 Or Not attrs.Has("id") Then Error 9944, "attribute collection failed"
+    Set attr = attrs.First
+    If attr.Name <> "id" Or attr.Parent.Name <> "renamed" Or attr.OwnerElement.Name <> "renamed" Then Error 9945, "attribute navigation failed"
+    attr.Value = "2"
+    If attr.Stringify() <> "id=\"2\"" Then Error 9946, "attribute stringify failed"
+
+    Dim child As XPXmlElement
+    Set child = root.AddElement("child", "one")
+    Set child = root.PrependElement("first", "zero")
+    Call root.AddText("tail")
+    Call root.AddCData("cdata")
+    Call root.AddComment("comment")
+    If root.Count <> 2 Or root.ElementCount <> 2 Then Error 9947, "element counts failed"
+    If root.Elements.First.Name <> "first" Or root.Elements.Last.Name <> "child" Then Error 9948, "element collection failed"
+    If root.GetElement("child").Value <> "one" Then Error 9949, "GetElement failed"
+    If root.GetElements("child").Count <> 1 Then Error 9950, "GetElements failed"
+    If root.GetDescendants("child").Count <> 1 Then Error 9951, "GetDescendants failed"
+    If root.GetAttributeNode("id").Value <> "2" Then Error 9952, "GetAttributeNode failed"
+
+    Set node = root.FirstChild
+    If node.NodeType <> "Element" Or node.Name <> "first" Or node.Parent.Name <> "renamed" Then Error 9953, "node properties failed"
+    If node.OwnerDocument.DocumentElement.Name <> "renamed" Or Not node.HasParent Or Not node.HasChildNodes Then Error 9954, "node ownership failed"
+    If node.ChildCount <> 1 Or node.FirstChild.Value <> "zero" Or node.LastChild.Value <> "zero" Then Error 9955, "child navigation failed"
+    If node.NextSibling.Name <> "child" Or node.NextSibling.PreviousSibling.Name <> "first" Then Error 9956, "sibling navigation failed"
+    If Len(node.InnerText) = 0 Or Len(node.OuterXml) = 0 Or Len(node.Stringify()) = 0 Then Error 9957, "node serialization failed"
+    Set clone = node.Clone()
+    If clone.HasParent Then Error 9958, "clone attached"
+    Set clone = node.InsertAfter(clone)
+    Call node.InsertBefore(clone)
+    Set clone = clone.ReplaceWith(node.Clone())
+    If Not clone.Remove() Then Error 9959, "node remove failed"
+    If clone.Delete() Then Error 9960, "detached node delete failed"
+
+    Set nodes = doc.ChildNodes
+    If nodes.Count <> 1 Or nodes.First.Name <> "renamed" Or nodes.Last.Name <> "renamed" Then Error 9961, "document nodes failed"
+    Set node = doc.SelectSingleNode("/renamed/child")
+    If node Is Nothing Then Error 9962, "document XPath failed"
+    If doc.SelectNodes("/renamed/child").Count <> 1 Then Error 9963, "document XPath collection failed"
+    If root.SelectSingleNode("child").Name <> "child" Or root.SelectNodes("child").Count <> 1 Then Error 9964, "element XPath failed"
+
+    If Not root.RemoveAttribute("id") Or root.RemoveAttribute("id") Then Error 9965, "RemoveAttribute failed"
+    Call root.SetAttribute("keep", "yes")
+    Call root.RemoveChildren()
+    If root.HasChildNodes Then Error 9966, "RemoveChildren failed"
+    Call root.AddElement("again", "value")
+    Call root.RemoveAll()
+    If root.AttributeCount <> 0 Or root.HasChildNodes Then Error 9967, "RemoveAll failed"
+    Call doc.SetRoot(doc.CreateElement("replacement", "ok"))
+    If doc.Root.Value <> "ok" Then Error 9968, "SetRoot failed"
+    If Not doc.RemoveRoot() Or doc.HasRoot Then Error 9969, "RemoveRoot failed"
+
+    Call doc.LoadXml("<empty />")
+    Set validation = doc.ValidateDTD("<!ELEMENT empty EMPTY>")
+    If Not validation.Valid Or validation.Errors.Count <> 0 Then Error 9970, "DTD validation failed"
+    If Not doc.IsValidDTD("<!ELEMENT empty EMPTY>") Then Error 9971, "IsValidDTD failed"
+    Call doc.LoadXml("<loaded><item /></loaded>")
+    Dim utf8WithoutBom As Variant
+    Dim utf8WithBom As Variant
+    Set doc = XmlParse("<encoded>å</encoded>")
+    utf8WithoutBom = doc.ToBytes("utf-8", False)
+    utf8WithBom = doc.ToBytes("utf-8", True)
+    If UBound(utf8WithBom) <= UBound(utf8WithoutBom) Then Error 9975, "UTF-8 BOM output missing"
+    If XmlParse(utf8WithoutBom).Root.Value <> "å" Or XmlParse(utf8WithBom).Root.Value <> "å" Then Error 9976, "UTF-8 output roundtrip failed"
+    If UBound(doc.ToBytes("utf-16", True)) <= UBound(utf8WithoutBom) Then Error 9977, "UTF-16 output missing"
+    Call doc.Clear()
+    If doc.HasRoot Or doc.ChildNodes.Count <> 0 Then Error 9972, "Clear failed"
+    Print "XML_FULL_SURFACE_AST_OK"
+End Sub

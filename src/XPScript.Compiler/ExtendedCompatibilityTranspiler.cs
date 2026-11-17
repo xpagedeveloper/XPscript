@@ -5,7 +5,6 @@ namespace XPScript.Compiler;
 
 internal sealed class ExtendedCompatibilityTranspiler
 {
-    private static readonly string[] SaxTypes = ["NotesSAXParser", "NotesSAXAttributeList", "NotesSAXException"];
     private static readonly string[] JsonHttpTypes = ["NotesHTTPRequest", "XPJSONNavigator", "XPJSONObject", "XPJSONArray", "XPJSONElement"];
     private static readonly string[] ExtendedFunctions =
     [
@@ -63,21 +62,6 @@ internal sealed class ExtendedCompatibilityTranspiler
 
             DiscoverCompatibilityVariables(line, compatibilityVariables);
 
-            var dimNewSax = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+NotesSAXParser\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
-            if (dimNewSax.Success)
-            {
-                output.Add(indent + $"Dim {dimNewSax.Groups[1].Value} As Variant");
-                output.Add(indent + $"{dimNewSax.Groups[1].Value} = LSSaxRuntime.CreateParser({dimNewSax.Groups[2].Value})");
-                continue;
-            }
-
-            var setNewSax = Regex.Match(line, @"^Set\s+([A-Za-z_]\w*)\s*=\s*New\s+NotesSAXParser\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
-            if (setNewSax.Success)
-            {
-                output.Add(indent + $"{setNewSax.Groups[1].Value} = LSSaxRuntime.CreateParser({setNewSax.Groups[2].Value})");
-                continue;
-            }
-
             var dimNewCompat = Regex.Match(line, @"^Dim\s+([A-Za-z_]\w*)\s+As\s+New\s+(NotesHTTPRequest|XPJSONNavigator|XPJSONObject|XPJSONArray|XPJSONElement)\s*(?:\((.*)\))?\s*$", RegexOptions.IgnoreCase);
             if (dimNewCompat.Success)
             {
@@ -125,35 +109,6 @@ internal sealed class ExtendedCompatibilityTranspiler
             if (compatibilityStatement is not null)
             {
                 output.Add(indent + compatibilityStatement);
-                continue;
-            }
-
-            var onEventCall = Regex.Match(line, @"^On\s+Event\s+([A-Za-z_]\w*)\s+From\s+(.+?)\s+Call\s+([A-Za-z_]\w*)\s*$", RegexOptions.IgnoreCase);
-            if (onEventCall.Success)
-            {
-                output.Add(indent + $"Call LSSaxRuntime.Bind({onEventCall.Groups[2].Value}, \"{onEventCall.Groups[1].Value}\", \"{onEventCall.Groups[3].Value}\")");
-                continue;
-            }
-
-            var onEventRemove = Regex.Match(line, @"^On\s+Event\s+([A-Za-z_]\w*)\s+From\s+(.+?)\s+Remove(?:\s+([A-Za-z_]\w*))?\s*$", RegexOptions.IgnoreCase);
-            if (onEventRemove.Success)
-            {
-                var handler = string.IsNullOrWhiteSpace(onEventRemove.Groups[3].Value) ? "Nothing" : $"\"{onEventRemove.Groups[3].Value}\"";
-                output.Add(indent + $"Call LSSaxRuntime.Remove({onEventRemove.Groups[2].Value}, \"{onEventRemove.Groups[1].Value}\", {handler})");
-                continue;
-            }
-
-            var saxNoArgs = Regex.Match(line, @"^([A-Za-z_]\w*)\.(Process|Parse)\s*$", RegexOptions.IgnoreCase);
-            if (saxNoArgs.Success)
-            {
-                output.Add(indent + $"Call {saxNoArgs.Groups[1].Value}.{saxNoArgs.Groups[2].Value}()");
-                continue;
-            }
-
-            var saxStatementArgs = Regex.Match(line, @"^([A-Za-z_]\w*)\.(Parse|SetInput|SetOutput|Output)\s+(.+)$", RegexOptions.IgnoreCase);
-            if (saxStatementArgs.Success && !saxStatementArgs.Groups[3].Value.TrimStart().StartsWith("(", StringComparison.Ordinal))
-            {
-                output.Add(indent + $"Call {saxStatementArgs.Groups[1].Value}.{saxStatementArgs.Groups[2].Value}({saxStatementArgs.Groups[3].Value})");
                 continue;
             }
 

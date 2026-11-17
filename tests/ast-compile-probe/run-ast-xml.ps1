@@ -4,7 +4,7 @@ $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc
 $output = Join-Path $root ('out/ast-cli/xml-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 # Keep the smallest discovered Parent/With failures first.
-foreach ($fixture in @('xml-parent', 'xml-with-call', 'xml-runtime', 'xml-reference', 'xml-security', 'xml-parity', 'xml-unused', 'xml-escape-only')) {
+foreach ($fixture in @('xml-parent', 'xml-with-call', 'xml-runtime', 'xml-reference', 'xml-security', 'xml-parity', 'xml-full-surface', 'xml-charset', 'xml-unused', 'xml-escape-only')) {
     $directory = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $directory
     if ($LASTEXITCODE -ne 0) { throw "AST $fixture compilation failed." }
@@ -16,6 +16,8 @@ foreach ($fixture in @('xml-parent', 'xml-with-call', 'xml-runtime', 'xml-refere
         'xml-reference' { 'XML_REFERENCE_OK' }
         'xml-security' { "Invalid XML input.`nInvalid XML input.`nInvalid XML input.`nXML input exceeds the 8 MiB parse limit.`nExternal DTD identifiers and external entities are not supported.`nDTD input exceeds the 1 MiB limit.`nXML operation requires an element node.`nXML_SECURITY_OK" }
         'xml-parity' { "root`nÅsa & Anna`n43`nFalse`n<root id=`"43`"><child>Åsa &amp; Anna</child></root>`nreplaced`n5 &lt; 10 &amp; 20 &gt; 10`nXML_PARITY_OK" }
+        'xml-full-surface' { 'XML_FULL_SURFACE_AST_OK' }
+        'xml-charset' { 'XML_CHARSET_AST_OK' }
         'xml-unused' { 'XPXmlDocument XmlParse XmlEscape' }
         'xml-escape-only' { '&lt;&amp;&gt;' }
     }

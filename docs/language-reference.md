@@ -261,7 +261,7 @@ See [Date and time](date-time.md) for Date object extensions.
 | `InputBox` | `InputBox(prompt [, title [, default]])` | prompt and optional UI text/default. | Reads interactive text input. | [hello.xps](../samples/hello.xps) |
 | `Pause` | `Pause [prompt]` | optional prompt. | Waits for console input. | [textio-console.xps](../samples/textio-console.xps) |
 | `Environ` | `Environ(name)` | environment variable name. | Reads environment variable. | [http-client.xps](../demo/http/http-client.xps) |
-| `Sleep` | `Sleep milliseconds` | milliseconds. | Suspends execution. | [runtime-sax.xps](../samples/runtime-sax.xps) |
+| `Sleep` | `Sleep milliseconds` | milliseconds. | Suspends execution. | [native-xml-regression.xps](../samples/native-xml-regression.xps) |
 | `Platform` | `Platform()` | none | Returns stable platform name. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `Shell` | `Shell(command [, windowStyle])` | command and optional style. | Starts external process using platform-safe argument handling. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `ShellId` | `ShellId(program [, windowStyle])` | program and optional style. | Starts a program and returns its task identifier. | [platform-shell.xps](../samples/platform-shell.xps) |

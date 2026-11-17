@@ -184,6 +184,11 @@ public static class AstCompiler
         if (usesNetworkTools)
             source = new NetworkToolsObjectPreprocessor().Transform(source);
         var fullSource = source;
+        var removedSaxCode = AstObjectSupportRegistry.RemoveStringsAndComments(fullSource);
+        if (Regex.IsMatch(removedSaxCode, @"(?i)\b(?:NotesSAXParser|NotesSAXAttributeList|NotesSAXException)\b"))
+            RejectUnsupported(sourcePath, removedSaxCode,
+                @"(?i)\b(?:NotesSAXParser|NotesSAXAttributeList|NotesSAXException)\b",
+                "NotesSAXParser and its SAX support have been removed. Use XPXmlDocument and XPXmlNode instead.");
         if (runtimeIdentifier?.StartsWith("android-", StringComparison.OrdinalIgnoreCase) == true &&
             Regex.IsMatch(fullSource, @"(?i)\bXPImage\b"))
         {

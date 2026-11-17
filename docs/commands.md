@@ -144,7 +144,7 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `Input` | `Input [prompt,] variable` | prompt, variable | Reads console input. | [textio-console.xps](../samples/textio-console.xps) |
 | `Pause` | `Pause [prompt]` | optional prompt | Waits for console input. | [textio-console.xps](../samples/textio-console.xps) |
 | `Environ` | `Environ(name)` | environment variable name | Reads an environment variable. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
-| `Sleep` | `Sleep milliseconds` | milliseconds | Suspends execution. | [runtime-sax.xps](../samples/runtime-sax.xps) |
+| `Sleep` | `Sleep milliseconds` | milliseconds | Suspends execution. | [native-xml-regression.xps](../samples/native-xml-regression.xps) |
 | `Platform` | `Platform()` | none | Returns the current platform name. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `Shell` | `Shell(command [, windowStyle])` | command, optional style | Starts an external process. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `ShellArgs` | `ShellArgs(executable, arguments [, windowStyle])` | executable, one-dimensional argument array/list, optional style | Starts a process without waiting; structured arguments avoid command-string re-parsing. | [shell-structured-arguments.xps](../samples/shell-structured-arguments.xps) |

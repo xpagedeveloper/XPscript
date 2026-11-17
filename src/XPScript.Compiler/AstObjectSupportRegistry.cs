@@ -50,11 +50,6 @@ internal static class AstObjectSupportRegistry
         ,"XPDBSQLite", "XPDbMySql", "XPDbMsSql", "XPDBMsSQL", "XPDbSupabase", "XPSupabaseDB", "XPHttpDbSupabase", "XPHttpDbDominoRest", "XPShellResult", "XPPathValue", "XPFileInfoValue"
     };
 
-    private static readonly IReadOnlySet<string> LegacyObjectNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "NotesSAXParser", "NotesSAXAttributeList", "NotesSAXException",
-    };
-
     // Generated Notes runtime names deliberately retain the public type's spelling.
     // One definition supplies class-method capability and native emission together.
     private static readonly IReadOnlyDictionary<string, string> NotesRuntimeTypes = new[]
@@ -139,7 +134,6 @@ internal static class AstObjectSupportRegistry
         var names = CompilerSymbolCatalog.All
             .Where(symbol => symbol.Kind.Equals("class", StringComparison.OrdinalIgnoreCase))
             .Select(symbol => symbol.Name)
-            .Concat(LegacyObjectNames)
             .Concat(NotesRuntimeTypes.Keys)
             .Concat(["XPImage"])
             .Distinct(StringComparer.OrdinalIgnoreCase)

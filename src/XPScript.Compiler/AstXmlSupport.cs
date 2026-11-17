@@ -17,7 +17,7 @@ internal static class AstXmlSupport
         .Replace("XPXml", "XPScriptXml", StringComparison.Ordinal);
     private static string LanguageType(string type) => type.TrimEnd('?') switch
     {
-        "object" => "Variant", "int" => "Integer", "string" => "String", "bool" => "Boolean",
+        "object" or "object?" or "byte[]" => "Variant", "int" => "Integer", "string" => "String", "bool" => "Boolean",
         _ => type.TrimEnd('?').Replace("XPScriptXml", "XPXml", StringComparison.Ordinal)
     };
     internal static readonly AstNativeObjectSurface.Member[] Members = ReadMembers().ToArray();
