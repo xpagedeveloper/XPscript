@@ -30,10 +30,10 @@ public static class XPScriptCompilerCommandLine
             return await AstCompileAsync(args[1..]).ConfigureAwait(false);
 
         if (args[0] is "compilev1" or "legacy-compile")
-            return await CompileAsync(args[1..]).ConfigureAwait(false);
+            return LegacyCompilerDisabled(args[0]);
 
         if (args[0] is "runv1" or "legacy-run")
-            return await RunScriptAsync(["run", .. args[1..]]).ConfigureAwait(false);
+            return LegacyCompilerDisabled(args[0]);
 
         if (args[0].Equals("ast-compile", StringComparison.OrdinalIgnoreCase))
             return await AstCompileAsync(args[1..]).ConfigureAwait(false);
@@ -1180,6 +1180,12 @@ public static class XPScriptCompilerCommandLine
         progressLineWidth = 0;
     }
 
+    private static int LegacyCompilerDisabled(string command)
+    {
+        Console.Error.WriteLine($"{command}: Legacy compilation is disabled. Use compile/ast-compile or run/ast-run.");
+        return 2;
+    }
+
     private static void WriteProgressLine(string message)
     {
         if (progressLineWidth > 0)
@@ -1204,13 +1210,13 @@ XPScript Compiler and Runtime
 
 Usage:
   {compileCommand} <source.xps> [-o output] [--target desktop|console|webiis] [--target-framework 10|11|...] [--platform RID] [--single-file true|false] [--runtime true|false] [--info] [--debug] [--embed-assets] [--result-format text|json|xml] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
-  xpscript legacy-compile|compilev1 <source.xps> [legacy compiler options]
+  xpscript legacy-compile|compilev1 <source.xps> (disabled; use compile/ast-compile)
   xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml]
   xpscript ast-run <source.xps> [--target-framework 10|11|...] [--platform RID] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
   xpscript mcp
   xpscript mcp install codex|claude [--scope user|project] [--force]
   {runCommand} <source.xps> [--info] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
-  xpscript legacy-run|runv1 <source.xps> [legacy run options]
+  xpscript legacy-run|runv1 <source.xps> (disabled; use run/ast-run)
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
@@ -1220,7 +1226,7 @@ Compiler targets:
   console   Create a console executable.
   webiis    Create an IIS deployable ASP.NET Core application folder and ZIP package.
 
-The default compile and run commands use the AST compiler. Use legacy-compile/compilev1 and legacy-run/runv1 for the legacy compiler during migration.
+The default compile and run commands use the AST compiler. Legacy compiler entry points are retained only as rejected compatibility aliases.
 
 If --platform/--rid is omitted, XPScript targets the current operating system and process architecture.
 If --target-framework is omitted, the highest installed .NET SDK major version (10 or higher) is selected, including its highest installed patch. For example, --target-framework 10 selects the highest installed 10.x SDK and emits net10.0.
