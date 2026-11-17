@@ -15,6 +15,8 @@ try
 }
 catch (CompilerException compilerException)
 {
+    if (compilerException.GeneratedDiagnostics.Count != 1)
+        throw new Exception($"Generated backend diagnostic fixture returned {compilerException.GeneratedDiagnostics.Count} mapped diagnostics: {compilerException.Message}", compilerException);
     var diagnostic = compilerException.GeneratedDiagnostics.Single();
     if (diagnostic.File != "mapped-backend.xps" || diagnostic.Line != 42 || diagnostic.Position <= 0 ||
         diagnostic.EndLine != 42 || diagnostic.EndColumn <= diagnostic.Position || diagnostic.Category != "code-generation")
