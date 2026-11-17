@@ -239,8 +239,11 @@ End Sub
 
         var policySource = await File.ReadAllTextAsync(policyPath);
         var compilerIdentity = typeof(XpsWebCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        var targetFramework = Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } configuredTargetFramework
+            ? configuredTargetFramework
+            : "net10.0";
         var sourceHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes(policySource + "\0" + compilerIdentity + "\0" + "4")));
+            System.Text.Encoding.UTF8.GetBytes(policySource + "\0" + compilerIdentity + "\0" + "4" + "\0" + targetFramework)));
 
         async Task<(int StatusCode, string Body)> InvokePolicyAsync(string procedureName, XpsWebPrincipal principal)
         {
