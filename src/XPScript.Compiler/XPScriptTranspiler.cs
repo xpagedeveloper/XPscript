@@ -20,6 +20,13 @@ public sealed partial class XPScriptTranspiler
         generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
         generated = new UIFormActionModelPostProcessor().Transform(generated);
         generated = new UIFormCallbackModelPostProcessor().Transform(generated);
+        if (!generated.Contains("internal sealed class XPScriptJsonSchema", StringComparison.Ordinal))
+            generated += Environment.NewLine + JsonSchemaRuntimeSource.Code;
+        if (!generated.Contains("public bool IsDataValid => ValidateData().Valid", StringComparison.Ordinal))
+            generated += Environment.NewLine + UIFormValidationRuntimeSource.Code;
+        if (!generated.Contains("public string ValidationError { get; internal set; }", StringComparison.Ordinal))
+            generated = generated.Replace("    public List<string> Options { get; } = [];\n", "    public List<string> Options { get; } = [];\n    public string ValidationError { get; internal set; } = string.Empty;\n", StringComparison.Ordinal);
+        generated = new UIFormEventDispatcherPostProcessor().Transform(generated);
         if (hasComponentBase)
         {
             generated = generated
@@ -280,7 +287,9 @@ public sealed partial class XPScriptTranspiler
         if (usesAi) { generated = new AiSessionRuntimePostProcessor().Transform(generated); generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated); }
         generated = new UIExtensionDesktopPostProcessor(notesRuntimeFeatures).Transform(
             generated,
-            browserWasm: runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase));
+            browserWasm: runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase) ||
+                runtimeIdentifier.Equals("browser-wasm-server", StringComparison.OrdinalIgnoreCase),
+            browserWasmServer: runtimeIdentifier.Equals("browser-wasm-server", StringComparison.OrdinalIgnoreCase));
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase) &&
             generated.Contains("class XPScriptUIForm", StringComparison.Ordinal))
             generated = ApplyWebUiFormModelExtensions(generated);

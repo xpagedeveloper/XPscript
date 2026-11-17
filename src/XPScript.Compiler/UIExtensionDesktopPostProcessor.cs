@@ -85,7 +85,7 @@ internal sealed class UIExtensionDesktopPostProcessor
 
 """;
 
-    public string Transform(string generated, bool browserWasm = false)
+    public string Transform(string generated, bool browserWasm = false, bool browserWasmServer = false)
     {
         ArgumentNullException.ThrowIfNull(generated);
 
@@ -140,7 +140,12 @@ internal sealed class UIExtensionDesktopPostProcessor
         // desktop renderer and are not valid against the browser runtime's
         // component model.
         if (browserWasm)
+        {
+            // Browser-WASM uses the JavaScript renderer, but it still needs
+            // the generated event dispatcher so a browser callback can invoke
+            // local XPscript code and then cross a [ServerSide] boundary.
             return HardenWebBridgeLookup(replaced);
+        }
 
         replaced = new UIFormWindowLifecyclePostProcessor().Transform(replaced);
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
@@ -171,7 +176,8 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIFormAdditionalFieldsPostProcessor().Transform(replaced);
         replaced = new UIFormAdditionalFieldFixupPostProcessor().Transform(replaced);
         replaced = new ApplicationUiMetadataPostProcessor().Transform(replaced);
-        replaced = new UIFormWebWindowLifecyclePostProcessor().Transform(replaced);
+        if (!browserWasmServer)
+            replaced = new UIFormWebWindowLifecyclePostProcessor().Transform(replaced);
         replaced = NormalizeAccessibilityRequestMarkers(replaced);
         replaced = new UIFormAccessibilityPostProcessor().Transform(replaced);
         return HardenWebBridgeLookup(replaced);
