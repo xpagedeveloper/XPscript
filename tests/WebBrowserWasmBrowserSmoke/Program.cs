@@ -63,6 +63,11 @@ try
         browserErrors.Add(error);
         Console.WriteLine($"BROWSER_PAGE_ERROR: {error}");
     };
+    page.Response += (_, response) =>
+    {
+        if (response.Status >= 400)
+            Console.WriteLine($"BROWSER_HTTP_{response.Status}: {response.Url}");
+    };
     await page.GotoAsync($"http://127.0.0.1:{port}/app.xps/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
     var name = page.Locator("input[name='name']");
     try
