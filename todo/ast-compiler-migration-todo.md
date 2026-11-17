@@ -1145,6 +1145,7 @@ Run this phase only after all preceding implementation work, permanent FullTest 
 
 ## DoD audit update — 2026-11-17
 
+- [x] Ran the complete local Windows Platform FullTest with bounded diagnostics: `PLATFORM_FULLTEST: passed` and `FULLTEST_SUITE_PASSED=platform`. The run covered Android setup AST compilation, archive/runtime security, NetworkTools, SystemInventory and the platform AST safe-runtime probes.
 - [x] Confirmed the AST front-end owns XPscript parsing and binding: `DeclarationParser`, `StatementBinder` and the AST emitters produce generated C#; Roslyn is invoked only for generated C# compilation/emission through `RunRoslynCompiler` (the runtime-source catalog uses Roslyn syntax parsing only to inspect embedded C# runtime declarations).
 - [x] Confirmed selective generated dependency coverage for plain, XPImage, SQLite and combined programs with `tests/GeneratedDependencyProbe`; the probe passed as `GENERATED_DEPENDENCIES_OK` when run with a writable `XPSCRIPT_TEMP_ROOT` and serialized MSBuild project evaluation.
 - [x] Fixed a legacy runtime-feature false positive: `XPScriptTranspiler` now ignores `XPImage` in strings/comments when deciding whether to emit the XPImage array runtime. The no-XPImage workflow fixture now compiles without Magick.NET artifacts (`b4033157`).
