@@ -487,7 +487,7 @@ var responseSchemaQuotedTextClient = new XpsOpenApiClientGenerator().Generate(re
 if (!responseSchemaQuotedTextClient.Source.Contains(@"\u0022quoted\u0022", StringComparison.Ordinal))
     throw new Exception("OpenAPI client response validation must encode JSON escaped quotes safely for XPScript.");
 var responseSchemaQuotedTextPath = Path.Combine(Path.GetTempPath(), "response-schema-quoted-text-client.xps");
-_ = new XPScriptTranspiler().Transpile(
+await CompileGeneratedWithAstAsync(
     responseSchemaQuotedTextClient.Source + "\nSub Main()\nEnd Sub\n",
     responseSchemaQuotedTextPath,
     CompilerDriver.CurrentRuntimeIdentifier());
@@ -911,7 +911,7 @@ Console.WriteLine("OPENAPI-CLIENT-RUNTIME-RESERVED-IDENTIFIERS=OK");
 var runtimeReservedClientPath = Path.Combine(Path.GetTempPath(), "xpscript-openapi-runtime-reserved-" + Guid.NewGuid().ToString("N") + ".xps");
 try
 {
-    _ = new XPScriptTranspiler().Transpile(
+    await CompileGeneratedWithAstAsync(
         runtimeReservedClient.Source + "\nSub Main()\nEnd Sub\n",
         runtimeReservedClientPath,
         CompilerDriver.CurrentRuntimeIdentifier());
@@ -2366,11 +2366,10 @@ static async Task VerifyVersionPair(string version, string yaml, XpsOpenApiGener
 
             var clientPath = Path.Combine(tempRoot, "client.xps");
             File.WriteAllText(clientPath, client.Source);
-            _ = new XPScriptTranspiler().TranspileRestricted(
+            await CompileGeneratedWithAstAsync(
                 client.Source + "\nSub Main()\nEnd Sub\n",
                 clientPath,
-                CompilerDriver.CurrentRuntimeIdentifier(),
-                [tempRoot]);
+                CompilerDriver.CurrentRuntimeIdentifier());
         }
         finally
         {
@@ -2606,7 +2605,7 @@ Sub Main()
 End Sub
 """;
 var sizeLiteralPath = Path.Combine(root, "size-literals.xps");
-_ = new XPScriptTranspiler().TranspileRestricted(sizeLiteralSource, sizeLiteralPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
+await CompileGeneratedWithAstAsync(sizeLiteralSource, sizeLiteralPath, CompilerDriver.CurrentRuntimeIdentifier());
 Console.WriteLine("SIZE-LITERALS=OK");
 
 try
@@ -2627,11 +2626,10 @@ try
     }
     try
     {
-        _ = new XPScriptTranspiler().TranspileRestricted(
+        await CompileGeneratedWithAstAsync(
             digitalOceanCompileClient.Source + "\nSub Main()\nEnd Sub\n",
             digitalOceanClientPath,
-            CompilerDriver.CurrentRuntimeIdentifier(),
-            [root]);
+            CompilerDriver.CurrentRuntimeIdentifier());
     }
     catch (CompilerException ex) when (ex.GeneratedDiagnostics.Count > 0)
     {
@@ -2646,11 +2644,10 @@ try
     await File.WriteAllTextAsync(openApi32ServerPath, openApi32Server.Source);
     var openApi32ClientPath = Path.Combine(root, "openapi32-client.xps");
     await File.WriteAllTextAsync(openApi32ClientPath, openApi32Client.Source);
-    _ = new XPScriptTranspiler().TranspileRestricted(
+    await CompileGeneratedWithAstAsync(
         openApi32Client.Source + "\nSub Main()\nEnd Sub\n",
         openApi32ClientPath,
-        CompilerDriver.CurrentRuntimeIdentifier(),
-        [root]);
+        CompilerDriver.CurrentRuntimeIdentifier());
 
     var scopeCollisionPath = Path.Combine(root, "scope-collision.xps");
     await File.WriteAllTextAsync(scopeCollisionPath, scopeCollision.Source);
@@ -2684,23 +2681,20 @@ End Class
     if (parsed.Routes["EndpointCreatePet"].ParameterBindings?.Count != 1)
         throw new Exception("Generated POST body binding did not match the OpenAPI requestBody.");
 
-    // Client-only generated sources do not export web routes. Compile them through the
-    // language transpiler directly; XpsWebCompiler intentionally requires at least one route.
-    _ = new XPScriptTranspiler().TranspileRestricted(
+    // Client-only generated sources do not export web routes. Compile them through
+    // the AST compiler directly; XpsWebCompiler intentionally requires at least one route.
+    await CompileGeneratedWithAstAsync(
         crossScopeRuntimeNames.Source + "\nSub Main()\nEnd Sub\n",
         crossScopeRuntimePath,
-        CompilerDriver.CurrentRuntimeIdentifier(),
-        [root]);
-    _ = new XPScriptTranspiler().TranspileRestricted(
+        CompilerDriver.CurrentRuntimeIdentifier());
+    await CompileGeneratedWithAstAsync(
         propertyMethodRuntimeSource + "\nSub Main()\nEnd Sub\n",
         propertyMethodRuntimePath,
-        CompilerDriver.CurrentRuntimeIdentifier(),
-        [root]);
-    _ = new XPScriptTranspiler().TranspileRestricted(
+        CompilerDriver.CurrentRuntimeIdentifier());
+    await CompileGeneratedWithAstAsync(
         compilerReservedClient.Source + "\nSub Main()\nEnd Sub\n",
         compilerReservedPath,
-        CompilerDriver.CurrentRuntimeIdentifier(),
-        [root]);
+        CompilerDriver.CurrentRuntimeIdentifier());
 
     var compiler = new XpsWebCompiler();
     await using (var openApi32Unit = await compiler.CompileAsync(openApi32ServerPath, root))
@@ -2878,7 +2872,7 @@ static async Task VerifyDefinition(string definitionPath, bool verifyServer, boo
         var rootReferences = string.Join(" | ", scopedClient.Source.Split('\n').Where(line => line.Contains("Root", StringComparison.Ordinal)).Take(12));
         if (rootReferences.Length > 0 && !scopedClient.Source.Contains("Public Class Root", StringComparison.Ordinal))
         throw new Exception("GitHub representative client references an undeclared Root model: " + rootReferences);
-        _ = new XPScriptTranspiler().TranspileRestricted(await File.ReadAllTextAsync(clientPath), clientPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
+        await CompileGeneratedWithAstAsync(await File.ReadAllTextAsync(clientPath), clientPath, CompilerDriver.CurrentRuntimeIdentifier());
     }
     Console.WriteLine($"OPENAPI-DEFINITION={Path.GetFileName(fullPath)} SERVER_OPERATIONS={server?.Operations.Count ?? 0} SERVER_MODELS={server?.Models.Count ?? 0} CLIENT_OPERATIONS={client?.Operations.Count ?? 0} CLIENT_MODELS={client?.Models.Count ?? 0} REPRESENTATIVE-COMPILE=OK");
 }
@@ -2896,7 +2890,7 @@ static async Task VerifyScopedClient(string definitionPath)
     Directory.CreateDirectory(root);
     var clientPath = Path.Combine(root, "client.xps");
     await File.WriteAllTextAsync(clientPath, client.Source + "\nSub Main()\nEnd Sub\n");
-    _ = new XPScriptTranspiler().TranspileRestricted(await File.ReadAllTextAsync(clientPath), clientPath, CompilerDriver.CurrentRuntimeIdentifier(), [root]);
+    await CompileGeneratedWithAstAsync(await File.ReadAllTextAsync(clientPath), clientPath, CompilerDriver.CurrentRuntimeIdentifier());
     Console.WriteLine($"OPENAPI-SCOPED-CLIENT={fileName} OPERATIONS={client.Operations.Count} MODELS={client.Models.Count} COMPILE=OK");
 }
 
@@ -2908,4 +2902,13 @@ static string ResolveDefinitionPath(string definitionPath)
     if (File.Exists(workingDirectoryPath)) return workingDirectoryPath;
 
     return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, definitionPath));
+}
+
+static async Task CompileGeneratedWithAstAsync(string source, string sourcePath, string? runtimeIdentifier)
+{
+    await File.WriteAllTextAsync(sourcePath, source);
+    var outputDirectory = Path.Combine(
+        Path.GetDirectoryName(sourcePath) ?? Path.GetTempPath(),
+        ".ast-" + Path.GetFileNameWithoutExtension(sourcePath) + "-" + Guid.NewGuid().ToString("N"));
+    await AstCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier);
 }

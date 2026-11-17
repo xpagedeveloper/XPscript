@@ -88,10 +88,26 @@ public sealed class Lexer
                     _position++;
             }
 
+            var numericText = _text[start.._position];
+            var multiplier = 1L;
+            if (!isDecimal && Current is 'k' or 'K' or 'm' or 'M' or 'g' or 'G')
+            {
+                var suffix = _text.Substring(_position, Math.Min(2, _text.Length - _position));
+                multiplier = suffix.ToLowerInvariant() switch
+                {
+                    "kb" => 1024L,
+                    "mb" => 1024L * 1024L,
+                    "gb" => 1024L * 1024L * 1024L,
+                    _ => 1L
+                };
+                if (multiplier != 1L)
+                    _position += 2;
+            }
+
             var text = _text[start.._position];
             object? value = isDecimal
-                ? double.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var doubleValue) ? doubleValue : null
-                : long.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var longValue) ? longValue : null;
+                ? double.TryParse(numericText, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var doubleValue) ? doubleValue : null
+                : long.TryParse(numericText, NumberStyles.None, CultureInfo.InvariantCulture, out var longValue) ? TryScale(longValue, multiplier) : null;
             return new SyntaxToken(SyntaxKind.NumberToken, text, value, Span(start, text.Length));
         }
 
@@ -197,6 +213,18 @@ public sealed class Lexer
     private char Current => _position < _text.Length ? _text[_position] : '\0';
     private char Peek(int offset) => _position + offset < _text.Length ? _text[_position + offset] : '\0';
     private char CurrentAt(int position) => position < _text.Length ? _text[position] : '\0';
+
+    private static long? TryScale(long value, long multiplier)
+    {
+        try
+        {
+            return checked(value * multiplier);
+        }
+        catch (OverflowException)
+        {
+            return null;
+        }
+    }
 
     private bool IsMemberName(int start)
     {

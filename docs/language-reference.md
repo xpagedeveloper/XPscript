@@ -28,6 +28,10 @@ Runtime function names are not globally reserved identifiers. An unqualified cal
 
 This distinction also applies to properties, methods, parameters, locals, enum members, and symbols in different classes: sharing a spelling with a runtime API does not by itself reserve that spelling. Only actual syntax keywords and compiler/runtime names with a real declaration-scope collision are restricted.
 
+## Numeric literals
+
+Integer size literals may use the case-insensitive suffixes `kb`, `mb`, and `gb`. They multiply the preceding integer by 1024, 1024², or 1024³ and produce a `Long`; for example, `100mb` is `104857600`. Decimal values cannot use these suffixes, and a value that overflows `Long` is rejected by the compiler.
+
 ## Declarations and procedures
 
 | Command | Syntax | Parameters | Description | Example |

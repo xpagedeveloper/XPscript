@@ -2110,6 +2110,12 @@ dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'shared-runtime.xps') -o $
 if ($LASTEXITCODE -ne 0) { throw 'AST shared scalar runtime compilation failed.' }
 $runtimeResult = dotnet (Join-Path $runtimeOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($runtimeResult -join "`n") -ne "INTEGER`nLONG`n17`nTrue`n2`nEMPTY=[]`nVariable is null`nNULL`n1`nFalse`nTrue`nbcd`nTrue`n3`n2`n1`nOVERFLOW=6`nCONTINUED") { throw 'AST scalar runtime conversion, Null/Empty, environment or overflow behavior drifted.' }
+$sizeLiteralOutput = Join-Path $output 'size-literals'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'size-literals.xps') -o $sizeLiteralOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST size literal regression failed.' }
+$sizeLiteralResult = dotnet (Join-Path $sizeLiteralOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0) { throw "AST size literal runtime regression failed: $($sizeLiteralResult -join "`n")" }
+Write-AstCliCheckpoint 'size-literals'
 foreach ($jsonFixture in @('json-runtime', 'json-reference')) {
     $jsonOutput = Join-Path $output $jsonFixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$jsonFixture.xps") -o $jsonOutput

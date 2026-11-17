@@ -26,6 +26,8 @@ The normal CLI `compile` and `run` commands use the AST compiler. Use `ast-compi
 
 XPscript is case-insensitive and VB/LotusScript-like, but it has its own runtime and compatibility rules.
 
+Integer size literals support case-insensitive `kb`, `mb`, and `gb` suffixes. They use powers of 1024 and produce a `Long` (`100mb` is `104857600`); decimal values and overflowing results are invalid. Use the documented language reference as the source of truth.
+
 Prefer explicit declarations in generated programs:
 
 ```xpscript
