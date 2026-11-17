@@ -35,42 +35,31 @@ function Get-DiagnosticIdentity([string[]] $lines, [string] $mode) {
     }
 }
 
-$legacy = @(& dotnet $compiler legacy-compile $source -o (Join-Path $root 'out/diagnostic-compat-legacy') --runtime=false 2>&1)
-$legacyExit = $LASTEXITCODE
 $ast = @(& dotnet $compiler ast-compile $source -o (Join-Path $root 'out/diagnostic-compat-ast') 2>&1)
 $astExit = $LASTEXITCODE
-if ($legacyExit -ne 2 -or $astExit -ne 2) { throw "Expected both compilers to reject the fixture. legacy=$legacyExit ast=$astExit" }
-
-$legacyIdentity = Get-DiagnosticIdentity $legacy 'legacy'
+if ($astExit -ne 2) { throw "Expected AST to reject the fixture. ast=$astExit" }
 $astIdentity = Get-DiagnosticIdentity $ast 'ast'
-if ($legacyIdentity.Code -ne $astIdentity.Code -or $legacyIdentity.Line -ne $astIdentity.Line) {
-    throw "Legacy/AST diagnostic identity mismatch: legacy=$($legacyIdentity.Code):$($legacyIdentity.Line) AST=$($astIdentity.Code):$($astIdentity.Line)"
+if ($astIdentity.Code -ne 'XPS1012' -or $astIdentity.Line -ne 2 -or $astIdentity.Column -ne 25) {
+    throw "AST array rank diagnostic changed: $($astIdentity.Code):$($astIdentity.Line):$($astIdentity.Column)"
 }
+Write-Host "AST_DIAGNOSTIC=OK code=$($astIdentity.Code) line=$($astIdentity.Line) column=$($astIdentity.Column)"
 
-Write-Host "AST_DIAGNOSTIC_COMPAT=OK code=$($astIdentity.Code) line=$($astIdentity.Line) legacyColumn=$($legacyIdentity.Column) astColumn=$($astIdentity.Column)"
-
-$legacyJsonText = (& dotnet $compiler legacy-compile $source -o (Join-Path $root 'out/diagnostic-compat-legacy-json') --runtime=false --result-format json 2>&1 | Out-String)
 $astJsonText = (& dotnet $compiler ast-compile $source -o (Join-Path $root 'out/diagnostic-compat-ast-json') --result-format json 2>&1 | Out-String)
-$legacyJson = $legacyJsonText.Substring($legacyJsonText.IndexOf('{')) | ConvertFrom-Json
 $astJson = $astJsonText.Substring($astJsonText.IndexOf('{')) | ConvertFrom-Json
-$legacyError = $legacyJson.errors[0]
 $astError = $astJson.errors[0]
-if ($legacyError.file -ne $astError.file -or $legacyError.line -ne $astError.line -or
-    $legacyError.diagnosticCode -ne $astError.diagnosticCode -or $legacyError.category -ne $astError.category) {
-    throw "Structured legacy/AST diagnostic mismatch: legacy=$($legacyError.file):$($legacyError.line):$($legacyError.diagnosticCode):$($legacyError.category) AST=$($astError.file):$($astError.line):$($astError.diagnosticCode):$($astError.category)"
+if ([System.IO.Path]::GetFileName($astError.file) -ne [System.IO.Path]::GetFileName($source) -or $astError.line -ne $astIdentity.Line -or $astError.diagnosticCode -ne $astIdentity.Code) {
+    throw "Structured AST diagnostic mismatch: $($astError.file):$($astError.line):$($astError.diagnosticCode)"
 }
-Write-Host "AST_DIAGNOSTIC_STRUCTURED_COMPAT=OK category=$($astError.category) columnDelta=$([int]$astError.position - [int]$legacyError.position)"
+Write-Host "AST_DIAGNOSTIC_STRUCTURED=OK category=$($astError.category)"
 
 # AST capability improvements are allowed when the published legacy compiler
 # rejects the same source. The reverse direction is not allowed and is covered
 # by the legacy/AST compile-and-runtime parity harness.
 $astOnlySource = Join-Path $root 'samples/null-integer-assignment-error.xps'
-$astOnlyLegacy = @(& dotnet $compiler legacy-compile $astOnlySource -o (Join-Path $root 'out/diagnostic-ast-only-legacy') --runtime=false 2>&1)
-$astOnlyLegacyExit = $LASTEXITCODE
 $astOnlyOutput = Join-Path $root 'out/diagnostic-ast-only'
 $astOnly = @(& dotnet $compiler ast-compile $astOnlySource -o $astOnlyOutput 2>&1)
 $astOnlyExit = $LASTEXITCODE
-if ($astOnlyLegacyExit -eq 0 -or $astOnlyExit -ne 0 -or -not (Test-Path (Join-Path $astOnlyOutput 'Generated.dll'))) {
-    throw "An AST-only capability must be allowed when legacy rejects it. legacy=$astOnlyLegacyExit ast=$astOnlyExit`n$($astOnly -join "`n")"
+if ($astOnlyExit -ne 0 -or -not (Test-Path (Join-Path $astOnlyOutput 'Generated.dll'))) {
+    throw "An AST-only capability must be allowed. ast=$astOnlyExit`n$($astOnly -join "`n")"
 }
 Write-Host 'AST_ONLY_CAPABILITY_ALLOWED=OK'

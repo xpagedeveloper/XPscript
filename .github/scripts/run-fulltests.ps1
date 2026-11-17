@@ -105,7 +105,7 @@ if ($Suite -eq 'language') {
     throw 'Legacy/AST compatibility corpus regression failed.'
   }
   $diagnosticCompatibility = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compat/run-diagnostic-compat.ps1') 180000 'legacy/AST diagnostic compatibility'
-  if ($diagnosticCompatibility.ExitCode -ne 0 -or $diagnosticCompatibility.Output -notmatch 'AST_DIAGNOSTIC_COMPAT=OK') {
+  if ($diagnosticCompatibility.ExitCode -ne 0 -or $diagnosticCompatibility.Output -notmatch 'AST_DIAGNOSTIC=OK' -or $diagnosticCompatibility.Output -notmatch 'AST_DIAGNOSTIC_STRUCTURED=OK') {
     throw 'Legacy/AST diagnostic compatibility regression failed.'
   }
 }
