@@ -264,9 +264,10 @@ internal static class CompilerBuildEnvironment
         var generatedSource = Path.Combine(root, "Program.cs");
         if (!File.Exists(generatedSource)) return;
         var source = File.ReadAllText(generatedSource);
-        var usesUiForm = source.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal);
-        var usesUiListView = source.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal);
-        var usesDesktopDialog = source.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
+        var code = AstObjectSupportRegistry.RemoveStringsAndComments(source);
+        var usesUiForm = code.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal);
+        var usesUiListView = code.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal);
+        var usesDesktopDialog = code.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
         var runtimeIdentifier = ReadRuntimeIdentifier(startInfo);
         var usesAndroidUi = runtimeIdentifier.StartsWith("android-", StringComparison.OrdinalIgnoreCase) && usesUiForm;
         var packages = ApplicationDependencyCatalog.Detect(source);
@@ -283,9 +284,9 @@ internal static class CompilerBuildEnvironment
                 Console.Error.WriteLine($"  {package.Name} {package.Version} ({package.Reason}) - {status}");
             }
         }
-        var usesMySql = source.Contains("XPScriptDbMySql", StringComparison.Ordinal);
-        var usesMsSql = source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
-        var usesSupabaseDb = source.Contains("XPScriptDbSupabase", StringComparison.Ordinal);
+        var usesMySql = code.Contains("XPScriptDbMySql", StringComparison.Ordinal);
+        var usesMsSql = code.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
+        var usesSupabaseDb = code.Contains("XPScriptDbSupabase", StringComparison.Ordinal);
         var stagedIconName = StageApplicationIcon(source, root, runtimeIdentifier);
         var product = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildProductMarker);
         var company = ReadBuildMarker(source, ApplicationObjectPreprocessor.BuildCompanyMarker);

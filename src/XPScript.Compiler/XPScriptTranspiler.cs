@@ -182,12 +182,16 @@ public sealed partial class XPScriptTranspiler
             .Replace("XPScriptDatabaseAttachmentRuntime.ForSupabase(", "XPScriptDatabaseAttachmentApi.ForSupabase(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.ForDomino(", "XPScriptDatabaseAttachmentApi.ForDomino(", StringComparison.Ordinal)
             .Replace("XPScriptDatabaseAttachmentRuntime.SetSupabaseBucket(", "XPScriptDatabaseAttachmentApi.SetSupabaseBucket(", StringComparison.Ordinal);
-        var usesSqlite = runtimeFeatures.Sqlite || source.Contains("XPScriptDbSqlite", StringComparison.Ordinal);
-        var usesMsSql = runtimeFeatures.MsSql || source.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
-        var usesExtendedArchive = source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
-        var usesArchive = archiveRequested || usesExtendedArchive || source.Contains("XPScriptArchive", StringComparison.Ordinal);
-        var usesSpreadsheet = spreadsheetRequested || source.Contains("XPScriptSpreadsheet", StringComparison.Ordinal);
-        var usesNetworkTools = networkToolsRequested || source.Contains("XPScriptNetworkTools", StringComparison.Ordinal);
+        // These markers may also occur in user strings/comments after the
+        // compatibility preprocessors. Only emitted code is allowed to select
+        // an optional runtime family.
+        var markerSource = AstObjectSupportRegistry.RemoveStringsAndComments(source);
+        var usesSqlite = runtimeFeatures.Sqlite || markerSource.Contains("XPScriptDbSqlite", StringComparison.Ordinal);
+        var usesMsSql = runtimeFeatures.MsSql || markerSource.Contains("XPScriptDbMsSql", StringComparison.Ordinal);
+        var usesExtendedArchive = markerSource.Contains("XPScriptExtendedArchive", StringComparison.Ordinal);
+        var usesArchive = archiveRequested || usesExtendedArchive || markerSource.Contains("XPScriptArchive", StringComparison.Ordinal);
+        var usesSpreadsheet = spreadsheetRequested || markerSource.Contains("XPScriptSpreadsheet", StringComparison.Ordinal);
+        var usesNetworkTools = networkToolsRequested || markerSource.Contains("XPScriptNetworkTools", StringComparison.Ordinal);
         if (runtimeIdentifier.Equals("browser-wasm", StringComparison.OrdinalIgnoreCase))
         {
             var detectedFeatures = runtimeFeatures with
@@ -251,7 +255,7 @@ public sealed partial class XPScriptTranspiler
         if (runtimeFeatures.RequiresHttp) { generated += "\n\n" + NativeHttpRuntimeSource.Code + "\n"; generated += "\n\n" + HttpCoreRuntimeSource.Code + "\n"; generated += "\n\n" + AsyncHttpRuntimeSource.Code + "\n"; }
         if (runtimeFeatures.Ui) generated += "\n\n" + UIExtensionRuntimeSource.Code + "\n";
         if (runtimeFeatures.RequiresHttp) generated += "\n\n" + HttpJsonRuntimeSource.Code + "\n";
-        if (runtimeFeatures.RequiresHttp && runtimeFeatures.Ui && source.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal)) generated += "\n\n" + HttpUiFormRuntimeSource.Code + "\n";
+        if (runtimeFeatures.RequiresHttp && runtimeFeatures.Ui && markerSource.Contains("XPScriptHttpUiFormHelpers", StringComparison.Ordinal)) generated += "\n\n" + HttpUiFormRuntimeSource.Code + "\n";
         if (runtimeFeatures.Database) generated += "\n\n" + CaseInsensitiveDynamicObjectRuntimeSource.Code + "\n";
         if (usesSqlite) generated += "\n\n" + SqliteDbRuntimeSource.Code + "\n";
         if (usesMsSql) generated += "\n\n" + MsSqlDbRuntimeSource.Code + "\n";

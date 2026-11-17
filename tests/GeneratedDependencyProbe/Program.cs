@@ -50,6 +50,15 @@ var plainAssembly = await Build(plain, "plain");
 if (await Run(plainAssembly) != "7" || Directory.EnumerateFiles(Path.GetDirectoryName(plainAssembly)!, "Magick*", SearchOption.AllDirectories).Any())
     throw new Exception("Plain output unexpectedly acquired image dependencies.");
 
+var markerSourcePath = Path.Combine(outputRoot, "marker-text.xps");
+await File.WriteAllTextAsync(markerSourcePath, "Sub Main()\n    ' XPImage XPScriptDbSqlite XPScriptUI\n    Print \"XPImage XPScriptDbSqlite XPScriptUI.CreateForm( XPScriptExtendedArchive\"\nEnd Sub\n");
+var markerOutput = Path.Combine(outputRoot, "marker-text-ast");
+await AstCompiler.CompileAsync(markerSourcePath, markerOutput);
+if (Directory.EnumerateFiles(markerOutput, "Magick*", SearchOption.AllDirectories).Any() ||
+    Directory.EnumerateFiles(markerOutput, "*Sqlite*", SearchOption.AllDirectories).Any() ||
+    File.Exists(Path.Combine(markerOutput, "Third-party-license.txt")))
+    throw new Exception("AST marker-text fixture acquired an unused XP runtime or package.");
+
 var source = """
 internal sealed class XPImage { }
 internal static class Program
