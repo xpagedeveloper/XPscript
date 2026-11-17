@@ -424,7 +424,7 @@ internal static class RunCompiler
             ? "Microsoft.NET.Sdk.WebAssembly"
             : "Microsoft.NET.Sdk";
         var wasmProperties = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase)
-            ? "    <UseMonoRuntime>true</UseMonoRuntime>\n"
+            ? "    <UseMonoRuntime>true</UseMonoRuntime>\n    <WasmBuildNative>false</WasmBuildNative>\n"
             : string.Empty;
 
         return $"""

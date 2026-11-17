@@ -10,7 +10,8 @@ internal sealed class UIFormAdditionalFieldsPostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
         if (generated.Contains(Sentinel, StringComparison.Ordinal)) return generated;
-        if (!generated.Contains("internal sealed class XPScriptUIForm", StringComparison.Ordinal)) return generated;
+        if (!generated.Contains("internal sealed class XPScriptUIForm", StringComparison.Ordinal) &&
+            !generated.Contains("internal sealed partial class XPScriptUIForm", StringComparison.Ordinal)) return generated;
 
         generated = InjectFieldMetadata(generated);
         generated = InjectFormMethods(generated);
