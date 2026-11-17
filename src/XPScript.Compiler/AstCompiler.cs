@@ -1736,22 +1736,19 @@ internal static class Program
             var singleVisibleFormMode = isAndroidTarget ||
                 string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(runtimeIdentifier, "webiis", StringComparison.OrdinalIgnoreCase);
-            // Android uses the same request-model bridge as desktop, but its
-            // adapter resolves XPScript.UI.Android.AndroidFormHost at runtime.
-            // Keep the bridge in the AST-generated program so Show(False) can
-            // render a modeless Avalonia form instead of only toggling Visible.
+            // Android has its own Avalonia form host. The desktop postprocessor
+            // installs desktop window/layout rendering and assumes the legacy
+            // desktop renderer is present, which is not true for the Android
+            // AST runtime. Android receives the shared model/runtime extensions
+            // below without applying the desktop rendering pipeline.
             generated = new UIFormActionModelPostProcessor().Transform(generated);
             generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
             generated = new UIFormCallbackModelPostProcessor().Transform(generated);
-            if (!generated.Contains("internal sealed class XPScriptJsonSchema", StringComparison.Ordinal))
-                generated += Environment.NewLine + JsonSchemaRuntimeSource.Code;
-            if (!generated.Contains("public bool IsDataValid => ValidateData().Valid", StringComparison.Ordinal))
-                generated += Environment.NewLine + UIFormValidationRuntimeSource.Code;
-            if (!generated.Contains("public string ValidationError { get; internal set; }", StringComparison.Ordinal))
-                generated = generated.Replace("    public List<string> Options { get; } = [];\n", "    public List<string> Options { get; } = [];\n    public string ValidationError { get; internal set; } = string.Empty;\n", StringComparison.Ordinal);
-            generated = new UIFormEventDispatcherPostProcessor().Transform(generated);
-            generated += Environment.NewLine + UIExtensionDesktopRuntimeSource.Code;
-            generated = new UIFormWindowLifecyclePostProcessor().Transform(generated);
+            if (!isAndroidTarget)
+            {
+                generated += Environment.NewLine + UIExtensionDesktopRuntimeSource.Code;
+                generated = new UIFormWindowLifecyclePostProcessor().Transform(generated);
+            }
             if (!isAndroidTarget)
             {
                 generated = new UIFormDateRangeValidationPostProcessor().Transform(generated);
@@ -1764,7 +1761,7 @@ internal static class Program
             generated = UIFormBasicStructuralPostProcessor.Transform(generated);
             if (isAndroidTarget && !generated.Contains("public void Show(object? modalValue)", StringComparison.Ordinal))
             {
-                const string mobileFormApi = "    public void Show(object? modalValue) { _modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture); XPScriptUI.Activate(this); XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues); }\n    public void RefreshForm() { XPScriptUI.Activate(this); XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues); }\n    public void Hide() { XPScriptUI.Deactivate(this); }\n";
+                const string mobileFormApi = "    public void Show(object? modalValue) { _modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture); XPScriptUI.Activate(this); }\n    public void RefreshForm() => XPScriptUI.Activate(this);\n    public void Hide() => XPScriptUI.Deactivate(this);\n";
                 generated = generated.Replace("internal sealed partial class XPScriptUIForm\n{\n", "internal sealed partial class XPScriptUIForm\n{\n" + mobileFormApi, StringComparison.Ordinal)
                     .Replace("internal sealed class XPScriptUIForm\n{\n", "internal sealed class XPScriptUIForm\n{\n" + mobileFormApi, StringComparison.Ordinal);
             }
@@ -1798,7 +1795,7 @@ internal static class Program
             {
                 generated = generated.Replace(
                     "    public void RefreshForm()\n    {\n        XPScriptUI.Activate(this);\n        if (XPScriptUIDesktopAdapter.IsAvailable)\n        {\n            XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);\n            return;\n        }\n        if (XPScriptUIWebAdapter.IsAvailable)\n            XPScriptUIWebAdapter.WriteHtml(RenderWebForm(false));\n    }",
-                    "    public void RefreshForm() { XPScriptUI.Activate(this); XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues); }",
+                    "    public void RefreshForm() => XPScriptUI.Activate(this);",
                     StringComparison.Ordinal);
             }
             if (!generated.Contains("class XPScriptHttpClient", StringComparison.Ordinal))

@@ -433,22 +433,6 @@ public static class AndroidFormHost
 
     public static string ShowDialog(string requestJson) => ShowDialog(requestJson, null);
 
-    // Modeless mobile forms must return to the XPScript program while the
-    // Avalonia form remains visible. Run the existing dialog lifecycle on a
-    // worker so its completion wait cannot block the UI dispatcher.
-    public static string Show(string requestJson, Func<string, string, string>? eventCallback)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(requestJson);
-        _ = Task.Run(() =>
-        {
-            try { ShowDialog(requestJson, eventCallback); }
-            catch (Exception exception) { Log.Error("XPScript", "Android UIForm modeless host failed: " + exception); }
-        });
-        return "Pending";
-    }
-
-    public static string Show(string requestJson) => Show(requestJson, null);
-
     public static string ShowDialog(string requestJson, Func<string, string, string>? eventCallback)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(requestJson);
@@ -679,11 +663,6 @@ public static class AndroidFormHost
                 };
 
                 AutomationProperties.SetAutomationId(editor, "xps-field-" + name);
-                // Avalonia Android templates do not always mark dynamically
-                // created editors as tab stops. Without this, the first
-                // TextBox can render and receive a tap but never becomes the
-                // served Android input connection.
-                editor.IsTabStop = true;
                 if (field.TryGetProperty("width", out var widthValue) && widthValue.ValueKind == JsonValueKind.Number && widthValue.TryGetDouble(out var width)) editor.Width = width;
                 if (field.TryGetProperty("height", out var heightValue) && heightValue.ValueKind == JsonValueKind.Number && heightValue.TryGetDouble(out var height)) editor.Height = height;
                 if (editor is TemplatedControl styledEditor)
@@ -848,12 +827,9 @@ public static class AndroidFormHost
 
             var initialFocus = request.TryGetProperty("initialFocus", out var initialFocusValue) ? initialFocusValue.GetString() ?? string.Empty : string.Empty;
             if (initialFocus.Length > 0 && editors.TryGetValue(initialFocus, out var initialEditor) && initialEditor.IsEnabled && initialEditor.Focusable)
-                Dispatcher.UIThread.Post(() => initialEditor.Focus());
+                initialEditor.Focus();
             else
-            {
-                var firstEditor = editors.Values.FirstOrDefault(editor => editor.IsVisible && editor.IsEnabled && editor.Focusable && editor.IsTabStop);
-                if (firstEditor is not null) Dispatcher.UIThread.Post(() => firstEditor.Focus());
-            }
+                editors.Values.FirstOrDefault(editor => editor.IsVisible && editor.IsEnabled && editor.Focusable && editor.IsTabStop)?.Focus();
 
             cancel.Click += (_, _) =>
             {
