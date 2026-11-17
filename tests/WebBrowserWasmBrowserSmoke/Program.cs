@@ -25,9 +25,10 @@ try
     // Serve from a short deployment path: Python normalizes URL paths and
     // cannot reliably serve Windows extended-path cache directories.
     var serverRoot = Path.Combine(root, "site");
+    var deploymentRoot = Path.Combine(serverRoot, "app.xps");
     foreach (var file in Directory.EnumerateFiles(appRoot, "*", SearchOption.AllDirectories))
     {
-        var target = Path.Combine(serverRoot, Path.GetRelativePath(appRoot, file));
+        var target = Path.Combine(deploymentRoot, Path.GetRelativePath(appRoot, file));
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         File.Copy(file, target);
     }
@@ -62,7 +63,7 @@ try
         browserErrors.Add(error);
         Console.WriteLine($"BROWSER_PAGE_ERROR: {error}");
     };
-    await page.GotoAsync($"http://127.0.0.1:{port}/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
+    await page.GotoAsync($"http://127.0.0.1:{port}/app.xps/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
     var name = page.Locator("input[name='name']");
     try
     {
