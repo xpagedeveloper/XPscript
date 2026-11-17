@@ -166,11 +166,12 @@ internal static class XpsBrowserWasmServerBridgeCompiler
                 "browser-wasm-server",
                 [webRoot]);
             LogBuildStep("server transpile: done");
-            // TranspileRestricted already runs the browser/server UIForm
-            // post-processing pipeline. Applying the model extensions again
-            // here duplicates generated members such as _grids and
-            // RenderWebForm in the server companion.
-            LogBuildStep("server model extensions: already applied by restricted transpile");
+            // The restricted server pipeline intentionally skips the browser
+            // renderer wrapper, but still needs the shared UIForm model API
+            // (Theme, Tabs, Buttons, grids and callbacks). The server-specific
+            // transpiler guard keeps this pass from duplicating the renderer.
+            serverGenerated = XPScriptTranspiler.ApplyWebUiFormModelExtensions(serverGenerated);
+            LogBuildStep("server model extensions: done");
             await File.WriteAllTextAsync(Path.Combine(workspace, "ServerGenerated.cs"), serverGenerated, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "ServerCompanion.csproj"), BuildServerProject(serverGenerated), cancellationToken).ConfigureAwait(false);
             await RunDotNetAsync(workspace, ["restore", "ServerCompanion.csproj", "--disable-build-servers", "--nologo", "-p:NuGetAudit=false", "-p:RestoreIgnoreFailedSources=true", .. buildIsolation], "server companion restore", cancellationToken).ConfigureAwait(false);
