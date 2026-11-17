@@ -595,9 +595,11 @@ End Sub
     foreach (var appRoot in appRoots)
     {
         var candidateBootstrap = await File.ReadAllTextAsync(Path.Combine(appRoot, "index.html"));
+        Console.WriteLine($"[WASM smoke] cached app root: {appRoot}; base={ExtractBaseHref(candidateBootstrap)}");
         if (candidateBootstrap.Contains("<base href=\"app.xps/\">", StringComparison.Ordinal))
             matchingRoots.Add(appRoot);
     }
+    Console.WriteLine($"[WASM smoke] cache root: {cacheRoot}; index roots: {appRoots.Length}; matching app.xps roots: {matchingRoots.Count}");
     if (matchingRoots.Count != 1)
         throw new Exception($"Expected exactly one cached Browser-WASM application for app.xps, found {matchingRoots.Count}.");
 
@@ -685,6 +687,16 @@ catch (Exception ex)
 finally
 {
     try { Directory.Delete(root, true); } catch { }
+}
+
+static string ExtractBaseHref(string html)
+{
+    const string marker = "<base href=\"";
+    var start = html.IndexOf(marker, StringComparison.Ordinal);
+    if (start < 0) return "<missing>";
+    start += marker.Length;
+    var end = html.IndexOf('"', start);
+    return end < 0 ? "<unterminated>" : html[start..end];
 }
 
 static XpsWebRequest BridgeRequest(string path, IReadOnlyDictionary<string, IReadOnlyList<string>> headers) => new(
