@@ -43,9 +43,7 @@ try
     var client = new XpsOpenApiClientGenerator().Generate(modelArraysOpenApi, "model-arrays.yaml");
     var sourcePath = Path.Combine(arrayRoot, "client.xps");
     await File.WriteAllTextAsync(sourcePath, client.Source + "\nSub Main()\nEnd Sub\n");
-    var compiled = await new CompilerDriver().CompileWithResultAsync(sourcePath, Path.Combine(arrayRoot, "client"), false);
-    if (!compiled.Success)
-        throw new Exception("Generated model arrays must compile through the CLI compiler: " + System.Text.Json.JsonSerializer.Serialize(compiled));
+    await AstCompiler.CompileAsync(sourcePath, Path.Combine(arrayRoot, "client"));
     Console.WriteLine("OPENAPI-CLIENT-MODEL-ARRAYS-COMPILE=OK");
     Console.WriteLine("OPENAPI-CLIENT-ENUM-MODEL-SCOPE-COMPILE=OK");
 }
@@ -112,9 +110,10 @@ try
     foreach (var marker in new[] { "Public Class clear_actor_limits", "As connection_create", "As default", "As RequestPayload" })
         if (!modelClient.Source.Contains(marker, StringComparison.Ordinal))
             throw new Exception("Client schema references must use the declared model name: " + marker);
-    _ = new XPScriptTranspiler().TranspileRestricted(
+    _ = await AstCompiler.GenerateRestrictedSourceAsync(
         modelClient.Source + "\nSub Main()\nEnd Sub\n",
         Path.Combine(referencedModelRoot, "client.xps"),
+        Path.Combine(referencedModelRoot, "ast-client"),
         CompilerDriver.CurrentRuntimeIdentifier(), [referencedModelRoot]);
     Console.WriteLine("OPENAPI-SERVER-REFERENCED-MODEL-NAMES=OK");
     Console.WriteLine("OPENAPI-CLIENT-REFERENCED-MODEL-NAMES=OK");
