@@ -1820,12 +1820,11 @@ internal static class Program
             generated += Environment.NewLine + JsonSchemaRuntimeSource.Code;
         if (generatedSourceTransform is not null)
             generated = generatedSourceTransform(generated);
-        // Android AST applications emit a static Program container.  UI
+        // AST applications emit a static Program container. UI
         // post-processors share runtime snippets with the legacy Script
         // container, so normalize any late-injected type references after all
         // post-processors have run and before Roslyn sees the generated source.
-        if (runtimeIdentifier?.StartsWith("android-", StringComparison.OrdinalIgnoreCase) == true &&
-            generated.Contains("internal static class Program", StringComparison.Ordinal))
+        if (generated.Contains("internal static class Program", StringComparison.Ordinal))
             generated = generated.Replace("typeof(Script)", "typeof(Program)", StringComparison.Ordinal);
         if (runtimeFeatures.Ui && !generated.Contains("internal static class XPScriptUIDesktopAdapter", StringComparison.Ordinal))
             generated += Environment.NewLine + UIExtensionAstCompatibilitySource.Code;

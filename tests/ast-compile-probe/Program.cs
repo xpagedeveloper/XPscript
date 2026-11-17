@@ -204,7 +204,10 @@ if (!guardEmit.Success) throw new InvalidOperationException(string.Join("\n", gu
 Assembly.Load(guardStream.ToArray()).GetType("Guard")!.GetMethod("Main")!.Invoke(null, null);
 Console.WriteLine("AST_BYREF_STORAGE_GUARDS_OK");
 
-var toolingFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "go-to-definition-next.xps");
+var fixtureRoot = new DirectoryInfo(AppContext.BaseDirectory);
+while (fixtureRoot is not null && !File.Exists(Path.Combine(fixtureRoot.FullName, "AstCompileProbe.csproj")))
+    fixtureRoot = fixtureRoot.Parent;
+var toolingFixture = Path.Combine((fixtureRoot ?? throw new Exception("AST probe fixture directory not found.")).FullName, "go-to-definition-next.xps");
 toolingFixture = Path.GetFullPath(toolingFixture);
 var toolingSource = await File.ReadAllTextAsync(toolingFixture);
 var definition = XPScript.Compiler.AstTooling.GoToDefinition(toolingSource, toolingFixture, 6, 10)
@@ -213,7 +216,7 @@ if (definition.Name != "Helper" || definition.Kind != "Sub" || definition.Line !
     throw new InvalidOperationException($"Go-to-definition returned {definition.File}:{definition.Line}:{definition.Column}.");
 Console.WriteLine("AST_GOTO_DEFINITION_OK");
 
-var schemaFreeFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "dependency-schema-free-next.xps");
+var schemaFreeFixture = Path.Combine(fixtureRoot.FullName, "dependency-schema-free-next.xps");
 schemaFreeFixture = Path.GetFullPath(schemaFreeFixture);
 var schemaFreeOutput = Path.Combine(Path.GetTempPath(), "xpscript-schema-free-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(schemaFreeOutput);
@@ -237,7 +240,7 @@ finally
     try { Directory.Delete(schemaFreeOutput, recursive: true); } catch { }
 }
 
-var schemaEnabledFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "dependency-schema-enabled-next.xps");
+var schemaEnabledFixture = Path.Combine(fixtureRoot.FullName, "dependency-schema-enabled-next.xps");
 schemaEnabledFixture = Path.GetFullPath(schemaEnabledFixture);
 var schemaEnabledOutput = Path.Combine(Path.GetTempPath(), "xpscript-schema-enabled-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(schemaEnabledOutput);
@@ -262,7 +265,7 @@ finally
     try { Directory.Delete(schemaEnabledOutput, recursive: true); } catch { }
 }
 
-var listEventFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "ui-list-view-event-dispatch.xps");
+var listEventFixture = Path.Combine(fixtureRoot.FullName, "ui-list-view-event-dispatch.xps");
 listEventFixture = Path.GetFullPath(listEventFixture);
 var listEventOutput = Path.Combine(Path.GetTempPath(), "xpscript-ui-list-event-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(listEventOutput);
@@ -288,7 +291,7 @@ finally
     try { Directory.Delete(listEventOutput, recursive: true); } catch { }
 }
 
-var targetFixture = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "target-specific-generated-code-next.xps");
+var targetFixture = Path.Combine(fixtureRoot.FullName, "target-specific-generated-code-next.xps");
 targetFixture = Path.GetFullPath(targetFixture);
 var targetOutput = Path.Combine(Path.GetTempPath(), "xpscript-target-source-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(targetOutput);

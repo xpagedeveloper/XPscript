@@ -1155,3 +1155,16 @@ Run this phase only after all preceding implementation work, permanent FullTest 
 - [x] Re-verified the opt-in bound-tree/emission cache with `tests/AstIncrementalCacheProbe`: clean and cached emission matched, unchanged procedures hit the cache, source/include/symbol edits invalidated dependent entries, and the run reported `AST_BOUND_CACHE_HIT_OK` (`hits=3`, `misses=8`, `emission_hits=3`). The cache remains opt-in; full phase-level performance benchmarking and selective cross-file generation remain open.
 - [x] Extended unused-dependency coverage through the actual AST compiler: marker names in XPscript strings/comments no longer select UI, database, archive or XPImage runtimes; `GeneratedDependencyProbe` passed `GENERATED_DEPENDENCIES_OK` after the generated-marker filtering fix.
 - [ ] The audit is not closed: physical Android/device-control execution, remaining legacy parser/transpiler reduction, selective cross-file emission, and the final cross-platform/manual gates remain open below.
+# Verification checkpoint: legacy disabled, .NET 10
+
+- [x] AST object registry audit: every registered object uses the AST route.
+- [x] Disable legacy transpilation and remove AST whole-file fallback.
+- [x] Validate final generated C# against legacy compiler and removed SAX identifiers.
+- [x] Run the AST compilation probe on .NET 10 with legacy disabled: core compilation,
+  ByRef storage, tooling, schema dependency inclusion and UIListView event dispatch passed.
+  Generated-code checks for win-x64, linux-x64 and osx-x64 passed on Windows;
+  these are not native execution results on Linux or macOS.
+- [ ] Migrate direct WASM browser/serverbridge transpiler calls to AST emission.
+- [ ] Replace legacy parity test invocations with AST-only behavioral assertions.
+- [ ] Run native Linux/macOS and local Android/WASM interaction gates with legacy disabled.
+
