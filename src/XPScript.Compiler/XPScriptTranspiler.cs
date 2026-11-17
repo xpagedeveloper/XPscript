@@ -92,7 +92,10 @@ public sealed partial class XPScriptTranspiler
 
     private static string TranspileExpanded(string source, string sourceName, string runtimeIdentifier, SourceMap sourceMap)
     {
-        var usesXpImage = source.Contains("XPImage", StringComparison.OrdinalIgnoreCase);
+        // Detect the object in code, not in string literals or comments.  A
+        // message such as "NO-XPIMAGE=OK" must not pull the Magick-backed
+        // XPImage array/runtime types into an otherwise image-free program.
+        var usesXpImage = AstObjectSupportRegistry.UsesObject(source, "XPImage");
         var originalFeatures = RuntimeFeatures.Detect(source);
         var originalTargetRestriction = originalFeatures.UnavailableFor(runtimeIdentifier).FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(originalTargetRestriction.Symbol))
