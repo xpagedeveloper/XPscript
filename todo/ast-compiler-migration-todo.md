@@ -1142,3 +1142,10 @@ Run this phase only after all preceding implementation work, permanent FullTest 
 - [ ] Run any remaining externally socketed Kestrel, CGI, and FastCGI checks that require local host permissions or machine-specific configuration.
 - [ ] Run manual WebAssembly/browser smoke checks on a configured browser when CI packaging/workload checks do not cover the local browser runtime.
 - [ ] Record the machine, OS, SDK/workload, emulator/device, Notes/Domino, IIS, and browser versions together with the exact commands and any environment-specific skips.
+
+## DoD audit update — 2026-11-17
+
+- [x] Confirmed the AST front-end owns XPscript parsing and binding: `DeclarationParser`, `StatementBinder` and the AST emitters produce generated C#; Roslyn is invoked only for generated C# compilation/emission through `RunRoslynCompiler` (the runtime-source catalog uses Roslyn syntax parsing only to inspect embedded C# runtime declarations).
+- [x] Confirmed selective generated dependency coverage for plain, XPImage, SQLite and combined programs with `tests/GeneratedDependencyProbe`; the probe passed as `GENERATED_DEPENDENCIES_OK` when run with a writable `XPSCRIPT_TEMP_ROOT` and serialized MSBuild project evaluation.
+- [x] Fixed a legacy runtime-feature false positive: `XPScriptTranspiler` now ignores `XPImage` in strings/comments when deciding whether to emit the XPImage array runtime. The no-XPImage workflow fixture now compiles without Magick.NET artifacts (`b4033157`).
+- [ ] The audit is not closed: Android SDK/device execution, remaining legacy parser/transpiler reduction, bound-tree caching/selective emission, and the final cross-platform/manual gates remain open below.
