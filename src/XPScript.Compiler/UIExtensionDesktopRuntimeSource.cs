@@ -15,6 +15,8 @@ internal static class XPScriptUIDesktopAdapter
 
     private static Type? ResolveHostType()
     {
+        if (global::System.OperatingSystem.IsAndroid())
+            return typeof(global::XPScript.UI.Android.AndroidFormHost);
         var names = global::System.OperatingSystem.IsAndroid()
             ? new[] { AndroidHostTypeName, HostTypeName }
             : new[] { HostTypeName };
