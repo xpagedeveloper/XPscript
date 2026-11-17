@@ -37,6 +37,15 @@ async Task<string> Run(string assembly)
 
 var plain = "internal static class Program { public static void Main() => System.Console.WriteLine(7); }";
 if (ApplicationDependencyCatalog.Detect(plain).Count != 0) throw new Exception("Plain program selected packages.");
+var markerText = """
+// XPImage XPScriptDbSqlite XPScriptDbMsSql XPScriptDbMySql XPScriptDbSupabase
+internal static class Program
+{
+    public static void Main() => System.Console.WriteLine("XPImage XPScriptDbSqlite XPScriptUI.CreateForm( XPScriptExtendedArchive");
+}
+""";
+if (ApplicationDependencyCatalog.Detect(markerText).Count != 0)
+    throw new Exception("Names in generated strings/comments selected unused packages.");
 var plainAssembly = await Build(plain, "plain");
 if (await Run(plainAssembly) != "7" || Directory.EnumerateFiles(Path.GetDirectoryName(plainAssembly)!, "Magick*", SearchOption.AllDirectories).Any())
     throw new Exception("Plain output unexpectedly acquired image dependencies.");

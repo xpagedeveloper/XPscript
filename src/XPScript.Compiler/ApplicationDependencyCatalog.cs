@@ -50,10 +50,19 @@ public static class ApplicationDependencyCatalog
     public static IReadOnlyList<ApplicationPackageReference> Detect(string generatedSource)
     {
         ArgumentNullException.ThrowIfNull(generatedSource);
+        // Dependency markers describe emitted runtime types/calls, not text
+        // written by the XPscript program. Ignore C# strings and comments so a
+        // diagnostic, log message or user-facing value mentioning an XP object
+        // cannot pull an unused provider into the generated application.
+        var code = AstObjectSupportRegistry.RemoveStringsAndComments(generatedSource);
+        // The generated backend source can also contain C# comments. The
+        // shared XPscript scrubber intentionally handles XPscript comments;
+        // remove the backend forms here before inspecting dependency markers.
+        code = System.Text.RegularExpressions.Regex.Replace(code, @"(?m)//[^\r\n]*|/\*.*?\*/", "", System.Text.RegularExpressions.RegexOptions.Singleline);
         var result = new List<ApplicationPackageReference>();
-        var usesUi = generatedSource.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
-                     generatedSource.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
-                     generatedSource.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
+        var usesUi = code.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
+                     code.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
+                     code.Contains("XPScriptUIDialogRuntime.", StringComparison.Ordinal);
         if (usesUi)
         {
             Add(result, "Avalonia", AvaloniaVersion, "Desktop UI");
@@ -61,20 +70,20 @@ public static class ApplicationDependencyCatalog
             Add(result, "Avalonia.Themes.Fluent", AvaloniaVersion, "Desktop UI");
             Add(result, "Avalonia.Controls.WebView", AvaloniaWebViewVersion, "Desktop UI WebView");
         }
-        if (generatedSource.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal))
+        if (code.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal))
             Add(result, "Microsoft.Data.Sqlite", MicrosoftDataSqliteVersion, "SQLite database");
-        if (generatedSource.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal))
+        if (code.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal))
             Add(result, "Microsoft.Data.SqlClient", MicrosoftDataSqlClientVersion, "SQL Server database");
-        if (generatedSource.Contains("XPScriptDbMySql", StringComparison.Ordinal))
+        if (code.Contains("XPScriptDbMySql", StringComparison.Ordinal))
             Add(result, "MySqlConnector", MySqlConnectorVersion, "MySQL database");
-        if (generatedSource.Contains("XPScriptDbSupabase", StringComparison.Ordinal))
+        if (code.Contains("XPScriptDbSupabase", StringComparison.Ordinal))
             Add(result, "Npgsql", NpgsqlVersion, "PostgreSQL/Supabase database");
-        if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal) || generatedSource.Contains("NotesMIMEEntity", StringComparison.Ordinal))
+        if (code.Contains("MimeKit.", StringComparison.Ordinal) || code.Contains("NotesMIMEEntity", StringComparison.Ordinal))
             Add(result, "MimeKit", MimeKitVersion, "Notes MIME support");
-        if (generatedSource.Contains("internal sealed class XPImage", StringComparison.Ordinal))
+        if (code.Contains("internal sealed class XPImage", StringComparison.Ordinal))
             Add(result, "Magick.NET-Q16-AnyCPU", MagickNetVersion, "XPImage runtime");
-        if (generatedSource.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ||
-            System.Text.RegularExpressions.Regex.IsMatch(generatedSource, @"new\s+XPScriptArchive\s*\([^\r\n;]*,\s*true\s*\)", System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+        if (code.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ||
+            System.Text.RegularExpressions.Regex.IsMatch(code, @"new\s+XPScriptArchive\s*\([^\r\n;]*,\s*true\s*\)", System.Text.RegularExpressions.RegexOptions.CultureInvariant))
             Add(result, "SharpCompress", SharpCompressVersion, "Extended Archive runtime");
         return result;
     }
