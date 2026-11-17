@@ -24,6 +24,24 @@ try
 catch (XPScript.Compiler.CompilerException ex) when (ex.Message.Contains("Legacy compilation is disabled")) { }
 Console.WriteLine("AST_LEGACY_DISABLED_GUARDS_OK");
 if (args.Contains("--legacy-guards-only")) return;
+if (args.Contains("--source-emission-only"))
+{
+    var directory = new DirectoryInfo(AppContext.BaseDirectory);
+    while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AstCompileProbe.csproj"))) directory = directory.Parent;
+    var fixture = Path.Combine(directory!.FullName, "cli-main.xps");
+    var output = Path.Combine(directory.FullName, "out", "source-emission", Guid.NewGuid().ToString("N"));
+    var emitted = await XPScript.Compiler.AstCompiler.GenerateSourceAsync(fixture, output);
+    if (!emitted.Contains("class Program") || File.Exists(Path.Combine(output, "Generated.dll")))
+        throw new Exception("AST source emission did not preserve the source-only contract.");
+    var emittedCompilation = CSharpCompilation.Create("SourceOnlyProbe", [CSharpSyntaxTree.ParseText(emitted)],
+        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator).Select(path => MetadataReference.CreateFromFile(path)),
+        new CSharpCompilationOptions(OutputKind.ConsoleApplication, allowUnsafe: true));
+    using var emittedStream = new MemoryStream();
+    var result = emittedCompilation.Emit(emittedStream);
+    if (!result.Success) throw new Exception(string.Join("\n", result.Diagnostics));
+    Console.WriteLine("AST_SOURCE_EMISSION_OK");
+    return;
+}
 
 {
     var registry = typeof(DeclarationParser).Assembly.GetType("XPScript.Compiler.AstObjectSupportRegistry", throwOnError: true)!;

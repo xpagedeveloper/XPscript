@@ -78,6 +78,10 @@ jobs:
         shell: pwsh
         timeout-minutes: 5
         run: dotnet run --project tests/ast-compile-probe -c Release -- --legacy-guards-only
+      - name: Verify AST source emission for host packaging
+        shell: pwsh
+        timeout-minutes: 5
+        run: dotnet run --project tests/ast-compile-probe -c Release -- --source-emission-only
       - name: Verify MCP protocol, concurrent requests and AST compilation
         if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.webiis_only || inputs.ast_lexer_only)) }}
         timeout-minutes: 10

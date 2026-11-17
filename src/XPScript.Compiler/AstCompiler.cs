@@ -54,6 +54,12 @@ public static class AstCompiler
     public static Task<string> CompileAsync(string sourcePath, string outputDirectory, CancellationToken cancellationToken = default)
         => CompileAsync(sourcePath, outputDirectory, null, cancellationToken: cancellationToken);
 
+    /// <summary>Emits validated C# through AST for hosts that own backend packaging.</summary>
+    public static Task<string> GenerateSourceAsync(string sourcePath, string outputDirectory,
+        string? runtimeIdentifier = null, CancellationToken cancellationToken = default)
+        => CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, null,
+            ApplicationSecurityMode.Off, false, null, null, false, cancellationToken, emitSourceOnly: true);
+
     /// <summary>
     /// Compiles through the AST pipeline after applying an optional transform to
     /// the generated C# source. This is used by hosts that need to add a host
@@ -107,7 +113,7 @@ public static class AstCompiler
         Func<string, string>? generatedSourceTransform,
         ApplicationSecurityMode securityMode, bool restricted,
         IReadOnlyList<string>? sourceRoots, IReadOnlyList<string>? sourcePreprocessors,
-        bool embedAssets, CancellationToken cancellationToken)
+        bool embedAssets, CancellationToken cancellationToken, bool emitSourceOnly = false)
     {
         if (runtimeIdentifier is not null)
             TargetPrerequisiteValidator.Validate(runtimeIdentifier.Trim().ToLowerInvariant());
@@ -1830,6 +1836,8 @@ internal static class Program
             generated += Environment.NewLine + UIExtensionAstCompatibilitySource.Code;
         AstRuntimeDependencyGuard.Validate(generated, sourcePath);
         var applicationMarkers = AstApplicationSupport.BuildMarkers(fullSource, sourcePath);
+        if (emitSourceOnly)
+            return generated + Environment.NewLine + applicationMarkers;
         string outputResult;
         if (applicationMarkers.Length != 0)
             outputResult = await RunCompiler.CompileGeneratedWithDependenciesAsync(generated + Environment.NewLine + applicationMarkers, outputDirectory, false, cancellationToken, runtimeIdentifier, managedReferences.Managed, sourcePath, generatedSourceTransform is not null ? "Script" : null).ConfigureAwait(false);
