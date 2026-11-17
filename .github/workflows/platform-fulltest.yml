@@ -102,6 +102,14 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '${{ matrix.framework }}.0.x'
+      - name: Select the matrix .NET SDK
+        shell: pwsh
+        run: |
+          $sdk = '${{ matrix.framework }}.0.0'
+          @{ sdk = @{ version = $sdk; rollForward = 'latestPatch'; allowPrerelease = $false } } |
+            ConvertTo-Json -Depth 4 | Set-Content -Path global.json -Encoding utf8
+          Write-Host "Selected .NET SDK for browser-WASM matrix: $sdk"
+          dotnet --version
       - name: Install browser-WASM workload
         shell: pwsh
         run: dotnet workload install wasm-tools --skip-manifest-update
