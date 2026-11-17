@@ -105,7 +105,13 @@ jobs:
       - name: Select the matrix .NET SDK
         shell: pwsh
         run: |
-          $sdk = '${{ matrix.framework }}.0.0'
+          $major = '${{ matrix.framework }}'
+          $sdk = (dotnet --list-sdks |
+            Select-String -Pattern "^$major\.0\.\d+" |
+            ForEach-Object { ($_.Line -split '\s+')[0] } |
+            Sort-Object { [version]$_ } |
+            Select-Object -Last 1)
+          if ([string]::IsNullOrWhiteSpace($sdk)) { throw "No installed .NET SDK found for major version $major." }
           @{ sdk = @{ version = $sdk; rollForward = 'latestPatch'; allowPrerelease = $false } } |
             ConvertTo-Json -Depth 4 | Set-Content -Path global.json -Encoding utf8
           Write-Host "Selected .NET SDK for browser-WASM matrix: $sdk"
