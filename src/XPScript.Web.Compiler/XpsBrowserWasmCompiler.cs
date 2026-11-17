@@ -258,7 +258,7 @@ public sealed class XpsBrowserWasmCompiler
         foreach (var file in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories)) { var destination = Path.Combine(destinationRoot, Path.GetRelativePath(sourceRoot, file)); Directory.CreateDirectory(Path.GetDirectoryName(destination)!); File.Copy(file, destination, true); }
     }
     private string BuildIndexHtml(string sourcePath) => IndexHtml
-        .Replace("__XPSCRIPT_BASE_HREF__", Uri.EscapeDataString(Path.GetFileName(sourcePath)) + "/", StringComparison.Ordinal)
+        .Replace("__XPSCRIPT_BASE_HREF__", "/" + Uri.EscapeDataString(Path.GetFileName(sourcePath)) + "/", StringComparison.Ordinal)
         .Replace("__XPSCRIPT_BOOTSTRAP__", UIFormAppAssets.UsesUIForm(sourcePath) ? "<link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css\" rel=\"stylesheet\">" : string.Empty, StringComparison.Ordinal);
     private static string NormalizeVariantSetAssignments(string source)
     {

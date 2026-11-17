@@ -596,7 +596,7 @@ End Sub
     {
         var candidateBootstrap = await File.ReadAllTextAsync(Path.Combine(appRoot, "index.html"));
         Console.WriteLine($"[WASM smoke] cached app root: {appRoot}; base={ExtractBaseHref(candidateBootstrap)}");
-        if (candidateBootstrap.Contains("<base href=\"app.xps/\">", StringComparison.Ordinal))
+        if (candidateBootstrap.Contains("<base href=\"/app.xps/\">", StringComparison.Ordinal))
             matchingRoots.Add(appRoot);
     }
     Console.WriteLine($"[WASM smoke] cache root: {cacheRoot}; index roots: {appRoots.Length}; matching app.xps roots: {matchingRoots.Count}");
@@ -612,7 +612,7 @@ End Sub
         throw new Exception("Browser-WASM bootstrap assets are not colocated with the published _framework directory.");
 
     var bootstrap = await File.ReadAllTextAsync(Path.Combine(frameworkRoot, "index.html"));
-    if (!bootstrap.Contains("<base href=\"app.xps/\">", StringComparison.Ordinal))
+    if (!bootstrap.Contains("<base href=\"/app.xps/\">", StringComparison.Ordinal))
         throw new Exception("Browser WASM bootstrap does not anchor relative assets to its owning .xps route.");
 
     var browserModule = await File.ReadAllTextAsync(Path.Combine(frameworkRoot, "xpscript-browser.js"));
