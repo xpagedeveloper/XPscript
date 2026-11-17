@@ -109,6 +109,7 @@ public static class XPScriptCompilationSnapshotBuilder
         var identityText = new StringBuilder()
             .Append("compiler=").AppendLine(compilerIdentity)
             .Append("runtime=").AppendLine(runtimeIdentifier)
+            .Append("framework=").AppendLine(DotNetVersionSelection.NormalizeTargetFramework(Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK")))
             .Append("config=").AppendLine(configurationIdentity);
         foreach (var dependency in dependencies)
             identityText.Append(dependency.Path).Append('=').AppendLine(dependency.Sha256);

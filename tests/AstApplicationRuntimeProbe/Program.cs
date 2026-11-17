@@ -7,6 +7,26 @@ var repo = Path.GetFullPath(args.Length == 0 ? "." : args[0]);
 var output = Path.Combine(repo, "out", "application-ast-probe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(output);
 var compiler = Path.Combine(repo, "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll");
+var snapshotBuilder = Assembly.LoadFrom(Path.Combine(Path.GetDirectoryName(compiler)!, "XPScript.Compiler.Core.dll")).GetType("XPScript.Compiler.XPScriptCompilationSnapshotBuilder", throwOnError: true)!;
+var createSnapshot = snapshotBuilder.GetMethod("CreateForRunAsync", BindingFlags.Static | BindingFlags.NonPublic)!;
+var previousFramework = Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK");
+try
+{
+    async Task<string> Identity(string framework)
+    {
+        Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", framework);
+        var task = (Task)createSnapshot.Invoke(null, [Path.Combine(repo, "tests/ast-compile-probe/application-unused.xps"), "win-x64", "framework-regression", long.MaxValue, CancellationToken.None])!;
+        await task;
+        var result = task.GetType().GetProperty("Result")!.GetValue(task)!;
+        return (string)result.GetType().GetProperty("Identity")!.GetValue(result)!;
+    }
+    var ten = await Identity("net10.0");
+    var eleven = await Identity("net11.0");
+    if (ten == eleven || ten != await Identity("net10.0"))
+        throw new Exception("Framework cache invalidation or stable identity failed.");
+    Console.WriteLine("AST_FRAMEWORK_CACHE_IDENTITY_OK");
+}
+finally { Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", previousFramework); }
 var registryAvailable = CanWriteUserRegistry();
 foreach (var (name, code) in new[] { ("application-member-error", "XPS2009"), ("application-readonly-error", "XPS2001"),
     ("application-args-readonly-error", "XPS2001"),
@@ -77,6 +97,10 @@ async Task Run(string file, string[] commandArguments)
 }
 async Task<(int Exit, string Text)> Execute(string file, string[] commandArguments)
 {
+    // Reflection checks run in this net10.0 probe, so compile fixtures for the
+    // same framework even when a newer SDK is installed on the test machine.
+    if (commandArguments.Contains("ast-compile") || commandArguments.Contains("legacy-compile"))
+        commandArguments = [.. commandArguments, "--target-framework", "10"];
     var start = new ProcessStartInfo(file) { RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = output };
     foreach (var argument in commandArguments) start.ArgumentList.Add(argument);
     foreach (var (variable, folder) in new[] { ("XDG_CONFIG_HOME", "config"), ("XDG_CACHE_HOME", "cache"), ("XDG_DATA_HOME", "data") })
