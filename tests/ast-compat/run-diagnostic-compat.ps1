@@ -51,6 +51,13 @@ if ([System.IO.Path]::GetFileName($astError.file) -ne [System.IO.Path]::GetFileN
     throw "Structured AST diagnostic mismatch: $($astError.file):$($astError.line):$($astError.diagnosticCode)"
 }
 Write-Host "AST_DIAGNOSTIC_STRUCTURED=OK category=$($astError.category)"
+$validationText = (& dotnet $compiler validate $source --result-format json 2>&1 | Out-String)
+$validation = $validationText.Substring($validationText.IndexOf('{')) | ConvertFrom-Json
+if ($validation.result -ne 'error' -or $validation.errors[0].diagnosticCode -ne 'XPS1012' -or
+    $validation.errors[0].line -ne 2 -or $validation.errors[0].position -ne 25) {
+    throw "AST validate diagnostic contract failed: $validationText"
+}
+Write-Host 'AST_VALIDATE_DIAGNOSTIC=OK'
 
 # AST capability improvements are allowed when the published legacy compiler
 # rejects the same source. The reverse direction is not allowed and is covered

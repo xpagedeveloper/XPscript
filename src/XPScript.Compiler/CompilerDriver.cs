@@ -148,11 +148,18 @@ public sealed class CompilerDriver
             ValidateNativeDependencies(sourcePath, nativeDependencies);
             ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
-            var transpiler = new XPScriptTranspiler();
-            sourceContext = ExpandedSourceContext.Begin(expandedSource, sourcePath, includeResult.Map);
-            var generatedSource = transpiler.Transpile(expandedSource, sourcePath, rid);
+            var astWorkspace = CreateCompilerTempRoot();
+            string generatedSource;
+            try
+            {
+                generatedSource = await AstCompiler.GenerateSourceAsync(sourcePath, astWorkspace, rid);
+            }
+            finally
+            {
+                if (Directory.Exists(astWorkspace)) Directory.Delete(astWorkspace, recursive: true);
+            }
             await ValidateGeneratedCodeAsync(sourcePath, rid, generatedSource, managedReferences);
-            sourceContext.Dispose();
+            sourceContext?.Dispose();
             sourceContext = null;
             return CompileResult.Valid().WithContext(sourcePath, rid);
         }
