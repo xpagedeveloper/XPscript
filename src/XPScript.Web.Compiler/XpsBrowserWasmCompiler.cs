@@ -58,7 +58,8 @@ public sealed class XpsBrowserWasmCompiler
             TryDelete(appRoot);
             Directory.CreateDirectory(publishRoot);
             var browserSource = EnsureBrowserEntryPoint(NormalizeVariantSetAssignments(parsed.Source), parsed.Routes);
-            var generated = new XPScriptTranspiler().TranspileRestricted(browserSource, sourcePath, Platform, [_webRoot]);
+            var generated = await AstCompiler.GenerateRestrictedSourceAsync(browserSource, sourcePath,
+                Path.Combine(workspace, "ast-emission"), Platform, [_webRoot], cancellationToken).ConfigureAwait(false);
             generated = generated.Replace("XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop", "XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser", StringComparison.Ordinal);
             generated = AstCompiler.EnsureUiComponentHierarchy(generated);
             // The restricted browser transpiler can emit attachment API calls

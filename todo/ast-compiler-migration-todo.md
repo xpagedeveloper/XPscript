@@ -1164,7 +1164,12 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   ByRef storage, tooling, schema dependency inclusion and UIListView event dispatch passed.
   Generated-code checks for win-x64, linux-x64 and osx-x64 passed on Windows;
   these are not native execution results on Linux or macOS.
-- [ ] Migrate direct WASM browser/serverbridge transpiler calls to AST emission.
+- [x] Migrate direct WASM browser/serverbridge transpiler calls to AST emission.
+  Verified locally on Windows with SDK 10.0.404, net10.0 and installed wasm-tools,
+  with legacy disabled. Dispatcher bundle/assets passed. Playwright verified the
+  button/client callback/helper, capability GET 200, server POST 200 and continued
+  client execution (`WASM_PLAYWRIGHT_PAGE_OK`, `WASM_SERVERSIDE_EVENT_OK`).
+  Native Linux/macOS and broader control interaction coverage remain open.
 - [ ] Replace legacy parity test invocations with AST-only behavioral assertions.
 - [ ] Run native Linux/macOS and local Android/WASM interaction gates with legacy disabled.
 

@@ -116,7 +116,8 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             TryDelete(serverRoot);
 
             var browserSource = EnsureEntryPoint(NormalizeVariantSetAssignments(plan.BrowserSource), parsed.Routes);
-            var browserGenerated = new XPScriptTranspiler().TranspileRestricted(browserSource, sourcePath, Platform, [webRoot]);
+            var browserGenerated = await AstCompiler.GenerateRestrictedSourceAsync(browserSource, sourcePath,
+                Path.Combine(workspace, "ast-browser-emission"), Platform, [webRoot], cancellationToken).ConfigureAwait(false);
             browserGenerated = browserGenerated.Replace(
                 "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop",
                 "XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser",
@@ -160,17 +161,14 @@ internal static class XpsBrowserWasmServerBridgeCompiler
 
             var serverSource = EnsureEntryPoint(normalizedSource, parsed.Routes);
             LogBuildStep("server transpile: start");
-            var serverGenerated = new XPScriptTranspiler().TranspileRestricted(
-                serverSource,
-                sourcePath,
-                "browser-wasm-server",
-                [webRoot]);
+            var serverGenerated = await AstCompiler.GenerateRestrictedSourceAsync(serverSource, sourcePath,
+                Path.Combine(workspace, "ast-server-emission"), "browser-wasm-server", [webRoot], cancellationToken).ConfigureAwait(false);
             LogBuildStep("server transpile: done");
             // The restricted server pipeline intentionally skips the browser
             // renderer wrapper, but still needs the shared UIForm model API
             // (Theme, Tabs, Buttons, grids and callbacks). The server-specific
             // transpiler guard keeps this pass from duplicating the renderer.
-            serverGenerated = XPScriptTranspiler.ApplyWebUiFormModelExtensions(serverGenerated);
+            // AST emission already installs the UIForm model and callbacks.
             LogBuildStep("server model extensions: done");
             await File.WriteAllTextAsync(Path.Combine(workspace, "ServerGenerated.cs"), serverGenerated, cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(workspace, "ServerCompanion.csproj"), BuildServerProject(serverGenerated), cancellationToken).ConfigureAwait(false);

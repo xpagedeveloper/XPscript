@@ -196,8 +196,8 @@ internal static class XpsBrowserWasmServerBridgeHost
         IReadOnlyList<JsonElement> jsonArguments,
         XpsWebContext context)
     {
-        var script = state.Assembly.GetType("Script", throwOnError: true, ignoreCase: false)
-            ?? throw new InvalidOperationException("Server bridge companion Script type was not found.");
+        var script = state.Assembly.GetType("Program", throwOnError: true, ignoreCase: false)
+            ?? throw new InvalidOperationException("Server bridge companion AST Program type was not found.");
         var methods = script.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
             .Where(method => method.Name.Equals(procedure.Name, StringComparison.OrdinalIgnoreCase) && method.GetParameters().Length == procedure.Parameters.Count)
             .ToArray();

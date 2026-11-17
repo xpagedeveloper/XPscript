@@ -11,7 +11,8 @@ Directory.CreateDirectory(root);
 try
 {
     Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", "1");
-    Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", "net11.0");
+    if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK")))
+        Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", "net10.0");
     await File.WriteAllTextAsync(Path.Combine(root, "index.xps"), """
 [Platform:browser-wasm]
 [ServerSide]

@@ -60,6 +60,13 @@ public static class AstCompiler
         => CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, null,
             ApplicationSecurityMode.Off, false, null, null, false, cancellationToken, emitSourceOnly: true);
 
+    public static Task<string> GenerateRestrictedSourceAsync(string source, string sourcePath,
+        string outputDirectory, string runtimeIdentifier, IReadOnlyList<string> sourceRoots,
+        CancellationToken cancellationToken = default)
+        => CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, null,
+            ApplicationSecurityMode.Off, true, sourceRoots, null, false, cancellationToken,
+            emitSourceOnly: true, sourceOverride: source);
+
     /// <summary>
     /// Compiles through the AST pipeline after applying an optional transform to
     /// the generated C# source. This is used by hosts that need to add a host
@@ -113,7 +120,7 @@ public static class AstCompiler
         Func<string, string>? generatedSourceTransform,
         ApplicationSecurityMode securityMode, bool restricted,
         IReadOnlyList<string>? sourceRoots, IReadOnlyList<string>? sourcePreprocessors,
-        bool embedAssets, CancellationToken cancellationToken, bool emitSourceOnly = false)
+        bool embedAssets, CancellationToken cancellationToken, bool emitSourceOnly = false, string? sourceOverride = null)
     {
         if (runtimeIdentifier is not null)
             TargetPrerequisiteValidator.Validate(runtimeIdentifier.Trim().ToLowerInvariant());
@@ -122,7 +129,7 @@ public static class AstCompiler
         using var includeScope = restricted
             ? IncludeSecurityContext.Push(sourceRoots is { Count: > 0 } ? sourceRoots : [Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory])
             : null;
-        var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        var source = sourceOverride ?? await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         // Expand Include directives before AST feature detection and parsing so the
         // AST compiler has the same multi-file source contract as the legacy path.
         var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
@@ -1821,6 +1828,17 @@ internal static class Program
             generated = new AiPromptSchemaRuntimePostProcessor().Transform(generated);
         }
         generated = RemoveDuplicateTlsRuntime(generated);
+        if (runtimeFeatures.Ui && AstObjectSupportRegistry.UsesObject(fullSource, "UIForm"))
+        {
+            if (!generated.Contains("internal sealed class XPScriptJsonSchema", StringComparison.Ordinal))
+                generated += Environment.NewLine + JsonSchemaRuntimeSource.Code;
+            if (!generated.Contains("public bool IsDataValid => ValidateData().Valid", StringComparison.Ordinal))
+                generated += Environment.NewLine + UIFormValidationRuntimeSource.Code;
+            if (!generated.Contains("public string ValidationError { get; internal set; }", StringComparison.Ordinal))
+                generated = generated.Replace("    public List<string> Options { get; } = [];\n",
+                    "    public List<string> Options { get; } = [];\n    public string ValidationError { get; internal set; } = string.Empty;\n", StringComparison.Ordinal);
+            generated = new UIFormEventDispatcherPostProcessor().Transform(generated);
+        }
         if (Regex.IsMatch(generated, @"\bXPScriptJson(?:Schema|ValidationResult)\b") &&
             !generated.Contains("internal sealed class XPScriptJsonSchema", StringComparison.Ordinal))
             generated += Environment.NewLine + JsonSchemaRuntimeSource.Code;

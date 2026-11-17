@@ -162,7 +162,7 @@ internal static class XPScriptUIDesktopAdapter
         try
         {
             var args = method.GetParameters().Length == 2
-                ? new object?[] { System.Text.Json.JsonSerializer.Serialize(request), new Func<string, string, string>((eventToken, submittedValue) => string.Empty) }
+                ? new object?[] { System.Text.Json.JsonSerializer.Serialize(request), new Func<string, string, string>(form.DispatchRegisteredEvent) }
                 : new object?[] { System.Text.Json.JsonSerializer.Serialize(request) };
             resultJson = Convert.ToString(method.Invoke(null, args), System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
         }
@@ -213,7 +213,7 @@ internal static class XPScriptUIDesktopAdapter
     {
         var register = type.GetMethod("SetEventDispatcher", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(Func<string, string, string>)], null);
         if (register is null) return;
-        try { register.Invoke(null, [new Func<string, string, string>((eventToken, submittedValue) => string.Empty)]); }
+        try { register.Invoke(null, [new Func<string, string, string>(form.DispatchRegisteredEvent)]); }
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "UIForm event dispatcher registration failed: " + ex.InnerException.Message); }
     }
 
