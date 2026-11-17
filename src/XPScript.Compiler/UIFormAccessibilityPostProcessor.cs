@@ -34,10 +34,7 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "        IsTabStop = interactive;",
                 "    }"));
 
-        generated = ReplaceOnceRequired(
-            generated,
-            "    public List<string> Options { get; } = [];\n",
-            Block(
+        var fieldProperties = Block(
                 "    public List<string> Options { get; } = [];",
                 "    public string AccessibleName { get; set; } = string.Empty;",
                 "    public string AccessibleDescription { get; set; } = string.Empty;",
@@ -54,7 +51,16 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "    internal Func<string, bool>? AccessibilityFocusQuery { get; set; }",
                 "    public bool HasFocus => AccessibilityFocusQuery?.Invoke(Name) == true;",
                 "    public void Focus() => AccessibilityFocusHandler?.Invoke(Name);",
-                string.Empty));
+                string.Empty);
+        if (generated.Contains("public bool Focusable { get; set; }", StringComparison.Ordinal))
+            fieldProperties = fieldProperties.Replace("    public bool Focusable { get; set; }\n", string.Empty, StringComparison.Ordinal);
+        if (generated.Contains("public bool IsTabStop { get; set; }", StringComparison.Ordinal))
+            fieldProperties = fieldProperties.Replace("    public bool IsTabStop { get; set; }\n", string.Empty, StringComparison.Ordinal);
+
+        generated = ReplaceOnceRequired(
+            generated,
+            "    public List<string> Options { get; } = [];\n",
+            fieldProperties);
 
         generated = ReplaceOnceRequired(
             generated,

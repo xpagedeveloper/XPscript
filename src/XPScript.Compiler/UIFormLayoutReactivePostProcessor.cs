@@ -333,6 +333,12 @@ internal sealed partial class XPScriptUIForm
         }
         if (!source.Contains(oldValue, StringComparison.Ordinal))
         {
+            if (oldValue.Contains("private readonly List<XPScriptUIField> _fields", StringComparison.Ordinal) &&
+                source.Contains("private readonly Dictionary<string, XPScriptUIGrid> _grids", StringComparison.Ordinal))
+            {
+                Console.Error.WriteLine("[XPScript UIForm] grid state was already transformed; continuing with the existing grid state.");
+                return source;
+            }
             if (oldValue.Contains("public object? GetFieldValue(object? name)", StringComparison.Ordinal) &&
                 source.Contains("public XPScriptUIGrid AddGridColumns(object? columns)", StringComparison.Ordinal))
             {
