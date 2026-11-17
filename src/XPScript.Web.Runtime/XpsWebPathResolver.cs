@@ -28,6 +28,14 @@ public sealed class XpsWebPathResolver
         var segments = NormalizeUrlPath(requestPath);
         if (segments.Count == 0) return ResolveCandidate(_defaultDocumentName, null, fileExists);
 
+        // Browser-WASM server-side calls use a virtual endpoint that belongs to
+        // the default browser bundle rather than to a physical .xps route.
+        if (segments[0].Equals("__xpscript_bridge", StringComparison.OrdinalIgnoreCase))
+        {
+            var bridgeSource = ResolveCandidate(_defaultDocumentName, BrowserWasmAssetRoute, fileExists);
+            if (bridgeSource.Found) return bridgeSource;
+        }
+
         if (segments.Count > 0 && (segments[0].Equals("main.js", StringComparison.OrdinalIgnoreCase) ||
             segments[0].Equals("xpscript-browser.js", StringComparison.OrdinalIgnoreCase) ||
             segments[0].Equals("_framework", StringComparison.OrdinalIgnoreCase)))

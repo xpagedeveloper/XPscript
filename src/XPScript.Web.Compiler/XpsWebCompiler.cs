@@ -465,7 +465,9 @@ public sealed class XpsWebCompiler
     private static async Task<XpsCompiledWebUnit> CompileBrowserWasmAsync(string sourcePath, string webRoot, XpsWebRouteParseResult parsed, CancellationToken cancellationToken)
     {
         var bundle = await XpsBrowserWasmServerBridgeCompiler.GetOrBuildAsync(sourcePath, webRoot, parsed, cancellationToken).ConfigureAwait(false);
-        var methods = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "GET", "HEAD" };
+        // The browser bundle serves normal assets with GET/HEAD, but the
+        // server-side WASM bridge also needs POST for procedure invocation.
+        var methods = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "GET", "HEAD", "POST" };
         var policy = new XpsRoutePolicy(true, methods, [], []);
         var routes = new Dictionary<string, XpsWebRouteDescriptor>(StringComparer.OrdinalIgnoreCase)
         {

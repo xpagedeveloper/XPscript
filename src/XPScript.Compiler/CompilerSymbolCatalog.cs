@@ -91,6 +91,7 @@ public static class CompilerSymbolCatalog
             Define("XPJsonObject", "class", "XPJsonObject", [], null, "api.XPJsonObject"),
             Define("XPJsonObject.Get", "method", "XPJsonObject.Get(name As String) As Variant", [new("name", "String")], "Variant", "api.XPJsonObject.Get"),
             Define("XPJsonObject.Set", "method", "XPJsonObject.Set(name As String, value As Variant)", [new("name", "String"), new("value", "Variant")], null, "api.XPJsonObject.Set"),
+            Define("XPJsonObject.SetArray", "method", "XPJsonObject.SetArray(name As String, value As XPJsonArray)", [new("name", "String"), new("value", "XPJsonArray")], null, "api.XPJsonObject.SetArray"),
             Define("XPJsonObject.Remove", "method", "XPJsonObject.Remove(name As String)", [new("name", "String")], null, "api.XPJsonObject.Remove"),
             Define("XPJsonObject.Contains", "method", "XPJsonObject.Contains(name As String) As Boolean", [new("name", "String")], "Boolean", "api.XPJsonObject.Contains"),
             Define("XPJsonObject.Count", "method", "XPJsonObject.Count As Integer", [], "Integer", "api.XPJsonObject.Count"),

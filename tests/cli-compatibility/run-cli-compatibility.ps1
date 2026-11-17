@@ -89,7 +89,7 @@ if ($LASTEXITCODE -ne 0 -or $mixedCaseAstRunOutput -notlike '*APPLICATION_NEWLIN
 }
 
 $legacyCaseOutput = dotnet $compiler legacy-run (Join-Path $root 'tests/ast-compile-probe/application-newline.xps') --No-Daemon --InFo --ArGs 'legacy-case-insensitive' 2>&1 | Out-String
-if ($LASTEXITCODE -ne 0 -or $legacyCaseOutput -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $legacyCaseOutput -notlike '*APPLICATION_NEWLINE_END*') {
+if ($LASTEXITCODE -ne 2 -or $legacyCaseOutput -notlike '*Legacy compilation is disabled*') {
     throw "Legacy run case-insensitive option regression: $legacyCaseOutput"
 }
 
@@ -184,56 +184,13 @@ if ($LASTEXITCODE -ne 0 -or $defaultRunText -notlike '*APPLICATION_NEWLINE_BEGIN
     throw "Default AST run regression: $defaultRunText"
 }
 
-$legacyRunText = dotnet $compiler legacy-run $astSource --platform $hostRid --no-daemon --Args 'legacy-run-check' | Out-String
-if ($LASTEXITCODE -ne 0 -or $legacyRunText -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $legacyRunText -notlike '*APPLICATION_NEWLINE_END*') {
-    throw "Legacy run alias regression: $legacyRunText"
-}
-
-$runV1Text = dotnet $compiler runv1 $astSource --platform $hostRid --no-daemon --Args 'runv1-check' | Out-String
-if ($LASTEXITCODE -ne 0 -or $runV1Text -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $runV1Text -notlike '*APPLICATION_NEWLINE_END*') {
-    throw "runv1 legacy alias regression: $runV1Text"
-}
-
-$legacyOutput = Join-Path $resultRoot 'legacy-compile'
-$legacyOutputText = dotnet $compiler legacy-compile $astSource -o $legacyOutput --runtime=false --single-file=false --debug | Out-String
-if ($LASTEXITCODE -ne 0 -or $legacyOutputText -notlike '*result: ok*' -or -not (Test-Path $legacyOutput)) {
-    throw "Legacy compile option compatibility regression: $legacyOutputText"
-}
-
-$compileV1Output = Join-Path $resultRoot 'compilev1'
-$compileV1Text = dotnet $compiler compilev1 $astSource -o $compileV1Output --runtime=false --single-file=false | Out-String
-if ($LASTEXITCODE -ne 0 -or $compileV1Text -notlike '*result: ok*' -or -not (Test-Path $compileV1Output)) {
-    throw "compilev1 legacy alias regression: $compileV1Text"
-}
-
-$legacyJsonOutput = Join-Path $resultRoot 'legacy-option-matrix'
-$legacyJsonText = dotnet $compiler legacy-compile $astSource -o $legacyJsonOutput --platform win-x64 --runtime=false --singlefile=false --result-format json --security=off --restricted --source-root (Join-Path $root 'tests/ast-compile-probe') --preprocessor identity --embed-assets | Out-String
-if ($LASTEXITCODE -ne 0) { throw "Legacy option matrix regression: $legacyJsonText" }
-$legacyJsonResult = $legacyJsonText | ConvertFrom-Json
-if ($legacyJsonResult.result -ne 'ok' -or $legacyJsonResult.operation -ne 'compile' -or -not (Test-Path $legacyJsonOutput)) {
-    throw "Legacy option matrix returned an unexpected result: $legacyJsonText"
-}
-
-foreach ($legacyTarget in @('desktop', 'console')) {
-    $legacyTargetOutput = Join-Path $resultRoot "legacy-target-$legacyTarget"
-    $legacyTargetText = dotnet $compiler legacy-compile $astSource --target $legacyTarget -o $legacyTargetOutput --runtime=false --single-file=false 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0 -or $legacyTargetText -notlike '*result: ok*' -or -not (Test-Path $legacyTargetOutput)) {
-        throw "Legacy --target $legacyTarget compatibility regression: $legacyTargetText"
+foreach ($legacyCommand in @('legacy-run', 'runv1', 'legacy-compile', 'compilev1')) {
+    $legacyText = dotnet $compiler $legacyCommand $astSource --platform $hostRid --no-daemon --runtime=false 2>&1 | Out-String
+    if ($LASTEXITCODE -ne 2 -or $legacyText -notlike '*Legacy compilation is disabled*') {
+        throw "Disabled legacy command $legacyCommand did not return the migration guard: $legacyText"
     }
 }
-
-$legacyWebIisText = dotnet $compiler legacy-compile $astSource --target webiis --runtime=false --single-file=false 2>&1 | Out-String
-if ($LASTEXITCODE -eq 0 -or $legacyWebIisText -notlike '*webiis target requires main.xps*') {
-    throw "Legacy webiis entry-point validation regression: $legacyWebIisText"
-}
-
-$legacyWebIisOutput = Join-Path $resultRoot 'legacy-webiis'
-$legacyWebIisPackageText = dotnet $compiler legacy-compile (Join-Path $root 'demo/webiis/main.xps') --target webiis --runtime=false --single-file=false --output $legacyWebIisOutput --result-format json | Out-String
-if ($LASTEXITCODE -ne 0) { throw "Legacy webiis package regression: $legacyWebIisPackageText" }
-$legacyWebIisResult = $legacyWebIisPackageText | ConvertFrom-Json
-if ($legacyWebIisResult.result -ne 'ok' -or -not (Test-Path ($legacyWebIisOutput + '.zip'))) {
-    throw "Legacy webiis package returned an unexpected result: $legacyWebIisPackageText"
-}
+Write-Host 'LEGACY_ENTRYPOINTS_DISABLED=OK'
 
 $defaultCompileOutput = Join-Path $resultRoot 'default-ast-compile'
 $defaultCompileText = dotnet $compiler compile $astSource -o $defaultCompileOutput --runtime=false --single-file=false | Out-String

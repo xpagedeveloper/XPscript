@@ -40,7 +40,7 @@ internal sealed class UIFormCallbackModelPostProcessor
             generated,
             "internal sealed partial class XPScriptUIForm\n{",
             """
-internal sealed class XPScriptUIFormEvent
+public sealed class XPScriptUIFormEvent
 {
     internal XPScriptUIFormEvent(
         XPScriptUIForm form,
@@ -56,12 +56,13 @@ internal sealed class XPScriptUIFormEvent
         Values = values is null ? [] : [.. values];
     }
 
-    public XPScriptUIForm Form { get; }
+    public object Form { get; }
     public string EventType { get; }
     public string ControlName { get; }
     public object? Value { get; }
     public IReadOnlyList<string> Values { get; }
     public int ValueCount => Values.Count;
+    public void SetFieldValue(object? name, object? value) => ((XPScriptUIForm)Form).SetFieldValue(name, value);
 
     public string GetValue(object? indexValue)
     {
@@ -76,7 +77,7 @@ internal sealed class XPScriptUIFormEvent
         return Values[index];
     }
 
-    public XPScriptJsonObject ToJsonObject()
+    internal XPScriptJsonObject ToJsonObject()
     {
         var node = new System.Text.Json.Nodes.JsonObject
         {

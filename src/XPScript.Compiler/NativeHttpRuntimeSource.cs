@@ -25,15 +25,19 @@ internal sealed partial class XPScriptHttpClient : IDisposable
 
     public XPScriptHttpClient()
     {
-        _handler = new System.Net.Http.HttpClientHandler
+        _handler = new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false };
+        // BrowserHttpHandler does not implement the desktop cookie, decompression,
+        // or certificate-handler switches. Browser requests are governed by the
+        // browser fetch policy and the server-side bridge; keep these settings
+        // desktop-only so invoking [ServerSide] from WASM remains supported.
+        if (!OperatingSystem.IsBrowser())
         {
-            AllowAutoRedirect = false,
-            UseCookies = false,
-            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
-                                     System.Net.DecompressionMethods.Deflate |
-                                     System.Net.DecompressionMethods.Brotli,
-            ServerCertificateCustomValidationCallback = _tls.Validate
-        };
+            _handler.UseCookies = false;
+            _handler.AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                             System.Net.DecompressionMethods.Deflate |
+                                             System.Net.DecompressionMethods.Brotli;
+            _handler.ServerCertificateCustomValidationCallback = _tls.Validate;
+        }
         _client = new System.Net.Http.HttpClient(_handler, disposeHandler: false)
         {
             Timeout = System.Threading.Timeout.InfiniteTimeSpan

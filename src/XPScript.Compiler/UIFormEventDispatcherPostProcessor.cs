@@ -309,7 +309,8 @@ internal sealed class UIFormEventDispatcherPostProcessor
 
     public object? GetFieldValue(object? name)
 """, 1);
-        return result.Contains("internal static class Program", StringComparison.Ordinal)
+        return !result.Contains("class Script", StringComparison.Ordinal) &&
+            result.Contains("internal static class Program", StringComparison.Ordinal)
             ? result.Replace("typeof(Script)", "typeof(Program)", StringComparison.Ordinal)
             : result;
     }
