@@ -237,6 +237,9 @@ jobs:
         run: dotnet workload install wasm-tools --skip-manifest-update
       - name: Build browser interaction probe
         run: dotnet build tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release
+      - name: Install Playwright Chromium on macOS
+        if: matrix.os == 'macos-latest'
+        run: pwsh -File tests/WebBrowserWasmBrowserSmoke/bin/Release/net10.0/playwright.ps1 install chromium
       - name: Build browser WASM smoke probe
         run: dotnet build tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
       - name: Run browser WASM probe
