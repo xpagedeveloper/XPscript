@@ -16,7 +16,8 @@ Sub Main()
     Call form.AddTextField("city", "City")
     Call detailsGrid.SetFieldPosition("email", 2)
     Call detailsGrid.SetFieldPosition("city", 1)
-    result = form.ShowDialog()
-    Call Application.Debug.Info("ANDROID-UIFORM-REGRESSION=result:" & result)
-    Print "ANDROID-UIFORM-REGRESSION=" & result
+    ' Mobile UIForms are hosted by the Android Activity and use Show.
+    Call form.Show(False)
+    Call Application.Debug.Info("ANDROID-UIFORM-REGRESSION=shown")
+    Print "ANDROID-UIFORM-REGRESSION=shown"
 End Sub

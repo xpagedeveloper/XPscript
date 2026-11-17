@@ -77,8 +77,11 @@ internal sealed class XPScriptUIGrid
         }
 
         var column = _usedColumns + 1;
-        _form.SetFieldPosition(name, _row, column, span, 1);
+        // Associate the field with this grid before the form validates the
+        // coordinates. A named grid may have a different column count than
+        // the form's default grid.
         if (_name.Length > 0) _form.SetFieldGrid(name, _name);
+        _form.SetFieldPosition(name, _row, column, span, 1);
         _usedColumns += span;
 
         if (_usedColumns == _columns)
@@ -204,7 +207,10 @@ internal sealed partial class XPScriptUIForm
         }
         if (r < 1 || c < 1 || cs < 1 || rs < 1)
             throw new XPScriptRuntimeException(5, "UIForm layout row, column and spans must be greater than zero.");
-        if (c + cs - 1 > _gridColumns)
+        var gridColumns = field.GridName.Length > 0 && _grids.TryGetValue(field.GridName, out var namedGrid)
+            ? namedGrid.Columns
+            : _gridColumns;
+        if (c + cs - 1 > gridColumns)
             throw new XPScriptRuntimeException(5, "UIForm field layout exceeds the configured grid column count.");
         field.LayoutRow = r;
         field.LayoutColumn = c;

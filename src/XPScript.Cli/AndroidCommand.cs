@@ -90,22 +90,22 @@ internal static class AndroidCommand
 
         var outputDirectory = Path.Combine(Path.GetTempPath(), "xpscript-android");
         Directory.CreateDirectory(outputDirectory);
-        var apk = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(source) + "-" + platform + ".apk");
+        // AST/MSBuild treats -o as an output directory and returns the signed
+        // APK below that directory. Keep each invocation isolated so stale APKs
+        // from an earlier run cannot make artifact discovery ambiguous.
+        var compileOutputDirectory = Path.Combine(outputDirectory, Path.GetFileNameWithoutExtension(source) + "-" + platform);
+        if (Directory.Exists(compileOutputDirectory))
+            Directory.Delete(compileOutputDirectory, recursive: true);
+        Directory.CreateDirectory(compileOutputDirectory);
         Console.WriteLine("Building " + platform + " APK...");
-        var compilerArgs = new List<string> { source, "-o", apk, "--platform", platform, "--runtime=false" };
+        var compilerArgs = new List<string> { source, "-o", compileOutputDirectory, "--platform", platform, "--runtime=false" };
         if (debug) compilerArgs.Add("--debug");
         var compileResult = await XPScript.Compiler.XPScriptCompilerCommandLine.AstCompileAsync(compilerArgs.ToArray());
         if (compileResult != 0) return compileResult;
-        if (!File.Exists(apk))
-        {
-            var publishedApks = Directory.Exists(Path.GetDirectoryName(apk))
-                ? Directory.GetFiles(Path.GetDirectoryName(apk)!, "*-Signed.apk", SearchOption.AllDirectories)
-                : Array.Empty<string>();
-            if (publishedApks.Length == 1)
-                apk = publishedApks[0];
-            else
-                throw new InvalidOperationException("Android compilation completed without producing the expected APK: " + apk);
-        }
+        var publishedApks = Directory.GetFiles(compileOutputDirectory, "*-Signed.apk", SearchOption.AllDirectories);
+        if (publishedApks.Length != 1)
+            throw new InvalidOperationException("Android compilation completed without producing exactly one signed APK under: " + compileOutputDirectory);
+        var apk = publishedApks[0];
 
         var install = await ExecuteAsync(adb, ["-s", serial, "install", "-r", apk]);
         var installDiagnostics = install.Error + Environment.NewLine + install.Output;
