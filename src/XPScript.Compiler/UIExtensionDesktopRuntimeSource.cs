@@ -15,6 +15,8 @@ internal static class XPScriptUIDesktopAdapter
 
     private static Type? ResolveHostType()
     {
+        if (global::System.OperatingSystem.IsAndroid())
+            return typeof(global::XPScript.UI.Android.AndroidFormHost);
         var names = global::System.OperatingSystem.IsAndroid()
             ? new[] { AndroidHostTypeName, HostTypeName }
             : new[] { HostTypeName };
@@ -32,6 +34,18 @@ internal static class XPScriptUIDesktopAdapter
                 var typeName = name.Split(',', 2)[0].Trim();
                 var candidate = assembly.GetType(typeName, throwOnError: false, ignoreCase: false);
                 if (candidate is not null) return candidate;
+                try
+                {
+                    candidate = assembly.GetTypes().FirstOrDefault(type =>
+                        string.Equals(type.FullName, typeName, StringComparison.Ordinal));
+                    if (candidate is not null) return candidate;
+                }
+                catch (System.Reflection.ReflectionTypeLoadException exception)
+                {
+                    candidate = exception.Types.FirstOrDefault(type =>
+                        type is not null && string.Equals(type.FullName, typeName, StringComparison.Ordinal));
+                    if (candidate is not null) return candidate;
+                }
             }
         }
 
@@ -45,7 +59,11 @@ internal static class XPScriptUIDesktopAdapter
 
     private static System.Reflection.MethodInfo? ResolveShow(Type type) =>
         type.GetMethod("Show", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(string), typeof(Func<string, string, string>)], null)
-        ?? type.GetMethod("Show", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(string)], null);
+        ?? type.GetMethod("Show", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(string)], null)
+        ?? type.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .FirstOrDefault(method => method.Name.Equals("Show", StringComparison.Ordinal) &&
+                method.GetParameters() is var parameters && parameters.Length is 1 or 2 &&
+                parameters[0].ParameterType == typeof(string));
 
     public static bool IsAvailable => HostType is Type type && ResolveShowDialog(type) is not null;
     public static string WebViewCommand(string instanceId, string fieldName, string command, string? argument)
@@ -103,7 +121,9 @@ internal static class XPScriptUIDesktopAdapter
 
     private static string ShowCore(XPScriptUIForm form, IReadOnlyList<XPScriptUIField> fields, XPScriptJsonObject data, Action<XPScriptUIField, string> apply, Action<XPScriptUIField, IReadOnlyList<string>> applyMany, bool modal)
     {
-        var type = modal && !IsBrowserHost ? HostType : LifecycleHostType;
+        var type = global::System.OperatingSystem.IsAndroid()
+            ? HostType
+            : modal && !IsBrowserHost ? HostType : LifecycleHostType;
         if (type is null) throw new XPScriptRuntimeException(5, "XPScript UI bridge is unavailable.");
         var method = modal ? ResolveShowDialog(type) : ResolveShow(type);
         if (method is null) throw new XPScriptRuntimeException(5, modal ? "XPScript modal UI bridge is incomplete." : "XPScript modeless UI bridge is incomplete.");
@@ -161,8 +181,10 @@ internal static class XPScriptUIDesktopAdapter
         string resultJson;
         try
         {
+            var eventCallback = new Func<string, string, string>((eventToken, submittedValue) =>
+                form.DispatchRegisteredEvent(eventToken, submittedValue));
             var args = method.GetParameters().Length == 2
-                ? new object?[] { System.Text.Json.JsonSerializer.Serialize(request), new Func<string, string, string>((eventToken, submittedValue) => string.Empty) }
+                ? new object?[] { System.Text.Json.JsonSerializer.Serialize(request), eventCallback }
                 : new object?[] { System.Text.Json.JsonSerializer.Serialize(request) };
             resultJson = Convert.ToString(method.Invoke(null, args), System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
         }
@@ -213,7 +235,7 @@ internal static class XPScriptUIDesktopAdapter
     {
         var register = type.GetMethod("SetEventDispatcher", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(Func<string, string, string>)], null);
         if (register is null) return;
-        try { register.Invoke(null, [new Func<string, string, string>((eventToken, submittedValue) => string.Empty)]); }
+        try { register.Invoke(null, [new Func<string, string, string>((eventToken, submittedValue) => form.DispatchRegisteredEvent(eventToken, submittedValue))]); }
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "UIForm event dispatcher registration failed: " + ex.InnerException.Message); }
     }
 
