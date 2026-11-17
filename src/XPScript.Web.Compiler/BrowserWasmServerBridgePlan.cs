@@ -130,7 +130,7 @@ internal sealed record BrowserWasmServerBridgePlan(
                 continue;
             }
 
-            browser.AppendLine(lines[i]);
+            browser.AppendLine(Regex.Replace(lines[i], @"(?<prefix>[(,]\s*)(?!ByVal\b)(?<name>[A-Za-z_]\w*)\s+As\b", "${prefix}ByVal ${name} As", RegexOptions.IgnoreCase));
             AppendStub(browser, manifest.Values.Single(x => x.Name.Equals(procedure.Name, StringComparison.OrdinalIgnoreCase)));
             browser.AppendLine(lines[procedure.EndLine]);
             i = procedure.EndLine;

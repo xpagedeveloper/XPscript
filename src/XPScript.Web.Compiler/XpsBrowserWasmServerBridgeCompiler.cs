@@ -160,6 +160,10 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
 
             var serverSource = EnsureEntryPoint(normalizedSource, parsed.Routes);
+            foreach (var procedure in plan.Procedures.Values)
+                serverSource = Regex.Replace(serverSource,
+                    @"(?im)^(?:Public\s+|Private\s+)?(?:Sub|Function)\s+" + Regex.Escape(procedure.Name) + @"\s*\([^\r\n]*",
+                    match => Regex.Replace(match.Value, @"(?<prefix>[(,]\s*)(?!ByVal\b)(?<name>[A-Za-z_]\w*)\s+As\b", "${prefix}ByVal ${name} As", RegexOptions.IgnoreCase));
             LogBuildStep("server transpile: start");
             var serverGenerated = await AstCompiler.GenerateRestrictedSourceAsync(serverSource, sourcePath,
                 Path.Combine(workspace, "ast-server-emission"), "browser-wasm-server", [webRoot], cancellationToken).ConfigureAwait(false);

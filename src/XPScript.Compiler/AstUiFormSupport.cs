@@ -35,12 +35,22 @@ internal static class AstUiFormSupport
             ["object?"], ["modalValue"], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "Hide", "void",
             [], [], false, false, false))
+        .Append(new AstNativeObjectSurface.Member("UIForm", "Navigate", "void",
+            ["object?"], ["target"], false, false, false))
+        .Append(new AstNativeObjectSurface.Member("UIForm", "Navigate", "void",
+            ["object?", "object?", "object?"], ["target", "parameterName", "parameterValue"], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "RefreshForm", "void",
             [], [], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "AddButton", "XPScriptUIButton",
             ["object?", "object?", "object?"], ["name", "label", "handlerName"], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "AddButtonCallback", "XPScriptUIButton",
             ["object?", "object?", "object?"], ["name", "label", "handlerName"], false, false, false))
+        .Append(new AstNativeObjectSurface.Member("UIForm", "AddButtonCallback", "XPScriptUIButton",
+            ["object?", "object?", "object?", "object?"], ["name", "label", "handlerName", "callbackArgument"], false, false, false))
+        .Append(new AstNativeObjectSurface.Member("UIForm", "AddButtonCallback", "XPScriptUIButton",
+            ["object?", "object?", "object?", "object?", "object?"], ["name", "label", "handlerName", "callbackArgument", "callbackArgument2"], false, false, false))
+        .Append(new AstNativeObjectSurface.Member("UIForm", "AddButtonCallback", "XPScriptUIButton",
+            ["object?", "object?", "object?", "object?", "object?", "object?"], ["name", "label", "handlerName", "callbackArgument", "callbackArgument2", "callbackArgument3"], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIComponent", "AddChild", "void",
             ["XPScriptUIComponent"], ["component"], false, false, false))
         .Concat(new[]
