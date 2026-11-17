@@ -1135,6 +1135,7 @@ Run this phase only after all preceding implementation work, permanent FullTest 
 - [x] Run the installed Android SDK/workload-backed APK compilation checks for `android-x64` and `android-arm64`.
 - [ ] Install and run generated APKs on a configured Android emulator and physical device; verify UIForm, media, debug output, runtime errors, and logcat behavior.
   - [x] Local emulator verification passed on Android 11/API 30, x86_64, with `android run samples/android-uiform-regression.xps --device emulator --platform android-x64 --debug`: AST APK build, install, Activity start, UIForm lifecycle and `XPSCRIPT-EXIT=0` were observed. Physical ARM64 device, media and camera interaction remain open.
+  - [ ] Interactive Android UIForm control coverage is intentionally deferred to the next separate UIForm version; the current emulator gate verifies AST APK build/install, Activity startup, lifecycle and logcat only.
   - Emulator CI now requires KVM acceleration on Ubuntu 24.04 and bounds boot/install/log capture; BOOT_OK, INSTALL_OK and APP_START_OK identify progress. Runtime verification is pending the accelerated workflow result.
 - [ ] Run the full manual HCL Notes/Domino integration suite on configured Notes/Domino installations with `notes.ini`, ID, NSF data, and required credentials.
 - [ ] Launch complete Avalonia desktop applications through both legacy and AST paths and compare runtime behavior on each available Windows, Linux, and macOS environment.

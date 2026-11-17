@@ -53,8 +53,11 @@ timeout 15s adb logcat -d > "$log"
 grep -q 'ANDROID-UIFORM=start' "$log"
 echo "APP_START_OK"
 
-timeout 120s python3 .github/scripts/android-ui-interact.py
+# The new interactive UIForm control model is intentionally deferred to the
+# next UIForm version. Keep this workflow focused on the current AST APK,
+# Activity startup, lifecycle and logcat contract.
+echo "UIFORM_INTERACTION_DEFERRED=next-uiform-version"
 timeout 120s bash -c 'until adb logcat -d | grep -q "ANDROID-UIFORM-RESULT="; do sleep 2; done'
 adb logcat -d > "$log"
 grep -q 'ANDROID-UIFORM-RESULT=' "$log"
-echo "UIFORM_INTERACTION_OK"
+echo "UIFORM_LIFECYCLE_OK"
