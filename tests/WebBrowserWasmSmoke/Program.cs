@@ -350,8 +350,11 @@ End Sub
 
         var archiveSource = await File.ReadAllTextAsync(serverArchivePath);
         var compilerIdentity = typeof(XpsWebCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+        var archiveTargetFramework = Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } configuredArchiveTargetFramework
+            ? configuredArchiveTargetFramework
+            : "net10.0";
         var sourceHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes(archiveSource + "\0" + compilerIdentity + "\0" + "4")));
+            System.Text.Encoding.UTF8.GetBytes(archiveSource + "\0" + compilerIdentity + "\0" + "4" + "\0" + archiveTargetFramework)));
         var procedureId = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(sourceHash + "\0" + "DOWNLOADARCHIVE"))).ToLowerInvariant()[..32];
         var archiveSession = new SmokeSession();
