@@ -768,13 +768,17 @@ public static class AstCompiler
         symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("InputBox", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         var usesApplication = AstApplicationSupport.UsesApplication(fullSource);
+        var reportsConsoleErrors = !emitSourceOnly && generatedSourceTransform is null &&
+            runtimeIdentifier is not ("android-arm64" or "android-x64");
+        var guardPlainMain = reportsConsoleErrors && !usesApplication && !runtimeFeatures.Ui &&
+            sub is not null && sub.Identifier.Text.Equals("Main", StringComparison.OrdinalIgnoreCase) && sub.Parameters.Count == 0;
         var usesDatabaseAttachments = Regex.IsMatch(source, @"(?i)\.\s*Attachments\s*\(");
         var usesDatabaseDynamicRuntime = AstSqliteSupport.Uses(fullSource) || AstMySqlSupport.Uses(fullSource) || AstHttpDatabaseSupport.Uses(fullSource) ||
             AstMsSqlSupport.Uses(fullSource) || AstSupabaseSupport.Uses(fullSource) ||
             usesDatabaseAttachments;
-        if (usesApplication)
+        if (usesApplication || guardPlainMain)
             foreach (var mainSymbol in symbols.LookupAll("Main").OfType<FunctionSymbol>())
-                mainSymbol.NativeTargetName = "__xps_application_main";
+                mainSymbol.NativeTargetName = usesApplication ? "__xps_application_main" : "__xps_console_main";
         symbols.Declare(new VariableSymbol("RequestScope", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Err", typeof(object), XpTypeSymbol.Variant));
         symbols.Declare(new VariableSymbol("Erl", typeof(object), XpTypeSymbol.Variant));
@@ -839,6 +843,8 @@ public static class AstCompiler
                 name = "Main";
             if (usesApplication && name.Equals("Main", StringComparison.OrdinalIgnoreCase))
                 name = "__xps_application_main";
+            else if (guardPlainMain && name.Equals("Main", StringComparison.OrdinalIgnoreCase))
+                name = "__xps_console_main";
             methods.Add(new BoundMethodDefinition(name, returnType, parameters, bound, false, semanticReturnType));
             var defaults = new BoundExpression?[parameters.Length];
             // Defaults are expressions in the procedure's declaration scope:
@@ -902,16 +908,27 @@ public static class AstCompiler
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, moduleArrayDeclarations
             .Select(match => $"    public static System.Array {match.Groups["name"].Value} = {ModuleArrayInitializer(match.Groups["bounds"].Value, match.Groups["type"].Value)};"));
         moduleFields += Environment.NewLine + "    public static long Jsonelem_type_object = 1L, Jsonelem_type_array = 2L, Jsonelem_type_string = 3L, Jsonelem_type_number = 4L, Jsonelem_type_boolean = 5L, Jsonelem_type_utf8_bytearray = 6L, Jsonelem_type_empty = 64L;";
+        const string consoleErrorHandler = """
+             catch (Exception ex)
+            {
+                global::System.Console.Error.WriteLine(global::System.Environment.GetEnvironmentVariable("XPSCRIPT_RUNTIME_DEBUG") == "1" ? ex.ToString() : "error: " + ex.Message);
+                global::System.Environment.ExitCode = 1;
+            }
+            """;
+        var applicationMain = methods.Any(m => m.Name == "__xps_application_main" && m.Parameters.Count == 0 && m.ReturnType == typeof(void))
+            ? "__xps_application_main();" : "";
         var entryPoint = usesMacDesktopUi
             ? "public static void Main() { if (OperatingSystem.IsMacOS()) { var host = Type.GetType(\"XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop\", throwOnError: true)!; host.GetMethod(\"RunMacOS\")!.Invoke(null, new object[] { (Action)__xps_ui_main }); } else __xps_ui_main(); }"
             : usesApplication
             ? "public static void Main(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
-                (methods.Any(m => m.Name == "__xps_application_main" && m.Parameters.Count == 0 && m.ReturnType == typeof(void)) ? "__xps_application_main();" : "") + " }"
+                (reportsConsoleErrors ? "try { " + applicationMain + " } " + consoleErrorHandler : applicationMain) + " }"
+            : guardPlainMain
+            ? "public static void Main() { try { __xps_console_main(); } " + consoleErrorHandler + " }"
             : methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
         var androidEntryPoint = runtimeIdentifier is "android-arm64" or "android-x64"
             ? usesApplication
                 ? "public static void __xps_android_entry(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
-                    (methods.Any(m => m.Name == "__xps_application_main" && m.Parameters.Count == 0 && m.ReturnType == typeof(void)) ? "__xps_application_main();" : "") + " }"
+                    applicationMain + " }"
                 : $"public static void __xps_android_entry(string[] args) {{ XPScriptRuntime.SetArgs(args); {methodName}(); }}"
             : string.Empty;
         var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");

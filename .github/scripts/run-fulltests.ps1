@@ -72,26 +72,23 @@ function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeou
 }
 function Compile-Xps([string] $source, [string] $name) {
   $outputPath = "./out/fulltest/$name"
-  if ($IsWindows) { $outputPath += ".exe" }
   Write-Host "FULLTEST_COMPILE=$name"
-  $compileArguments = @($compilerDll,$source,'-o',$outputPath,'--runtime=false')
-  # Language checks exercise compiler/runtime semantics. Single-file packaging
-  # has separate compile workflows and can exceed the semantic test deadline.
-  if ($Suite -eq 'language') { $compileArguments += '--single-file=false' }
-  $r = Invoke-Bounded 'dotnet' $compileArguments $compileTimeoutMilliseconds "compile $name"
-  if ($r.ExitCode -ne 0) {
-    if ($name -eq 'archive-compressed-tar') {
-      Write-Host 'FULLTEST_RETRY_DEBUG=archive-compressed-tar'
-      $debug = Invoke-Bounded 'dotnet' @($compilerDll,$source,'-o',"./out/fulltest/$name-debug",'--runtime=false','--debug') $compileTimeoutMilliseconds "compile debug $name"
-      Write-Host $debug.Output
-    }
-    exit $r.ExitCode
-  }
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile',$source,'-o',$outputPath,'--runtime=false','--debug') $compileTimeoutMilliseconds "compile $source"
+  if ($r.ExitCode -ne 0) { exit $r.ExitCode }
 }
-function Get-XpsExe([string] $name) { $plain = "./out/fulltest/$name"; $win = "$plain.exe"; if (Test-Path $win -PathType Leaf) { return (Resolve-Path $win).Path }; if (Test-Path $plain -PathType Leaf) { return (Resolve-Path $plain).Path }; throw "Executable not found: $name" }
-function Run-Xps([string] $source, [string] $name, [string[]] $arguments = @()) { Compile-Xps $source $name; Write-Host "FULLTEST_RUN=$name"; $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "run $name"; if ($r.ExitCode -ne 0) { exit $r.ExitCode }; return $r }
+function Invoke-CompiledXps([string] $name, [string[]] $arguments, [string] $label) {
+  $assembly = (Resolve-Path "./out/fulltest/$name/Generated.dll").Path
+  return Invoke-Bounded 'dotnet' (@($assembly) + $arguments) $runtimeTimeoutMilliseconds $label
+}
+function Run-Xps([string] $source, [string] $name, [string[]] $arguments = @()) {
+  Compile-Xps $source $name
+  Write-Host "FULLTEST_RUN=$name"
+  $r = Invoke-CompiledXps $name $arguments "run $source"
+  if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  return $r
+}
 function Expect-XpsFailure([string] $name, [string[]] $arguments, [string] $label) {
-  $r = Invoke-Bounded (Get-XpsExe $name) $arguments $runtimeTimeoutMilliseconds "security $label"
+  $r = Invoke-CompiledXps $name $arguments "security $label"
   if ($r.ExitCode -eq 0) { throw "Security probe unexpectedly succeeded: $label" }
   if ([string]::IsNullOrWhiteSpace($r.Output)) { throw "Security probe returned no diagnostic: $label" }
   if ($r.Output -match 'SharpCompress') { throw "Security diagnostic exposed implementation detail: $label" }
@@ -173,21 +170,21 @@ if (Should-Run 'language') {
   if ($astCompile.ExitCode -ne 0 -or $astCompile.Output -notmatch 'AST_XPS_COMPILE_OK') { throw 'AST XPscript compile probe failed.' }
   if ($astCompile.Output -notmatch 'AST_COMPILATION_UNIT_OK') { throw 'AST compilation-unit regression failed.' }
   # Keep incompatible override signature regression first while inheritance semantics are active.
-  $overrideBad = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/class-override-signature-error.xps','-o','./out/fulltest/class-override-signature-error','--runtime=false') $compileTimeoutMilliseconds 'incompatible class override diagnostic'
+  $overrideBad = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./samples/class-override-signature-error.xps','-o','./out/fulltest/class-override-signature-error','--runtime=false','--debug') $compileTimeoutMilliseconds 'incompatible class override diagnostic'
   if ($overrideBad.ExitCode -eq 0) { throw 'Incompatible class override unexpectedly compiled.' }
   if ($overrideBad.Output -notmatch 'XPS2007' -or $overrideBad.Output -notmatch 'incompatible override') { throw 'Incompatible class override did not produce XPS2007.' }
   $overrideGood = Run-Xps ./samples/class-override-signature-ok.xps class-override-signature-ok
   if ($overrideGood.Output -notmatch "(?m)^7\s*$") { throw 'Compatible class override regression failed.' }
 
   # Cover property overrides separately from method overrides.
-  $propertyOverrideBad = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/class-property-override-signature-error.xps','-o','./out/fulltest/class-property-override-signature-error','--runtime=false') $compileTimeoutMilliseconds 'incompatible property override diagnostic'
+  $propertyOverrideBad = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./samples/class-property-override-signature-error.xps','-o','./out/fulltest/class-property-override-signature-error','--runtime=false','--debug') $compileTimeoutMilliseconds 'incompatible property override diagnostic'
   if ($propertyOverrideBad.ExitCode -eq 0) { throw 'Incompatible property override unexpectedly compiled.' }
   if ($propertyOverrideBad.Output -notmatch 'XPS2007' -or $propertyOverrideBad.Output -notmatch 'incompatible override') { throw 'Incompatible property override did not produce XPS2007.' }
   $propertyOverrideGood = Run-Xps ./samples/class-property-override-signature-ok.xps class-property-override-signature-ok
   if ($propertyOverrideGood.Output -notmatch "(?m)^base:child\s*$") { throw 'Compatible property override regression failed.' }
 
   # Keep the smallest Parent visibility regression first while inheritance semantics are active.
-  $parentPrivate = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/class-parent-private-error.xps','-o','./out/fulltest/class-parent-private-error','--runtime=false') $compileTimeoutMilliseconds 'Parent private access diagnostic'
+  $parentPrivate = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./samples/class-parent-private-error.xps','-o','./out/fulltest/class-parent-private-error','--runtime=false','--debug') $compileTimeoutMilliseconds 'Parent private access diagnostic'
   if ($parentPrivate.ExitCode -eq 0) { throw 'Parent private access unexpectedly compiled.' }
   if ($parentPrivate.Output -notmatch 'XPS2009' -or $parentPrivate.Output -notmatch 'Private base member') { throw 'Parent private access did not produce XPS2009.' }
 
@@ -205,7 +202,7 @@ if (Should-Run 'language') {
   if ($functionNotByRef.Output -notmatch 'FUNCTION-NOT-BYREF=OK') { throw 'Boolean default-ByRef function under Not regression failed.' }
 
   # Keep the smallest regression for the latest compiler failure first.
-  $r = Invoke-Bounded 'dotnet' @($compilerDll,'./samples/function-result-name-conflict-error.xps','-o','./out/fulltest/function-result-name-conflict-error','--runtime=false') $compileTimeoutMilliseconds 'function result name conflict'
+  $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./samples/function-result-name-conflict-error.xps','-o','./out/fulltest/function-result-name-conflict-error','--runtime=false','--debug') $compileTimeoutMilliseconds 'function result name conflict'
   if ($r.ExitCode -eq 0) { throw 'Function result name conflict unexpectedly compiled.' }
   if ($r.Output -notmatch 'XPS2014' -or $r.Output -notmatch 'conflicts with the function result name') { throw 'Function result name conflict did not produce XPS2014.' }
 
@@ -239,6 +236,25 @@ if (Should-Run 'notes') {
 }
 
 if (Should-Run 'runtime') {
+  Write-Host '=== XP RUNTIME FULLTEST ==='
+  Write-Host 'FULLTEST_CHECKPOINT=console-error-start'
+  Compile-Xps ./samples/runtime-error-stacktrace-regression.xps runtime-error-stacktrace-regression
+  $previousRuntimeDebug = $env:XPSCRIPT_RUNTIME_DEBUG
+  try {
+    $env:XPSCRIPT_RUNTIME_DEBUG = '0'
+    $runtimeError = Invoke-CompiledXps 'runtime-error-stacktrace-regression' @() 'runtime error without debug'
+    if ($runtimeError.ExitCode -ne 1 -or $runtimeError.Output.Trim() -ne 'error: runtime stacktrace regression') {
+      throw './samples/runtime-error-stacktrace-regression.xps: expected a clean runtime error without managed stack details.'
+    }
+    $env:XPSCRIPT_RUNTIME_DEBUG = '1'
+    $runtimeError = Invoke-CompiledXps 'runtime-error-stacktrace-regression' @() 'runtime error with debug'
+    if ($runtimeError.ExitCode -ne 1 -or $runtimeError.Output -notmatch 'Program\.Main') {
+      throw './samples/runtime-error-stacktrace-regression.xps: expected a managed stack trace in debug mode.'
+    }
+  } finally {
+    $env:XPSCRIPT_RUNTIME_DEBUG = $previousRuntimeDebug
+  }
+  Write-Host 'FULLTEST_CHECKPOINT=console-error-complete'
   foreach ($case in @(@('array-storage-bounds','ARRAY_STORAGE_BOUNDS_OK'), @('class-constructor-list','LIST_CONSTRUCTORS_OK'), @('class-constructor-variant','VARIANT_CONSTRUCTORS_OK'), @('class-constructor-native','NATIVE_CONSTRUCTORS_OK'))) {
     $target = "./out/fulltest/ast-$($case[0])"
     $compiled = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile',"./tests/ast-compile-probe/$($case[0]).xps",'-o',$target) 180000 "AST constructor $($case[0])"
@@ -276,16 +292,10 @@ if (Should-Run 'runtime') {
   if ($scalarRuntime.Output -notmatch 'OVERFLOW=6' -or $scalarRuntime.Output -notmatch 'CONTINUED') { throw 'Shared scalar runtime conversion/overflow regression did not complete.' }
   $nativeJson = Run-Xps ./tests/ast-compile-probe/json-runtime.xps native-json-shared-runtime
   if ($nativeJson.Output -notmatch 'Invalid JSON input\.' -or $nativeJson.Output -notmatch 'JSON array index out of range\.') { throw 'Shared native JSON runtime regression did not complete.' }
-  Write-Host '=== XP RUNTIME FULLTEST ==='
-  # Keep the smallest regression for managed stack-trace suppression first.
-  Compile-Xps ./samples/runtime-error-stacktrace-regression.xps runtime-error-stacktrace-regression
-  $runtimeError = Invoke-Bounded (Get-XpsExe 'runtime-error-stacktrace-regression') @() $runtimeTimeoutMilliseconds 'runtime error stacktrace regression'
-  if ($runtimeError.ExitCode -eq 0) { throw 'Runtime error stacktrace regression unexpectedly succeeded.' }
-  if ($runtimeError.Output -match ' at Script\.|System\.[A-Za-z].*Exception') { throw 'Runtime error exposed managed C#/.NET stack details without debug.' }
   # Keep the most recently failing regression first so CI surfaces it immediately.
   Write-Host 'FULLTEST_CHECKPOINT=xpspreadsheet-invalid-format-first'
   Compile-Xps ./demo/spreadsheet/xpspreadsheet-invalid-format.xps xpspreadsheet-invalid-format
-  $r = Invoke-Bounded (Get-XpsExe xpspreadsheet-invalid-format) @() $runtimeTimeoutMilliseconds 'unsupported spreadsheet format'
+  $r = Invoke-CompiledXps xpspreadsheet-invalid-format @() 'unsupported spreadsheet format'
   if ($r.ExitCode -eq 0 -or $r.Output -notmatch 'supports only \.xlsx files') { throw 'XPSpreadsheet unsupported-format regression failed.' }
   Write-Host 'FULLTEST_CHECKPOINT=xpspreadsheet-invalid-format-passed'
 
@@ -365,7 +375,7 @@ if (Should-Run 'platform') {
     Compile-Xps ./demo/archive/archive-replacement-failure-regression.xps archive-replacement-failure-regression
     try {
       (Get-Item $replacementPath).IsReadOnly = $true
-      $replacementFailure = Invoke-Bounded (Get-XpsExe 'archive-replacement-failure-regression') @((Resolve-Path $replacementPath).Path) $runtimeTimeoutMilliseconds 'archive replacement failure preserves original'
+      $replacementFailure = Invoke-CompiledXps 'archive-replacement-failure-regression' @((Resolve-Path $replacementPath).Path) 'archive replacement failure preserves original'
       if ($replacementFailure.ExitCode -eq 0 -or $replacementFailure.Output -notmatch 'Archive save or replacement failed without replacing the original archive') {
         throw 'Archive replacement probe did not reach the guarded save operation.'
       }
@@ -389,7 +399,7 @@ if (Should-Run 'platform') {
   Set-Content -NoNewline -Path (Join-Path $rollbackTarget 'b-existing.txt') -Value 'original'
   New-Item -ItemType Directory -Force (Join-Path $rollbackTarget 'z-blocked.txt') | Out-Null
   Compile-Xps ./demo/archive/archive-extraction-rollback-regression.xps archive-extraction-rollback-regression
-  $rollbackFailure = Invoke-Bounded (Get-XpsExe 'archive-extraction-rollback-regression') @((Resolve-Path $rollbackArchive).Path,(Resolve-Path $rollbackTarget).Path) $runtimeTimeoutMilliseconds 'archive extraction commit rollback'
+  $rollbackFailure = Invoke-CompiledXps 'archive-extraction-rollback-regression' @((Resolve-Path $rollbackArchive).Path,(Resolve-Path $rollbackTarget).Path) 'archive extraction commit rollback'
   if ($rollbackFailure.ExitCode -eq 0 -or [string]::IsNullOrWhiteSpace($rollbackFailure.Output) -or
       $rollbackFailure.Output -match 'not found|ZIP only|SharpCompress') {
     throw 'Archive rollback probe failed before reaching the destination conflict.'
