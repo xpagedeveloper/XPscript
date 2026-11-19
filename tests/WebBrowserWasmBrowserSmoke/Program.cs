@@ -13,19 +13,20 @@ try
         .Select(Path.GetDirectoryName)
         .FirstOrDefault(path => path is not null &&
             File.Exists(Path.Combine(path, "index.html")) &&
-            File.Exists(Path.Combine(path, "_framework", "dotnet.js")) &&
-            (File.Exists(Path.Combine(path, "_framework", "dotnet.boot.js")) ||
-             File.Exists(Path.Combine(path, "_framework", "dotnet.js"))) &&
-            File.Exists(Path.Combine(path, "_framework", "dotnet.native.wasm")))
+            File.Exists(Path.Combine(path, "_framework", "dotnet.js")))
         ?? throw new InvalidOperationException("WASM publish root was not found.");
     var frameworkRoot = Path.Combine(appRoot, "_framework");
-    var coreLibraries = Directory.EnumerateFiles(frameworkRoot, "*CoreLib*", SearchOption.AllDirectories)
-        .Select(file => $"{Path.GetRelativePath(frameworkRoot, file)} ({new FileInfo(file).Length} bytes)");
+    var coreLibraries = Directory.EnumerateFiles(frameworkRoot, "System.Private.CoreLib.*")
+        .Where(file => Path.GetExtension(file) is ".dll" or ".wasm")
+        .Select(file => $"{Path.GetFileName(file)} ({new FileInfo(file).Length} bytes)")
+        .ToArray();
     var externalBootConfig = Path.Combine(frameworkRoot, "dotnet.boot.js");
     var bootConfig = File.Exists(externalBootConfig) ? externalBootConfig : Path.Combine(frameworkRoot, "dotnet.js");
     var bootText = await File.ReadAllTextAsync(bootConfig);
     Console.WriteLine($"WASM_CORELIB_FILES={string.Join(", ", coreLibraries)}");
     Console.WriteLine($"WASM_BOOT_CONFIG={Path.GetFileName(bootConfig)}; mentions CoreLib={bootText.Contains("System.Private.CoreLib", StringComparison.Ordinal)}");
+    if (coreLibraries.Length == 0)
+        throw new InvalidOperationException($"{source}: published WASM framework is missing System.Private.CoreLib.");
     var port = Random.Shared.Next(18000, 28000);
     var python = new[] { "python.exe", "python3", "py.exe" }
         .FirstOrDefault(command => command is "python3" || File.Exists(command) || Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator).Any(path => File.Exists(Path.Combine(path, command))) == true)

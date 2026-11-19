@@ -116,8 +116,7 @@ public sealed class XpsBrowserWasmCompiler
     private static bool IsValidAppRoot(string appRoot) =>
         Directory.Exists(appRoot) &&
         File.Exists(Path.Combine(appRoot, "main.js")) &&
-        File.Exists(Path.Combine(appRoot, "_framework", "dotnet.js")) &&
-        File.Exists(Path.Combine(appRoot, "_framework", "dotnet.native.wasm"));
+        HasBrowserFramework(Path.Combine(appRoot, "_framework"));
     private static void NormalizePublishedLayout(string root)
     {
         var framework = Path.Combine(root, "_framework");
@@ -137,42 +136,24 @@ public sealed class XpsBrowserWasmCompiler
         foreach (var searchRoot in searchRoots)
         {
             if (!Directory.Exists(searchRoot)) continue;
-            var fullSearchRoot = Path.GetFullPath(searchRoot);
-            var bootEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.boot.js", SearchOption.AllDirectories)
-                .FirstOrDefault(path =>
-                {
-                    var framework = Path.GetDirectoryName(path);
-                    return framework is not null &&
-                        string.Equals(Path.GetFileName(framework), "_framework", StringComparison.OrdinalIgnoreCase) &&
-                        HasBrowserFramework(framework);
-                });
-            if (bootEntry is not null)
-            {
-                var bootFrameworkDirectory = Path.GetDirectoryName(bootEntry) ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
-                return Directory.GetParent(bootFrameworkDirectory)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
-            }
-            if (HasBrowserFramework(Path.Combine(fullSearchRoot, "_framework")))
-                return fullSearchRoot;
-            var frameworkEntry = Directory.EnumerateFiles(fullSearchRoot, "dotnet.js", SearchOption.AllDirectories).FirstOrDefault(path => string.Equals(Path.GetFileName(Path.GetDirectoryName(path)), "_framework", StringComparison.OrdinalIgnoreCase));
-            if (frameworkEntry is null || !HasBrowserFramework(Path.GetDirectoryName(frameworkEntry)!)) continue;
-            var frameworkDirectory = Path.GetDirectoryName(frameworkEntry) ?? throw new XpsWebCompilationException("Unable to determine browser-wasm framework directory.");
-            return Directory.GetParent(frameworkDirectory)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
-        }
-        foreach (var searchRoot in searchRoots)
-        {
-            var framework = Directory.Exists(searchRoot)
-                ? Directory.EnumerateDirectories(Path.GetFullPath(searchRoot), "_framework", SearchOption.AllDirectories).FirstOrDefault()
-                : null;
+            // The SDK can emit a partial publish directory beside its runnable AppBundle.
+            var framework = Directory.EnumerateDirectories(Path.GetFullPath(searchRoot), "_framework", SearchOption.AllDirectories)
+                .Where(HasBrowserFramework)
+                .OrderByDescending(path => File.Exists(Path.Combine(path, "dotnet.boot.js")) ||
+                    File.ReadAllText(Path.Combine(path, "dotnet.js")).Contains("/*json-start*/", StringComparison.Ordinal))
+                .FirstOrDefault();
             if (framework is not null)
-                return Directory.GetParent(framework)?.FullName ?? throw new XpsWebCompilationException("Unable to determine browser-wasm application root.");
+                return Path.GetDirectoryName(framework)!;
         }
-        throw new XpsWebCompilationException("browser-wasm build output did not contain _framework/dotnet.js.");
+        throw new XpsWebCompilationException("browser-wasm build output did not contain a framework bundle with System.Private.CoreLib.");
     }
     private static bool HasBrowserFramework(string frameworkDirectory) =>
         Directory.Exists(frameworkDirectory) &&
         File.Exists(Path.Combine(frameworkDirectory, "dotnet.js")) &&
         (File.Exists(Path.Combine(frameworkDirectory, "dotnet.native.wasm")) ||
-         Directory.EnumerateFiles(frameworkDirectory, "dotnet.native.*.wasm", SearchOption.TopDirectoryOnly).Any());
+         Directory.EnumerateFiles(frameworkDirectory, "dotnet.native.*.wasm", SearchOption.TopDirectoryOnly).Any()) &&
+        Directory.EnumerateFiles(frameworkDirectory, "System.Private.CoreLib.*", SearchOption.TopDirectoryOnly)
+            .Any(path => Path.GetExtension(path) is ".dll" or ".wasm");
 
     internal static void EnsureBrowserRuntimeBundle(string appRoot, string targetFramework)
     {
