@@ -103,7 +103,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # Playwright 1.55 provides Chromium for Ubuntu 24.04.
+        os: [ubuntu-24.04, windows-latest, macos-latest]
         framework: ['10', '11']
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -134,21 +135,24 @@ jobs:
         run: |
           $framework = 'net${{ matrix.framework }}.0'
           $env:XPSCRIPT_TARGET_FRAMEWORK = $framework
+          # Generated SDK projects must inherit the matrix global.json.
+          $env:XPSCRIPT_TEMP_ROOT = Join-Path $PWD 'out/wasm-fulltest'
+          New-Item -ItemType Directory -Force $env:XPSCRIPT_TEMP_ROOT | Out-Null
           $astOutput = Join-Path $env:RUNNER_TEMP 'browser-wasm-ast-attachments'
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/browser-wasm-attachment-download.xps --output $astOutput --platform browser-wasm --target-framework $framework --runtime=false --debug
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $astOutput 'Generated.dll'))) { throw 'Browser-WASM AST XPHttpDbSupabase.Attachments compilation failed.' }
           $controlsOutput = Join-Path $env:RUNNER_TEMP 'browser-wasm-uiform-controls'
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/android-uiform-controls-api.xps --output $controlsOutput --platform browser-wasm --target-framework $framework --runtime=false --debug
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $controlsOutput 'Generated.dll'))) { throw 'Browser-WASM AST UIForm controls compilation failed.' }
-          dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
+          dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release -p:WasmSmokeTargetFramework=$framework
           if ($LASTEXITCODE -ne 0) { throw 'Browser-WASM or Notes server-boundary smoke test failed.' }
-          dotnet restore tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj --force-evaluate -p:TargetFramework=$framework
-          dotnet build tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-restore -p:TargetFramework=$framework -p:UseSharedCompilation=false
+          dotnet restore tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj --force-evaluate -p:WasmSmokeTargetFramework=$framework
+          dotnet build tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-restore -p:WasmSmokeTargetFramework=$framework -p:UseSharedCompilation=false
           & (Join-Path $PWD "tests/WebBrowserWasmServerSideBrowserSmoke/bin/Release/$framework/playwright.ps1") install chromium
           if ($LASTEXITCODE -ne 0) { throw 'Playwright Chromium installation failed.' }
-          dotnet run --project tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-build -p:TargetFramework=$framework
+          dotnet run --project tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-build -p:WasmSmokeTargetFramework=$framework
           Write-Host 'BEGIN WASM UIForm browser interaction'
-          dotnet run --project tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release -p:UseSharedCompilation=false
+          dotnet run --project tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release -p:WasmSmokeTargetFramework=$framework -p:UseSharedCompilation=false
           if ($LASTEXITCODE -ne 0) { throw 'WASM UIForm browser interaction failed.' }
           Write-Host 'END WASM UIForm browser interaction'
           if ($LASTEXITCODE -ne 0) { throw 'Browser-WASM client/server/client event smoke test failed.' }
