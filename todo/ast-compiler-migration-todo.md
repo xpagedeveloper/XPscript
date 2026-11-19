@@ -1170,6 +1170,10 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   button/client callback/helper, capability GET 200, server POST 200 and continued
   client execution (`WASM_PLAYWRIGHT_PAGE_OK`, `WASM_SERVERSIDE_EVENT_OK`).
   Native Linux/macOS and broader control interaction coverage remain open.
-- [ ] Replace legacy parity test invocations with AST-only behavioral assertions.
+- [x] Replace legacy parity test invocations with AST-only behavioral assertions.
+  CLI compatibility still verifies that the legacy aliases are disabled.
+  Windows verification passed for AST CLI shard 1, the focused default CLI
+  fixtures, constructor/destructor, XML, Application, HTTP/TLS, spreadsheet,
+  and the full MCP protocol probe.
 - [ ] Run native Linux/macOS and local Android/WASM interaction gates with legacy disabled.
 

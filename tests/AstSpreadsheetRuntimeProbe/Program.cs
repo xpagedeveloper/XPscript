@@ -36,8 +36,8 @@ foreach (var name in new[] { "spreadsheet-runtime", "spreadsheet-reference", "sp
         var normalSource = Copy(name, Path.Combine(repo, "tests/ast-compile-probe", name + ".xps"), "normal");
         var normalDirectory = Path.GetDirectoryName(normalSource)!;
         var normalProgram = Path.Combine(normalDirectory, OperatingSystem.IsWindows() ? "program.exe" : "program");
-        await Run("dotnet", [compiler, "legacy-compile", normalSource, "-o", normalProgram, "--single-file=false", "--runtime=false"], output);
-        if ((await Run(normalProgram, [], normalDirectory)).Trim() != expected)
+        await Run("dotnet", [compiler, "compile", normalSource, "-o", normalProgram, "--single-file=false", "--runtime=false"], output);
+        if ((await Run("dotnet", [Path.Combine(normalProgram, "Generated.dll")], normalDirectory)).Trim() != expected)
             throw new Exception("Static FromWorksheet normal/AST parity failed.");
     }
 }
@@ -49,8 +49,8 @@ foreach (var name in new[] { "xpspreadsheet-basic", "xpspreadsheet-worksheets", 
         var source = Copy(name, Path.Combine(repo, "demo/spreadsheet", name + ".xps"), mode);
         var directory = Path.GetDirectoryName(source)!;
         var program = Path.Combine(directory, mode == "ast" ? "program" : OperatingSystem.IsWindows() ? "program.exe" : "program");
-        await Run("dotnet", [compiler, mode == "ast" ? "ast-compile" : "legacy-compile", source, "-o", program, ..(mode == "normal" ? new[] { "--single-file=false", "--runtime=false" } : [])], output);
-        var result = await Run(mode == "ast" ? "dotnet" : program, mode == "ast" ? [Path.Combine(program, "Generated.dll")] : [], directory);
+        await Run("dotnet", [compiler, mode == "ast" ? "ast-compile" : "compile", source, "-o", program, ..(mode == "normal" ? new[] { "--single-file=false", "--runtime=false" } : [])], output);
+        var result = await Run("dotnet", [Path.Combine(program, "Generated.dll")], directory);
         if (!result.Contains("=OK")) throw new Exception("Spreadsheet demo did not complete: " + name);
         if (expected is not null && expected.Replace("\r\n", "\n") != result.Replace("\r\n", "\n")) throw new Exception("Normal/AST spreadsheet demo output differs: " + name);
         expected = result;

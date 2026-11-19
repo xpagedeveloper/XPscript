@@ -69,8 +69,8 @@ foreach (var name in new[] { "application-with", "application-native", "applicat
     if (name == "application-with") continue;
     var normalDirectory = Path.Combine(output, name, "normal"); Directory.CreateDirectory(normalDirectory);
     var normalProgram = Path.Combine(normalDirectory, OperatingSystem.IsWindows() ? "program.exe" : "program");
-    await Run("dotnet", [compiler, "legacy-compile", source, "-o", normalProgram, "--single-file=false", "--runtime=false"]);
-    var normal = await Execute(normalProgram, arguments);
+    await Run("dotnet", [compiler, "compile", source, "-o", normalProgram, "--single-file=false", "--runtime=false"]);
+    var normal = await Execute("dotnet", [Path.Combine(normalProgram, "Generated.dll"), .. arguments]);
     if (normal.Exit != expectedExit || normal.Text.Trim() != result.Text.Trim()) throw new Exception("Normal/AST Application parity failed: " + name + normal.Text);
 }
 Console.WriteLine("AST_APPLICATION_RUNTIME_OK");
@@ -99,7 +99,7 @@ async Task<(int Exit, string Text)> Execute(string file, string[] commandArgumen
 {
     // Reflection checks run in this net10.0 probe, so compile fixtures for the
     // same framework even when a newer SDK is installed on the test machine.
-    if (commandArguments.Contains("ast-compile") || commandArguments.Contains("legacy-compile"))
+    if (commandArguments.Contains("ast-compile") || commandArguments.Contains("compile"))
         commandArguments = [.. commandArguments, "--target-framework", "10"];
     var start = new ProcessStartInfo(file) { RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = output };
     foreach (var argument in commandArguments) start.ArgumentList.Add(argument);

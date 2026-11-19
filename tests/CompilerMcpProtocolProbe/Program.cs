@@ -58,6 +58,17 @@ var list=await CallAsync(new {jsonrpc="2.0",id=2,method="tools/list",@params=new
 Mark("tools-list-response");
 var names=list.GetProperty("result").GetProperty("tools").EnumerateArray().Select(x=>x.GetProperty("name").GetString()).ToHashSet();
 foreach(var name in new[]{"xpscript_validate","xpscript_ast_validate","xpscript_virtual_compile","xpscript_compile","xpscript_symbols","xpscript_describe","xpscript_explain"}) if(!names.Contains(name)) throw new Exception("Missing MCP appTool: "+name);
+var webValidation=await CallAsync(new {jsonrpc="2.0",id=4,method="tools/call",@params=new{name="xpscript_validate",arguments=new{source="[Anonymous]\n[Get]\nSub Index()\n    Response.Write(\"ok\")\nEnd Sub",filename="web.xps"}}});
+var webResult=webValidation.GetProperty("result");
+if (!webResult.GetProperty("isError").GetBoolean()) throw new Exception("Web source validated as a console application must be an MCP tool error.");
+var webStructured=webResult.GetProperty("structuredContent");
+if (webStructured.GetProperty("result").GetString() != "error") throw new Exception("Expected structured web/console mismatch error.");
+if (!webStructured.GetProperty("errors").EnumerateArray().Any(error =>
+    error.GetProperty("file").GetString() == "web.xps" &&
+    error.GetProperty("diagnosticCode").GetString() == "XPS2008" &&
+    error.GetProperty("description").GetString()?.StartsWith("The name 'Response' does not exist in the current context", StringComparison.Ordinal) == true))
+    throw new Exception("MCP did not preserve the web/console mismatch diagnostic: " + webStructured);
+
 var concurrentRequests = Enumerable.Range(10, 8)
     .Select(id => new { jsonrpc="2.0", id, method="tools/call", @params=new { name="xpscript_symbols", arguments=new { search="XP" } } })
     .ToArray();
@@ -118,11 +129,12 @@ foreach (var imageParameterFixture in new[] { "xpimage-parameter-runtime-next" }
     var result = await CallAsync(new { jsonrpc="2.0",id=imageParameterFixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=imageParameterFixture+".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("XPImage parameter validation failed: " + result);
     var imageOutput = Path.Combine(probeRoot, imageParameterFixture + "-runtime");
-    var compile = await CallAsync(new { jsonrpc="2.0",id=imageParameterFixture+"-compile",method="tools/call",@params=new { name="xpscript_compile",arguments=new { source,filename=imageParameterFixture+".xps",outputDirectory=imageOutput,runtimeIdentifier="linux-x64",debug=true,securityMode="warn" } } });
-    var compiledPath = compile.GetProperty("result").GetProperty("structuredContent").GetProperty("output").GetString();
-    if (compile.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok" || string.IsNullOrWhiteSpace(compiledPath) || !File.Exists(compiledPath))
+    var compile = await CallAsync(new { jsonrpc="2.0",id=imageParameterFixture+"-compile",method="tools/call",@params=new { name="xpscript_compile",arguments=new { source,filename=imageParameterFixture+".xps",outputDirectory=imageOutput,debug=true,securityMode="warn" } } });
+    var compiled = compile.GetProperty("result").GetProperty("structuredContent");
+    if (compiled.GetProperty("result").GetString() != "ok" || !compiled.TryGetProperty("output", out var artifact) || !File.Exists(artifact.GetString()))
         throw new Exception("XPImage parameter MCP compile failed: " + compile);
-    var run = new ProcessStartInfo("dotnet", compiledPath) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, WorkingDirectory = repo };
+    var run = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, WorkingDirectory = repo };
+    run.ArgumentList.Add(artifact.GetString()!);
     using var imageProcess = Process.Start(run) ?? throw new Exception("Could not start MCP XPImage parameter artifact.");
     var imageOutputText = await imageProcess.StandardOutput.ReadToEndAsync();
     var imageErrorText = await imageProcess.StandardError.ReadToEndAsync();
@@ -418,7 +430,7 @@ foreach (var fixture in new[] { "class-constructor-list", "constructor-reference
     var result = await CallAsync(new { jsonrpc="2.0",id=fixture,method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source,filename=fixture+".xps" } } });
     if (result.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("Constructor validation failed: " + result);
 }
-foreach (var (fixture, code, line) in new[] { ("constructor-list-byref-type-error", "XPS2003", 7), ("constructor-list-byval-type-error", "XPS2004", 7), ("constructor-list-default-type-error", "XPS2001", 2), ("constructor-list-default-name-error", "XPS2008", 2), ("constructor-list-reference-type-error", "XPS2003", 11), ("constructor-list-unknown-type-error", "XPS3001", 2), ("constructor-list-method-deferred", "XPS3001", 2), ("constructor-native-byref-type-error", "XPS2003", 7), ("constructor-native-optional-type-error", "XPS2001", 2), ("constructor-variant-byref-type-error", "XPS2003", 7), ("constructor-variant-optional-type-error", "XPS2001", 2), ("constructor-overloads-ambiguous-error", "XPS2005", 8), ("constructor-overloads-name-error", "XPS2006", 2), ("constructor-overloads-no-match-error", "XPS2004", 8), ("constructor-overloads-private-error", "XPS2009", 8), ("constructor-parent-late-error", "XPS1012", 6), ("constructor-parent-duplicate-error", "XPS1012", 6), ("constructor-parent-root-error", "XPS1012", 3), ("constructor-parent-nested-error", "XPS1012", 6), ("constructor-parent-type-error", "XPS2004", 7), ("constructor-parent-private-error", "XPS2009", 7), ("constructor-parent-instance-error", "XPS2008", 8), ("constructor-private-base-field-error", "XPS2008", 6), ("constructor-arity-error", "XPS2004", 6), ("constructor-type-error", "XPS2004", 6), ("constructor-private-error", "XPS2009", 6), ("constructor-body-error", "XPS2008", 3), ("constructor-byref-literal-error", "XPS2001", 6), ("constructor-byref-type-error", "XPS2003", 7), ("constructor-byref-property-error", "XPS3001", 11), ("constructor-byref-indexed-property-error", "XPS3001", 11), ("constructor-byref-module-storage-error", "XPS3001", 7), ("constructor-byref-parent-literal-error", "XPS2001", 7), ("constructor-byref-parent-type-error", "XPS2003", 7), ("constructor-mixed-literal-error", "XPS2001", 6), ("constructor-mixed-type-error", "XPS2003", 7), ("constructor-mixed-default-error", "XPS2008", 2), ("constructor-optional-byref-literal-error", "XPS2001", 6), ("constructor-optional-byref-type-error", "XPS2003", 7), ("constructor-optional-byref-default-error", "XPS2008", 2), ("constructor-optional-byref-default-type-error", "XPS2001", 2), ("constructor-optional-byref-parent-literal-error", "XPS2001", 7), ("constructor-optional-order-error", "XPS1012", 2), ("constructor-optional-marker-error", "XPS1012", 2), ("constructor-optional-type-error", "XPS2001", 2), ("constructor-optional-name-error", "XPS2008", 2), ("constructor-optional-later-error", "XPS2008", 2), ("constructor-optional-self-error", "XPS2008", 2), ("constructor-optional-instance-error", "XPS2008", 3), ("constructor-optional-required-error", "XPS2004", 6), ("constructor-optional-slot-error", "XPS1012", 6), ("constructor-optional-private-error", "XPS2009", 6), ("constructor-refref-element-type-error", "XPS2003", 11), ("constructor-refref-upcast-error", "XPS2003", 11), ("constructor-refref-object-error", "XPS2003", 9), ("constructor-refref-temporary-error", "XPS2001", 8), ("constructor-refref-variant-error", "XPS2003", 7), ("constructor-refref-property-error", "XPS3001", 14), ("constructor-refref-parent-error", "XPS2003", 11), ("constructor-optional-reference-type-error", "XPS2001", 2), ("constructor-optional-reference-name-error", "XPS2008", 4), ("constructor-reference-native-deferred", "XPS3001", 2), ("constructor-reference-unknown-deferred", "XPS3001", 2), ("constructor-reference-scalar-error", "XPS2004", 6), ("constructor-reference-class-error", "XPS2004", 11), ("constructor-reference-downcast-error", "XPS2004", 11), ("constructor-reference-method-deferred", "XPS3001", 6), ("constructor-required-base-deferred", "XPS2004", 5), ("constructor-overloads-duplicate-error", "XPS2006", 4) })
+foreach (var (fixture, code, line) in new[] { ("constructor-list-byref-type-error", "XPS2003", 7), ("constructor-list-byval-type-error", "XPS2004", 7), ("constructor-list-default-type-error", "XPS2001", 2), ("constructor-list-default-name-error", "XPS2008", 2), ("constructor-list-reference-type-error", "XPS2003", 11), ("constructor-list-unknown-type-error", "XPS3001", 2), ("constructor-list-method-deferred", "XPS3001", 2), ("constructor-native-byref-type-error", "XPS2003", 7), ("constructor-native-optional-type-error", "XPS2001", 2), ("constructor-variant-byref-type-error", "XPS2003", 7), ("constructor-overloads-ambiguous-error", "XPS2005", 8), ("constructor-overloads-name-error", "XPS2006", 2), ("constructor-overloads-no-match-error", "XPS2004", 8), ("constructor-overloads-private-error", "XPS2009", 8), ("constructor-parent-late-error", "XPS1012", 6), ("constructor-parent-duplicate-error", "XPS1012", 6), ("constructor-parent-root-error", "XPS1012", 3), ("constructor-parent-nested-error", "XPS1012", 6), ("constructor-parent-type-error", "XPS2004", 7), ("constructor-parent-private-error", "XPS2009", 7), ("constructor-parent-instance-error", "XPS2008", 8), ("constructor-private-base-field-error", "XPS2008", 6), ("constructor-arity-error", "XPS2004", 6), ("constructor-type-error", "XPS2004", 6), ("constructor-private-error", "XPS2009", 6), ("constructor-body-error", "XPS2008", 3), ("constructor-byref-literal-error", "XPS2001", 6), ("constructor-byref-type-error", "XPS2003", 7), ("constructor-byref-property-error", "XPS3001", 11), ("constructor-byref-indexed-property-error", "XPS3001", 11), ("constructor-byref-module-storage-error", "XPS3001", 7), ("constructor-byref-parent-literal-error", "XPS2001", 7), ("constructor-byref-parent-type-error", "XPS2003", 7), ("constructor-mixed-literal-error", "XPS2001", 6), ("constructor-mixed-type-error", "XPS2003", 7), ("constructor-mixed-default-error", "XPS2008", 2), ("constructor-optional-byref-literal-error", "XPS2001", 6), ("constructor-optional-byref-type-error", "XPS2003", 7), ("constructor-optional-byref-default-error", "XPS2008", 2), ("constructor-optional-byref-default-type-error", "XPS2001", 2), ("constructor-optional-byref-parent-literal-error", "XPS2001", 7), ("constructor-optional-order-error", "XPS1012", 2), ("constructor-optional-marker-error", "XPS1012", 2), ("constructor-optional-type-error", "XPS2001", 2), ("constructor-optional-name-error", "XPS2008", 2), ("constructor-optional-later-error", "XPS2008", 2), ("constructor-optional-self-error", "XPS2008", 2), ("constructor-optional-instance-error", "XPS2008", 3), ("constructor-optional-required-error", "XPS2004", 6), ("constructor-optional-slot-error", "XPS1012", 6), ("constructor-optional-private-error", "XPS2009", 6), ("constructor-refref-element-type-error", "XPS2003", 11), ("constructor-refref-upcast-error", "XPS2003", 11), ("constructor-refref-object-error", "XPS2003", 9), ("constructor-refref-temporary-error", "XPS2001", 8), ("constructor-refref-variant-error", "XPS2003", 7), ("constructor-refref-property-error", "XPS3001", 14), ("constructor-refref-parent-error", "XPS2003", 11), ("constructor-optional-reference-type-error", "XPS2001", 2), ("constructor-optional-reference-name-error", "XPS2008", 4), ("constructor-reference-native-deferred", "XPS3001", 2), ("constructor-reference-unknown-deferred", "XPS3001", 2), ("constructor-reference-scalar-error", "XPS2004", 6), ("constructor-reference-class-error", "XPS2004", 11), ("constructor-reference-downcast-error", "XPS2004", 11), ("constructor-reference-method-deferred", "XPS3001", 6), ("constructor-required-base-deferred", "XPS2004", 5), ("constructor-overloads-duplicate-error", "XPS2006", 4) })
 {
     if (fixture is "constructor-reference-native-deferred" or "constructor-list-method-deferred" or "constructor-byref-module-storage-error" or "constructor-reference-method-deferred") continue;
     var source = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe", fixture + ".xps"));
@@ -837,7 +849,8 @@ if (implicitMemberError.GetProperty("line").GetInt32() != 2 || implicitMemberErr
 var goSubSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "unsupported-gosub.xps"));
 var goSubValidation = await CallAsync(new {jsonrpc="2.0",id=41,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=goSubSource,filename="unsupported-gosub.xps"}}});
 var goSubError = goSubValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
-if (goSubError.GetProperty("line").GetInt32() != 3 || goSubError.GetProperty("position").GetInt32() != 9 || goSubError.GetProperty("description").GetString() is not { } goSubMessage || !goSubMessage.Contains("GoSub is not implemented", StringComparison.OrdinalIgnoreCase)) throw new Exception("AST MCP GoSub diagnostics lost the source span or stable message.");
+if (goSubError.GetProperty("diagnosticCode").GetString() != "XPS1012" || goSubError.GetProperty("file").GetString() != "unsupported-gosub.xps" || goSubError.GetProperty("line").GetInt32() != 3 || goSubError.GetProperty("position").GetInt32() != 9 || goSubError.GetProperty("description").GetString() != "Unknown GoSub label 'worker'.")
+    throw new Exception("AST MCP GoSub diagnostic mismatch: " + goSubValidation);
 var staticArraySource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "static-array.xps"));
 var staticArrayValidation = await CallAsync(new {jsonrpc="2.0",id=42,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=staticArraySource,filename="static-array.xps"}}});
 if (staticArrayValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected the Static array lifecycle fixture.");
@@ -862,7 +875,7 @@ try
     var astParitySource=Path.Combine(astParityRoot,"ast-error.xps");
     await File.WriteAllTextAsync(astParitySource,"Sub Main(\n    Print 1\nEnd Sub");
     var astCli=new ProcessStartInfo("dotnet"){RedirectStandardOutput=true,RedirectStandardError=true,UseShellExecute=false,WorkingDirectory=repo};
-    foreach(var arg in new[]{"run","--project","src/XPScript.Compiler/XPScript.Compiler.csproj","-c","Release","--no-build","--","ast-compile",astParitySource,"-o",Path.Combine(astParityRoot,"output")}) astCli.ArgumentList.Add(arg);
+    foreach(var arg in new[]{compiler,"ast-compile",astParitySource,"-o",Path.Combine(astParityRoot,"output")}) astCli.ArgumentList.Add(arg);
     using var astProcess=Process.Start(astCli) ?? throw new Exception("Could not start AST CLI parity process.");
     var astCliErrorTask = astProcess.StandardError.ReadToEndAsync();
     var astCliOutputTask = astProcess.StandardOutput.ReadToEndAsync();
@@ -873,7 +886,7 @@ try
     if(mcpDiagnostic.GetProperty("diagnosticCode").GetString()!="XPS1012" || mcpDiagnostic.GetProperty("line").GetInt32()!=3 || mcpDiagnostic.GetProperty("position").GetInt32()!=8) throw new Exception("AST MCP diagnostic identity does not match AST CLI.");
 }
 finally { try { Directory.Delete(astParityRoot,true); } catch { } }
-var diagnosticSource=await File.ReadAllTextAsync(Path.Combine(repo,"samples","null-integer-assignment-error.xps"));
+const string diagnosticSource = "Sub Main()\n    Print missingValue\nEnd Sub";
 async Task<JsonElement> ValidateMcpAsync(int id, bool debug)
 {
     var validation=await CallAsync(new {jsonrpc="2.0",id,method="tools/call",@params=new{name="xpscript_validate",arguments=new{source=diagnosticSource,filename="agent.xps",debug}}});
@@ -909,7 +922,7 @@ await File.WriteAllTextAsync(cliSource,diagnosticSource);
 async Task<JsonElement> CompileCliAsync(bool debug)
 {
     var cliPsi=new ProcessStartInfo("dotnet"){RedirectStandardOutput=true,RedirectStandardError=true,UseShellExecute=false,WorkingDirectory=repo};
-    foreach(var arg in new[]{"run","--project","src/XPScript.Compiler/XPScript.Compiler.csproj","-c","Release","--no-build","--","compilev1",cliSource,"--result-format","json"}) cliPsi.ArgumentList.Add(arg);
+    foreach(var arg in new[]{compiler,"compile",cliSource,"--result-format","json"}) cliPsi.ArgumentList.Add(arg);
     if(debug) cliPsi.ArgumentList.Add("--debug");
     using var cli=Process.Start(cliPsi) ?? throw new Exception("Could not start CLI compiler.");
     // Drain both redirected pipes concurrently. Reading stdout to completion
@@ -939,14 +952,6 @@ var nonzeroRedimValidation=await CallAsync(new {jsonrpc="2.0",id=43,method="tool
 var nonzeroRedimResult=nonzeroRedimValidation.GetProperty("result");
 if (nonzeroRedimResult.GetProperty("isError").GetBoolean() || nonzeroRedimResult.GetProperty("structuredContent").GetProperty("result").GetString() != "ok")
     throw new Exception("AST MCP rejected implemented dynamic non-zero ReDim bounds.");
-var webValidation=await CallAsync(new {jsonrpc="2.0",id=4,method="tools/call",@params=new{name="xpscript_validate",arguments=new{source="[Anonymous]\n[Get]\nSub Index()\n    Response.Write(\"ok\")\nEnd Sub",filename="web.xps"}}});
-var webResult=webValidation.GetProperty("result");
-if (!webResult.GetProperty("isError").GetBoolean()) throw new Exception("Web source validated as a console application must be an MCP tool error.");
-var webStructured=webResult.GetProperty("structuredContent");
-if (webStructured.GetProperty("result").GetString() != "error") throw new Exception("Expected structured web/console mismatch error.");
-var webDescriptions=webStructured.GetProperty("errors").EnumerateArray().Select(error=>error.GetProperty("description").GetString() ?? "").ToArray();
-if (!webDescriptions.Any(description=>description.Contains("web application", StringComparison.OrdinalIgnoreCase))) throw new Exception("MCP did not preserve the web application compilation diagnostic. Actual: "+string.Join(" || ",webDescriptions));
-
 var tool = list.GetProperty("result").GetProperty("tools").EnumerateArray().Single(x=>x.GetProperty("name").GetString()=="xpscript_validate");
 var properties = tool.GetProperty("inputSchema").GetProperty("properties");
 if (!properties.TryGetProperty("debug", out var debugProperty) || debugProperty.GetProperty("type").GetString()!="boolean") throw new Exception("MCP validate must expose boolean debug mode.");

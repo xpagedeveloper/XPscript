@@ -48,9 +48,9 @@ foreach ($fixture in @('xml-parent', 'xml-parity', 'native-xml-dom-regression', 
     if ($LASTEXITCODE -ne 0) { throw "AST parity execution failed: $fixture" }
     $normalExe = Join-Path $output "$fixture-normal"
     if ($IsWindows) { $normalExe += '.exe' }
-    dotnet $compiler legacy-compile $source -o $normalExe --single-file=false --runtime=false
+    dotnet $compiler compile $source -o $normalExe --single-file=false --runtime=false
     if ($LASTEXITCODE -ne 0) { throw "Normal XML parity compilation failed: $fixture" }
-    $normalResult = & $normalExe
+    $normalResult = dotnet (Join-Path $normalExe 'Generated.dll')
     if ($LASTEXITCODE -ne 0 -or ($normalResult -join "`n") -ne ($astResult -join "`n")) { throw "Normal/AST XML execution differs: $fixture" }
 }
 Write-Host 'AST native XML compilation probe passed.'

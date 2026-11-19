@@ -62,8 +62,9 @@ function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
     }
     return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
 }
-function Invoke-BoundedExecutable([string] $path, [int] $timeoutMilliseconds = 120000) {
-    $info = [System.Diagnostics.ProcessStartInfo]::new($path)
+function Invoke-BoundedCompiledAssembly([string] $path, [int] $timeoutMilliseconds = 120000) {
+    $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
+    $info.ArgumentList.Add((Join-Path $path 'Generated.dll'))
     $info.UseShellExecute = $false
     $info.CreateNoWindow = $true
     $info.WorkingDirectory = Split-Path -Parent $path
@@ -126,12 +127,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST instance class method compilation failed.'
 $classMethodsResult = dotnet (Join-Path $output 'class-methods-native/Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($classMethodsResult -join "`n") -ne 'CLASS_METHODS_NATIVE_OK') { throw 'AST instance class method execution failed.' }
 $classNormalPath = Join-Path $output $(if ($IsWindows) { 'class-methods-normal.exe' } else { 'class-methods-normal' })
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o $classNormalPath --single-file=false --runtime=false
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o $classNormalPath --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal instance class method compilation failed.' }
-$classNormalResult = Invoke-BoundedExecutable $classNormalPath
+$classNormalResult = Invoke-BoundedCompiledAssembly $classNormalPath
 if ($classNormalResult.TimedOut) { throw 'Normal instance class method execution or output capture timed out.' }
 if ($classNormalResult.ExitCode -ne 0 -or $classNormalResult.Output.Trim() -ne ($classMethodsResult -join "`n").Trim()) { throw 'Normal/AST class method parity failed.' }
-Write-Host 'AST_CLASS_METHOD_LEGACY_PARITY_OK'
+Write-Host 'DEFAULT_CLI_CLASS_METHOD_OK'
 $typedSiblingOutput = Join-Path $output 'class-method-typed-sibling-return-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-typed-sibling-return-next.xps') -o $typedSiblingOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST typed sibling method result compilation failed.' }
@@ -392,18 +393,12 @@ if (Test-Path -LiteralPath (Join-Path $sqliteOutput 'MySqlConnector.dll')) {
 $sqliteResult = dotnet (Join-Path $sqliteOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($sqliteResult -join "`n") -ne 'SQLITE_AST_OK') { throw 'AST SQLite native-surface regression failed.' }
 Write-Host 'AST_SQLITE_OK'
-$legacySqliteOutput = Join-Path $output $(if ($IsWindows) { 'sqlite-native-legacy.exe' } else { 'sqlite-native-legacy' })
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'sqlite-native-next.xps') -o $legacySqliteOutput --single-file=false --runtime=false
-if ($LASTEXITCODE -ne 0) { throw 'Legacy SQLite native-surface compilation failed.' }
-$legacySqliteStdout = [System.IO.Path]::GetTempFileName()
-try {
-    $legacySqliteProcess = Start-Process -FilePath $legacySqliteOutput -RedirectStandardOutput $legacySqliteStdout -NoNewWindow -Wait -PassThru
-    $legacySqliteResult = if (Test-Path $legacySqliteStdout) { Get-Content -LiteralPath $legacySqliteStdout } else { @() }
-    if ($legacySqliteProcess.ExitCode -ne 0 -or ($legacySqliteResult -join "`n") -notmatch 'SQLITE_AST_OK') { throw 'Legacy SQLite native-surface regression failed.' }
-} finally {
-    Remove-Item -LiteralPath $legacySqliteStdout -Force -ErrorAction SilentlyContinue
-}
-Write-Host 'LEGACY_SQLITE_OK'
+$normalSqliteOutput = Join-Path $output $(if ($IsWindows) { 'sqlite-native-normal.exe' } else { 'sqlite-native-normal' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'sqlite-native-next.xps') -o $normalSqliteOutput --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Default CLI SQLite native-surface compilation failed.' }
+$normalSqliteResult = Invoke-BoundedCompiledAssembly $normalSqliteOutput
+if ($normalSqliteResult.TimedOut -or $normalSqliteResult.ExitCode -ne 0 -or $normalSqliteResult.Output.Trim() -notmatch 'SQLITE_AST_OK') { throw 'Default CLI SQLite native-surface regression failed.' }
+Write-Host 'DEFAULT_CLI_SQLITE_OK'
 $mysqlOutput = Join-Path $output 'mysql-native-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'mysql-native-next.xps') -o $mysqlOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST MySQL native-surface compilation failed.' }
@@ -429,48 +424,30 @@ finally {
 $mysqlResult = dotnet (Join-Path $mysqlOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($mysqlResult -join "`n") -ne 'MYSQL_AST_OK') { throw 'AST MySQL native-surface regression failed.' }
 Write-Host 'AST_MYSQL_OK'
-$legacyMysqlOutput = Join-Path $output $(if ($IsWindows) { 'mysql-native-legacy.exe' } else { 'mysql-native-legacy' })
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'mysql-native-next.xps') -o $legacyMysqlOutput --single-file=false --runtime=false
-if ($LASTEXITCODE -ne 0) { throw 'Legacy MySQL native-surface compilation failed.' }
-$legacyMysqlStdout = [System.IO.Path]::GetTempFileName()
-try {
-    $legacyMysqlProcess = Start-Process -FilePath $legacyMysqlOutput -RedirectStandardOutput $legacyMysqlStdout -NoNewWindow -Wait -PassThru
-    $legacyMysqlResult = if (Test-Path $legacyMysqlStdout) { Get-Content -LiteralPath $legacyMysqlStdout } else { @() }
-    if ($legacyMysqlProcess.ExitCode -ne 0 -or ($legacyMysqlResult -join "`n") -notmatch 'MYSQL_AST_OK') { throw 'Legacy MySQL native-surface regression failed.' }
-} finally {
-    Remove-Item -LiteralPath $legacyMysqlStdout -Force -ErrorAction SilentlyContinue
-}
-Write-Host 'LEGACY_MYSQL_OK'
+$normalMysqlOutput = Join-Path $output $(if ($IsWindows) { 'mysql-native-normal.exe' } else { 'mysql-native-normal' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'mysql-native-next.xps') -o $normalMysqlOutput --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Default CLI MySQL native-surface compilation failed.' }
+$normalMysqlResult = Invoke-BoundedCompiledAssembly $normalMysqlOutput
+if ($normalMysqlResult.TimedOut -or $normalMysqlResult.ExitCode -ne 0 -or $normalMysqlResult.Output.Trim() -notmatch 'MYSQL_AST_OK') { throw 'Default CLI MySQL native-surface regression failed.' }
+Write-Host 'DEFAULT_CLI_MYSQL_OK'
 $mssqlOutput = Join-Path $output 'mssql-native-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'mssql-native-next.xps') -o $mssqlOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST SQL Server native-surface compilation failed.' }
 $mssqlResult = dotnet (Join-Path $mssqlOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($mssqlResult -join "`n") -ne 'MSSQL_AST_OK') { throw 'AST SQL Server native-surface regression failed.' }
 Write-Host 'AST_MSSQL_OK'
-$legacyMssqlOutput = Join-Path $output $(if ($IsWindows) { 'mssql-native-legacy.exe' } else { 'mssql-native-legacy' })
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'mssql-native-next.xps') -o $legacyMssqlOutput --single-file=false --runtime=false
-if ($LASTEXITCODE -ne 0) { throw 'Legacy MSSQL native-surface compilation failed.' }
-$legacyMssqlStdout = [System.IO.Path]::GetTempFileName()
-try {
-    $legacyMssqlProcess = Start-Process -FilePath $legacyMssqlOutput -RedirectStandardOutput $legacyMssqlStdout -NoNewWindow -Wait -PassThru
-    $legacyMssqlResult = if (Test-Path $legacyMssqlStdout) { Get-Content -LiteralPath $legacyMssqlStdout } else { @() }
-    if ($legacyMssqlProcess.ExitCode -ne 0 -or ($legacyMssqlResult -join "`n") -notmatch 'MSSQL_AST_OK') { throw 'Legacy MSSQL native-surface regression failed.' }
-} finally {
-    Remove-Item -LiteralPath $legacyMssqlStdout -Force -ErrorAction SilentlyContinue
-}
-Write-Host 'LEGACY_MSSQL_OK'
-$legacySupabaseOutput = Join-Path $output $(if ($IsWindows) { 'supabase-native-legacy.exe' } else { 'supabase-native-legacy' })
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'supabase-native-next.xps') -o $legacySupabaseOutput --single-file=false --runtime=false
-if ($LASTEXITCODE -ne 0) { throw 'Legacy Supabase native-surface compilation failed.' }
-$legacySupabaseStdout = [System.IO.Path]::GetTempFileName()
-try {
-    $legacySupabaseProcess = Start-Process -FilePath $legacySupabaseOutput -RedirectStandardOutput $legacySupabaseStdout -NoNewWindow -Wait -PassThru
-    $legacySupabaseResult = if (Test-Path $legacySupabaseStdout) { Get-Content -LiteralPath $legacySupabaseStdout } else { @() }
-    if ($legacySupabaseProcess.ExitCode -ne 0 -or ($legacySupabaseResult -join "`n") -notmatch 'SUPABASE_AST_OK') { throw 'Legacy Supabase native-surface regression failed.' }
-} finally {
-    Remove-Item -LiteralPath $legacySupabaseStdout -Force -ErrorAction SilentlyContinue
-}
-Write-Host 'LEGACY_SUPABASE_OK'
+$normalMssqlOutput = Join-Path $output $(if ($IsWindows) { 'mssql-native-normal.exe' } else { 'mssql-native-normal' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'mssql-native-next.xps') -o $normalMssqlOutput --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Default CLI MSSQL native-surface compilation failed.' }
+$normalMssqlResult = Invoke-BoundedCompiledAssembly $normalMssqlOutput
+if ($normalMssqlResult.TimedOut -or $normalMssqlResult.ExitCode -ne 0 -or $normalMssqlResult.Output.Trim() -notmatch 'MSSQL_AST_OK') { throw 'Default CLI MSSQL native-surface regression failed.' }
+Write-Host 'DEFAULT_CLI_MSSQL_OK'
+$normalSupabaseOutput = Join-Path $output $(if ($IsWindows) { 'supabase-native-normal.exe' } else { 'supabase-native-normal' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'supabase-native-next.xps') -o $normalSupabaseOutput --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Default CLI Supabase native-surface compilation failed.' }
+$normalSupabaseResult = Invoke-BoundedCompiledAssembly $normalSupabaseOutput
+if ($normalSupabaseResult.TimedOut -or $normalSupabaseResult.ExitCode -ne 0 -or $normalSupabaseResult.Output.Trim() -notmatch 'SUPABASE_AST_OK') { throw 'Default CLI Supabase native-surface regression failed.' }
+Write-Host 'DEFAULT_CLI_SUPABASE_OK'
 $supabaseOutput = Join-Path $output 'supabase-native-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'supabase-native-next.xps') -o $supabaseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST Supabase native-surface compilation failed.' }
@@ -1160,9 +1137,9 @@ if ($LASTEXITCODE -ne 0) { throw 'AST class-method override compilation failed.'
 $overrideClassMethodResult = dotnet (Join-Path $overrideClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($overrideClassMethodResult -join "`n") -ne '9') { throw 'AST class-method override execution failed.' }
 $overrideClassMethodNormal = Join-Path $output 'class-method-override-normal'
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-override-next.xps') -o $overrideClassMethodNormal --single-file=false --runtime=false
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-method-override-next.xps') -o $overrideClassMethodNormal --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal class-method override compilation failed.' }
-$overrideClassMethodNormalResult = Invoke-BoundedExecutable $overrideClassMethodNormal
+$overrideClassMethodNormalResult = Invoke-BoundedCompiledAssembly $overrideClassMethodNormal
 if ($overrideClassMethodNormalResult.ExitCode -ne 0 -or $overrideClassMethodNormalResult.Output.Trim() -ne ($overrideClassMethodResult -join "`n").Trim()) { throw 'Normal/AST class-method override parity failed.' }
 $parentClassMethodOutput = Join-Path $output 'class-method-parent-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-parent-next.xps') -o $parentClassMethodOutput
@@ -1170,9 +1147,9 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Parent class-method compilation failed.' }
 $parentClassMethodResult = dotnet (Join-Path $parentClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($parentClassMethodResult -join "`n") -ne '7') { throw 'AST Parent class-method execution failed.' }
 $parentClassMethodNormal = Join-Path $output 'class-method-parent-normal'
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-parent-next.xps') -o $parentClassMethodNormal --single-file=false --runtime=false
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-method-parent-next.xps') -o $parentClassMethodNormal --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal Parent class-method compilation failed.' }
-$parentClassMethodNormalResult = Invoke-BoundedExecutable $parentClassMethodNormal
+$parentClassMethodNormalResult = Invoke-BoundedCompiledAssembly $parentClassMethodNormal
 if ($parentClassMethodNormalResult.ExitCode -ne 0 -or $parentClassMethodNormalResult.Output.Trim() -ne ($parentClassMethodResult -join "`n").Trim()) { throw 'Normal/AST Parent class-method parity failed.' }
 Write-Host 'AST_CLASS_INHERITANCE_LEGACY_PARITY_OK'
 Write-Host 'AST_CLASS_METHOD_OVERRIDE_OK'
@@ -1782,17 +1759,10 @@ if ($LASTEXITCODE -ne 0) { throw 'AST array parity compilation failed.' }
 $arrayParityResult = dotnet (Join-Path $arrayParityOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($arrayParityResult -join "`n") -ne "-3`n-1`n7`nARRAY_STORAGE_PARITY_OK") { throw 'AST array parity execution failed.' }
 $normalArray = Join-Path $output $(if ($IsWindows) { 'normal-array.exe' } else { 'normal-array' })
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'array-storage-parity.xps') -o $normalArray --single-file=false --runtime=false
+dotnet $compiler compile (Join-Path $PSScriptRoot 'array-storage-parity.xps') -o $normalArray --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal array parity compilation failed.' }
-$normalStdout = [System.IO.Path]::GetTempFileName()
-try {
-    $normalProcess = Start-Process -FilePath $normalArray -RedirectStandardOutput $normalStdout -NoNewWindow -Wait -PassThru
-    $normalArrayResult = if (Test-Path $normalStdout) { Get-Content -LiteralPath $normalStdout } else { @() }
-    if ($normalProcess.ExitCode -ne 0 -or ($normalArrayResult -join "`n") -ne ($arrayParityResult -join "`n")) { throw 'Normal/AST array storage parity failed.' }
-}
-finally {
-    Remove-Item -LiteralPath $normalStdout -Force -ErrorAction SilentlyContinue
-}
+$normalArrayResult = Invoke-BoundedCompiledAssembly $normalArray
+if ($normalArrayResult.TimedOut -or $normalArrayResult.ExitCode -ne 0 -or ($normalArrayResult.Output -replace "\r\n", "`n").Trim() -ne ($arrayParityResult -join "`n")) { throw 'Normal/AST array storage parity failed.' }
 $applicationProbeProject = Join-Path $root 'tests/AstApplicationRuntimeProbe/AstApplicationRuntimeProbe.csproj'
 dotnet restore $applicationProbeProject
 if ($LASTEXITCODE -ne 0) { throw 'AST native Application runtime probe restore failed.' }
@@ -1907,9 +1877,9 @@ if ($LASTEXITCODE -ne 0) { throw 'AST shared List storage compilation failed.' }
 $listStorageResult = dotnet (Join-Path $output 'list-stable-storage/Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($listStorageResult -join "`n") -ne 'LIST_STABLE_STORAGE_OK') { throw 'AST shared List storage failed.' }
 $listStorageNormal = Join-Path $output $(if ($IsWindows) { 'list-stable-normal.exe' } else { 'list-stable-normal' })
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'list-stable-storage.xps') -o $listStorageNormal --single-file=false --runtime=false
+dotnet $compiler compile (Join-Path $PSScriptRoot 'list-stable-storage.xps') -o $listStorageNormal --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal shared List storage compilation failed.' }
-$listStorageNormalResult = Invoke-BoundedExecutable $listStorageNormal
+$listStorageNormalResult = Invoke-BoundedCompiledAssembly $listStorageNormal
 if ($listStorageNormalResult.TimedOut) { throw 'Normal shared List storage execution timed out.' }
 if ($listStorageNormalResult.ExitCode -ne 0 -or $listStorageNormalResult.Output.Trim() -ne 'LIST_STABLE_STORAGE_OK') { throw 'Normal/AST shared List storage parity failed.' }
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-list-lifetime.xps') -o (Join-Path $output 'indexed-byref-list-lifetime')
@@ -1947,9 +1917,9 @@ foreach ($indexedFixture in @('indexed-byref-module-simple', 'indexed-byref-fiel
     if ($LASTEXITCODE -ne 0 -or ($indexedResult -join "`n") -ne $indexedExpected) { throw "AST indexed property execution failed: $indexedFixture" }
 }
 $indexedNormal = Join-Path $output $(if ($IsWindows) { 'indexed-get-normal.exe' } else { 'indexed-get-normal' })
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-get-parity.xps') -o $indexedNormal --single-file=false --runtime=false
+dotnet $compiler compile (Join-Path $PSScriptRoot 'indexed-get-parity.xps') -o $indexedNormal --single-file=false --runtime=false
 if ($LASTEXITCODE -ne 0) { throw 'Normal indexed getter compilation failed.' }
-$indexedNormalResult = Invoke-BoundedExecutable $indexedNormal
+$indexedNormalResult = Invoke-BoundedCompiledAssembly $indexedNormal
 if ($indexedNormalResult.TimedOut) { throw 'Normal indexed getter execution timed out.' }
 if ($indexedNormalResult.ExitCode -ne 0 -or $indexedNormalResult.Output.Trim() -ne '6') { throw 'Normal/AST indexed getter parity failed.' }
 dotnet $compiler ast-compile (Join-Path $root 'samples/indexed-properties.xps') -o (Join-Path $output 'indexed-existing-sample')

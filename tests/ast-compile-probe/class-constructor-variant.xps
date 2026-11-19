@@ -11,7 +11,7 @@ End Class
 Class Defaults
     Public Value As Variant
     Public OriginalEmpty As Boolean
-    Public Sub New(Optional ByRef first As Variant, Optional ByRef second As Variant = first)
+    Public Sub New(Optional ByRef first As Variant, Optional ByRef second As Variant = first, Optional ByVal explicitDefault As Variant = Nothing)
         OriginalEmpty = IsEmpty(first)
         If IsEmpty(first) Then
             first = 0

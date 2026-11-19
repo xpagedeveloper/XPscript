@@ -83,8 +83,8 @@ try
     var result = await Run("dotnet", [Path.Combine(output, "ast", "Generated.dll"), ..arguments]);
     if (result.Trim() != "HTTP_AST_OK") throw new Exception("HTTP/TLS fixture output mismatch: " + result);
     var normal = Path.Combine(output, OperatingSystem.IsWindows() ? "normal.exe" : "normal");
-    await Run("dotnet", [compiler, "legacy-compile", source, "-o", normal, "--single-file=false", "--runtime=false"]);
-    if ((await Run(normal, arguments)).Trim() != result.Trim()) throw new Exception("Normal/AST HTTP/TLS execution differs.");
+    await Run("dotnet", [compiler, "compile", source, "-o", normal, "--single-file=false", "--runtime=false"]);
+    if ((await Run("dotnet", [Path.Combine(normal, "Generated.dll"), .. arguments])).Trim() != result.Trim()) throw new Exception("Normal/AST HTTP/TLS execution differs.");
     var unused = Path.Combine(output, "unused");
     await Run("dotnet", [compiler, "ast-compile", Path.Combine(repo, "tests/ast-compile-probe/http-unused.xps"), "-o", unused]);
     var unusedAssembly = System.Reflection.Assembly.LoadFile(Path.Combine(unused, "Generated.dll"));
