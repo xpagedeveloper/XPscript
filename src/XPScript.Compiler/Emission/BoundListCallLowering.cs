@@ -57,7 +57,7 @@ internal static class BoundListCallLowering
             }
         }
         var invocation = receiver is null
-            ? $"{call.Function.Name}({string.Join(", ", arguments)})"
+            ? $"{call.Function.EmittedMemberName ?? call.Function.Name}({string.Join(", ", arguments)})"
             : $"receiver.{memberName}({string.Join(", ", arguments)})";
         return $"private static {BoundMethodEmitter.CSharpType(call.Function.ReturnType)} {Name(call)}({string.Join(", ", parameters)})\n{{\ntry {{ return {invocation}; }}\nfinally {{ {string.Join(" ", after)} }}\n}}\n";
     }

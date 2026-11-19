@@ -61,6 +61,8 @@ jobs:
           Write-Host 'OPENAPI_RUNTIME_NAME_SCOPE=begin'
           dotnet run --project tests/OpenApiGeneratorSmoke -c Release -- --verify-definition-client tests/OpenApiGeneratorSmoke/fixtures/cross-scope-runtime-names.yaml 'GET /runtime'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ast-run tests/ast-compile-probe/jsonparse-member-scope.xps --no-daemon --debug
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Write-Host 'OPENAPI_RUNTIME_NAME_SCOPE=passed'
       - name: Run focused regressions, CLI chain and complete OpenAPI suite
         shell: bash

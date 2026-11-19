@@ -582,7 +582,10 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         if (candidates.Length > 1)
             return Error(syntax, CompilerDiagnosticCodes.AmbiguousOverload, $"Call to function '{name}' is ambiguous.");
 
-        return new BoundCallExpression(target, candidates[0], ConvertArguments(candidates[0], arguments));
+        var function = candidates[0];
+        if (target is BoundMemberAccessExpression member && function.EmittedMemberName is { } emittedName)
+            target = new BoundMemberAccessExpression(member.Receiver, emittedName, function.ReturnType, function.SemanticReturnType);
+        return new BoundCallExpression(target, function, ConvertArguments(function, arguments));
     }
 
     private bool IsBetterOverload(FunctionSymbol left, FunctionSymbol right, IReadOnlyList<BoundExpression> arguments)

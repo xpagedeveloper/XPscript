@@ -271,7 +271,7 @@ public sealed class SymbolTable
     {
         if (_symbols.TryGetValue(name, out var symbols) && symbols.Count > 0)
         {
-            symbol = symbols[^1];
+            symbol = symbols.FindLast(item => item is FieldSymbol or PropertySymbol) ?? symbols[^1];
             return true;
         }
 
@@ -297,7 +297,7 @@ public sealed class SymbolTable
         var members = LookupMembers(receiverType, memberName);
         if (members.Count > 0)
         {
-            symbol = members[^1];
+            symbol = members.LastOrDefault(item => item is PropertySymbol) ?? members[^1];
             return true;
         }
 

@@ -57,7 +57,7 @@ jobs:
             dotnet restore $_.FullName
             if ($LASTEXITCODE -ne 0) { throw "Restore failed: $($_.FullName)" }
           }
-      - name: Run Language FullTest, including built-in and member name resolution
+      - name: Run Language FullTest, including field and method name coexistence
         if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.skip_macos && matrix.os == 'macos-latest' || inputs.skip_language_fulltest || inputs.webiis_only || inputs.ast_lexer_only)) }}
         shell: pwsh
         run: ./.github/scripts/run-fulltests.ps1 -Suite language

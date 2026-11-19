@@ -26,6 +26,8 @@ XPScript resolves identifiers by syntactic scope. Language keywords such as `If`
 
 Runtime function names are not globally reserved identifiers. An unqualified call such as `JsonParse(text)`, `SHA256(text)`, or `StrLeftBack(text, 2)` can resolve to the corresponding runtime function, while the same spelling remains legal for a class member when the grammar permits it. The receiver determines which member `item.JsonParse(...)` calls. This also applies when `item.JsonParse()` uses the member's Optional defaults.
 
+A field and a method may share a name in a class. With a declared class receiver, `item.JsonParse` accesses the field and `item.JsonParse(...)` calls the method. Inside that function, assignment to the bare function name still sets its return value. Use `Me.JsonParse` to access the field there.
+
 This distinction also applies to properties, methods, parameters, locals, enum members, and symbols in different classes: sharing a spelling with a runtime API does not by itself reserve that spelling. Only actual syntax keywords and compiler/runtime names with a real declaration-scope collision are restricted.
 
 ## Numeric literals

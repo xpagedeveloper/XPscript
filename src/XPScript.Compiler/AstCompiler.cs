@@ -379,6 +379,7 @@ public static class AstCompiler
             symbols.DeclareUserClassInheritance(item.Identifier.Text, item.BaseType?.Identifier.Text);
         }
         AstClassConstructorSupport.Register(classes, symbols, sourcePath, fullSource);
+        var fieldsByClass = AstClassMethodSupport.CollectFieldNamesByClass(classes);
         foreach (var classDeclaration in classes.Values)
         {
             for (var current = classDeclaration; current is not null; current = current.BaseType is not null && classes.TryGetValue(current.BaseType.Identifier.Text, out var baseClass) ? baseClass : null)
@@ -399,8 +400,10 @@ public static class AstCompiler
                             continue;
                         var parameterTypes = method.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
                         var qualifiedMethodName = $"{classDeclaration.Identifier.Text}.{method.Identifier.Text}";
-                        symbols.Declare(new FunctionSymbol(qualifiedMethodName, typeof(void), parameterTypes.Select(type => type.RuntimeType).ToArray(), null, parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
-                        DeclareOptionalSignatures(symbols, qualifiedMethodName, typeof(void), method.Parameters);
+                        var alias = AstClassMethodSupport.MethodAlias(fieldsByClass[classDeclaration.Identifier.Text], method.Identifier.Text);
+                        symbols.Declare(new FunctionSymbol(qualifiedMethodName, typeof(void), parameterTypes.Select(type => type.RuntimeType).ToArray(), null, parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray())
+                        { EmittedMemberName = alias });
+                        DeclareOptionalSignatures(symbols, qualifiedMethodName, typeof(void), method.Parameters, alias);
                     }
                 foreach (var method in current.Members.OfType<FunctionDeclarationSyntax>())
                 {
@@ -413,8 +416,10 @@ public static class AstCompiler
                     var qualifiedMethodName = $"{classDeclaration.Identifier.Text}.{method.Identifier.Text}";
                     var semanticReturnType = returnName is not null && classes.ContainsKey(returnName)
                         ? XpTypeSymbol.User(returnName) : XpTypeSymbol.FromClr(returnType);
-                    symbols.Declare(new FunctionSymbol(qualifiedMethodName, returnType, parameterTypes.Select(type => type.RuntimeType).ToArray(), semanticReturnType, parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray()));
-                    DeclareOptionalSignatures(symbols, qualifiedMethodName, returnType, method.Parameters);
+                    var alias = AstClassMethodSupport.MethodAlias(fieldsByClass[classDeclaration.Identifier.Text], method.Identifier.Text);
+                    symbols.Declare(new FunctionSymbol(qualifiedMethodName, returnType, parameterTypes.Select(type => type.RuntimeType).ToArray(), semanticReturnType, parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray())
+                    { EmittedMemberName = alias });
+                    DeclareOptionalSignatures(symbols, qualifiedMethodName, returnType, method.Parameters, alias);
                 }
             }
         }
@@ -775,7 +780,7 @@ public static class AstCompiler
         // members so constructors and accessors are not emitted twice.
         var emittedClassMembers = classes.Values.ToDictionary(
             classDeclaration => classDeclaration.Identifier.Text,
-            classDeclaration => AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource, classes),
+            classDeclaration => AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource, fieldsByClass[classDeclaration.Identifier.Text], classes),
             StringComparer.OrdinalIgnoreCase);
         // Bind every procedure in its own scope; declarations are registered
         // before bodies so forward calls and recursion see real signatures.
@@ -2136,7 +2141,7 @@ internal static class Program
         symbols.Declare(function);
     }
 
-    private static void DeclareOptionalSignatures(SymbolTable symbols, string name, Type returnType, IReadOnlyList<ParameterSyntax> parameters)
+    private static void DeclareOptionalSignatures(SymbolTable symbols, string name, Type returnType, IReadOnlyList<ParameterSyntax> parameters, string? emittedMemberName = null)
     {
         // Only a trailing Optional suffix can be omitted by a shorter call.
         // Explicit empty argument slots require separate call-syntax lowering.
@@ -2150,7 +2155,7 @@ internal static class Program
                 continue;
             symbols.Declare(new FunctionSymbol(name, returnType,
                 shortenedTypes.Select(type => type.RuntimeType).ToArray(), null, shortenedTypes, shortenedModes)
-                { IsOptionalForwarding = true });
+                { IsOptionalForwarding = true, EmittedMemberName = emittedMemberName });
         }
     }
 

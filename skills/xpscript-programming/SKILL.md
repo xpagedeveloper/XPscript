@@ -22,6 +22,8 @@ Do not invent a built-in or class member because it exists in a related language
 
 Use a receiver to call a class member that shares a built-in name. For example, `item.JsonParse()` calls the class method and uses its Optional defaults. The unqualified `JsonParse(text)` can resolve to the global parser.
 
+When a declared class has a field and method with the same name, `item.JsonParse` accesses the field and `item.JsonParse(...)` calls the method. Use `Me.JsonParse` to access the field from within the same-named function.
+
 The normal CLI `compile` and `run` commands use the AST compiler. Use `ast-compile` or `ast-run` to make that selection explicit. The legacy command aliases `legacy-compile`, `compilev1`, `legacy-run` and `runv1` are disabled.
 
 ## Core language model

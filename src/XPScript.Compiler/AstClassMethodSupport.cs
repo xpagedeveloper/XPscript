@@ -115,7 +115,29 @@ internal static class AstClassMethodSupport
         var name = syntax?.Identifier.Text ?? string.Empty;
         return BoundExpressionEmitter.RuntimeObjectType(name) ?? BoundMethodEmitter.CSharpType(DeclaredType(syntax, symbols));
     }
+    internal static Dictionary<string, HashSet<string>> CollectFieldNamesByClass(IReadOnlyDictionary<string, ClassDeclarationSyntax> classes)
+    {
+        var families = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        var fieldsByClass = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var declaration in classes.Values)
+        {
+            var root = declaration;
+            while (root.BaseType is { } parent)
+                root = classes[parent.Identifier.Text];
+            if (!families.TryGetValue(root.Identifier.Text, out var fields))
+                families.Add(root.Identifier.Text, fields = new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+            fields.UnionWith(declaration.Members.OfType<FieldDeclarationSyntax>().Select(field => field.Identifier.Text));
+            fieldsByClass.Add(declaration.Identifier.Text, fields);
+        }
+        return fieldsByClass;
+    }
+
+    // Keep a colliding CLR method name consistent across overrides and inherited calls.
+    internal static string? MethodAlias(HashSet<string> fields, string name) =>
+        fields.Contains(name) ? "__xps_method_" + name.ToUpperInvariant() : null;
+
     internal static string Emit(ClassDeclarationSyntax declaration, SymbolTable globals, string sourcePath, string source,
+        HashSet<string> inheritedFamilyFieldNames,
         IReadOnlyDictionary<string, ClassDeclarationSyntax> classes)
     {
         var output = new System.Text.StringBuilder();
@@ -247,7 +269,8 @@ internal static class AstClassMethodSupport
                         : DeclaredType(ownFunction.ReturnType, globals);
                     var parameterTypes = ps.Select(p => AstCompiler.ResolveParameterType(p, globals)).ToArray();
                     var symbol = new FunctionSymbol(methodName, rt, parameterTypes.Select((p, i) => ps[i].IsArray ? typeof(Array) : p.RuntimeType).ToArray(),
-                        semanticReturnType, parameterTypes, ps.Select(p => p.IsByRef).ToArray());
+                        semanticReturnType, parameterTypes, ps.Select(p => p.IsByRef).ToArray())
+                    { EmittedMemberName = MethodAlias(inheritedFamilyFieldNames, methodName) };
                     classScope.Declare(symbol);
                     classScope.Declare(symbol with { Name = declaration.Identifier.Text + "." + methodName });
                 }
@@ -293,7 +316,7 @@ internal static class AstClassMethodSupport
             var bound = AstCompiler.BindProcedure(statements, scope, parameters,
                 hasResult ? semanticResult : null, hasResult ? name : null, result,
                 declaration.Identifier.Text + "." + name, sourcePath, source, source, allowDynamicConversions: false);
-            var emittedName = constructor is not null ? "__xps_constructor_body" + AstClassConstructorSupport.Suffix(declaration, constructor) : isDestructor ? "__xps_destructor_body" : property is null ? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
+            var emittedName = constructor is not null ? "__xps_constructor_body" + AstClassConstructorSupport.Suffix(declaration, constructor) : isDestructor ? "__xps_destructor_body" : property is null ? MethodAlias(inheritedFamilyFieldNames, name) ?? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
             string body;
             try { body = new BoundMethodEmitter().Emit(emittedName, returnType, parameters, bound, false, source, sourcePath, semanticResult); }
             catch (BoundEmissionException ex) { throw AstCompiler.MappedDiagnostic(ex.Span ?? member.Span, sourcePath, source, ex.Message); }
