@@ -362,6 +362,9 @@ jobs:
       - name: Verify XPImage Browser-WASM ServerSide boundary
         shell: pwsh
         run: |
+          # Generated browser projects must inherit the same SDK as workload install.
+          $env:XPSCRIPT_TEMP_ROOT = Join-Path $PWD 'out/xpimage-wasm'
+          New-Item -ItemType Directory -Force $env:XPSCRIPT_TEMP_ROOT | Out-Null
           $browserOutput = dotnet run --project ./tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release 2>&1
           $browserExitCode = $LASTEXITCODE
           $browserOutput | ForEach-Object { Write-Host $_ }

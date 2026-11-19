@@ -185,9 +185,12 @@ internal static class RunCompiler
             ApplicationSecurityAudit.Report(build.Stdout + Environment.NewLine + build.Stderr);
             if (build.ExitCode != 0)
             {
-                var diagnosticText = build.Stdout + Environment.NewLine + build.Stderr;
+                var debugDiagnostics = debug || CompilerDiagnosticMode.Debug;
+                var diagnosticText = (build.Stdout + Environment.NewLine + build.Stderr).Trim();
+                if (debugDiagnostics && diagnosticText.Length == 0)
+                    diagnosticText = $".NET SDK build exited with code {build.ExitCode} without reporting a diagnostic.";
                 IReadOnlyList<CompileDiagnostic> generatedDiagnostics = [];
-                if (debug)
+                if (debugDiagnostics)
                 {
                     await File.WriteAllTextAsync(programPath, DisableSourceMappings(generatedSource), cancellationToken).ConfigureAwait(false);
                     CompilerPathSecurity.HardenTemporaryFile(programPath);
