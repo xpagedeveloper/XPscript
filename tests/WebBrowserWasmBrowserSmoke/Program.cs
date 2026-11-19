@@ -18,6 +18,14 @@ try
              File.Exists(Path.Combine(path, "_framework", "dotnet.js"))) &&
             File.Exists(Path.Combine(path, "_framework", "dotnet.native.wasm")))
         ?? throw new InvalidOperationException("WASM publish root was not found.");
+    var frameworkRoot = Path.Combine(appRoot, "_framework");
+    var coreLibraries = Directory.EnumerateFiles(frameworkRoot, "*CoreLib*", SearchOption.AllDirectories)
+        .Select(file => $"{Path.GetRelativePath(frameworkRoot, file)} ({new FileInfo(file).Length} bytes)");
+    var externalBootConfig = Path.Combine(frameworkRoot, "dotnet.boot.js");
+    var bootConfig = File.Exists(externalBootConfig) ? externalBootConfig : Path.Combine(frameworkRoot, "dotnet.js");
+    var bootText = await File.ReadAllTextAsync(bootConfig);
+    Console.WriteLine($"WASM_CORELIB_FILES={string.Join(", ", coreLibraries)}");
+    Console.WriteLine($"WASM_BOOT_CONFIG={Path.GetFileName(bootConfig)}; mentions CoreLib={bootText.Contains("System.Private.CoreLib", StringComparison.Ordinal)}");
     var port = Random.Shared.Next(18000, 28000);
     var python = new[] { "python.exe", "python3", "py.exe" }
         .FirstOrDefault(command => command is "python3" || File.Exists(command) || Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator).Any(path => File.Exists(Path.Combine(path, command))) == true)
@@ -65,9 +73,10 @@ try
     };
     page.Response += (_, response) =>
     {
-        if (response.Status >= 400)
+        if (response.Status >= 400 || response.Url.Contains("CoreLib", StringComparison.Ordinal))
             Console.WriteLine($"BROWSER_HTTP_{response.Status}: {response.Url}");
     };
+    page.RequestFailed += (_, request) => Console.WriteLine($"BROWSER_REQUEST_FAILED: {request.Url}: {request.Failure}");
     await page.GotoAsync($"http://127.0.0.1:{port}/app.xps/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
     var name = page.Locator("input[name='name']");
     try
