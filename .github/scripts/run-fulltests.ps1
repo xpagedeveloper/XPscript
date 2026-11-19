@@ -37,6 +37,7 @@ function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeou
       Write-Host "FULLTEST_PROCESS_TIMEOUT label=$label pid=$($p.Id) elapsed_ms=$($timer.ElapsedMilliseconds)"
       try { $p.Kill($true) } catch { Write-Warning "Failed to kill ${label}: $_" }
       [void] $p.WaitForExit(10000)
+      Get-Content -LiteralPath $stdoutPath,$stderrPath -Tail 100 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_ }
       # ErrorActionPreference is Stop: report only after terminating the child.
       Write-Error "FULLTEST_TIMEOUT: $label (pid=$($p.Id))" -ErrorAction Continue
       exit 124
@@ -114,6 +115,8 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
+  $jsonParseScope = Invoke-Bounded 'dotnet' @($compilerDll,'ast-run','./tests/ast-compile-probe/jsonparse-member-scope.xps','--no-daemon','--debug') $compileTimeoutMilliseconds 'AST JsonParse member scope'
+  if ($jsonParseScope.ExitCode -ne 0 -or $jsonParseScope.Output -notmatch '(?m)^JSONPARSE_MEMBER_SCOPE_OK\r?$') { throw "JsonParse member scope regression: $($jsonParseScope.Output)" }
   $arraySignatures = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-array-signature.ps1') $compileTimeoutMilliseconds 'AST array parameter syntax and explicit migration guards'
   if ($arraySignatures.ExitCode -ne 0 -or $arraySignatures.Output -notmatch 'AST_ARRAY_SIGNATURES_OK') { throw 'AST array signature regression failed.' }
   # The complete CLI suite now exceeds 15 minutes locally; retain all coverage with a bounded 20-minute budget.

@@ -22,9 +22,9 @@ if (args is ["--verify-definition-server", var serverDefinitionPath])
     return;
 }
 
-if (args is ["--verify-definition-client", var clientDefinitionPath])
+if (args is ["--verify-definition-client", var clientDefinitionPath, .. var operation] && operation.Length <= 1)
 {
-    await VerifyDefinition(clientDefinitionPath, false, true);
+    await VerifyDefinition(clientDefinitionPath, false, true, operation.SingleOrDefault());
     return;
 }
 
@@ -2162,28 +2162,8 @@ if (!scopedServer.Models.Contains("Included") || !scopedServer.Models.Contains("
     throw new Exception("OpenAPI server operation scoping did not retain only the selected operation's transitive models.");
 Console.WriteLine("OPENAPI-SERVER-MODEL-SCOPE=OK");
 
-var crossScopeRuntimeNames = new XpsOpenApiClientGenerator().Generate("""
-openapi: 3.1.0
-info: { title: Cross Scope Runtime Names, version: 1.0.0 }
-components:
-  schemas:
-    First:
-      type: object
-      properties:
-        JsonParse: { type: string }
-    Second:
-      type: object
-      properties:
-        jsonparse: { type: string }
-paths:
-  /runtime:
-    get:
-      operationId: JsonParse
-      parameters:
-        - { name: StrLeftBack, in: query, schema: { type: string } }
-      responses:
-        '204': { description: ok }
-""", "cross-scope-runtime-names.yaml");
+var crossScopeRuntimeNames = new XpsOpenApiClientGenerator().GenerateFile(
+    Path.Combine(AppContext.BaseDirectory, "fixtures", "cross-scope-runtime-names.yaml"));
 foreach (var marker in new[] { "Public JsonParse As String", "Public Jsonparse As String", "Public Function JsonParse(", "Optional StrLeftBack As Variant" })
     if (!crossScopeRuntimeNames.Source.Contains(marker, StringComparison.Ordinal))
         throw new Exception("Runtime/global identifier was renamed even though its declaration scope permits it: " + marker);
@@ -2843,7 +2823,7 @@ paths:
     Console.WriteLine("OPENAPI-REGENERATION-COLLISION=OK");
 }
 
-static async Task VerifyDefinition(string definitionPath, bool verifyServer, bool verifyClient)
+static async Task VerifyDefinition(string definitionPath, bool verifyServer, bool verifyClient, string? operation = null)
 {
     var fullPath = ResolveDefinitionPath(definitionPath);
     if (!File.Exists(fullPath)) throw new FileNotFoundException("OpenAPI definition was not found.", fullPath);
@@ -2854,7 +2834,7 @@ static async Task VerifyDefinition(string definitionPath, bool verifyServer, boo
     if (client is not null && (client.Operations.Count == 0 || client.Models.Count == 0)) throw new Exception("OpenAPI client generation produced no operations or models.");
     var fileName = Path.GetFileName(fullPath);
     var selectedKey = fileName.Equals("digitalocean.yaml", StringComparison.OrdinalIgnoreCase) ? "POST /v2/action-gateway/connections" : fileName.Equals("github.json", StringComparison.OrdinalIgnoreCase) ? "GET /zen" : fileName.Equals("riksantikvarieambetet.yaml", StringComparison.OrdinalIgnoreCase) ? "GET /lamningar" : fileName.Equals("scb.json", StringComparison.OrdinalIgnoreCase) ? "GET /tables" : fileName.Equals("skogsstyrelsen.json", StringComparison.OrdinalIgnoreCase) ? "GET /skogligagrunddata/v1/api-info" : fileName.Equals("stripe.json", StringComparison.OrdinalIgnoreCase) ? "GET /v1/account" : fileName.Equals("swedac.json", StringComparison.OrdinalIgnoreCase) ? "GET /api-info" : fileName.Equals("vinnova.yaml", StringComparison.OrdinalIgnoreCase) ? "GET /metadata" : "GET /assistants";
-    var selected = new XpsOpenApiGenerationOptions(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { selectedKey });
+    var selected = new XpsOpenApiGenerationOptions(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { operation ?? selectedKey });
     var scopedServer = verifyServer ? new XpsOpenApiGenerator().Generate(specification, Path.GetFileName(fullPath), selected) : null;
     var scopedClient = verifyClient ? new XpsOpenApiClientGenerator().Generate(specification, Path.GetFileName(fullPath), null, selected) : null;
     var root = Path.Combine(Path.GetTempPath(), "xps-openapi-definition-" + Guid.NewGuid().ToString("N"));

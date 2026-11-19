@@ -351,7 +351,6 @@ public sealed class BoundExpressionEmitter
             return (byRef ? "ref " : "") + Emit(argument);
         });
         var functionName = call.Function.Name.EndsWith("$", StringComparison.Ordinal) ? call.Function.Name.TrimEnd('$') : call.Function.Name;
-        if (functionName.Equals("JsonParse", StringComparison.OrdinalIgnoreCase)) functionName = "XPScriptNativeJson.Parse";
         if (functionName.Equals("StrTemplate", StringComparison.OrdinalIgnoreCase)) functionName = "Program.StrTemplate";
         if (functionName.Equals("Seek", StringComparison.OrdinalIgnoreCase)) functionName = "Program.Seek";
         if (call.Target is BoundNameExpression { Symbol: TypeSymbol { Name: "XPJsonSchema" } } && call.Function.Name is "Parse" or "FromJson")

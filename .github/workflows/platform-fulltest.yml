@@ -54,6 +54,14 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
+      - name: Verify OpenAPI client methods that share runtime names
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          Write-Host 'OPENAPI_RUNTIME_NAME_SCOPE=begin'
+          dotnet run --project tests/OpenApiGeneratorSmoke -c Release -- --verify-definition-client tests/OpenApiGeneratorSmoke/fixtures/cross-scope-runtime-names.yaml 'GET /runtime'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host 'OPENAPI_RUNTIME_NAME_SCOPE=passed'
       - name: Run focused regressions, CLI chain and complete OpenAPI suite
         shell: bash
         run: bash tests/OpenApiGeneratorSmoke/run-rest-host-ci.sh

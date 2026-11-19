@@ -127,7 +127,7 @@ if ($LASTEXITCODE -ne 0) { throw 'AST instance class method compilation failed.'
 $classMethodsResult = dotnet (Join-Path $output 'class-methods-native/Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($classMethodsResult -join "`n") -ne 'CLASS_METHODS_NATIVE_OK') { throw 'AST instance class method execution failed.' }
 $classNormalPath = Join-Path $output $(if ($IsWindows) { 'class-methods-normal.exe' } else { 'class-methods-normal' })
-dotnet $compiler compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o $classNormalPath --single-file=false --runtime=false
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-methods-native.xps') -o $classNormalPath --single-file=false --runtime=false --debug
 if ($LASTEXITCODE -ne 0) { throw 'Normal instance class method compilation failed.' }
 $classNormalResult = Invoke-BoundedCompiledAssembly $classNormalPath
 if ($classNormalResult.TimedOut) { throw 'Normal instance class method execution or output capture timed out.' }
