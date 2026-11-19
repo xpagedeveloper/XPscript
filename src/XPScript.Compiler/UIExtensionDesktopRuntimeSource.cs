@@ -134,6 +134,7 @@ internal static class XPScriptUIDesktopAdapter
             {
                 name = field.Name, id = field.Id, label = field.Label, type = field.Type, parentId = field.Parent?.Id ?? string.Empty, required = field.Required, layoutRow = field.LayoutRow, layoutColumn = field.LayoutColumn, columnSpan = field.ColumnSpan, rowSpan = field.RowSpan,
                 placeholder = field.Placeholder, tooltip = field.Tooltip, imageSource = field.ImageSource, imageAltText = field.ImageAltText, imageCertificateValidation = field.ImageCertificateValidation,
+                hasChangeHandler = field.OnChangeHandler.Length > 0 || field.RefreshHandler.Length > 0,
                 regexPattern = field.RegexPattern, schemaValidationError = ReadValidationError(form, field.Name),
                 value = field.Type is "PasswordField" or "MultiListBox" ? null : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
                 values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),

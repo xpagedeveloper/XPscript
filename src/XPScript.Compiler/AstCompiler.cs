@@ -1760,6 +1760,8 @@ internal static class Program
             // desktop renderer is present, which is not true for the Android
             // AST runtime. Android receives the shared model/runtime extensions
             // below without applying the desktop rendering pipeline.
+            if (isAndroidTarget)
+                generated = UIExtensionDesktopPostProcessor.InstallModalBridge(generated) + Environment.NewLine + UIExtensionDesktopRuntimeSource.Code;
             generated = new UIFormActionModelPostProcessor().Transform(generated);
             generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);
             generated = new UIFormCallbackModelPostProcessor().Transform(generated);

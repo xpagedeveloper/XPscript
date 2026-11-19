@@ -188,3 +188,11 @@ jobs:
           test -f "$RUNNER_TEMP/ast-android-x64-controls/Generated.dll"
           echo 'AST_ANDROID_X64_CONTROLS_BUILD=OK'
           echo 'AST_ANDROID_TARGET_BUILD=OK'
+      - name: Build Android modal form regression APK
+        timeout-minutes: 8
+        shell: bash
+        run: |
+          echo 'AST_ANDROID_MODAL=begin'
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-uiform-modal-regression.xps --output "$RUNNER_TEMP/ast-android-modal" --runtime=false --platform android-x64 --debug
+          test -n "$(find "$RUNNER_TEMP/ast-android-modal" -name '*-Signed.apk' -print -quit)"
+          echo 'AST_ANDROID_MODAL=passed'

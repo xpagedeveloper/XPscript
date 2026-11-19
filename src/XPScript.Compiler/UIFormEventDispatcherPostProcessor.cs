@@ -41,6 +41,13 @@ internal sealed class UIFormEventDispatcherPostProcessor
         object?[] callbackArguments = [];
         XPScriptUIFormEvent? callbackEvent = null;
 
+        if (kind.Equals("submit", StringComparison.OrdinalIgnoreCase) && controlName.Equals("OK", StringComparison.OrdinalIgnoreCase))
+        {
+            try { ApplySubmittedStateJson(submittedValue); }
+            catch (XPScriptRuntimeException) { return SerializeActionState(false); }
+            return SerializeActionState(IsDataValid);
+        }
+
         if (kind.Equals("validate", StringComparison.OrdinalIgnoreCase))
         {
             var field = FindField(controlName);
@@ -258,10 +265,11 @@ internal sealed class UIFormEventDispatcherPostProcessor
         }
     }
 
-    private string SerializeActionState()
+    private string SerializeActionState(bool? accepted = null)
     {
         var result = System.Text.Json.JsonSerializer.Serialize(new
         {
+            accepted,
             refreshAll = _refreshAllRequested,
             refreshRegions = _requestedRefreshRegions.ToArray(),
             activeTab = _activeTab,

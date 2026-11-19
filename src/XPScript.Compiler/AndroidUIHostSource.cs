@@ -461,6 +461,10 @@ public static class AndroidFormHost
                 : new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
 
             var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
+            var fieldsWithoutChangeHandlers = fields
+                .Where(field => field.TryGetProperty("hasChangeHandler", out var handler) && handler.ValueKind == JsonValueKind.False)
+                .Select(field => field.GetProperty("name").GetString() ?? string.Empty)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var mediaControls = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
             var progressControls = new Dictionary<string, Avalonia.Controls.ProgressBar>(StringComparer.OrdinalIgnoreCase);
             var validationErrors = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
@@ -504,7 +508,7 @@ public static class AndroidFormHost
 
             void DispatchFieldChange(string fieldName, string value)
             {
-                if (eventCallback is null || dispatchingFieldChange) return;
+                if (eventCallback is null || dispatchingFieldChange || fieldsWithoutChangeHandlers.Contains(fieldName)) return;
                 try
                 {
                     dispatchingFieldChange = true;
@@ -847,27 +851,37 @@ public static class AndroidFormHost
                     values[hidden.Key] = hidden.Value;
 
                 var submittedValues = JsonSerializer.Serialize(values);
-                var result = JsonSerializer.Serialize(new { result = "OK", values });
                 if (eventCallback is not null)
                 {
-                    var callbackResult = eventCallback("button:OK", submittedValues);
-                    if (!string.IsNullOrWhiteSpace(callbackResult))
+                    try
                     {
-                        var hasValidationErrors = ApplyActionState(callbackResult, editors, mediaControls, progressControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
-                        if (hasValidationErrors)
-                            return;
-                        result = callbackResult;
+                        var state = eventCallback("submit:OK", submittedValues);
+                        using var action = JsonDocument.Parse(state);
+                        ApplyActionState(state, editors, mediaControls, progressControls, validationErrors, fieldContainers, fieldLabels, actionButtons, tabControl);
+                        if (!action.RootElement.TryGetProperty("accepted", out var accepted) || accepted.ValueKind != JsonValueKind.True) return;
+                    }
+                    catch (Exception exception)
+                    {
+                        DisposeMediaControls();
+                        MainView.Current?.RestoreHome();
+                        completion.TrySetException(exception);
+                        return;
                     }
                 }
 
                 DisposeMediaControls();
                 MainView.Current?.RestoreHome();
-                completion.TrySetResult(result);
+                completion.TrySetResult(JsonSerializer.Serialize(new { result = "OK", values }));
             };
         }
 
-        if (Dispatcher.UIThread.CheckAccess()) Show();
-        else Dispatcher.UIThread.Post(Show);
+        if (Dispatcher.UIThread.CheckAccess())
+            throw new InvalidOperationException("A modal UIForm cannot be opened synchronously from an Android UI callback.");
+        Dispatcher.UIThread.Post(() =>
+        {
+            try { Show(); }
+            catch (Exception exception) { completion.TrySetException(exception); }
+        });
 
         return completion.Task.GetAwaiter().GetResult();
     }

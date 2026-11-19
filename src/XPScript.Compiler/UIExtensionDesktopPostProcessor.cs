@@ -66,11 +66,13 @@ internal sealed class UIExtensionDesktopPostProcessor
             return "Pending";
         }
 
-        if (!XPScriptUIDesktopAdapter.IsAvailable)
-            throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured desktop UI backend or an active XPScript web request.");
-        var result = XPScriptUIDesktopAdapter.ShowDialog(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);
-        _visible = false;
-        return result;
+        try
+        {
+            if (!XPScriptUIDesktopAdapter.IsAvailable)
+                throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured UI backend or an active XPScript web request.");
+            return XPScriptUIDesktopAdapter.ShowDialog(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);
+        }
+        finally { _visible = false; }
     }
 
     private void ApplyDesktopValue(XPScriptUIField field, string submitted)
@@ -84,6 +86,14 @@ internal sealed class UIExtensionDesktopPostProcessor
         => ApplySubmittedValues(field, submitted);
 
 """;
+
+    internal static string InstallModalBridge(string generated)
+    {
+        var replaced = ShowDialogPattern.Replace(generated, Replacement, 1);
+        if (string.Equals(replaced, generated, StringComparison.Ordinal))
+            throw new CompilerException("Unable to install the UIForm modal runtime bridge into generated code.");
+        return replaced;
+    }
 
     public string Transform(string generated, bool browserWasm = false, bool browserWasmServer = false)
     {
@@ -116,13 +126,9 @@ internal sealed class UIExtensionDesktopPostProcessor
 
         var needsListView = NeedsListView(generated);
 
-        var replaced = generated;
-        if (generated.Contains("public string ShowDialog()", StringComparison.Ordinal))
-        {
-            replaced = ShowDialogPattern.Replace(generated, Replacement, 1);
-            if (ReferenceEquals(replaced, generated) || string.Equals(replaced, generated, StringComparison.Ordinal))
-                throw new CompilerException("Unable to install the desktop UIForm runtime bridge into generated code.");
-        }
+        var replaced = generated.Contains("public string ShowDialog()", StringComparison.Ordinal)
+            ? InstallModalBridge(generated)
+            : generated;
 
         replaced = RewriteDialogCalls(replaced);
         replaced = replaced
