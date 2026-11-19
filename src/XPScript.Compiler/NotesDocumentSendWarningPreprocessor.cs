@@ -32,8 +32,8 @@ internal sealed class NotesDocumentSendWarningPreprocessor
                         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                     continue;
 
-                Console.Error.WriteLine(
-                    "warning: NotesDocument.Send attachForm=True is not supported. " +
+                CompilerDiagnosticMode.ReportWarning(
+                    "NotesDocument.Send attachForm=True is not supported. " +
                     "The document will not be sent with an attached form; use Send(False) or omit attachForm.");
                 return source;
             }

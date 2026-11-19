@@ -95,6 +95,15 @@ var realCompile = await CallAsync(new { jsonrpc="2.0", id="real-compile", method
 var realContent = realCompile.GetProperty("result").GetProperty("structuredContent");
 if (realContent.GetProperty("result").GetString() != "ok" || realContent.GetProperty("compiler").GetString() != "ast" || !File.Exists(realContent.GetProperty("output").GetString()))
     throw new Exception("MCP real AST compile did not produce an output artifact: " + realCompile);
+var notesSendSource = await File.ReadAllTextAsync(Path.Combine(repo, "samples/notes-document-send-surface.xps"));
+var notesSendResponse = await CallAsync(new { jsonrpc = "2.0", id = "notes-send-warning", method = "tools/call",
+    @params = new { name = "xpscript_ast_validate", arguments = new { source = notesSendSource, filename = "notes-document-send-surface.xps" } } });
+var notesSendContent = notesSendResponse.GetProperty("result").GetProperty("structuredContent");
+if (notesSendContent.GetProperty("result").GetString() != "ok" ||
+    !notesSendContent.GetProperty("warnings").EnumerateArray().Any(warning =>
+        warning.GetProperty("severity").GetString() == "warning" &&
+        warning.GetProperty("description").GetString()!.StartsWith("NotesDocument.Send attachForm=True is not supported.", StringComparison.Ordinal)))
+    throw new Exception("MCP AST validation lost the NotesDocument.Send warning: " + notesSendResponse);
 var classMethodsSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/class-methods-native.xps"));
 var arrayBytesSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/image-array-byte-interop.xps"));
 var arrayBytesResult = await CallAsync(new { jsonrpc="2.0",id="image-array-byte-interop",method="tools/call",@params=new { name="xpscript_ast_validate",arguments=new { source=arrayBytesSource,filename="image-array-byte-interop.xps" } } });

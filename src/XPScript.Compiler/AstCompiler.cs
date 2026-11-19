@@ -134,6 +134,7 @@ public static class AstCompiler
         // AST compiler has the same multi-file source contract as the legacy path.
         var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
         source = includeResult.Source;
+        new NotesDocumentSendWarningPreprocessor().Transform(source);
         try
         {
             // Keep declaration-level overload diagnostics identical to the

@@ -139,9 +139,11 @@ public static class CompilerMcpServer
             var sourcePath = Path.Combine(root, filename);
             var outputPath = Path.Combine(root, "output");
             await File.WriteAllTextAsync(sourcePath, source).ConfigureAwait(false);
-            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+            var warnings = new List<string>();
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug, warningSink: warnings.Add);
             await AstCompiler.CompileAsync(sourcePath, outputPath).ConfigureAwait(false);
-            return new { result = "ok", source = new { entryPoint = filename }, compiler = "ast" };
+            return new { result = "ok", source = new { entryPoint = filename }, compiler = "ast",
+                warnings = warnings.Select(description => new { file = filename, severity = "warning", description }).ToArray() };
         }
         catch (CompilerException exception)
         {
