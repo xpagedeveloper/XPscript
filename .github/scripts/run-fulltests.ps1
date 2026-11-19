@@ -241,6 +241,10 @@ if (Should-Run 'runtime') {
   if ($applicationDebug.ExitCode -ne 0 -or $applicationDebug.Output -notmatch 'APPLICATION-DEBUG-RUNTIME=OK') {
     throw 'ApplicationDebugRuntimeProbe failed.'
   }
+  $spreadsheetCapability = Invoke-Bounded 'dotnet' @('run','--project','./tests/SpreadsheetCapabilityProbe/SpreadsheetCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Spreadsheet AST capability'
+  if ($spreadsheetCapability.ExitCode -ne 0 -or $spreadsheetCapability.Output -notmatch 'XPSPREADSHEET-CAPABILITY-PROBE=OK') {
+    throw 'SpreadsheetCapabilityProbe failed.'
+  }
   Write-Host 'FULLTEST_CHECKPOINT=console-error-start'
   Compile-Xps ./samples/runtime-error-stacktrace-regression.xps runtime-error-stacktrace-regression
   $previousRuntimeDebug = $env:XPSCRIPT_RUNTIME_DEBUG
@@ -266,7 +270,7 @@ if (Should-Run 'runtime') {
     $executed = Invoke-Bounded 'dotnet' @("$target/Generated.dll") 30000 "AST constructor execution $($case[0])"
     if ($executed.ExitCode -ne 0 -or $executed.Output -notmatch $case[1]) { throw "AST constructor execution failed: $($case[0])" }
   }
-  $imageGetters = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compile-probe/run-ast-image-get.ps1') 180000 'AST ByRef/ByVal Object/user-reference, Optional ByRef and mixed constructor failures, Optional constructor defaults, inherited constructor and base-argument failure cleanup, multi-level image destructor failures, field Delete through inheritance, getter transfer, setter snapshots and exceptional cleanup'
+  $imageGetters = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compile-probe/run-ast-image-get.ps1') 300000 'AST image ownership, accessors, constructors and cleanup'
   if ($imageGetters.ExitCode -ne 0 -or $imageGetters.Output -notmatch 'AST_IMAGE_GETTERS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_SETTERS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_FIELD_DELETE_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_DESTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_DERIVED_DESTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_CONSTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_DERIVED_CONSTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_OPTIONAL_CONSTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_BYREF_CONSTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_MIXED_CONSTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_OPTIONAL_BYREF_CONSTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_REFERENCE_CONSTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_BYREF_REFERENCE_CONSTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_OPTIONAL_REFERENCE_CONSTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_OPTIONAL_REFREF_CONSTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_VARIANT_CONSTRUCTORS_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_LIST_CONSTRUCTORS_OK') { throw 'AST image accessor/field/destructor lifetime regression failed.' }
   if ($imageGetters.Output -notmatch 'AST_IMAGE_ARRAY_BYTE_INTEROP_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_INDEXED_PROPERTY_OK') { throw 'AST native Byte array/indexed image property regression missing.' }
   $applicationAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstApplicationRuntimeProbe','-c','Release') 180000 'native Application AST/normal runtime, services, metadata and diagnostics'
@@ -311,7 +315,6 @@ if (Should-Run 'runtime') {
   if ($jsonSchema.Output -notmatch 'XPJSONSCHEMA-RUNTIME=OK') { throw 'XPJsonSchema runtime regression did not complete.' }
   $jsonSchemaBoolean = Run-Xps ./samples/xpjsonschema-boolean-runtime.xps xpjsonschema-boolean-runtime
   if ($jsonSchemaBoolean.Output -notmatch 'XPJSONSCHEMA-BOOLEAN-RUNTIME=OK') { throw 'XPJsonSchema boolean-schema regression did not complete.' }
-  $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/SpreadsheetCapabilityProbe/SpreadsheetCapabilityProbe.csproj','-c','Release') $compileTimeoutMilliseconds 'Spreadsheet compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/SpreadsheetSecurityFixtures/SpreadsheetSecurityFixtures.csproj','-c','Release','--','./out/spreadsheet-security-fixtures') $compileTimeoutMilliseconds 'Spreadsheet security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   Compile-Xps ./samples/xpspreadsheet-security-reject.xps xpspreadsheet-security-reject
   foreach ($fixture in @('malformed.xlsx','missing-workbook.xlsx','too-many-parts.xlsx','oversized-part.xlsx')) { Expect-XpsFailure xpspreadsheet-security-reject @("../../out/spreadsheet-security-fixtures/$fixture") "XLSX $fixture" }

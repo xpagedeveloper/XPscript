@@ -430,7 +430,7 @@ XPSpreadsheet still does not provide a full spreadsheet application or calculati
 
 Because of that limitation, XPSpreadsheet deliberately refuses to overwrite external/unmarked XLSX workbooks. `SaveAsSimple()` is the explicit opt-in operation for creating a simplified XPScript workbook from data that XPSpreadsheet can read.
 
-The file-based API is not available for `browser-wasm` targets in this version.
+In `browser-wasm`, use `ToBytes()` and `FromBytes(data)` for in-memory workbook data. Opening or saving a workbook by path raises a runtime error.
 
 
 ## CSV interoperability example

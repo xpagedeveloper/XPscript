@@ -7,7 +7,34 @@ Directory.CreateDirectory(root);
 try
 {
     var source = Path.Combine(root, "app.xps");
-    await File.WriteAllTextAsync(source, "[Platform:browser-wasm]\n\nSub Main()\n    Dim form As New UIForm(\"Browser interaction\")\n    Call form.AddTextField(\"name\", \"Name\")\n    Call form.AddButton(\"save\", \"Save\", \"SaveForm\")\n    Call form.Show(False)\nEnd Sub\n\nSub SaveForm()\nEnd Sub\n");
+    await File.WriteAllTextAsync(source, """
+[Platform:browser-wasm]
+
+Sub Main()
+    Dim book As New XPSpreadsheet()
+    Call book.AddWorksheet("Browser")
+    Dim workbookBytes As Variant
+    workbookBytes = book.ToBytes()
+    Call book.FromBytes(workbookBytes)
+    If book.WorksheetCount <> 1 Then Error 5, "In-memory workbook round-trip failed"
+
+    Dim fileError As String
+    On Error Resume Next
+    Call book.SaveAs("browser-file.xlsx")
+    fileError = Error$
+    On Error GoTo 0
+    If fileError <> "XPSpreadsheet file operations are not available in browser-wasm." Then Error 5, "Unexpected spreadsheet result: " & fileError
+    Print "WASM_SPREADSHEET_BOUNDARY_OK"
+
+    Dim form As New UIForm("Browser interaction")
+    Call form.AddTextField("name", "Name")
+    Call form.AddButton("save", "Save", "SaveForm")
+    Call form.Show(False)
+End Sub
+
+Sub SaveForm()
+End Sub
+""");
     await using var unit = await new XpsWebCompiler().CompileAsync(source, root);
     var appRoot = Directory.EnumerateFiles(root, "main.js", SearchOption.AllDirectories)
         .Select(Path.GetDirectoryName)
@@ -63,8 +90,10 @@ try
         ExecutablePath = chromiumPath
     });
     var page = await browser.NewPageAsync();
+    var spreadsheetBoundaryPassed = false;
     page.Console += (_, message) =>
     {
+        if (message.Text == "WASM_SPREADSHEET_BOUNDARY_OK") spreadsheetBoundaryPassed = true;
         if (message.Type is "error" or "warning") Console.WriteLine($"BROWSER_CONSOLE_{message.Type.ToUpperInvariant()}: {message.Text}");
     };
     page.PageError += (_, error) =>
@@ -91,6 +120,7 @@ try
         throw new InvalidOperationException($"WASM UIForm did not render input[name='name']. Page errors: {string.Join(" | ", browserErrors)}. DOM:\n{preview}", exception);
     }
     await name.FillAsync("Alice");
+    if (!spreadsheetBoundaryPassed) throw new InvalidOperationException($"{source}: spreadsheet browser boundary marker missing.");
     if (await name.InputValueAsync() != "Alice") throw new InvalidOperationException("WASM text input failed.");
     await page.GetByRole(AriaRole.Button, new() { Name = "Save" }).ClickAsync();
     Console.WriteLine("WASM_BROWSER_TEXT_OK");

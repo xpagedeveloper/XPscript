@@ -638,6 +638,8 @@ AST user properties can declare XPCsvDocument, CSV header/row/column collection/
 
 `XPSpreadsheet`, `XPWorksheet`, `XPCell` and `XPRange` compile directly through AST without external packages. Construct the workbook only; obtain worksheets/cells/ranges from its methods. ByVal shares references and ByRef can replace them; worksheet Name/Index are read-only (use RenameWorksheet). XLSX relative paths are script-relative. External/unmarked workbooks cannot be overwritten; SaveAsSimple explicitly converts them. Formulas are stored, not evaluated. Range.Values currently returns a rank-one LSArray; use LBound/UBound and ForAll. Use csv.ToSpreadsheet, sheet.ToCsv or XPCsvDocument.FromWorksheet for native conversion. Only actual use includes the relevant engines. See `docs/xpspreadsheet.md`.
 
+For XPSpreadsheet in `browser-wasm`, work with workbook bytes through `ToBytes()` and `FromBytes(data)`. File-path operations raise a runtime error.
+
 ## XPImage
 
 In experimental AST, `Delete owner` releases typed XPImage fields, including private and inherited fields, through the existing Delete chain. It clears the named caller variable; other aliases still see the object but its image fields are Nothing. Source images copied into fields and borrowed Variant fields remain untouched. Repeated Delete is safe. Use `Set backing = Nothing` for early field release or Delete the owner when finished. Merely leaving scope or assigning owner Nothing does not invoke cleanup; GC finalizers are not enabled. See `image-field-delete.xps`.

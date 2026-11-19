@@ -154,10 +154,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Playwright smoke project build failed.' }
           & (Join-Path $PWD "tests/WebBrowserWasmServerSideBrowserSmoke/bin/Release/$framework/playwright.ps1") install chromium
           if ($LASTEXITCODE -ne 0) { throw 'Playwright Chromium installation failed.' }
-          Write-Host 'BEGIN WASM UIForm browser interaction'
+          Write-Host 'BEGIN WASM spreadsheet boundary and UIForm interaction'
           dotnet run --project tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release -p:WasmSmokeTargetFramework=$framework -p:UseSharedCompilation=false
-          if ($LASTEXITCODE -ne 0) { throw 'WASM UIForm browser interaction failed.' }
-          Write-Host 'END WASM UIForm browser interaction'
+          if ($LASTEXITCODE -ne 0) { throw 'WASM spreadsheet boundary or UIForm interaction failed.' }
+          Write-Host 'END WASM spreadsheet boundary and UIForm interaction'
           dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release -p:WasmSmokeTargetFramework=$framework
           if ($LASTEXITCODE -ne 0) { throw 'Browser-WASM or Notes server-boundary smoke test failed.' }
           dotnet run --project tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-build -p:WasmSmokeTargetFramework=$framework
