@@ -93,6 +93,8 @@ public sealed class SymbolTable
                 Declare(new FunctionSymbol(definition.Name, returnType,
                     parameterTypes[..1], semanticReturnType, semanticParameterTypes[..1]));
             }
+            if (definition.Name.Equals("Request.Files", StringComparison.OrdinalIgnoreCase))
+                Declare(new FunctionSymbol(definition.Name, returnType, [], semanticReturnType, []));
         }
         AstImageSupport.Import(this);
         AstCsvSupport.Import(this);

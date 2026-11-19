@@ -127,7 +127,7 @@ public static class CompilerDocumentationCatalog
             "Request.QueryFirst", "Request.QueryAll", "Request.Header", "Request.HeaderFirst",
             "Request.HeaderAll", "Request.Cookie", "Request.Cgi", "Request.BodyText",
             "Request.BodyBytes", "Request.Form", "Request.FormFirst", "Request.FormAll",
-            "Request.FileFirst",
+            "Request.FileFirst", "Request.Files",
             "Response.AppendHeader", "Response.BadRequest", "Response.Clear", "Response.Conflict",
             "Response.ContentType", "Response.Created", "Response.DeleteCookie", "Response.Forbidden",
             "Response.Json", "Response.NoContent", "Response.NotFound", "Response.OK",

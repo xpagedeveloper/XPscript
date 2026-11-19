@@ -94,6 +94,12 @@ Sub UploadFile()
     Response.Write(uploaded.FileName)
     Response.Write("|")
     Response.Write(uploaded.Text())
+    ForAll item In Request.Files("file")
+        Response.Write("|" & item.FileName)
+    End ForAll
+    ForAll uploadedItem In Request.Files()
+        Response.Write("|" & uploadedItem.FileName)
+    End ForAll
 End Sub
 
 [Anonymous]
@@ -265,10 +271,11 @@ try
     var app = new XpsApplicationState();
 
     Console.WriteLine("BEGIN AST multipart upload");
-    const string uploadBody = "--upload-boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"sample.txt\"\r\n\r\nXPscript upload\r\n--upload-boundary--\r\n";
+    const string uploadBody = "--upload-boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"sample.txt\"\r\n\r\nXPscript upload\r\n"
+        + "--upload-boundary\r\nContent-Disposition: form-data; name=\"other\"; filename=\"other.txt\"\r\n\r\nOther upload\r\n--upload-boundary--\r\n";
     var uploadedFile = await SendAsync(dispatcher, app, "POST", "/api/upload-file", uploadBody,
         "multipart/form-data; boundary=upload-boundary");
-    if (uploadedFile.StatusCode != 200 || BodyText(uploadedFile) != "sample.txt|XPscript upload")
+    if (uploadedFile.StatusCode != 200 || BodyText(uploadedFile) != "sample.txt|XPscript upload|sample.txt|sample.txt|other.txt")
         throw new Exception($"api.xps UploadFile returned HTTP {uploadedFile.StatusCode}: {BodyText(uploadedFile)}");
     var missingFile = await SendAsync(dispatcher, app, "POST", "/api/upload-file");
     if (missingFile.StatusCode != 200 || BodyText(missingFile) != "missing")

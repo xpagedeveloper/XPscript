@@ -658,5 +658,5 @@ Class methods may call a sibling or inherited Function returning a declared user
 
 For REST error responses, use `Response.Problem(status, title, detail)` or `Response.problem(status, title, detail)`. The status can be a literal, Integer or Long variable and must be 400–599. Invalid or overflowing status values are rejected before the response is changed. Response helpers write to the active response and are called as statements. See `docs/rest-api.md` and `samples/web-rest-api.xps`.
 
-In an AST web route, store `Request.FileFirst(name)` in a `Variant` and check `Is Nothing` before calling `Bytes()` or `Text()` on the upload. See `docs/web.md`.
+In an AST web route, store `Request.FileFirst(name)` in a `Variant` and check `Is Nothing` before calling `Bytes()` or `Text()` on the upload. Use `ForAll` with `Request.Files()` for all uploads or `Request.Files(name)` for one form field. See `docs/web.md`.
 UIForm controls also share a component model on every platform: set a unique `Id`, read `Type`, and traverse `Parent`. Use `form.Components`, `form.GetComponentById(id)`, and `form.GetComponentsByType(type)` to inspect the control tree. A field placed in a named grid has that grid as `Parent`, and the grid's parent is the form.

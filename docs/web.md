@@ -243,6 +243,7 @@ Query and form names are case-insensitive. Repeated query and form fields preser
 Body and upload methods include `BodyText()`, `BodyBytes()`, `Files()`, `Files(name)` and `FileFirst(name)`. These methods enforce their configured size and count limits.
 
 In an AST web route, assign `Request.FileFirst(name)` to a `Variant` and check for `Nothing` before reading the upload with `Bytes()` or `Text()`.
+Use `ForAll` with `Request.Files()` to visit every upload or with `Request.Files(name)` to visit the uploads for one form field.
 
 `Request.Authorization` is a convenience alias for `Request.Header("Authorization")`. `Request.BearerToken` only accepts one Authorization header whose scheme is Bearer and whose token is non-empty. Multiple Authorization values are treated as ambiguous and produce `Null`.
 
