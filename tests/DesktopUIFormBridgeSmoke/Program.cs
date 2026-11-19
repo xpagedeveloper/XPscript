@@ -79,8 +79,19 @@ if (root.GetProperty("values").GetProperty("age").ValueKind != JsonValueKind.Num
 if (root.GetProperty("values").GetProperty("enabled").ValueKind != JsonValueKind.True)
     throw new InvalidOperationException("Desktop UIForm Boolean result mismatch.");
 
+var workspace = Path.GetFullPath(Path.Combine("out", "desktop-uiform-bridge", Guid.NewGuid().ToString("N")));
+Directory.CreateDirectory(workspace);
+
+async Task<string> GenerateAsync(string sourceText, string filename)
+{
+    var path = Path.Combine(workspace, filename);
+    await File.WriteAllTextAsync(path, sourceText);
+    return await AstCompiler.GenerateSourceAsync(path, workspace);
+}
+
 var source = """
 Sub Main()
+    Dim form As New UIForm("Dialog declaration")
     Dim answer As String
     Dim fileName As String
     answer = ShowDialog("Save?", "Confirm", "YesNo")
@@ -90,13 +101,13 @@ Sub Main()
     fileName = SaveFileDialog("Save", "report.json", "JSON|*.json")
 End Sub
 """;
-var generated = new XPScriptTranspiler().Transpile(source, "ui-dialog-smoke.xps", "win-x64");
+var generated = await GenerateAsync(source, "ui-dialog-smoke.xps");
 foreach (var expected in new[]
 {
-    "XPScriptUIDialogRuntime.ShowDialog(",
-    "XPScriptUIDialogRuntime.LoadFileDialog(",
-    "XPScriptUIDialogRuntime.OpenFileDialog(",
-    "XPScriptUIDialogRuntime.SaveFileDialog(",
+    "AstCompatibilityHelpers.ShowDialog(",
+    "AstCompatibilityHelpers.LoadFileDialog(",
+    "AstCompatibilityHelpers.OpenFileDialog(",
+    "AstCompatibilityHelpers.SaveFileDialog(",
     "internal static class XPScriptUIDialogRuntime",
     "internal static class XPScriptUIDesktopAdapter"
 })
@@ -115,7 +126,7 @@ Sub Main()
     Call second.Show(False)
 End Sub
 """;
-var generatedMultiWindow = new XPScriptTranspiler().Transpile(multiWindowSource, "uiform-multiwindow-smoke.xps", "win-x64");
+var generatedMultiWindow = await GenerateAsync(multiWindowSource, "uiform-multiwindow-smoke.xps");
 foreach (var expected in new[]
 {
     "public void Show() => Show(false);",
@@ -149,7 +160,7 @@ Sub Main()
     Call list.SetKeyField("id")
 End Sub
 """;
-var generatedList = new XPScriptTranspiler().Transpile(listSource, "ui-list-smoke.xps", "win-x64");
+var generatedList = await GenerateAsync(listSource, "ui-list-smoke.xps");
 foreach (var expected in new[]
 {
     "internal static class XPScriptUIList",
