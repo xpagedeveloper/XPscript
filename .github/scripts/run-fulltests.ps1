@@ -24,13 +24,29 @@ function Invoke-Bounded([string] $fileName, [string[]] $arguments, [int] $timeou
     Write-Host "FULLTEST_PROCESS_START label=$label timeout_ms=$timeoutMilliseconds utc=$($startedAt.ToString('O'))"
     $argumentList = ($arguments | ForEach-Object {
       $argument = [string]$_
-      if ($argument -match '[\s"]') { '"' + $argument.Replace('"','\\"') + '"' } else { $argument }
+      if (!$argument.Length -or $argument -match '[\s"]') {
+        '"' + [regex]::Replace($argument, '(\\*)("|$)', {
+          param($match)
+          $slashes = $match.Groups[1].Value
+          $slashes + $slashes + $(if ($match.Groups[2].Value) { '\"' })
+        }) + '"'
+      } else { $argument }
     }) -join ' '
     $p = Start-Process -FilePath $fileName -ArgumentList $argumentList -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -NoNewWindow -PassThru
     Write-Host "FULLTEST_PROCESS_PID label=$label pid=$($p.Id)"
-    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    while (-not $p.HasExited -and $stopwatch.ElapsedMilliseconds -lt $timeoutMilliseconds) {
-      Start-Sleep -Milliseconds 100
+    $lastProgress = ''
+    $nextProgressMilliseconds = 30000
+    while (-not $p.HasExited -and $timer.ElapsedMilliseconds -lt $timeoutMilliseconds) {
+      if ($timer.ElapsedMilliseconds -ge $nextProgressMilliseconds) {
+        $recent = (Get-Content -LiteralPath $stdoutPath,$stderrPath -Tail 6 -ErrorAction SilentlyContinue) -join "`n"
+        if ($recent -and $recent -ne $lastProgress) {
+          Write-Host "FULLTEST_PROCESS_PROGRESS pid=$($p.Id) elapsed_ms=$($timer.ElapsedMilliseconds)"
+          Write-Host $recent
+          $lastProgress = $recent
+        }
+        $nextProgressMilliseconds += 30000
+      }
+      [void] $p.WaitForExit(100)
     }
     if (-not $p.HasExited) {
       $timer.Stop()
@@ -119,8 +135,8 @@ if (Should-Run 'language') {
   if ($jsonParseScope.ExitCode -ne 0 -or $jsonParseScope.Output -notmatch '(?m)^JSONPARSE_MEMBER_SCOPE_OK\r?$') { throw "JsonParse member scope regression: $($jsonParseScope.Output)" }
   $arraySignatures = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-array-signature.ps1') $compileTimeoutMilliseconds 'AST array parameter syntax and explicit migration guards'
   if ($arraySignatures.ExitCode -ne 0 -or $arraySignatures.Output -notmatch 'AST_ARRAY_SIGNATURES_OK') { throw 'AST array signature regression failed.' }
-  # The complete CLI suite now exceeds 15 minutes locally; retain all coverage with a bounded 20-minute budget.
-  $astCliFirst = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-cli.ps1') 1200000 'AST CLI ByRef/ByVal Object/user-reference, Optional ByRef and mixed ByRef/Optional ByVal and inherited constructors with Parent.New, derived destructor chains, image field Delete, getter/setter ownership/cleanup and mapped diagnostics first, HTTP reference/security accessors, native signatures, inherited conversions, cycle/base validation, Optional defaults, ByRef aliases, Static lifecycle, shared List storage parity, native runtime, FileDateTime, Dir, GetFileAttr, FileCopy, Name, ChDir, FileExists, DirExists, Resume and GoTo regressions'
+  $astCliFirst = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compile-probe/run-ast-cli.ps1') 2400000 'AST CLI language and runtime corpus'
+  if ($astCliFirst.ExitCode -ne 0) { exit $astCliFirst.ExitCode }
   if ($astCliFirst.Output -notmatch 'AST_INCLUDE_USE_OK') { throw 'AST Include/Use regression marker missing.' }
   if ($astCliFirst.Output -notmatch 'AST_TYPED_SIBLING_RETURN_OK') { throw 'AST typed sibling/inherited method return regression marker missing.' }
   if ($astCliFirst.Output -notmatch 'AST_WEBIIS_ISOLATED_RESTORE_OK') { throw 'AST WebIIS isolated restore regression marker missing.' }

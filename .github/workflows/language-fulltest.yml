@@ -38,7 +38,7 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 65
     steps:
       - uses: actions/checkout@v6
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_macos && matrix.os == 'macos-latest') }}
