@@ -224,11 +224,13 @@ public static class AstCompiler
         var runtimeFeatures = RuntimeFeatures.Detect(fullSource);
         var usesAi = runtimeFeatures.Ai;
         // Detect direct source references to the schema types and validation API.
-        var usesJsonSchemaRuntime = Regex.IsMatch(source + Environment.NewLine + fullSource, @"(?i)\b(?:XPJsonSchema|XPJsonValidationResult|XPScriptJsonSchema|XPScriptJsonValidationResult|SetValidationSchema|ValidateData|IsDataValid)\b") ||
+        var usesJsonSchemaRuntime = Regex.IsMatch(source + Environment.NewLine + fullSource, @"(?i)\b(?:XPJsonSchema|XPJsonValidationResult|XPScriptJsonSchema|XPScriptJsonValidationResult|HasValidationSchema|SetValidationSchema|ValidateData|IsDataValid)\b") ||
             AstObjectSupportRegistry.UsesObject(source, "XPJsonSchema") ||
             AstObjectSupportRegistry.UsesObject(source, "XPJsonValidationResult") ||
             AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonSchema") ||
             AstObjectSupportRegistry.UsesObject(fullSource, "XPJsonValidationResult");
+        var usesUIFormSchema = usesJsonSchemaRuntime ||
+            Regex.IsMatch(fullSource, @"(?i)\.\s*(?:LoadForm|SaveForm|PutForm)\s*\(");
         if (AstObjectSupportRegistry.UsesUnsupportedObject(source, out var definition))
         {
             RejectUnsupported(sourcePath, source, $@"(?i)\b{Regex.Escape(definition!.Name)}\b", definition.Message ?? "The XP object is not implemented by the AST compiler.");
@@ -1027,7 +1029,7 @@ using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
 {{LegacyPrintFormattingRuntimeSource.Code}}
 {{(Regex.IsMatch(fullSource, @"(?i)\b(ShowDialog|LoadFileDialog|OpenFileDialog|SaveFileDialog)\b") ? UIDialogRuntimeSource.Code : "")}}
-{{(runtimeFeatures.Ui ? UIExtensionRuntimeSource.Code + (AstObjectSupportRegistry.UsesObject(fullSource, "UIListView") ? UIListViewRuntimeSource.Code : "") + ((usesJsonSchemaRuntime || Regex.IsMatch(fullSource, @"(?i)\.\s*(?:LoadForm|SaveForm|PutForm)\s*\(")) ? Environment.NewLine + UIFormValidationRuntimeSource.Code : "") : "")}}
+{{(runtimeFeatures.Ui ? UIExtensionRuntimeSource.Code + (AstObjectSupportRegistry.UsesObject(fullSource, "UIListView") ? UIListViewRuntimeSource.Code : "") + (usesUIFormSchema ? Environment.NewLine + UIFormValidationRuntimeSource.Code : "") : "")}}
 {{(usesArchive ? ArchiveRuntimeSource.Code + ArchiveMemoryRuntimeSource.Code + ArchiveIteratorRuntimeSource.Code : "")}}
 {{(usesArchive && source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ? ArchiveExtendedReaderRuntimeSource.Code + ArchiveExtendedWriterRuntimeSource.Code + ArchiveExtendedWriterFactoryRuntimeSource.Code : "")}}
 {{(usesNetworkTools ? NetworkToolsRuntimeSource.Code : "")}}
@@ -1839,10 +1841,8 @@ internal static class Program
         generated = RemoveDuplicateTlsRuntime(generated);
         if (runtimeFeatures.Ui && AstObjectSupportRegistry.UsesObject(fullSource, "UIForm"))
         {
-            if (!generated.Contains("internal sealed class XPScriptJsonSchema", StringComparison.Ordinal))
-                generated += Environment.NewLine + JsonSchemaRuntimeSource.Code;
             if (!generated.Contains("public bool IsDataValid => ValidateData().Valid", StringComparison.Ordinal))
-                generated += Environment.NewLine + UIFormValidationRuntimeSource.Code;
+                generated += Environment.NewLine + (usesUIFormSchema ? UIFormValidationRuntimeSource.Code : UIFormValidationRuntimeSource.SchemaFreeCode);
             if (!generated.Contains("public string ValidationError { get; internal set; }", StringComparison.Ordinal))
                 generated = generated.Replace("    public List<string> Options { get; } = [];\n",
                     "    public List<string> Options { get; } = [];\n    public string ValidationError { get; internal set; } = string.Empty;\n", StringComparison.Ordinal);

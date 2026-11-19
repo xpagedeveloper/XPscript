@@ -2,6 +2,14 @@ namespace XPScript.Compiler;
 
 internal static class UIFormValidationRuntimeSource
 {
+    public const string SchemaFreeCode = """
+internal sealed partial class XPScriptUIForm
+{
+    private bool IsDataValid => true;
+    private string GetValidationError(object? nameValue) => string.Empty;
+}
+""";
+
     public const string Code = """
 internal sealed partial class XPScriptUIForm
 {
