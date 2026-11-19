@@ -237,6 +237,10 @@ if (Should-Run 'notes') {
 
 if (Should-Run 'runtime') {
   Write-Host '=== XP RUNTIME FULLTEST ==='
+  $applicationDebug = Invoke-Bounded 'dotnet' @('run','--project','./tests/ApplicationDebugRuntimeProbe','-c','Release') 180000 'Application.Debug AST emission'
+  if ($applicationDebug.ExitCode -ne 0 -or $applicationDebug.Output -notmatch 'APPLICATION-DEBUG-RUNTIME=OK') {
+    throw 'ApplicationDebugRuntimeProbe failed.'
+  }
   Write-Host 'FULLTEST_CHECKPOINT=console-error-start'
   Compile-Xps ./samples/runtime-error-stacktrace-regression.xps runtime-error-stacktrace-regression
   $previousRuntimeDebug = $env:XPSCRIPT_RUNTIME_DEBUG
@@ -267,7 +271,7 @@ if (Should-Run 'runtime') {
   if ($imageGetters.Output -notmatch 'AST_IMAGE_ARRAY_BYTE_INTEROP_OK' -or $imageGetters.Output -notmatch 'AST_IMAGE_INDEXED_PROPERTY_OK') { throw 'AST native Byte array/indexed image property regression missing.' }
   $applicationAst = Invoke-Bounded 'dotnet' @('run','--project','./tests/AstApplicationRuntimeProbe','-c','Release') 180000 'native Application AST/normal runtime, services, metadata and diagnostics'
   if ($applicationAst.ExitCode -ne 0 -or $applicationAst.Output -notmatch 'AST_APPLICATION_RUNTIME_OK' -or $applicationAst.Output -notmatch 'AST_FRAMEWORK_CACHE_IDENTITY_OK') { throw 'Native Application runtime parity or framework cache invalidation failed.' }
-  foreach ($applicationProbe in @('ApplicationRuntimeIsolationProbe','ApplicationRuntimeConcurrencyProbe','ApplicationDebugRuntimeProbe')) {
+  foreach ($applicationProbe in @('ApplicationRuntimeIsolationProbe','ApplicationRuntimeConcurrencyProbe')) {
     $probe = Invoke-Bounded 'dotnet' @('run','--project',"./tests/$applicationProbe",'-c','Release') 180000 $applicationProbe
     if ($probe.ExitCode -ne 0) { throw "$applicationProbe failed." }
   }
