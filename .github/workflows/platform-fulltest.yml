@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.x'
-      - name: Run REST, Kestrel, CGI and FastCGI smoke tests
+      - name: Run REST multipart uploads, Kestrel, CGI and FastCGI smoke tests
         shell: pwsh
         run: |
           $projects = @(
@@ -36,9 +36,13 @@ jobs:
             'tests/WebCgiSmoke/WebCgiSmoke.csproj',
             'tests/WebFastCgiSmoke/WebFastCgiSmoke.csproj'
           )
+          . ./tests/ast-compile-probe/cli-common.ps1
           foreach ($project in $projects) {
-            dotnet run --project $project -c Release
-            if ($LASTEXITCODE -ne 0) { throw "Web hosting smoke test failed: $project" }
+            Write-Host "BEGIN $project"
+            $result = Invoke-BoundedDotnetRun @('run', '--project', $project, '-c', 'Release') 300000
+            Write-Host $result.Output
+            if ($result.TimedOut -or $result.ExitCode -ne 0) { throw "Web hosting smoke test failed: $project" }
+            Write-Host "END $project"
           }
 
   openapi:

@@ -83,6 +83,20 @@ Function GetUser(ByVal id As Integer) As String
 End Function
 
 [Anonymous]
+[Post:/api/upload-file]
+Sub UploadFile()
+    Dim uploaded As Variant
+    Set uploaded = Request.FileFirst("file")
+    If uploaded Is Nothing Then
+        Response.Write("missing")
+        Exit Sub
+    End If
+    Response.Write(uploaded.FileName)
+    Response.Write("|")
+    Response.Write(uploaded.Text())
+End Sub
+
+[Anonymous]
 [Get]
 [Route:/api/bind/{id}]
 Sub BindSources([FromRoute] id As Integer, [FromQuery] verbose As Boolean, [FromHeader:"X-Tenant-ID"] tenantId As String, [FromCookie:"client-id"] clientId As String)
@@ -249,6 +263,17 @@ try
 
     await using var dispatcher = new XpsWebDispatcher(root);
     var app = new XpsApplicationState();
+
+    Console.WriteLine("BEGIN AST multipart upload");
+    const string uploadBody = "--upload-boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"sample.txt\"\r\n\r\nXPscript upload\r\n--upload-boundary--\r\n";
+    var uploadedFile = await SendAsync(dispatcher, app, "POST", "/api/upload-file", uploadBody,
+        "multipart/form-data; boundary=upload-boundary");
+    if (uploadedFile.StatusCode != 200 || BodyText(uploadedFile) != "sample.txt|XPscript upload")
+        throw new Exception($"api.xps UploadFile returned HTTP {uploadedFile.StatusCode}: {BodyText(uploadedFile)}");
+    var missingFile = await SendAsync(dispatcher, app, "POST", "/api/upload-file");
+    if (missingFile.StatusCode != 200 || BodyText(missingFile) != "missing")
+        throw new Exception($"api.xps UploadFile missing-file case returned HTTP {missingFile.StatusCode}: {BodyText(missingFile)}");
+    Console.WriteLine("END AST multipart upload");
 
     // Keep method-dispatch hardening first: a path match must never invoke a handler for another HTTP method.
     var wrongMethodGetRoute = await SendAsync(dispatcher, app, "POST", "/api/users/42");

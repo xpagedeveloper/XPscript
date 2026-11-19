@@ -168,6 +168,7 @@ public static class CompilerSymbolCatalog
             Define("Request.Form", "method", "Request.Form(name As String) As String", [new("name", "String")], "String", "api.web.Request.Form"),
             Define("Request.FormFirst", "method", "Request.FormFirst(name As String) As String", [new("name", "String")], "String", "api.web.Request.FormFirst"),
             Define("Request.FormAll", "method", "Request.FormAll(name As String) As Variant", [new("name", "String")], "Variant", "api.web.Request.FormAll"),
+            Define("Request.FileFirst", "method", "Request.FileFirst(name As String) As Variant", [new("name", "String")], "Variant", "api.web.Request.FileFirst"),
             Define("Response.ContentType", "property", "Response.ContentType As String", [], "String", "api.web.Response.ContentType"),
             Define("Response.SetHeader", "method", "Response.SetHeader(name As String, value As String)", [new("name", "String"), new("value", "String")], null, "api.web.Response.SetHeader"),
             Define("Response.AppendHeader", "method", "Response.AppendHeader(name As String, value As String)", [new("name", "String"), new("value", "String")], null, "api.web.Response.AppendHeader"),
