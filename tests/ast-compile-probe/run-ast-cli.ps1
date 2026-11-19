@@ -365,6 +365,21 @@ $nativeMissingOutput = Join-Path $output 'native-missing-dependency'
 $nativeMissingDiagnostics = dotnet $compiler ast-compile (Join-Path $root 'samples/native-target-mismatch-error.xps') -o $nativeMissingOutput 2>&1 | Out-String
 if ($LASTEXITCODE -eq 0 -or $nativeMissingDiagnostics -notmatch 'native-probe.dll|dependency') { throw 'AST native missing dependency diagnostic regression failed.' }
 Write-Host 'AST_NATIVE_MISSING_DEPENDENCY_OK'
+Write-AstCliCheckpoint 'nested-gosub-start'
+$nestedGoSubSource = Join-Path $PSScriptRoot 'nested-gosub.xps'
+$nestedGoSubOutput = Join-Path $output 'nested-gosub'
+$nestedGoSubCompile = Invoke-BoundedDotnetRun @($compiler, 'ast-compile', $nestedGoSubSource, '-o', $nestedGoSubOutput, '--debug')
+if ($nestedGoSubCompile.TimedOut -or $nestedGoSubCompile.ExitCode -ne 0) {
+    throw "${nestedGoSubSource}: AST nested GoSub compilation failed. $($nestedGoSubCompile.Output)"
+}
+$nestedGoSubResult = Invoke-BoundedDotnetRun @((Join-Path $nestedGoSubOutput 'Generated.dll'))
+if ($nestedGoSubResult.TimedOut -or $nestedGoSubResult.ExitCode -ne 0 -or
+    $nestedGoSubResult.Output.Trim().Replace([Environment]::NewLine, "`n") -cne "worker`nafter") {
+    throw "${nestedGoSubSource}: AST nested GoSub execution failed. $($nestedGoSubResult.Output)"
+}
+Write-Host 'AST_NESTED_GOSUB_OK'
+Write-AstCliCheckpoint 'nested-gosub-complete'
+
 if ($Shard -eq 1) {
     Write-AstCliCheckpoint 'shard-1-complete'
     exit 0
@@ -2275,12 +2290,6 @@ if ($LASTEXITCODE -ne 0) { throw 'AST sequential GoSub compilation failed.' }
 $multipleGoSubResult = dotnet (Join-Path $multipleGoSubOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($multipleGoSubResult -join "`n") -ne "one`ntwo`nafter") { throw 'AST sequential GoSub/Return execution failed.' }
 Write-Host 'AST_GOSUB_OK'
-$nestedGoSubOutput = Join-Path $output 'nested-gosub'
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-gosub.xps') -o $nestedGoSubOutput
-if ($LASTEXITCODE -ne 0) { throw 'AST nested GoSub compilation failed.' }
-$nestedGoSubResult = dotnet (Join-Path $nestedGoSubOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($nestedGoSubResult -join "`n") -ne '') { throw 'AST nested GoSub execution failed.' }
-Write-Host 'AST_NESTED_GOSUB_OK'
 $nestedHelperGoSubOutput = Join-Path $output 'nested-gosub-helper'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'nested-gosub-helper.xps') -o $nestedHelperGoSubOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST nested GoSub helper compilation failed.' }
