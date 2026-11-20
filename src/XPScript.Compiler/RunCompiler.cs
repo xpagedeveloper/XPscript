@@ -74,10 +74,17 @@ internal static class RunCompiler
         var source = managedReferences.Source;
         var nativeDependencies = new NativeDependencyPackager(rid).Collect(source, includeResult.Map, sourcePath);
 
-        var transpiler = new XPScriptTranspiler();
         string generatedSource;
-        using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
-            generatedSource = transpiler.Transpile(source, sourcePath, rid);
+        var astWorkspace = Path.Combine(Path.GetTempPath(), "XPScript", "ast-run-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(astWorkspace);
+        try
+        {
+            generatedSource = await AstCompiler.GenerateSourceAsync(sourcePath, astWorkspace, rid, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (Directory.Exists(astWorkspace)) Directory.Delete(astWorkspace, recursive: true);
+        }
 
         var outputRoot = Path.GetFullPath(outputDirectory);
         Directory.CreateDirectory(outputRoot);

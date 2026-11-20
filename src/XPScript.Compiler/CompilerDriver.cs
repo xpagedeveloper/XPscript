@@ -205,10 +205,16 @@ public sealed class CompilerDriver
         ValidateNativeDependencies(sourcePath, nativeDependencies);
         ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
-        var transpiler = new XPScriptTranspiler();
         string generatedSource;
-        using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
-            generatedSource = transpiler.Transpile(source, sourcePath, rid);
+        var astWorkspace = CreateCompilerTempRoot();
+        try
+        {
+            generatedSource = await AstCompiler.GenerateSourceAsync(sourcePath, astWorkspace, rid);
+        }
+        finally
+        {
+            if (Directory.Exists(astWorkspace)) Directory.Delete(astWorkspace, recursive: true);
+        }
         // Native database providers expose the shared attachment collection
         // surface even when the source does not call Attachments directly.
         // Keep the legacy compiler's generated source self-contained just as
@@ -339,10 +345,16 @@ public sealed class CompilerDriver
         ValidateNativeDependencies(sourcePath, nativeDependencies);
         ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
-        var transpiler = new XPScriptTranspiler();
         string generatedSource;
-        using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
-            generatedSource = transpiler.Transpile(source, sourcePath, rid);
+        var astWorkspace = CreateCompilerTempRoot();
+        try
+        {
+            generatedSource = await AstCompiler.GenerateSourceAsync(sourcePath, astWorkspace, rid);
+        }
+        finally
+        {
+            if (Directory.Exists(astWorkspace)) Directory.Delete(astWorkspace, recursive: true);
+        }
         generatedSource = AstCompiler.EnsureAttachmentRuntime(generatedSource);
 
         var runOutputDirectory = Path.GetFullPath(outputDirectory);
