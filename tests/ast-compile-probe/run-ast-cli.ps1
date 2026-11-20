@@ -2209,7 +2209,10 @@ if ((@(& dotnet (Join-Path $multiDimensionalRedimOptionBaseOutput 'Generated.dll
 $multiDimensionalOutput = Join-Path $output 'multidimensional-array'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-array.xps') -o $multiDimensionalOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST multidimensional array compilation failed.' }
-if ((@(& dotnet (Join-Path $multiDimensionalOutput 'Generated.dll')) -join "`n") -ne "12`n0`n1`n0`n9`n1`n2`n3`n4`n1`n2`n0`n1`n3`n11`nTEXT_OK`n2.5`nTrue`n255`n`n0`nFalse`n13`n3`n4") { throw 'AST multidimensional array output mismatch.' }
+$multiDimensionalResult = @(& dotnet (Join-Path $multiDimensionalOutput 'Generated.dll')) -join "`n"
+$multiDimensionalExpected = "12`n0`n1`n0`n9`n1`n2`n3`n4`n1`n2`n0`n1`n3`n11`nTEXT_OK`n2.5`nTrue`n255`n`n0`nFalse`n13`n3`n4"
+$multiDimensionalExpected = $multiDimensionalExpected.Replace('2.5', ([double]2.5).ToString())
+if ($multiDimensionalResult -ne $multiDimensionalExpected) { throw 'AST multidimensional array output mismatch.' }
 $multiDimensionalOptionBaseOutput = Join-Path $output 'multidimensional-option-base'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'multidimensional-option-base.xps') -o $multiDimensionalOptionBaseOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST multidimensional Option Base compilation failed.' }
