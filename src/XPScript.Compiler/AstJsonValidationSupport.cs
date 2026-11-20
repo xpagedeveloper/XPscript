@@ -29,6 +29,8 @@ internal static class AstJsonValidationSupport
         new("XPJsonSchema", "AddArray", "XPJsonSchema", ["string", "object"], ["name", "itemSchema"], false, false, false),
         new("XPJsonSchema", "AddArray", "XPJsonSchema", ["string", "object", "object"], ["name", "itemSchema", "required"], false, false, false),
         new("XPJsonSchema", "Require", "XPJsonSchema", ["string"], ["name"], false, false, false),
+        new("XPJsonSchema", "Enum", "XPJsonSchema", ["object"], ["values"], false, false, false),
+        new("XPJsonSchema", "Items", "XPJsonSchema", ["object"], ["schema"], false, false, false),
         new("XPJsonSchema", "ToString", "string", [], [], false, false, false),
         new("XPJsonSchema", "Validate", "XPJsonValidationResult", ["object"], ["json"], false, false, false),
         new("XPJsonSchema", "IsValid", "bool", ["object"], ["json"], false, false, false),
