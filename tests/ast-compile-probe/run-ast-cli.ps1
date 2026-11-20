@@ -1965,12 +1965,14 @@ if ($LASTEXITCODE -ne 0 -or ($propertyResult -join "`n") -ne 'CLASS_PROPERTIES_N
 # legacy support here would reject an explicitly supported AST extension.
 Write-AstCliCheckpoint 'ast-only-and-final-diagnostics'
 foreach ($propertyInvalid in @('class-property-readonly-error', 'class-property-writeonly-error', 'class-property-private-error', 'class-property-body-error', 'class-property-type-error')) {
-    $propertyFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$propertyInvalid.xps") -o (Join-Path $output $propertyInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($propertyFailure -join "`n") -notmatch "$propertyInvalid.xps:(2|3|5|8|9):") { throw "Property diagnostic source mapping lost: $propertyInvalid" }
+    $propertyFailure = Invoke-BoundedDotnetRun @($compiler, 'ast-compile', (Join-Path $PSScriptRoot "$propertyInvalid.xps"), '-o', (Join-Path $output $propertyInvalid))
+    if ($propertyFailure.TimedOut) { throw "Property diagnostic compilation timed out: $propertyInvalid" }
+    if ($propertyFailure.ExitCode -ne 2 -or $propertyFailure.Output -notmatch "$propertyInvalid.xps:(2|3|5|8|9):") { throw "Property diagnostic source mapping lost: $propertyInvalid" }
 }
 foreach ($classInvalid in @('class-method-scope-error', 'class-method-private-error', 'class-field-private-error', 'class-method-body-error')) {
-    $classFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$classInvalid.xps") -o (Join-Path $output $classInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($classFailure -join "`n") -notmatch "$classInvalid.xps:(3|6|7):") { throw "Class diagnostic source span lost: $classInvalid" }
+    $classFailure = Invoke-BoundedDotnetRun @($compiler, 'ast-compile', (Join-Path $PSScriptRoot "$classInvalid.xps"), '-o', (Join-Path $output $classInvalid))
+    if ($classFailure.TimedOut) { throw "Class diagnostic compilation timed out: $classInvalid" }
+    if ($classFailure.ExitCode -ne 2 -or $classFailure.Output -notmatch "$classInvalid.xps:(3|6|7):") { throw "Class diagnostic source span lost: $classInvalid" }
 }
 $classCaseOutput = Join-Path $output 'class-method-case'
 $classCaseCompile = Invoke-BoundedDotnetRun @($compiler, 'ast-compile', (Join-Path $PSScriptRoot 'class-method-case.xps'), '-o', $classCaseOutput)
@@ -1993,8 +1995,9 @@ $spreadsheetProbe = Invoke-BoundedDotnetRun @((Join-Path $root 'tests/AstSpreads
 if ($spreadsheetProbe.TimedOut) { throw 'AST native spreadsheet runtime regression timed out.' }
 if ($spreadsheetProbe.ExitCode -ne 0) { throw "AST native spreadsheet runtime regression failed.`n$($spreadsheetProbe.Output)" }
 foreach ($sheetInvalid in @('spreadsheet-member-error', 'spreadsheet-constructor-error', 'spreadsheet-readonly-error', 'spreadsheet-private-setter-error', 'spreadsheet-arity-error')) {
-    $sheetFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$sheetInvalid.xps") -o (Join-Path $output $sheetInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($sheetFailure -join "`n") -notmatch "$sheetInvalid.xps:(2|3):") { throw "Spreadsheet diagnostic or source span lost: $sheetInvalid" }
+    $sheetFailure = Invoke-BoundedDotnetRun @($compiler, 'ast-compile', (Join-Path $PSScriptRoot "$sheetInvalid.xps"), '-o', (Join-Path $output $sheetInvalid))
+    if ($sheetFailure.TimedOut) { throw "Spreadsheet diagnostic compilation timed out: $sheetInvalid" }
+    if ($sheetFailure.ExitCode -ne 2 -or $sheetFailure.Output -notmatch "$sheetInvalid.xps:(2|3):") { throw "Spreadsheet diagnostic or source span lost: $sheetInvalid" }
 }
 $httpRuntimeProbe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $root 'tests/AstHttpRuntimeProbe'), '-c', 'Release', '--no-restore', '--', $root)
 if ($httpRuntimeProbe.TimedOut) { throw 'AST native HTTP/TLS runtime regression timed out.' }
@@ -2006,8 +2009,9 @@ if ($httpRuntimeProbe.ExitCode -ne 0) {
     }
 }
 foreach ($httpInvalid in @('http-member-error', 'http-constructor-error', 'http-readonly-error', 'http-arity-error')) {
-    $httpFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$httpInvalid.xps") -o (Join-Path $output $httpInvalid) 2>&1
-    if ($LASTEXITCODE -ne 2 -or ($httpFailure -join "`n") -notmatch "$httpInvalid.xps:(2|3):") { throw "HTTP diagnostic or source span lost: $httpInvalid" }
+    $httpFailure = Invoke-BoundedDotnetRun @($compiler, 'ast-compile', (Join-Path $PSScriptRoot "$httpInvalid.xps"), '-o', (Join-Path $output $httpInvalid))
+    if ($httpFailure.TimedOut) { throw "HTTP diagnostic compilation timed out: $httpInvalid" }
+    if ($httpFailure.ExitCode -ne 2 -or $httpFailure.Output -notmatch "$httpInvalid.xps:(2|3):") { throw "HTTP diagnostic or source span lost: $httpInvalid" }
 }
 & (Join-Path $PSScriptRoot 'run-ast-xml.ps1')
 $csvRoot = Join-Path $output ('csv-' + [Guid]::NewGuid().ToString('N'))
