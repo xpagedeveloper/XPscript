@@ -3,17 +3,41 @@ $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
 $outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
 $output = Join-Path $outputRoot ('image-get-' + [Guid]::NewGuid().ToString('N'))
+function Invoke-BoundedGeneratedAssembly([string] $path, [int] $timeoutMilliseconds = 120000) {
+    $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
+    [void]$info.ArgumentList.Add((Join-Path $path 'Generated.dll'))
+    $info.UseShellExecute = $false
+    $info.CreateNoWindow = $true
+    $info.WorkingDirectory = $path
+    $info.RedirectStandardInput = $true
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $info
+    [void]$process.Start()
+    $process.StandardInput.Close()
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    if (-not $process.WaitForExit($timeoutMilliseconds)) {
+        $process.Kill($true)
+        $process.WaitForExit()
+        return @{ TimedOut = $true; ExitCode = $null; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
+    }
+    return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
+}
 $byteTarget = Join-Path $output 'image-array-byte-interop'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'image-array-byte-interop.xps') -o $byteTarget
 if ($LASTEXITCODE -ne 0) { throw 'AST nonzero-bound Byte array image compilation failed.' }
-$byteResult = dotnet (Join-Path $byteTarget 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($byteResult -join "`n") -ne 'IMAGE_ARRAY_BYTE_INTEROP_OK') { throw 'AST native image Byte vector normalization failed.' }
+$byteResult = Invoke-BoundedGeneratedAssembly $byteTarget
+if ($byteResult.TimedOut) { throw 'AST native image Byte vector runtime timed out.' }
+if ($byteResult.ExitCode -ne 0 -or $byteResult.Output.Trim() -ne 'IMAGE_ARRAY_BYTE_INTEROP_OK') { throw 'AST native image Byte vector normalization failed.' }
 Write-Host 'AST_IMAGE_ARRAY_BYTE_INTEROP_OK'
 foreach ($fixture in @('image-constructor-list', 'image-constructor-variant', 'image-constructor-optional-refref', 'image-constructor-optional-reference', 'image-constructor-reference-byref', 'image-constructor-reference', 'image-constructor-optional-byref', 'image-constructor-mixed', 'image-constructor-byref', 'image-constructor-optional', 'image-constructor-derived', 'image-constructor', 'image-destructor-derived', 'image-destructor', 'image-field-delete', 'image-property-set', 'image-property-set-byval-signature', 'image-property-set-byref-signature', 'image-property-get', 'image-property-signature-only')) {
+    Write-Host "AST_IMAGE_FIXTURE=$fixture"
     $target = Join-Path $output $fixture
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
     if ($LASTEXITCODE -ne 0) { throw "AST image getter compilation failed: $fixture" }
-    $result = dotnet (Join-Path $target 'Generated.dll')
+    $result = Invoke-BoundedGeneratedAssembly $target
     $expected = switch ($fixture) {
         'image-constructor-list' { 'IMAGE_LIST_CONSTRUCTORS_OK' }
         'image-constructor-variant' { 'IMAGE_VARIANT_CONSTRUCTORS_OK' }
@@ -36,7 +60,8 @@ foreach ($fixture in @('image-constructor-list', 'image-constructor-variant', 'i
         'image-property-get' { 'IMAGE_PROPERTY_GET_OK' }
         'image-property-signature-only' { 'IMAGE_PROPERTY_SIGNATURE_ONLY_OK' }
     }
-    if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST image getter lifetime regression failed: $fixture" }
+    if ($result.TimedOut) { throw "AST image getter runtime timed out: $fixture" }
+    if ($result.ExitCode -ne 0 -or $result.Output.Trim() -ne $expected) { throw "AST image getter lifetime regression failed: $fixture" }
     $notice = Get-Content (Join-Path $target 'Third-party-license.txt') -Raw
     if ($notice -notmatch 'Magick.NET-Q16-AnyCPU' -or $notice -notmatch 'Magick.NET.Core' -or $notice -match 'License text could not be resolved') { throw 'Image getter addon notices are incomplete.' }
 }
