@@ -133,6 +133,12 @@ $classNormalResult = Invoke-BoundedCompiledAssembly $classNormalPath
 if ($classNormalResult.TimedOut) { throw 'Normal instance class method execution or output capture timed out.' }
 if ($classNormalResult.ExitCode -ne 0 -or $classNormalResult.Output.Trim() -ne ($classMethodsResult -join "`n").Trim()) { throw 'Normal/AST class method parity failed.' }
 Write-Host 'DEFAULT_CLI_CLASS_METHOD_OK'
+$typeOfOutput = Join-Path $output 'typeof-object'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'typeof-object.xps') -o $typeOfOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST TypeOf object compilation failed.' }
+$typeOfResult = Invoke-BoundedDotnetRun @((Join-Path $typeOfOutput 'Generated.dll'))
+if ($typeOfResult.TimedOut -or $typeOfResult.ExitCode -ne 0 -or $typeOfResult.Output.Trim() -ne 'AST_TYPEOF_OBJECT_OK') { throw "AST TypeOf object execution failed.`n$($typeOfResult.Output)" }
+Write-Host 'AST_TYPEOF_OBJECT_OK'
 $typedSiblingOutput = Join-Path $output 'class-method-typed-sibling-return-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-typed-sibling-return-next.xps') -o $typedSiblingOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST typed sibling method result compilation failed.' }

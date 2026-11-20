@@ -564,6 +564,7 @@ public static class AstCompiler
         symbols.Declare(new FunctionSymbol("Len", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("LenB", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("TypeName", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("TypeOf", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("FileLen", typeof(long), [typeof(string)]));
         symbols.Declare(new FunctionSymbol("FileDateTime", typeof(DateTime), [typeof(string)], XpTypeSymbol.FromClr(typeof(DateTime)), [XpTypeSymbol.FromClr(typeof(string))]));
         symbols.Declare(new FunctionSymbol("GetFileAttr", typeof(long), [typeof(object)], XpTypeSymbol.FromClr(typeof(long)), [XpTypeSymbol.Variant]));
@@ -1179,6 +1180,29 @@ internal static class Program
     public static long Len(object? value) => XPScriptRuntime.Len(value);
     public static long LenB(object? value) => XPScriptRuntime.LenB(value);
     public static string TypeName(object? value) => XPScriptNullRuntime.TypeName(value);
+    public static string TypeOf(object? value)
+    {
+        if (value is null) return string.Empty;
+        var name = value.GetType().Name;
+        if (!name.StartsWith("XPScript", StringComparison.Ordinal)) return name;
+        var suffix = name[8..];
+        return suffix.StartsWith("Ai", StringComparison.Ordinal) ||
+            suffix.StartsWith("Json", StringComparison.Ordinal) ||
+            suffix.StartsWith("Xml", StringComparison.Ordinal) ||
+            suffix.StartsWith("Csv", StringComparison.Ordinal) ||
+            suffix.StartsWith("Http", StringComparison.Ordinal) ||
+            suffix.StartsWith("Db", StringComparison.Ordinal) ||
+            suffix.StartsWith("Archive", StringComparison.Ordinal) ||
+            suffix.StartsWith("Spreadsheet", StringComparison.Ordinal) ||
+            suffix.StartsWith("Worksheet", StringComparison.Ordinal) ||
+            suffix.StartsWith("Cell", StringComparison.Ordinal) ||
+            suffix.StartsWith("Range", StringComparison.Ordinal) ||
+            suffix.StartsWith("Attachment", StringComparison.Ordinal) ||
+            suffix.StartsWith("Date", StringComparison.Ordinal) ||
+            suffix.StartsWith("NetworkTools", StringComparison.Ordinal)
+            ? "XP" + suffix
+            : suffix;
+    }
     public static long FileLen(string path) => new System.IO.FileInfo(RequireExistingFilePath(path)).Length;
     public static DateTime FileDateTime(string path) => System.IO.File.GetLastWriteTime(RequireExistingFilePath(path));
     public static long GetFileAttr(object? path) => (long)System.IO.File.GetAttributes(RequireExistingFilePath(path));

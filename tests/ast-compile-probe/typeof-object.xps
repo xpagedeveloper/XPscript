@@ -1,0 +1,12 @@
+Option Explicit
+
+Sub Main()
+    Dim x As XPAi
+    Set x = New XPAi("https://example.invalid", "type-test-key")
+    If TypeOf(x) <> "XPAi" Then Error 9853, "TypeOf did not return the XPScript object name"
+    Dim json As New XPJsonObject()
+    If TypeOf(json) <> "XPJsonObject" Then Error 9853, "TypeOf did not return the JSON object name"
+    Dim image As New XPImage(1, 1)
+    If TypeOf(image) <> "XPImage" Then Error 9853, "TypeOf did not return the image object name"
+    Print "AST_TYPEOF_OBJECT_OK"
+End Sub
