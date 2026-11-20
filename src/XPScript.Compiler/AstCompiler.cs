@@ -1800,6 +1800,7 @@ internal static class Program
             generated = new UIFormAdditionalFieldFixupPostProcessor().Transform(generated);
             generated = new UIFormMediaButtonsPostProcessor(runtimeIdentifier).Transform(generated);
             generated = UIFormBasicStructuralPostProcessor.Transform(generated);
+            generated = new UIFormRegexValidationPostProcessor().Transform(generated);
             if (!isAndroidTarget)
                 generated = new UIFormAccessibilityPostProcessor().Transform(generated, fullSource);
             if (isAndroidTarget && !generated.Contains("public void Show(object? modalValue)", StringComparison.Ordinal))
