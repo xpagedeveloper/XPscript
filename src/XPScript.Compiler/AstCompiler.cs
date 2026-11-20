@@ -1800,6 +1800,8 @@ internal static class Program
             generated = new UIFormAdditionalFieldFixupPostProcessor().Transform(generated);
             generated = new UIFormMediaButtonsPostProcessor(runtimeIdentifier).Transform(generated);
             generated = UIFormBasicStructuralPostProcessor.Transform(generated);
+            if (!isAndroidTarget)
+                generated = new UIFormAccessibilityPostProcessor().Transform(generated, fullSource);
             if (isAndroidTarget && !generated.Contains("public void Show(object? modalValue)", StringComparison.Ordinal))
             {
                 const string mobileFormApi = "    public void Show(object? modalValue) { _modal = Convert.ToBoolean(modalValue, System.Globalization.CultureInfo.CurrentCulture); XPScriptUI.Activate(this); }\n    public void RefreshForm() => XPScriptUI.Activate(this);\n    public void Hide() => XPScriptUI.Deactivate(this);\n";

@@ -18,11 +18,11 @@ internal sealed class UIFormAccessibilityPostProcessor
         ".FocusFirstError", ".AnnounceValidationErrors", ".Announce("
     ];
 
-    public string Transform(string generated)
+    public string Transform(string generated, string? applicationSource = null)
     {
         ArgumentNullException.ThrowIfNull(generated);
         if (generated.Contains(Sentinel, StringComparison.Ordinal)) return generated;
-        if (!NeedsAccessibilityRuntime(generated)) return generated;
+        if (!NeedsAccessibilityRuntime(applicationSource ?? generated)) return generated;
 
         generated = ReplaceOnceRequired(
             generated,
@@ -74,7 +74,7 @@ internal sealed class UIFormAccessibilityPostProcessor
 
         generated = ReplaceOnceRequired(
             generated,
-            "    public int FieldCount => _fields.Count;\n",
+            "    public int FieldCount => _fields.Count;",
             Block(
                 "    public int FieldCount => _fields.Count;",
                 "    public string InitialFocus { get => _initialFocus; set => _initialFocus = NormalizeOptionalFieldName(value); }",

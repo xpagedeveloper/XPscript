@@ -70,11 +70,11 @@ foreach (var name in new[] { "malformed", "missing-workbook", "too-many-parts", 
     await Run("dotnet", [compiler, "ast-compile", source, "-o", directory], output);
     var failure = await ExecuteExpectedFailure("dotnet", [Path.Combine(directory, "Generated.dll")], output);
     if (failure.Exit == 0) throw new Exception("Unsafe XLSX accepted: " + name);
-    if (!failure.Text.Contains("InvalidDataException", StringComparison.Ordinal)
+    if (!failure.Text.Contains("central directory", StringComparison.OrdinalIgnoreCase)
+        && !failure.Text.Contains("InvalidDataException", StringComparison.Ordinal)
         && !failure.Text.Contains("could not open", StringComparison.OrdinalIgnoreCase)
         && !failure.Text.Contains("exceeds", StringComparison.OrdinalIgnoreCase)
-        && !failure.Text.Contains("too many parts", StringComparison.OrdinalIgnoreCase)
-        && !failure.Text.Contains("timed out", StringComparison.OrdinalIgnoreCase))
+        && !failure.Text.Contains("too many parts", StringComparison.OrdinalIgnoreCase))
         throw new Exception("Unsafe XLSX produced an unexpected diagnostic: " + name + "\n" + failure.Text);
 }
 // Remove the marker from a real workbook: external files must remain read-only.

@@ -84,6 +84,13 @@ await ProbeDesktopRuntime("AST", "dotnet", astAssembly);
 Console.WriteLine("DESKTOP_PARITY_AST_RUNTIME_OK");
 Console.WriteLine("DESKTOP_AST_RUNTIME_LAUNCH_OK");
 
+async Task<string> GenerateAsync(string sourceText, string filename)
+{
+    var path = Path.Combine(parityRoot, filename);
+    await File.WriteAllTextAsync(path, sourceText);
+    return await AstCompiler.GenerateSourceAsync(path, parityRoot);
+}
+
 var modalChildSource = """
 Option Declare
 
@@ -106,17 +113,13 @@ Sub CloseSecondForm(evt As Variant)
 End Sub
 """;
 
-var generated = new XPScriptTranspiler().Transpile(modalChildSource, "uiform-modal-child-smoke.xps", "win-x64");
+var generated = await GenerateAsync(modalChildSource, "uiform-modal-child-smoke.xps");
 foreach (var expected in new[]
 {
     "public void Show(object? modalValue)",
     "XPScriptCallbackRuntime.Invoke(",
     "XPScriptUIDesktopAdapter.Show(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);",
-    "new XPScriptUIFormEvent(this, \"button\"",
-    "public string AccessibleName",
-    "public string InitialFocus",
-    "BuildAccessibilityAttributes(",
-    "aria-describedby"
+    "new XPScriptUIFormEvent(this, \"button\""
 })
 {
     if (!generated.Contains(expected, StringComparison.Ordinal))
@@ -124,7 +127,6 @@ foreach (var expected in new[]
 }
 
 Console.WriteLine("DESKTOP_UIFORM_DETACHED_REQUEST_OK");
-Console.WriteLine("DESKTOP_UIFORM_ACCESSIBILITY_BASELINE_OK");
 
 var accessibilitySource = """
 Option Declare
@@ -147,7 +149,7 @@ Sub Main()
 End Sub
 """;
 
-var generatedAccessibility = new XPScriptTranspiler().Transpile(accessibilitySource, "uiform-accessibility-smoke.xps", "linux-x64");
+var generatedAccessibility = await GenerateAsync(accessibilitySource, "uiform-accessibility-smoke.xps");
 foreach (var expected in new[]
 {
     "public string AccessibleName",
@@ -156,6 +158,7 @@ foreach (var expected in new[]
     "public void FocusFirstInvalid()",
     "public void SetValidationError(object? name, object? message)",
     "public string ValidationError",
+    "BuildAccessibilityAttributes(",
     "aria-invalid",
     "aria-describedby",
     "aria-live"
@@ -164,6 +167,7 @@ foreach (var expected in new[]
     if (!generatedAccessibility.Contains(expected, StringComparison.Ordinal))
         throw new InvalidOperationException("Generated UIForm accessibility surface is missing: " + expected);
 }
+Console.WriteLine("DESKTOP_UIFORM_ACCESSIBILITY_BASELINE_OK");
 
 var schemaAccessibilitySource = string.Join('\n', new[]
 {
@@ -178,10 +182,11 @@ var schemaAccessibilitySource = string.Join('\n', new[]
     "    Call form.AddTextField(\"customer\", \"Customer\")",
     "    Set schema = XPJsonSchema.Parse(\"{\"\"type\"\": \"\"object\"\", \"\"properties\"\": {\"\"customer\"\": {\"\"type\"\": \"\"object\"\", \"\"properties\"\": {\"\"address\"\": {\"\"type\"\": \"\"object\"\", \"\"properties\"\": {\"\"city\"\": {\"\"minLength\"\": 2}}}}}}}}\")",
     "    Call form.SetValidationSchema(schema)",
+    "    form.ValidationSummary = True",
     "End Sub"
 });
 
-var generatedSchemaAccessibility = new XPScriptTranspiler().Transpile(schemaAccessibilitySource, "uiform-schema-accessibility-smoke.xps", "linux-x64");
+var generatedSchemaAccessibility = await GenerateAsync(schemaAccessibilitySource, "uiform-schema-accessibility-smoke.xps");
 foreach (var expected in new[]
 {
     "var validationError = field.ValidationError.Length > 0 ? field.ValidationError : GetValidationError(field.Name);",
@@ -210,7 +215,7 @@ Sub Main()
 End Sub
 """;
 
-var generatedWebView = new XPScriptTranspiler().Transpile(webViewSource, "uiform-webview-smoke.xps", "linux-x64");
+var generatedWebView = await GenerateAsync(webViewSource, "uiform-webview-smoke.xps");
 foreach (var expected in new[]
 {
     "public XPScriptUIField AddWebView(object? name)",
