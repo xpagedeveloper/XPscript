@@ -2353,7 +2353,7 @@ $printFormattingOutput = Join-Path $output 'print-formatting-ast'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'print-formatting-ast.xps') -o $printFormattingOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST structural Print formatting compilation failed.' }
 $printFormattingResult = dotnet (Join-Path $printFormattingOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($printFormattingResult -join "`n") -ne "  x   y") { throw 'AST structural Print Spc/Tab execution failed.' }
+if ($LASTEXITCODE -ne 0 -or ($printFormattingResult -join "`n") -ne "  x  y") { throw 'AST structural Print Spc/Tab execution failed.' }
 Write-Host 'AST_PRINT_FORMATTING_OK'
 $uiListViewOutput = Join-Path $output 'ui-list-view-core'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot '..\..\samples\ui-list-view-core.xps') -o $uiListViewOutput
