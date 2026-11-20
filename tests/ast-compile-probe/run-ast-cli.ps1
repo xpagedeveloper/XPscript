@@ -44,6 +44,9 @@ $outputRoot = $cliContext.OutputRoot
 $output = Join-Path $outputRoot ('ast-cli/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 Write-AstCliCheckpoint 'full-corpus-start'
+$apiAudit = pwsh -NoProfile -File (Join-Path $root 'tests/ApiSurfaceAudit/run-api-surface-audit.ps1')
+if ($LASTEXITCODE -ne 0 -or ($apiAudit -join "`n") -notmatch 'API_SURFACE_AUDIT_OK') { throw "Documented API-surface audit failed.`n$($apiAudit -join "`n")" }
+Write-Host 'AST_API_SURFACE_AUDIT_OK'
 function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
     $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
     [void]$info.ArgumentList.Add($assemblyPath)
@@ -909,6 +912,12 @@ if ($LASTEXITCODE -ne 0) { throw 'AST AI class-method parameter compilation fail
 $aiClassMethodResult = dotnet (Join-Path $aiClassMethodOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($aiClassMethodResult -join "`n") -ne "True`nTrue`nTrue`nTrue`nTrue") { throw 'AST AI class-method parameter execution failed.' }
 Write-Host 'AST_AI_CLASS_METHOD_PARAMETERS_OK'
+$aiSurfaceOutput = Join-Path $output 'ai-api-surface-missing-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'ai-api-surface-missing-next.xps') -o $aiSurfaceOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST AI API-surface fixture compilation failed.' }
+$aiSurfaceResult = Invoke-BoundedDotnetRun @((Join-Path $aiSurfaceOutput 'Generated.dll'))
+if ($aiSurfaceResult.TimedOut -or $aiSurfaceResult.ExitCode -ne 0 -or $aiSurfaceResult.Output.Trim() -ne 'AST_AI_API_SURFACE_OK') { throw "AST AI API-surface fixture failed.`n$($aiSurfaceResult.Output)" }
+Write-Host 'AST_AI_API_SURFACE_OK'
 $optionalClassMethodOutput = Join-Path $output 'class-method-optional-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-optional-next.xps') -o $optionalClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST optional scalar class-method compilation failed.' }

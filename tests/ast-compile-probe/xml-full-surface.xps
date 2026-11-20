@@ -23,6 +23,7 @@ Sub Main()
     If attrs.Count <> 1 Or Not attrs.Has("id") Then Error 9944, "attribute collection failed"
     Set attr = attrs.First
     If attr.Name <> "id" Or attr.Parent.Name <> "renamed" Or attr.OwnerElement.Name <> "renamed" Then Error 9945, "attribute navigation failed"
+    If attr.IsNamespaceDeclaration Then Error 99451, "ordinary XML attribute reported as namespace declaration"
     attr.Value = "2"
     If attr.Stringify() <> "id=\"2\"" Then Error 9946, "attribute stringify failed"
 

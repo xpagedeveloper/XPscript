@@ -1,0 +1,21 @@
+Option Declare
+
+Sub Main()
+    Dim ai As New XPAi("https://example.invalid", "type-test-key")
+    ai.EndpointPath = "/v1/chat/completions"
+    ai.AutoExecuteTools = False
+    Call ai.AddMessage("user", "hello")
+    Dim messages As XPJsonDocument
+    Set messages = ai.GetMessages()
+    Call ai.ClearMessages()
+    Call ai.SetOption("temperature", 0.1)
+    Call ai.RemoveOption("temperature")
+    Call ai.ClearOptions()
+
+    Dim tool As New XPAITool("surface")
+    Dim names As XPJsonArray
+    Set names = tool.GetFunctionNames()
+    Dim metadata As XPJsonObject
+    Set metadata = tool.ToJsonObject()
+    Print "AST_AI_API_SURFACE_OK"
+End Sub
