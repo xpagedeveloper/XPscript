@@ -88,11 +88,11 @@ internal static class AstNativeObjectSurface
         {
             var name = member.Owner.Length == 0 ? member.Name : member.Owner + "." + member.Name;
             var result = SemanticType(member.Result, languageType);
-            if (member.IsProperty) symbols.Declare(new PropertySymbol(name, result.RuntimeType, result));
+            if (member.IsProperty) symbols.TryDeclare(new PropertySymbol(name, result.RuntimeType, result));
             else
             {
                 var args = member.Parameters.Select(t => SemanticType(t, languageType)).ToArray();
-                symbols.Declare(new FunctionSymbol(name, result.RuntimeType, args.Select(a => a.RuntimeType).ToArray(), result, args)
+                symbols.TryDeclare(new FunctionSymbol(name, result.RuntimeType, args.Select(a => a.RuntimeType).ToArray(), result, args)
                 {
                     NativeParameterTypes = member.Parameters, IsNativeStatic = member.IsStatic, NativeTargetName = member.NativeTarget, NativeReceiverArgument = member.ReceiverArgument
                 });
