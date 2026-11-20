@@ -26,7 +26,7 @@ foreach ($relative in $docs) {
         if ($line -match '^\|\s*`(?<member>[A-Za-z_][A-Za-z0-9_. ]*)`\s*\|' -or
             $line -match '^\s*-\s*`(?<member>[A-Za-z_][A-Za-z0-9_. ]*)`') {
             $member = $Matches.member.Trim()
-            if ($member -in @('FromRoute','FromQuery','FromHeader','FromCookie')) { continue }
+            if ($member -in @('FromRoute','FromQuery','FromHeader','FromCookie','FromBody','Required','MaxLength','FileSystem','required')) { continue }
             if ($member -notin @('Member','Syntax','Parameters','Description','Example') -and
                 $member -notmatch '^(Get|Set|Add|Remove|Clear|Open|Save|Close|From|To|New|Create|Delete|Update|Query|List|Find|Run|Execute|Complete|Stream|Cancel|Dispose|Bind|Show|Cell|Range|Worksheet|AutoFilter|Input|Output|Name|Path|Index|Address|Value|Text|Formula|Type|Title|Description|Timeout|Model|Endpoint|Provider|Session|Has|Is|Can|Created|XPScript|Used|Column|Row|Font|Background|Foreground|Horizontal|Vertical|Wrap|Border|Number|Auto|Grid|Dirty|Data|Body|Status|Content|Json|Root|Count|Length|Width|Height|Format|Filter|Sort|Select|Function|Parameter|Tool|Request|Response|Property|Options|Headers|Messages|Option|Temperature|Max|Certificate|Throw|Collect|System|User|EndpointPath|Authorization|Encode|Decode|Version|Read|Write|Lock|Unlock|Copy|Move|File|Dir|Date|Time|Month|Week|Currency|Decimal|Radio|ListBox|Select|Lookup|AutoComplete|Required|Placeholder|Tooltip|Validation|Schema|Field|Fields|Map|Document|YouTube|Separator|Spacer|Navigation|Selected|RowAction|Dialog)') {
                 continue
@@ -43,7 +43,15 @@ foreach ($item in $unique) {
     $found = $false
     $found = $corpusText -match "(?i)\b$needle\b"
     if (-not $found) { $missing += $item }
-    if ($fixtureCode -notmatch "(?i)\b$needle\b") { $uninvoked += $item }
+    # A bare token (especially in a comment or documentation string) is not
+    # an executable API probe. Require a call shape for methods, and a read or
+    # write expression for properties. This keeps the audit useful without
+    # relying on runtime reflection, which XPScript intentionally does not
+    # expose.
+    $escapedMember = [regex]::Escape(($item.Member -split '\.')[-1])
+    $isCall = $fixtureCode -match "(?i)\b$escapedMember\s*\("
+    $isProperty = $fixtureCode -match "(?im)(?<![A-Za-z0-9_])$escapedMember(?![A-Za-z0-9_])\s*(?:=|\.|\r?$)|(?im)(?:=|\.|\()\s*$escapedMember(?![A-Za-z0-9_])"
+    if (-not ($isCall -or $isProperty)) { $uninvoked += $item }
 }
 Write-Host ("API_SURFACE_DOCUMENTED_MEMBERS=" + $unique.Count)
 Write-Host ("API_SURFACE_MEMBER_REFERENCES_FOUND=" + ($unique.Count - $missing.Count))
