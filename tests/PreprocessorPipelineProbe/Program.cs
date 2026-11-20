@@ -520,7 +520,7 @@ End Sub
     if (!generated.Contains("model.XPJsonDocument", StringComparison.Ordinal))
         throw new Exception("Runtime type name was incorrectly reserved in class-member scope.");
 
-    const string[] keywordSources =
+    string[] keywordSources =
     [
         "Class If\nEnd Class",
         "Sub Main()\n    Dim End As String\nEnd Sub"
