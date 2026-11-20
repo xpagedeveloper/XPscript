@@ -19,6 +19,10 @@ public static class CompilerSymbolCatalog
     private static readonly IReadOnlyDictionary<string, CompilerSymbolDefinition> Definitions =
         new[]
         {
+            Define("JsonParse", "function", "JsonParse(value As Variant) As Variant", [new("value", "Variant")], "Variant", "api.JsonParse"),
+            Define("JsonStringify", "function", "JsonStringify(value As Variant) As String", [new("value", "Variant")], "String", "api.JsonStringify"),
+            Define("JsonEncode", "function", "JsonEncode(value As Variant) As String", [new("value", "Variant")], "String", "api.JsonEncode"),
+            Define("JsonDecode", "function", "JsonDecode(value As Variant) As Variant", [new("value", "Variant")], "Variant", "api.JsonDecode"),
             Define("XPJsonSchema", "class", "XPJsonSchema", [], null, "api.XPJsonSchema"),
             Define("XPJsonSchema.Parse", "method", "XPJsonSchema.Parse(text As String) As XPJsonSchema",
                 [new("text", "String")], "XPJsonSchema", "api.XPJsonSchema.Parse"),
