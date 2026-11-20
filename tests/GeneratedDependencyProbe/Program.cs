@@ -59,6 +59,26 @@ if (Directory.EnumerateFiles(markerOutput, "Magick*", SearchOption.AllDirectorie
     File.Exists(Path.Combine(markerOutput, "Third-party-license.txt")))
     throw new Exception("AST marker-text fixture acquired an unused XP runtime or package.");
 
+var auditedUnusedObjects = new[]
+{
+    "XPNetworkTools", "XPDate", "XPAttachmentCollection", "XPAttachment", "XPCell", "XPRange", "XPWorksheet",
+    "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall", "UIForm", "UIView", "UIListView"
+};
+foreach (var objectName in auditedUnusedObjects)
+{
+    var isolatedSourcePath = Path.Combine(outputRoot, "unused-" + objectName + ".xps");
+    await File.WriteAllTextAsync(isolatedSourcePath,
+        $"Sub Main()\n    ' {objectName}\n    Print \"{objectName}\"\nEnd Sub\n");
+    var isolatedOutput = Path.Combine(outputRoot, "unused-" + objectName);
+    await AstCompiler.CompileAsync(isolatedSourcePath, isolatedOutput);
+    if (Directory.EnumerateFiles(isolatedOutput, "*", SearchOption.AllDirectories)
+            .Any(path => Path.GetFileName(path).Contains(objectName, StringComparison.OrdinalIgnoreCase) ||
+                         Path.GetFileName(path).Contains("Magick", StringComparison.OrdinalIgnoreCase) ||
+                         Path.GetFileName(path).Contains("Sqlite", StringComparison.OrdinalIgnoreCase) ||
+                         Path.GetFileName(path).Equals("Third-party-license.txt", StringComparison.OrdinalIgnoreCase)))
+        throw new Exception($"Unused AST object marker acquired dependencies: {objectName}");
+}
+
 var source = """
 internal sealed class XPImage { }
 internal static class Program
