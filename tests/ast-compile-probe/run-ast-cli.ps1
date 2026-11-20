@@ -1904,8 +1904,9 @@ if ($LASTEXITCODE -ne 0 -or ($listLifetimeResult -join "`n") -ne 'INDEXED_BYREF_
 $moduleStorageOutput = Join-Path $output 'indexed-byref-module-storage-error'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-module-storage-error.xps') -o $moduleStorageOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST module ByRef storage compilation failed.' }
-$moduleStorageResult = dotnet (Join-Path $moduleStorageOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($moduleStorageResult -join "`n") -ne '1') { throw 'AST module ByRef storage execution failed.' }
+$moduleStorageResult = Invoke-BoundedCompiledAssembly $moduleStorageOutput
+if ($moduleStorageResult.TimedOut) { throw 'AST module ByRef storage execution timed out.' }
+if ($moduleStorageResult.ExitCode -ne 0 -or $moduleStorageResult.Output.Trim() -ne '1') { throw 'AST module ByRef storage execution failed.' }
 Write-Host 'AST_INDEXED_BYREF_MODULE_STORAGE_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-module-runtime.xps') -o (Join-Path $output 'indexed-byref-module-runtime')
 if ($LASTEXITCODE -ne 0) { throw 'AST module ByRef index compilation failed.' }
