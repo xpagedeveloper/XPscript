@@ -61,7 +61,7 @@ Sub Main()
 
     Dim arrayForm As New UIForm("Array schema")
     Dim arrayData As XPJsonDocument
-    Set arrayData = XPJson.Parse("{""items"":[{""quantity"":0}]}")
+    Set arrayData = XPJsonDocument.Parse("{""items"":[{""quantity"":0}]}")
     Call arrayForm.BindData(arrayData)
     Call arrayForm.AddTextField("items", "Items")
     Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""items"":{""type"":""array"",""items"":{""type"":""object"",""properties"":{""quantity"":{""minimum"":1}}}}}}")
@@ -71,7 +71,7 @@ Sub Main()
 
     Dim prefixForm As New UIForm("Schema prefix boundary")
     Dim prefixData As XPJsonDocument
-    Set prefixData = XPJson.Parse("{""username"":""""}")
+    Set prefixData = XPJsonDocument.Parse("{""username"":""""}")
     Call prefixForm.BindData(prefixData)
     Call prefixForm.AddTextField("user", "User")
     Call prefixForm.AddTextField("username", "Username")
