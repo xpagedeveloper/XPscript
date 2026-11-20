@@ -37,6 +37,7 @@ internal static class AstUiListViewSupport
             new("UIListView", "RemoveSelectedRow", "void", [], [], false, false, false)
         ]).ToArray();
 
+    internal static IEnumerable<CompilerSymbolDefinition> Catalog => AstNativeObjectSurface.Catalog(RuntimeTypes.Keys.ToArray(), Members, LanguageType);
     internal static string? RuntimeType(string name) => RuntimeTypes.GetValueOrDefault(name);
     internal static void Import(SymbolTable symbols) => AstNativeObjectSurface.Import(symbols, Members, LanguageType);
 }

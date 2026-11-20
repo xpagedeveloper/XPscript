@@ -24,7 +24,9 @@ $members = [System.Collections.Generic.List[object]]::new()
 foreach ($relative in $docs) {
     $path = Join-Path $Root $relative
     if (-not (Test-Path -LiteralPath $path)) { continue }
+    $owner = ''
     foreach ($line in Get-Content -LiteralPath $path) {
+        if ($line -match '^#{2,4}\s+`?(?<owner>[A-Za-z_][A-Za-z0-9_]*)`?(?:\s|$)') { $owner = $Matches.owner }
         if ($line -match '^\|\s*`(?<member>[A-Za-z_][A-Za-z0-9_. ]*)`\s*\|' -or
             $line -match '^\s*-\s*`(?<member>[A-Za-z_][A-Za-z0-9_. ]*)`') {
             $member = $Matches.member.Trim()
@@ -34,7 +36,8 @@ foreach ($relative in $docs) {
                 $member -notmatch '^(Get|Set|Add|Remove|Clear|Open|Save|Close|From|To|New|Create|Delete|Update|Query|List|Find|Run|Execute|Complete|Stream|Cancel|Dispose|Bind|Show|Cell|Range|Worksheet|AutoFilter|Input|Output|Name|Path|Index|Address|Value|Text|Formula|Type|Title|Description|Timeout|Model|Endpoint|Provider|Session|Has|Is|Can|Created|XPScript|Used|Column|Row|Font|Background|Foreground|Horizontal|Vertical|Wrap|Border|Number|Auto|Grid|Dirty|Data|Body|Status|Content|Json|Root|Count|Length|Width|Height|Format|Filter|Sort|Select|Function|Parameter|Tool|Request|Response|Property|Options|Headers|Messages|Option|Temperature|Max|Certificate|Throw|Collect|System|User|EndpointPath|Authorization|Encode|Decode|Version|Read|Write|Lock|Unlock|Copy|Move|File|Dir|Date|Time|Month|Week|Currency|Decimal|Radio|ListBox|Select|Lookup|AutoComplete|Required|Placeholder|Tooltip|Validation|Schema|Field|Fields|Map|Document|YouTube|Separator|Spacer|Navigation|Selected|RowAction|Dialog)') {
                 continue
             }
-            $members.Add([pscustomobject]@{ Doc = $relative; Member = $member })
+            $qualified = if ($member -match '\.' -or [string]::IsNullOrWhiteSpace($owner)) { $member } else { "$owner.$member" }
+            $members.Add([pscustomobject]@{ Doc = $relative; Member = $member; Qualified = $qualified })
         }
     }
 }
@@ -69,7 +72,9 @@ if (Test-Path -LiteralPath $CompilerPath) {
         $symbols = @($symbolJson -join "`n" | ConvertFrom-Json)
         foreach ($item in $unique) {
             $leaf = ($item.Member -split '\.')[-1]
-            if (-not ($symbols | Where-Object { $_.name -eq $item.Member -or $_.name -match "\.$([regex]::Escape($leaf))$" })) {
+            $qualified = [regex]::Escape($item.Qualified)
+            $ownerAlias = [regex]::Escape(($item.Qualified -replace '^XP?', ''))
+            if (-not ($symbols | Where-Object { $_.name -eq $item.Qualified -or $_.name -match "\.$([regex]::Escape($leaf))$" -or $_.name -match "^(?:XP)?$ownerAlias$" })) {
                 $symbolMissing += $item
             }
         }
