@@ -10,6 +10,8 @@ Sub Main()
     Set sheet = book.AddWorksheet("Data")
     Dim reader As New Reader
     Print reader.ReadName(sheet)
-    Print CStr(sheet.UsedRowCount)
-    Print CStr(sheet.UsedColumnCount)
+    Dim usedRows As Long
+    Dim usedColumns As Long
+    usedRows = sheet.UsedRowCount
+    usedColumns = sheet.UsedColumnCount
 End Sub
