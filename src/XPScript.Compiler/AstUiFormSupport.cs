@@ -26,7 +26,7 @@ internal static class AstUiFormSupport
     private static string LanguageType(string type) => type.TrimEnd('?') switch
     {
         "object" => "Variant", "int" => "Integer", "double" => "Double", "string" => "String", "bool" => "Boolean",
-        "XPScriptUIForm" => "UIForm", "XPScriptUIComponent" => "UIComponent", "XPScriptUIField" => "UIFormField", "XPScriptUIGrid" => "UIFormGrid", "XPScriptUITab" => "UIFormTab", "XPScriptUIButton" => "UIButton", _ => type
+        "XPScriptUIForm" => "UIForm", "XPScriptUIComponent" => "UIComponent", "XPScriptUIField" => "UIFormField", "XPScriptUIGrid" => "UIFormGrid", "XPScriptUITab" => "UIFormTab", "XPScriptUIButton" => "UIButton", "XPScriptJsonValidationResult" => "XPJsonValidationResult", _ => type
     };
 
     internal static readonly AstNativeObjectSurface.Member[] Members = AstNativeObjectSurface
@@ -111,6 +111,7 @@ internal static class AstUiFormSupport
             new AstNativeObjectSurface.Member("UIForm", "Announce", "void", ["object?", "object?"], ["message", "priority"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "ClearValidationError", "void", ["object?"], ["name"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "GetValidationErrors", "object", ["object?"], ["name"], false, false, false),
+            new AstNativeObjectSurface.Member("UIForm", "GetValidationError", "string", ["object?"], ["name"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "AddImage", "XPScriptUIField", ["object?", "object?"], ["name", "source"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "AddImage", "XPScriptUIField", ["object?", "object?", "object?"], ["name", "source", "altText"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetImageSource", "void", ["object?", "object?"], ["name", "source"], false, false, false),
