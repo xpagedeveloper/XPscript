@@ -47,6 +47,12 @@ Write-AstCliCheckpoint 'full-corpus-start'
 $apiAudit = pwsh -NoProfile -File (Join-Path $root 'tests/ApiSurfaceAudit/run-api-surface-audit.ps1')
 if ($LASTEXITCODE -ne 0 -or ($apiAudit -join "`n") -notmatch 'API_SURFACE_AUDIT_OK') { throw "Documented API-surface audit failed.`n$($apiAudit -join "`n")" }
 Write-Host 'AST_API_SURFACE_AUDIT_OK'
+$zenQuotesOutput = Join-Path $output 'xphttp-zenquotes-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xphttp-zenquotes-next.xps') -o $zenQuotesOutput
+if ($LASTEXITCODE -ne 0) { throw 'AST XPHttp ZenQuotes fixture compilation failed.' }
+$zenQuotesResult = Invoke-BoundedDotnetRun @((Join-Path $zenQuotesOutput 'Generated.dll'))
+if ($zenQuotesResult.TimedOut -or $zenQuotesResult.ExitCode -ne 0 -or $zenQuotesResult.Output.Trim() -notmatch '^AST_XPHTTP_ZENQUOTES_(OK|SKIPPED=NETWORK)$') { throw "AST XPHttp ZenQuotes fixture failed.`n$($zenQuotesResult.Output)" }
+Write-Host $zenQuotesResult.Output.Trim()
 function Invoke-ExpectedRuntimeFailure([string] $assemblyPath) {
     $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
     [void]$info.ArgumentList.Add($assemblyPath)
