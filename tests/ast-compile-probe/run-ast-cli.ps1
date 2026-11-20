@@ -2521,7 +2521,7 @@ $invalidDefault = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'optiona
 if ($LASTEXITCODE -ne 2 -or ($invalidDefault -join "`n") -notmatch "Default value for Optional parameter 'value' is incompatible with its type") { throw 'AST invalid Optional default was not rejected by binding.' }
 $evaluateRemovedError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'evaluate-removed-error.xps') -o (Join-Path $output 'evaluate-removed-error') 2>&1
 if ($LASTEXITCODE -ne 2 -or ($evaluateRemovedError -join "`n") -notmatch "The name 'Evaluate' does not exist in the current context") { throw 'AST removed Evaluate function was not rejected.' }
-$versionOutput = dotnet $compiler --version 2>&1
+$versionOutput = dotnet $compiler 2>&1
 if ($LASTEXITCODE -ne 0 -or ($versionOutput -join "`n") -notmatch 'XPScript version') { throw 'AST compiler version selection/reporting regression failed.' }
 $invalidOptionOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'cli-main.xps') -o (Join-Path $output 'invalid-cli-option') --definitely-invalid 2>&1
 if ($LASTEXITCODE -eq 0) { throw 'AST compiler accepted an invalid CLI option.' }
