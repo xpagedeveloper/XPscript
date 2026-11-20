@@ -66,6 +66,8 @@ internal sealed class ApplicationObjectPreprocessor
         source = Regex.Replace(source, @"\bApplication\.State\b", "XPScriptApplicationRuntime.State", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bProcess\.State\b", "XPScriptProcessRuntime.State", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bSession\.State\b", "XPScriptSessionRuntime.State", RegexOptions.IgnoreCase);
+        foreach (var member in new[] { "Start", "Add", "Set", "Get", "Exists", "Remove", "Unset", "Clear", "Authenticate", "SignOut", "RotateId", "RegenerateId", "Abandon", "Destroy", "SetRole", "GetRoles", "HasRole", "RemoveRole", "HasRule", "Id", "Count", "Keys", "IsAuthenticated", "UserId", "UserName" })
+            source = Regex.Replace(source, $@"\bSession\.{member}\b", "XPScriptSessionRuntime." + member, RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bRequest\.State\b", "XPScriptRequestRuntime.State", RegexOptions.IgnoreCase);
 
         source = Regex.Replace(

@@ -11,12 +11,21 @@ $fixtures = @(
     'tests/ApiSurfaceAudit/xpdbsqlite-full-surface.xps',
     'tests/ApiSurfaceAudit/xphttpdbsupabase-full-surface.xps',
     'tests/ApiSurfaceAudit/xphttpdbdomino-full-surface.xps',
-    'tests/ApiSurfaceAudit/xpdbsupabase-full-surface.xps'
+    'tests/ApiSurfaceAudit/xpdbsupabase-full-surface.xps',
+    'tests/ast-compile-probe/application-native.xps',
+    'samples/application-crypto.xps',
+    'samples/application-systemlog.xps',
+    'samples/application-registry-secrets.xps',
+    'samples/web-session-api.xps'
 )
 foreach ($relative in $fixtures) {
     $path = Join-Path $Root $relative
     Write-Host "API_SURFACE_FIXTURE_START=$relative"
-    & dotnet $CompilerPath compile $path --security=off
+    if ($relative -eq 'samples/web-session-api.xps') {
+        & dotnet $CompilerPath compile $path --target webiis --runtime false --security=off
+    } else {
+        & dotnet $CompilerPath compile $path --security=off
+    }
     if ($LASTEXITCODE -ne 0) { throw "Fixture failed: $relative" }
     Write-Host "API_SURFACE_FIXTURE_COMPILE_OK=$relative"
 }
@@ -26,6 +35,10 @@ if ($LASTEXITCODE -ne 0 -or ($runOutput -notmatch 'XPDBSQLITE_FULL_SURFACE=OK'))
     throw 'SQLite full-surface runtime verification failed.'
 }
 Write-Host 'API_SURFACE_FIXTURE_RUNTIME_OK=XPDBSQLite'
+$appSession = Join-Path $Root 'tests/ApiSurfaceAudit/application-session-combined.xps'
+& dotnet $CompilerPath compile $appSession --security=off
+if ($LASTEXITCODE -ne 0) { throw 'Combined Application/Session fixture failed.' }
+Write-Host 'API_SURFACE_FIXTURE_COMBINED_COMPILE_OK=Application+Session'
 $combined = Join-Path $Root 'tests/ApiSurfaceAudit/httpdb-domino-supabase-combined.xps'
 & dotnet $CompilerPath compile $combined --security=off
 if ($LASTEXITCODE -ne 0) { throw 'Combined Domino/Supabase fixture failed.' }

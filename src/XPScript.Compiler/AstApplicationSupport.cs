@@ -49,6 +49,15 @@ internal static class AstApplicationSupport
         yield return new("Application", "IsDebugging", "bool", [], [], true, true, false, "XPScriptDebugRuntime.IsEnabled");
         foreach (var name in new[] { "Process", "Session", "Request" })
             yield return new(name, "State", "XPScriptStateProxy", [], [], true, true, false, "XPScript" + name + "Runtime.State");
+        foreach (var method in new[] { "Start", "Clear", "SignOut", "RotateId", "RegenerateId", "Abandon", "Destroy", "GetRoles" })
+            yield return new("Session", method, "object?", [], [], true, false, false, "XPScriptSessionRuntime." + method);
+        foreach (var method in new[] { "Add", "Set" })
+            yield return new("Session", method, "object?", ["object", "object"], ["name", "value"], true, false, false, "XPScriptSessionRuntime." + method);
+        foreach (var method in new[] { "Get", "Exists", "Remove", "Unset", "SetRole", "HasRole", "RemoveRole", "HasRule" })
+            yield return new("Session", method, "object?", ["object"], ["name"], true, false, false, "XPScriptSessionRuntime." + method);
+        yield return new("Session", "Authenticate", "object?", ["object", "object", "object"], ["userId", "userName", "rules"], true, false, false, "XPScriptSessionRuntime.Authenticate");
+        foreach (var property in new[] { "Id", "Count", "Keys", "IsAuthenticated", "UserId", "UserName" })
+            yield return new("Session", property, "object?", [], [], true, true, false, "XPScriptSessionRuntime." + property);
     }
     internal static IEnumerable<CompilerSymbolDefinition> Catalog => AstNativeObjectSurface.Catalog([], Members, LanguageType);
     internal static void Import(SymbolTable symbols)

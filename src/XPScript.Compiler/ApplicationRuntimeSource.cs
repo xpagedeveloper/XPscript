@@ -184,6 +184,15 @@ internal static class XPScriptExternalStateBridge
     }
 
     public static object? SessionState() => ResolveWebObject("Session");
+    public static object? SessionObject() => ResolveWebObject("Session");
+    public static object? GetProperty(object target, string name)
+        => target.GetType().GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)?.GetValue(target);
+    public static object? Invoke(object target, string name, params object?[] args)
+    {
+        var method = target.GetType().GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.Ordinal) && m.GetParameters().Length == args.Length);
+        return method?.Invoke(target, args);
+    }
     public static object? RequestState() => ResolveWebObject("RequestScope");
 
     private static object? ResolveWebObject(string propertyName)
@@ -207,6 +216,33 @@ internal static class XPScriptSessionRuntime
 {
     private static readonly XPScriptStateScope LocalState = new();
     public static XPScriptStateProxy State { get; } = new(XPScriptExternalStateBridge.SessionState, LocalState, "Session.State is unavailable.");
+    private static object? Current => XPScriptExternalStateBridge.SessionObject();
+    private static object? Call(string name, params object?[] args) => Current is null ? null : XPScriptExternalStateBridge.Invoke(Current, name, args);
+    public static object? Start() => Call(nameof(Start));
+    public static object? Add(object? name, object? value) => Call(nameof(Add), name, value);
+    public static object? Set(object? name, object? value) => Call(nameof(Set), name, value);
+    public static object? Get(object? name) => Call(nameof(Get), name);
+    public static object? Exists(object? name) => Call(nameof(Exists), name);
+    public static object? Remove(object? name) => Call(nameof(Remove), name);
+    public static object? Unset(object? name) => Call(nameof(Unset), name);
+    public static object? Clear() => Call(nameof(Clear));
+    public static object? Authenticate(object? userId, object? userName, object? rules) => Call(nameof(Authenticate), userId, userName, rules);
+    public static object? SignOut() => Call(nameof(SignOut));
+    public static object? RotateId() => Call(nameof(RotateId));
+    public static object? RegenerateId() => Call(nameof(RegenerateId));
+    public static object? Abandon() => Call(nameof(Abandon));
+    public static object? Destroy() => Call(nameof(Destroy));
+    public static object? SetRole(object? role) => Call(nameof(SetRole), role);
+    public static object? GetRoles() => Call(nameof(GetRoles));
+    public static object? HasRole(object? role) => Call(nameof(HasRole), role);
+    public static object? RemoveRole(object? role) => Call(nameof(RemoveRole), role);
+    public static object? HasRule(object? rule) => Call(nameof(HasRule), rule);
+    public static object? Id => Current is null ? null : XPScriptExternalStateBridge.GetProperty(Current, nameof(Id));
+    public static object? Count => Current is null ? 0 : XPScriptExternalStateBridge.GetProperty(Current, nameof(Count));
+    public static object? Keys => Current is null ? Array.Empty<object>() : XPScriptExternalStateBridge.GetProperty(Current, nameof(Keys));
+    public static object? IsAuthenticated => Current is null ? false : XPScriptExternalStateBridge.GetProperty(Current, nameof(IsAuthenticated));
+    public static object? UserId => Current is null ? "" : XPScriptExternalStateBridge.GetProperty(Current, nameof(UserId));
+    public static object? UserName => Current is null ? "" : XPScriptExternalStateBridge.GetProperty(Current, nameof(UserName));
 }
 
 internal static class XPScriptRequestRuntime
