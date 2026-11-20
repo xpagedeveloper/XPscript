@@ -1899,8 +1899,9 @@ if ($listStorageNormalResult.TimedOut) { throw 'Normal shared List storage execu
 if ($listStorageNormalResult.ExitCode -ne 0 -or $listStorageNormalResult.Output.Trim() -ne 'LIST_STABLE_STORAGE_OK') { throw 'Normal/AST shared List storage parity failed.' }
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-list-lifetime.xps') -o (Join-Path $output 'indexed-byref-list-lifetime')
 if ($LASTEXITCODE -ne 0) { throw 'AST captured List reference compilation failed.' }
-$listLifetimeResult = dotnet (Join-Path $output 'indexed-byref-list-lifetime/Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($listLifetimeResult -join "`n") -ne 'INDEXED_BYREF_LIST_LIFETIME_OK') { throw 'AST captured List reference lifetime failed.' }
+$listLifetimeResult = Invoke-BoundedCompiledAssembly (Join-Path $output 'indexed-byref-list-lifetime')
+if ($listLifetimeResult.TimedOut) { throw 'AST captured List reference lifetime timed out.' }
+if ($listLifetimeResult.ExitCode -ne 0 -or $listLifetimeResult.Output.Trim() -ne 'INDEXED_BYREF_LIST_LIFETIME_OK') { throw 'AST captured List reference lifetime failed.' }
 $moduleStorageOutput = Join-Path $output 'indexed-byref-module-storage-error'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-module-storage-error.xps') -o $moduleStorageOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST module ByRef storage compilation failed.' }
@@ -1910,17 +1911,20 @@ if ($moduleStorageResult.ExitCode -ne 0 -or $moduleStorageResult.Output.Trim() -
 Write-Host 'AST_INDEXED_BYREF_MODULE_STORAGE_OK'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-module-runtime.xps') -o (Join-Path $output 'indexed-byref-module-runtime')
 if ($LASTEXITCODE -ne 0) { throw 'AST module ByRef index compilation failed.' }
-$moduleIndexResult = dotnet (Join-Path $output 'indexed-byref-module-runtime/Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($moduleIndexResult -join "`n") -ne 'INDEXED_BYREF_MODULE_OK') { throw 'AST module ByRef index storage/alias/exception execution failed.' }
+$moduleIndexResult = Invoke-BoundedCompiledAssembly (Join-Path $output 'indexed-byref-module-runtime')
+if ($moduleIndexResult.TimedOut) { throw 'AST module ByRef index runtime timed out.' }
+if ($moduleIndexResult.ExitCode -ne 0 -or $moduleIndexResult.Output.Trim() -ne 'INDEXED_BYREF_MODULE_OK') { throw 'AST module ByRef index storage/alias/exception execution failed.' }
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-runtime.xps') -o (Join-Path $output 'indexed-byref-runtime')
 if ($LASTEXITCODE -ne 0) { throw 'AST ByRef index compilation failed.' }
-$byRefIndexResult = dotnet (Join-Path $output 'indexed-byref-runtime/Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($byRefIndexResult -join "`n") -ne 'INDEXED_BYREF_RUNTIME_OK') { throw 'AST ByRef index alias/exception execution failed.' }
+$byRefIndexResult = Invoke-BoundedCompiledAssembly (Join-Path $output 'indexed-byref-runtime')
+if ($byRefIndexResult.TimedOut) { throw 'AST ByRef index runtime timed out.' }
+if ($byRefIndexResult.ExitCode -ne 0 -or $byRefIndexResult.Output.Trim() -ne 'INDEXED_BYREF_RUNTIME_OK') { throw 'AST ByRef index alias/exception execution failed.' }
 $listPropertyByRefOutput = Join-Path $output 'indexed-byref-property-list-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'indexed-byref-property-list-next.xps') -o $listPropertyByRefOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST indexed ByRef property List-element compilation failed.' }
-$listPropertyByRefResult = dotnet (Join-Path $listPropertyByRefOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($listPropertyByRefResult -join "`n") -ne "11`n11") { throw 'AST indexed ByRef property List-element copy-back failed.' }
+$listPropertyByRefResult = Invoke-BoundedCompiledAssembly $listPropertyByRefOutput
+if ($listPropertyByRefResult.TimedOut) { throw 'AST indexed ByRef property List-element runtime timed out.' }
+if ($listPropertyByRefResult.ExitCode -ne 0 -or $listPropertyByRefResult.Output.Trim() -ne "11`n11") { throw 'AST indexed ByRef property List-element copy-back failed.' }
 foreach ($byRefInvalid in @('indexed-byref-module-type-error', 'indexed-byref-property-error', 'indexed-byref-literal-error', 'indexed-byref-type-error', 'indexed-byref-mode-error', 'indexed-byref-complex-error')) {
     $byRefFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$byRefInvalid.xps") -o (Join-Path $output $byRefInvalid) 2>&1
     if ($LASTEXITCODE -ne 2 -or ($byRefFailure -join "`n") -notmatch "$byRefInvalid.xps:(5|8|9|16):") { throw "ByRef index diagnostic source mapping lost: $byRefInvalid" }
@@ -1928,9 +1932,10 @@ foreach ($byRefInvalid in @('indexed-byref-module-type-error', 'indexed-byref-pr
 foreach ($indexedFixture in @('indexed-byref-module-simple', 'indexed-byref-field-capability', 'indexed-properties-runtime', 'indexed-get-parity')) {
     dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$indexedFixture.xps") -o (Join-Path $output $indexedFixture)
     if ($LASTEXITCODE -ne 0) { throw "AST indexed property compilation failed: $indexedFixture" }
-    $indexedResult = dotnet (Join-Path $output "$indexedFixture/Generated.dll")
+    $indexedResult = Invoke-BoundedCompiledAssembly (Join-Path $output $indexedFixture)
     $indexedExpected = if ($indexedFixture -eq 'indexed-get-parity') { '6' } elseif ($indexedFixture -eq 'indexed-byref-module-simple') { 'INDEXED_BYREF_MODULE_SIMPLE_OK' } elseif ($indexedFixture -eq 'indexed-byref-field-capability') { 'INDEXED_BYREF_FIELD_OK' } else { 'INDEXED_PROPERTIES_RUNTIME_OK' }
-    if ($LASTEXITCODE -ne 0 -or ($indexedResult -join "`n") -ne $indexedExpected) { throw "AST indexed property execution failed: $indexedFixture" }
+    if ($indexedResult.TimedOut) { throw "AST indexed property runtime timed out: $indexedFixture" }
+    if ($indexedResult.ExitCode -ne 0 -or $indexedResult.Output.Trim() -ne $indexedExpected) { throw "AST indexed property execution failed: $indexedFixture" }
 }
 $indexedNormal = Join-Path $output $(if ($IsWindows) { 'indexed-get-normal.exe' } else { 'indexed-get-normal' })
 dotnet $compiler compile (Join-Path $PSScriptRoot 'indexed-get-parity.xps') -o $indexedNormal --single-file=false --runtime=false
