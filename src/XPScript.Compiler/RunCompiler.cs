@@ -296,6 +296,12 @@ internal static class RunCompiler
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add(outputRoot);
         psi.ArgumentList.Add("--nologo");
+        // Keep generated-project builds isolated from runner-wide MSBuild/VBCS
+        // servers. This is required for reliable concurrent AST compiles on
+        // macOS, where a silent SDK exit otherwise leaves no diagnostic to map.
+        psi.ArgumentList.Add("-p:UseSharedCompilation=false");
+        psi.ArgumentList.Add("-p:BuildInParallel=false");
+        psi.ArgumentList.Add("-m:1");
         if (!(CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile))
             psi.ArgumentList.Add("--no-incremental");
         if (!CompilePublishLayoutContext.IncludeRuntime &&
