@@ -742,9 +742,13 @@ if (nothingObjectParser.Diagnostics.Count != 0 || nothingObjectBinder.Diagnostic
 var nothingVariantParser = new StatementParser("variantValue = Nothing");
 var nothingVariantSyntax = nothingVariantParser.ParseStatement();
 var nothingVariantBinder = new StatementBinder(specialValueSymbols);
-_ = nothingVariantBinder.Bind(nothingVariantSyntax);
-if (nothingVariantBinder.Diagnostics.Count != 1 || nothingVariantBinder.Diagnostics[0].Code != "XPS2001")
-    throw new InvalidOperationException("Variant = Nothing must remain invalid.");
+var boundNothingVariant = nothingVariantBinder.Bind(nothingVariantSyntax);
+if (nothingVariantBinder.Diagnostics.Count != 0 ||
+    boundNothingVariant is not BoundAssignmentStatement
+    {
+        Expression: BoundConversionExpression { Conversion.Kind: ConversionKind.NothingToVariant }
+    })
+    throw new InvalidOperationException("Variant = Nothing must bind as an explicit Variant conversion.");
 
 var nullScalarParser = new StatementParser("typedValue = Null");
 var nullScalarSyntax = nullScalarParser.ParseStatement();
