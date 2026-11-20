@@ -15,12 +15,14 @@ Sub Main()
     Set memory = snapshot.Memory
     software = inventory.FindInstalledSoftware("dotnet")
 
-    Print CStr(cpu.MaxClockMHz)
-    Print CStr(memory.TotalSwap)
+    Dim maxClock As Long
+    Dim totalSwap As Long
+    maxClock = cpu.MaxClockMHz
+    totalSwap = memory.TotalSwap
     Forall diskEntry In inventory.GetPhysicalDisks()
         Dim disk As SystemInventoryPhysicalDiskInfo
         Set disk = diskEntry
-        Print CStr(disk.IsRemovable)
+        If disk.IsRemovable Then maxClock = maxClock + 0
     End Forall
 
     If inventory.IsSoftwareInstalled("dotnet") Or Not (systemInfo.Is64BitProcess Or Not systemInfo.Is64BitProcess) Then
