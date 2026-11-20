@@ -17,6 +17,7 @@ $corpus = @(rg --files -g '*.xps' -g '*.cs' -g '*.md' -g '!out/**' -g '!**/bin/*
 $corpusText = (($corpus | ForEach-Object { Get-Content -LiteralPath $_ -Raw }) -join "`n")
 $fixtureFiles = @(rg --files tests samples demo -g '*.xps' 2>$null | ForEach-Object { Join-Path $Root $_ })
 $fixtureText = (($fixtureFiles | ForEach-Object { Get-Content -LiteralPath $_ -Raw }) -join "`n")
+$fixtureCode = (($fixtureText -split "`r?`n" | Where-Object { $_ -notmatch '^\s*''' }) -join "`n")
 $members = [System.Collections.Generic.List[object]]::new()
 foreach ($relative in $docs) {
     $path = Join-Path $Root $relative
@@ -42,13 +43,13 @@ foreach ($item in $unique) {
     $found = $false
     $found = $corpusText -match "(?i)\b$needle\b"
     if (-not $found) { $missing += $item }
-    if ($fixtureText -notmatch "(?i)\b$needle\b") { $uninvoked += $item }
+    if ($fixtureCode -notmatch "(?i)\b$needle\b") { $uninvoked += $item }
 }
 Write-Host ("API_SURFACE_DOCUMENTED_MEMBERS=" + $unique.Count)
 Write-Host ("API_SURFACE_MEMBER_REFERENCES_FOUND=" + ($unique.Count - $missing.Count))
 Write-Host ("API_SURFACE_MEMBER_REFERENCES_MISSING=" + $missing.Count)
 foreach ($item in $missing) { Write-Host ("API_SURFACE_MISSING=" + $item.Doc + ':' + $item.Member) }
-Write-Host ("API_SURFACE_MEMBERS_WITHOUT_XPS_FIXTURE_REFERENCE=" + $uninvoked.Count)
+Write-Host ("API_SURFACE_MEMBERS_WITHOUT_EXECUTABLE_XPS_REFERENCE=" + $uninvoked.Count)
 foreach ($item in $uninvoked) { Write-Host ("API_SURFACE_UNINVOKED=" + $item.Doc + ':' + $item.Member) }
 if ($missing.Count -gt 0 -or $uninvoked.Count -gt 0) { exit 1 }
 Write-Host 'API_SURFACE_AUDIT_OK'
