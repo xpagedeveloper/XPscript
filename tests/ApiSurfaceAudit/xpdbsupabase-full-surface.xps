@@ -1,0 +1,51 @@
+Option Declare
+
+Sub Main()
+    Dim db As New XPDBSupabase("postgresql://user:password@127.0.0.1:5432/demo")
+    Dim rest As XPDBSupabase
+    Dim data As New XPJsonObject
+    Dim args As New XPJsonObject
+    Dim doc As XPJsonDocument
+    Dim value As Variant
+    Dim text As String
+    Dim openState As Boolean
+    Dim timeout As Double
+
+    text = db.Mode
+    openState = db.IsOpen
+    text = db.Database
+    text = db.BaseUrl
+    text = db.Schema
+    text = db.CertificateValidation
+    timeout = db.Timeout
+    db.CertificateValidation = "strict"
+    db.Timeout = 10
+    db.MaxRows = 100
+    Call db.Open()
+    Call db.Execute("select 1")
+    Call db.Execute("select 1", data)
+    Set doc = db.Query("select 1")
+    Set doc = db.Query("select 1", data)
+    value = db.Scalar("select 1")
+    value = db.Scalar("select 1", data)
+    Call db.BeginTransaction()
+    Call db.Commit()
+    Call db.BeginTransaction()
+    Call db.Rollback()
+    Call db.Close()
+    Call db.Dispose()
+
+    Set rest = New XPDBSupabase("http://127.0.0.1:18082", "api-key")
+    Call rest.SetApiKey("api-key-2")
+    Call rest.SetBearerToken("token")
+    Call rest.SetSchema("public")
+    text = rest.Eq("id", 1)
+    Set doc = rest.Select("people")
+    Set doc = rest.Select("people", "select=*")
+    Set doc = rest.Insert("people", data)
+    Set doc = rest.Upsert("people", data)
+    Set doc = rest.Update("people", text, data)
+    Set doc = rest.Delete("people", text)
+    Set doc = rest.Rpc("hello", args)
+    Print "XPDBSUPABASE_FULL_SURFACE=OK"
+End Sub

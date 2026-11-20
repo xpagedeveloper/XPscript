@@ -17,7 +17,7 @@ internal sealed class XPScriptDbMySql : XPScriptCaseInsensitiveDynamicObject, ID
     private MySqlConnector.MySqlConnection? _connection;
     private MySqlConnector.MySqlTransaction? _transaction;
     private double _timeout = 30;
-    private int _maxRows = 10_000;
+    private long _maxRows = 10_000;
 
     public XPScriptDbMySql(object? connectionString)
     {
@@ -79,7 +79,7 @@ internal sealed class XPScriptDbMySql : XPScriptCaseInsensitiveDynamicObject, ID
         }
     }
 
-    public int MaxRows
+    public long MaxRows
     {
         get
         {

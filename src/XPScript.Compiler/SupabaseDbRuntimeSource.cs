@@ -10,7 +10,7 @@ internal sealed class XPScriptDbSupabase : XPScriptCaseInsensitiveDynamicObject,
     private Npgsql.NpgsqlConnection? _connection;
     private Npgsql.NpgsqlTransaction? _transaction;
     private double _timeout = 30;
-    private int _maxRows = 10000;
+    private long _maxRows = 10000;
 
     public XPScriptDbSupabase(object? postgresConnectionString)
     {
@@ -46,7 +46,7 @@ internal sealed class XPScriptDbSupabase : XPScriptCaseInsensitiveDynamicObject,
         }
     }
 
-    public int MaxRows
+    public long MaxRows
     {
         get => _maxRows;
         set

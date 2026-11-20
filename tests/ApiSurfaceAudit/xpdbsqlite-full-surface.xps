@@ -14,6 +14,7 @@ Sub Main()
     openState = db.IsOpen
     txState = db.InTransaction
     db.Timeout = 15
+    db.MaxRows = 100
     Call db.Open()
     Call db.Execute("CREATE TABLE IF NOT EXISTS api_surface(id INTEGER PRIMARY KEY, name TEXT)")
     Call parameters.Set("name", "surface")

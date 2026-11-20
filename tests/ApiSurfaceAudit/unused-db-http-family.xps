@@ -1,0 +1,5 @@
+Option Declare
+
+Sub Main()
+    Print "UNUSED_DB_HTTP_FAMILY=OK"
+End Sub

@@ -17,7 +17,7 @@ internal sealed class XPScriptDbSqlite : XPScriptCaseInsensitiveDynamicObject, I
     private Microsoft.Data.Sqlite.SqliteConnection? _connection;
     private Microsoft.Data.Sqlite.SqliteTransaction? _transaction;
     private double _timeout = 30;
-    private int _maxRows = 10_000;
+    private long _maxRows = 10_000;
 
     public XPScriptDbSqlite(object? databasePath) : this(databasePath, false)
     {
@@ -67,7 +67,7 @@ internal sealed class XPScriptDbSqlite : XPScriptCaseInsensitiveDynamicObject, I
         }
     }
 
-    public int MaxRows
+    public long MaxRows
     {
         get
         {
