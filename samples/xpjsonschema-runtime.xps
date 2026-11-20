@@ -312,12 +312,12 @@ Sub Main()
     ' Exercise the machine-readable builder surface used by IntelliSense.
     Dim builderSurface As New XPJsonSchema
     Dim childSurface As New XPJsonSchema
-    Call childSurface.AddString("value")
+    Call childSurface.AddString("value", False)
     Call builderSurface.AddProperty("child", childSurface)
     Call builderSurface.AddJson("jsonValue", "{""enabled"":true}")
-    Call builderSurface.AddNumber("count")
-    Call builderSurface.AddObject("metadata")
-    Call builderSurface.AddArray("items", childSurface)
+    Call builderSurface.AddNumber("count", False)
+    Call builderSurface.AddObject("metadata", False)
+    Call builderSurface.AddArray("items", childSurface, False)
     Call builderSurface.Require("count")
     If Len(builderSurface.ToString()) = 0 Then Error 5, "Expected schema builder serialization"
 
