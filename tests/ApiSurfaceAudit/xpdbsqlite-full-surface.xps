@@ -1,0 +1,30 @@
+Option Declare
+
+Sub Main()
+    Dim db As New XPDBSQLite("api-surface-sqlite.db")
+    Dim parameters As New XPJsonObject
+    Dim rows As XPJsonDocument
+
+    Dim path As String
+    Dim ro As Boolean
+    Dim openState As Boolean
+    Dim txState As Boolean
+    path = db.DatabasePath
+    ro = db.ReadOnly
+    openState = db.IsOpen
+    txState = db.InTransaction
+    db.Timeout = 15
+    Call db.Open()
+    Call db.Execute("CREATE TABLE IF NOT EXISTS api_surface(id INTEGER PRIMARY KEY, name TEXT)")
+    Call parameters.Set("name", "surface")
+    Call db.Execute("INSERT INTO api_surface(name) VALUES ($name)", parameters)
+    Set rows = db.Query("SELECT id, name FROM api_surface", parameters)
+    Set rows = db.Query("SELECT id, name FROM api_surface")
+    Call db.BeginTransaction()
+    Call db.Commit()
+    Call db.BeginTransaction()
+    Call db.Rollback()
+    Call db.Close()
+    Call db.Dispose()
+    Print "XPDBSQLITE_FULL_SURFACE=OK"
+End Sub

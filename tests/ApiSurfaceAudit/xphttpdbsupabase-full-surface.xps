@@ -1,0 +1,37 @@
+Option Declare
+
+Sub Main()
+    Dim db As New XPHttpDbSupabase("http://127.0.0.1:18082", "test-key")
+    Dim data As New XPJsonObject
+    Dim args As New XPJsonObject
+    Dim doc As XPJsonDocument
+    Dim filter As String
+
+    Print db.BaseUrl
+    Print db.Schema
+    db.Timeout = 10
+    Print db.Timeout
+    db.CertificateValidation = "strict"
+    Print db.CertificateValidation
+    Call db.Open()
+    Call db.SetApiKey("test-key-2")
+    Call db.SetBearerToken("token")
+    Call db.SetSchema("public")
+    Call db.ConfigureCloudManagement("project", "access")
+    Call db.ConfigureSqlEndpoint("http://127.0.0.1:18082/sql", "admin")
+    filter = db.Eq("id", 1)
+    Set doc = db.Select("people")
+    Set doc = db.Select("people", "select=*")
+    Set doc = db.Insert("people", data)
+    Set doc = db.Upsert("people", data)
+    Set doc = db.Update("people", filter, data)
+    Set doc = db.Delete("people", filter)
+    Set doc = db.Rpc("hello", args)
+    Set doc = db.ExecuteSql("select 1")
+    Set doc = db.CreateTable("create table people(id int)")
+    Set doc = db.AlterTable("alter table people add name text")
+    Set doc = db.CreateView("create view people_view as select * from people")
+    Set doc = db.AlterView("alter view people_view as select id from people")
+    Call db.Close()
+    Print "XPHTTPDBSUPABASE_FULL_SURFACE=OK"
+End Sub
