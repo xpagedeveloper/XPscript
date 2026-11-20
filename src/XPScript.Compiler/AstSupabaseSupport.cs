@@ -11,6 +11,9 @@ internal static class AstSupabaseSupport
     [
         new("XPDbSupabase", "Open", "void", [], [], false, false, false),
         new("XPDbSupabase", "Close", "void", [], [], false, false, false),
+        new("XPDbSupabase", "BeginTransaction", "void", [], [], false, false, false),
+        new("XPDbSupabase", "Commit", "void", [], [], false, false, false),
+        new("XPDbSupabase", "Rollback", "void", [], [], false, false, false),
         new("XPDbSupabase", "Execute", "int", ["object"], ["sql"], false, false, false),
         new("XPDbSupabase", "Execute", "int", ["object", "object"], ["sql", "parameters"], false, false, false),
         new("XPDbSupabase", "Query", "XPJsonDocument", ["object"], ["sql"], false, false, false),
