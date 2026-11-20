@@ -48,4 +48,5 @@ Sub Main()
     values = inventory.FindInstalledSoftware("dotnet")
     Print CStr(inventory.IsSoftwareInstalled("dotnet"))
     Print systemInfo.MachineName & " " & cpu.Architecture & " " & CStr(memory.TotalPhysicalMemory)
+    Print CStr(memory.AvailablePhysicalMemory)
 End Sub

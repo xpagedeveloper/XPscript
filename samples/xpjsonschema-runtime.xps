@@ -309,5 +309,17 @@ Sub Main()
     Set dialectSchema = XPJsonSchema.Parse("{""$schema"":""https://json-schema.org/draft/2020-12/schema""}")
     If Not dialectSchema.IsValid(validJson) Then Error 5, "Expected $schema metadata not to invalidate an instance"
 
+    ' Exercise the machine-readable builder surface used by IntelliSense.
+    Dim builderSurface As New XPJsonSchema
+    Dim childSurface As New XPJsonSchema
+    Call childSurface.AddString("value")
+    Call builderSurface.AddProperty("child", childSurface)
+    Call builderSurface.AddJson("jsonValue", "{""enabled"":true}")
+    Call builderSurface.AddNumber("count")
+    Call builderSurface.AddObject("metadata")
+    Call builderSurface.AddArray("items", childSurface)
+    Call builderSurface.Require("count")
+    If Len(builderSurface.ToString()) = 0 Then Error 5, "Expected schema builder serialization"
+
     Print "XPJSONSCHEMA-RUNTIME=OK"
 End Sub
