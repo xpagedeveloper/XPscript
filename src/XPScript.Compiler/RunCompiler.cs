@@ -202,6 +202,8 @@ internal static class RunCompiler
                     await File.WriteAllTextAsync(programPath, DisableSourceMappings(generatedSource), cancellationToken).ConfigureAwait(false);
                     CompilerPathSecurity.HardenTemporaryFile(programPath);
                     var generatedBuild = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken, runtimeIdentifier).ConfigureAwait(false);
+                    if (diagnosticText.Length == 0)
+                        diagnosticText = (generatedBuild.Stdout + Environment.NewLine + generatedBuild.Stderr).Trim();
                     generatedDiagnostics = ParseGeneratedBuildDiagnostics(generatedBuild.Stdout + Environment.NewLine + generatedBuild.Stderr);
                 }
 
@@ -296,6 +298,7 @@ internal static class RunCompiler
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add(outputRoot);
         psi.ArgumentList.Add("--nologo");
+        psi.ArgumentList.Add("--disable-build-servers");
         // Keep generated-project builds isolated from runner-wide MSBuild/VBCS
         // servers. This is required for reliable concurrent AST compiles on
         // macOS, where a silent SDK exit otherwise leaves no diagnostic to map.
