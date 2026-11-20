@@ -1,5 +1,6 @@
 param(
-    [string]$Root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+    [string]$Root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path,
+    [string]$CompilerPath = (Join-Path (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -61,5 +62,20 @@ Write-Host ("API_SURFACE_MEMBER_REFERENCES_MISSING=" + $missing.Count)
 foreach ($item in $missing) { Write-Host ("API_SURFACE_MISSING=" + $item.Doc + ':' + $item.Member) }
 Write-Host ("API_SURFACE_MEMBERS_WITHOUT_EXECUTABLE_XPS_REFERENCE=" + $uninvoked.Count)
 foreach ($item in $uninvoked) { Write-Host ("API_SURFACE_UNINVOKED=" + $item.Doc + ':' + $item.Member) }
+$symbolMissing = @()
+if (Test-Path -LiteralPath $CompilerPath) {
+    $symbolJson = dotnet $CompilerPath symbols --result-format json 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        $symbols = @($symbolJson -join "`n" | ConvertFrom-Json)
+        foreach ($item in $unique) {
+            $leaf = ($item.Member -split '\.')[-1]
+            if (-not ($symbols | Where-Object { $_.name -eq $item.Member -or $_.name -match "\.$([regex]::Escape($leaf))$" })) {
+                $symbolMissing += $item
+            }
+        }
+    }
+}
+Write-Host ("API_SURFACE_SYMBOLS_MISSING=" + $symbolMissing.Count)
+foreach ($item in $symbolMissing) { Write-Host ("API_SURFACE_SYMBOL_MISSING=" + $item.Doc + ':' + $item.Member) }
 if ($missing.Count -gt 0 -or $uninvoked.Count -gt 0) { exit 1 }
 Write-Host 'API_SURFACE_AUDIT_OK'
