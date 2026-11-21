@@ -15,6 +15,7 @@ Sub Main()
     cert = db.CertificateValidation
     db.Timeout = 10
     db.CertificateValidation = "strict"
+    db.AllowPrivateNetwork = True
     Call db.SetBearerToken("token-2")
     Call db.SetDataSource("demo2")
     text = db.Login("user", "password")

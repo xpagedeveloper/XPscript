@@ -33,6 +33,7 @@ internal static class AstHttpDatabaseSupport
         new("XPHttpDbSupabase", "Schema", "string", [], [], false, true, false),
         new("XPHttpDbSupabase", "CertificateValidation", "string", [], [], false, true, true),
         new("XPHttpDbSupabase", "Timeout", "double", [], [], false, true, true),
+        new("XPHttpDbSupabase", "AllowPrivateNetwork", "bool", [], [], false, true, true),
         new("XPHttpDbDominoRest", "Login", "string", ["object", "object"], ["username", "password"], false, false, false),
         new("XPHttpDbDominoRest", "Logout", "void", [], [], false, false, false),
         new("XPHttpDbDominoRest", "CreateDocument", "XPJsonDocument", ["object"], ["data"], false, false, false),
@@ -51,7 +52,8 @@ internal static class AstHttpDatabaseSupport
         new("XPHttpDbDominoRest", "DataSource", "string", [], [], false, true, false),
         new("XPHttpDbDominoRest", "BearerToken", "string", [], [], false, true, false),
         new("XPHttpDbDominoRest", "CertificateValidation", "string", [], [], false, true, true),
-        new("XPHttpDbDominoRest", "Timeout", "double", [], [], false, true, true)
+        new("XPHttpDbDominoRest", "Timeout", "double", [], [], false, true, true),
+        new("XPHttpDbDominoRest", "AllowPrivateNetwork", "bool", [], [], false, true, true)
     ];
     internal static bool Uses(string source) => Names.Any(name => AstObjectSupportRegistry.UsesObject(source, name));
     internal static bool OwnsSymbol(string name) => Names.Any(n => name.Equals(n, StringComparison.OrdinalIgnoreCase) || name.StartsWith(n + ".", StringComparison.OrdinalIgnoreCase));

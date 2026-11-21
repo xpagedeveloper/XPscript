@@ -9,6 +9,7 @@ Sub Main()
     Dim doc As XPJsonDocument
 
     Call db.SetBearerToken("user-token")
+    db.AllowPrivateNetwork = True
     Call db.SetSchema("public")
     filter = db.Eq("id", 42)
     Call data.Set("id", 42)

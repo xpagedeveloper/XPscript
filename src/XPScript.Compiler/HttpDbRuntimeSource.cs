@@ -25,6 +25,7 @@ internal sealed class XPScriptHttpDbSupabase
 
     public double Timeout { get => _http.Timeout; set => _http.Timeout = value; }
     public string CertificateValidation { get => _http.CertificateValidation; set => _http.CertificateValidation = value; }
+    public bool AllowPrivateNetwork { get => _http.AllowPrivateNetwork; set => _http.AllowPrivateNetwork = value; }
     public string BaseUrl => _baseUrl;
     public string Schema => _schema;
     // HTTP connections are created per request; these lifecycle methods are
@@ -242,6 +243,7 @@ internal sealed class XPScriptHttpDbDominoRest
 
     public double Timeout { get => _http.Timeout; set => _http.Timeout = value; }
     public string CertificateValidation { get => _http.CertificateValidation; set => _http.CertificateValidation = value; }
+    public bool AllowPrivateNetwork { get => _http.AllowPrivateNetwork; set => _http.AllowPrivateNetwork = value; }
     public string BaseUrl => _serverBaseUrl;
     public string DataSource => _dataSource;
     public string BearerToken => _bearerToken;

@@ -12,6 +12,7 @@ Sub Main()
     db.Timeout = 10
     Print db.Timeout
     db.CertificateValidation = "strict"
+    db.AllowPrivateNetwork = True
     Print db.CertificateValidation
     Call db.Open()
     Call db.SetApiKey("test-key-2")

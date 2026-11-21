@@ -8,6 +8,7 @@ Sub Main()
     Dim token As String
     Dim unid As String
 
+    db.AllowPrivateNetwork = True
     token = db.Login("CN=Test User/O=Example", "secret")
     Call db.SetDataSource("demo")
     Call data.Set("Form", "Customer")
