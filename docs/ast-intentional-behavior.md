@@ -23,7 +23,6 @@ partial or misleading C# program for features whose lowering is not complete:
 
 - `On Error` and `Resume` statements;
 - `With` and implicit member access;
-- `GoSub`;
 - entry jumps into `For`/`ForAll` blocks;
 - List-element expressions passed directly to `ByRef` parameters;
 - truly unsupported syntax is reported as `XPS1012` rather than approximated.

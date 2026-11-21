@@ -1,6 +1,6 @@
 # AST GoSub lowering notes
 
-Status: top-level label blocks, nested control-flow calls, nested helper calls, loop calls and `On Error Resume Next` are implemented; labeled error-flow interaction remains open.
+Status: top-level label blocks, nested control-flow calls, nested helper calls, loop calls and `On Error`/`Resume` interaction are implemented.
 
 ## Current behavior
 
@@ -9,8 +9,8 @@ AST binder lowers top-level GoSub label blocks to local generated helper
 functions. Ordinary `GoTo` labels and procedure `Return` remain emitted by the
 AST path. GoSub inside nested control-flow is supported when the target is a
 top-level label, including calls from another GoSub helper. Interaction with
-`On Error Resume Next` is supported inside a helper. `On Error GoTo` and
-`Resume label` across extracted helper blocks remain deliberately deferred.
+`On Error Resume Next`, `On Error GoTo` and `Resume label` across extracted
+helper blocks are supported by the bounded error-flow emitter.
 
 The legacy compatibility transpiler uses a separate return stack per procedure.
 It pushes a generated return id before jumping to the label and pops that id at
@@ -42,9 +42,8 @@ unchanged.
 3. Bind `Return` in the extracted block to helper return and keep normal
    procedure returns unchanged.
 4. Add the sequential `multiple-gosub.xps` regression. (done)
-5. Handle nested GoSub and loops in a separate change. (done for helper calls,
-   loop calls and `On Error Resume Next`; labeled error-flow integration remains open)
-6. Handle `On Error`/`Resume` interaction in a separate change.
+5. Handle nested GoSub and loops in a separate change. (done)
+6. Handle `On Error`/`Resume` interaction in a separate change. (done)
 
 Do not replace GoSub with a normal top-level XPscript Function: that would
 change implicit local-variable access and would require changing existing
