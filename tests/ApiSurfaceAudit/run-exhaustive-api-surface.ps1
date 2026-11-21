@@ -20,7 +20,15 @@ $fixtures = @(
     'samples/ui-form-core.xps',
     'samples/uiform-extended-fields.xps',
     'tests/ast-compile-probe/ui-list-view-ast-core.xps',
-    'tests/ast-compile-probe/ui-list-view-event-dispatch.xps'
+    'tests/ast-compile-probe/ui-list-view-event-dispatch.xps',
+    'samples/networktools-native-runtime-test.xps',
+    'tests/ast-compile-probe/date-runtime-api-next.xps',
+    'tests/ast-compile-probe/database-attachments-next.xps',
+    'tests/ast-compile-probe/class-method-spreadsheet-next.xps',
+    'tests/ast-compile-probe/ai-native-metadata-next.xps',
+    'tests/ast-compile-probe/ai-tool-properties-next.xps',
+    'tests/ast-compile-probe/ai-tool-function-next.xps',
+    'tests/ast-compile-probe/ai-tool-lifecycle-next.xps'
 )
 foreach ($relative in $fixtures) {
     $path = Join-Path $Root $relative
