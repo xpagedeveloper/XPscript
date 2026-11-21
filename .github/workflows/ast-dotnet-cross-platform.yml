@@ -1,0 +1,64 @@
+name: AST .NET cross-platform matrix
+
+on:
+  push:
+    branches:
+      - investigate-ast-compiler
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ast-dotnet-cross-platform-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ast-runtime:
+    name: AST runtime (${{ matrix.os }}, .NET ${{ matrix.dotnet }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            dotnet: '10.0.x'
+            framework: '10'
+          - os: ubuntu-latest
+            dotnet: '11.0.x'
+            framework: '11'
+          - os: macos-latest
+            dotnet: '10.0.x'
+            framework: '10'
+          - os: macos-latest
+            dotnet: '11.0.x'
+            framework: '11'
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ matrix.dotnet }}
+
+      - name: Restore compiler
+        run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+
+      - name: Build compiler
+        run: dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+
+      - name: Run AST runtime smoke fixtures
+        shell: pwsh
+        run: |
+          $compiler = './src/XPScript.Compiler/bin/Release/net10.0/XPScript.Compiler.dll'
+          $fixtures = @(
+            './tests/ast-compile-probe/list-byval-element-runtime.xps',
+            './tests/ast-compile-probe/class-method-ui-native-signatures.xps',
+            './tests/ast-compile-probe/multidimensional-redim.xps'
+          )
+          foreach ($fixture in $fixtures) {
+            Write-Host "===== AST fixture: $fixture (.NET ${{ matrix.framework }}) ====="
+            dotnet $compiler ast-run $fixture --target-framework ${{ matrix.framework }} --security=off --no-daemon --debug
+            if ($LASTEXITCODE -ne 0) { throw "AST fixture failed: $fixture" }
+          }
