@@ -33,9 +33,12 @@ same structured diagnostic as the CLI.
 
 ## Deliberately deferred semantics
 
-Complete error-handler transfer semantics and class lowering stay deferred
-until their shared bound/runtime representations are available. These features
-must not be silently approximated with dynamic values or generated C# behavior.
+Complete error-handler transfer semantics and a small set of unknown native
+class-method signatures remain deferred until their shared bound/runtime
+representations are available. Constructors, fields, properties, methods,
+inheritance, `Parent`, arrays and supported native references are lowered by
+AST and covered by executable regressions. Unsupported signatures must not be
+silently approximated with dynamic values or generated C# behavior.
 
 AST image ownership also covers exception exits and evaluates replacements before
 recycling old images. The legacy image preprocessor's end-of-procedure cleanup

@@ -43,7 +43,8 @@ $fixtures = @(
     'tests/ast-compile-probe/resume-label-runtime.xps',
     'tests/ast-compile-probe/resume-current-next-runtime.xps',
     'tests/ast-compile-probe/redim-dynamic-nonzero-runtime.xps',
-    'tests/ast-compile-probe/multidimensional-redim.xps'
+    'tests/ast-compile-probe/multidimensional-redim.xps',
+    'tests/ast-compile-probe/class-method-parent-next.xps'
 )
 foreach ($relative in $fixtures) {
     $path = Join-Path $Root $relative
@@ -77,6 +78,10 @@ $multiDimensional = Join-Path $Root 'tests/ast-compile-probe/multidimensional-re
 $multiDimensionalOutput = @(& dotnet $CompilerPath run $multiDimensional --security=off 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0 -or ($multiDimensionalOutput -notmatch '1\r?\n4\r?\n11\r?\n22\r?\n1\r?\n5')) { throw 'Multidimensional ReDim runtime fixture failed.' }
 Write-Host 'AST_ARRAY_RUNTIME_OK=MultidimensionalReDim'
+$classParent = Join-Path $Root 'tests/ast-compile-probe/class-method-parent-next.xps'
+$classParentOutput = @(& dotnet $CompilerPath run $classParent --security=off 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0 -or ($classParentOutput -notmatch '(?m)^7\s*$')) { throw 'Class inheritance/Parent runtime fixture failed.' }
+Write-Host 'AST_CLASS_RUNTIME_OK=Inheritance+Parent'
 $applicationRuntimeFixtures = @(
     @{ Path = (Join-Path $Root 'samples/application-crypto.xps'); Marker = 'APPLICATION_CRYPTO_OK'; Name = 'Application.Crypto' },
     @{ Path = (Join-Path $Root 'samples/application-systemlog.xps'); Marker = 'APPLICATION-SYSTEMLOG=OK'; Name = 'Application.SystemLog' },
