@@ -51,6 +51,18 @@ $applicationNative = Join-Path $Root 'tests/ast-compile-probe/application-native
 $applicationNativeRun = @(& dotnet $CompilerPath run $applicationNative --security=off --Args 'Åsa "two words"' 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0 -or ($applicationNativeRun -notmatch 'APPLICATION_NATIVE_OK')) { throw 'Application native runtime fixture failed.' }
 Write-Host 'API_SURFACE_FIXTURE_RUNTIME_OK=Application'
+$applicationRuntimeFixtures = @(
+    @{ Path = (Join-Path $Root 'samples/application-crypto.xps'); Marker = 'APPLICATION_CRYPTO_OK'; Name = 'Application.Crypto' },
+    @{ Path = (Join-Path $Root 'samples/application-systemlog.xps'); Marker = 'APPLICATION-SYSTEMLOG=OK'; Name = 'Application.SystemLog' },
+    @{ Path = (Join-Path $Root 'samples/application-registry-secrets.xps'); Marker = 'REGISTRY=XPscript-registry-ok'; Name = 'Application.Registry+Secrets' }
+)
+foreach ($runtimeFixture in $applicationRuntimeFixtures) {
+    $runtimeOutput = @(& dotnet $CompilerPath run $runtimeFixture.Path --security=off 2>&1 | Out-String)
+    if ($LASTEXITCODE -ne 0 -or ($runtimeOutput -notmatch [regex]::Escape($runtimeFixture.Marker))) {
+        throw "Application runtime fixture failed: $($runtimeFixture.Name)"
+    }
+    Write-Host "API_SURFACE_FIXTURE_RUNTIME_OK=$($runtimeFixture.Name)"
+}
 $sqlite = Join-Path $Root 'tests/ApiSurfaceAudit/xpdbsqlite-full-surface.xps'
 $runOutput = @(& dotnet $CompilerPath run $sqlite --security=off 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0 -or ($runOutput -notmatch 'XPDBSQLITE_FULL_SURFACE=OK')) {
