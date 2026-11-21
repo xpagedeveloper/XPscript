@@ -41,7 +41,8 @@ $fixtures = @(
     'tests/ast-compile-probe/ai-tool-function-next.xps',
     'tests/ast-compile-probe/ai-tool-lifecycle-next.xps',
     'tests/ast-compile-probe/resume-label-runtime.xps',
-    'tests/ast-compile-probe/resume-current-next-runtime.xps'
+    'tests/ast-compile-probe/resume-current-next-runtime.xps',
+    'tests/ast-compile-probe/redim-dynamic-nonzero-runtime.xps'
 )
 foreach ($relative in $fixtures) {
     $path = Join-Path $Root $relative
@@ -67,6 +68,10 @@ $resumeCurrentNext = Join-Path $Root 'tests/ast-compile-probe/resume-current-nex
 $resumeCurrentNextOutput = @(& dotnet $CompilerPath run $resumeCurrentNext --security=off 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0 -or ($resumeCurrentNextOutput -notmatch 'RESUME_NEXT_RUNTIME=OK')) { throw 'Resume current/next runtime fixture failed.' }
 Write-Host 'AST_ERROR_FLOW_RUNTIME_OK=ResumeCurrent+ResumeNext'
+$redimNonZero = Join-Path $Root 'tests/ast-compile-probe/redim-dynamic-nonzero-runtime.xps'
+$redimNonZeroOutput = @(& dotnet $CompilerPath run $redimNonZero --security=off 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0 -or ($redimNonZeroOutput -notmatch 'REDIM_DYNAMIC_NONZERO_RUNTIME=OK')) { throw 'Dynamic non-zero ReDim runtime fixture failed.' }
+Write-Host 'AST_ARRAY_RUNTIME_OK=DynamicNonZeroReDim'
 $applicationRuntimeFixtures = @(
     @{ Path = (Join-Path $Root 'samples/application-crypto.xps'); Marker = 'APPLICATION_CRYPTO_OK'; Name = 'Application.Crypto' },
     @{ Path = (Join-Path $Root 'samples/application-systemlog.xps'); Marker = 'APPLICATION-SYSTEMLOG=OK'; Name = 'Application.SystemLog' },

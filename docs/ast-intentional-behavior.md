@@ -26,7 +26,6 @@ partial or misleading C# program for features whose lowering is not complete:
 - `GoSub`;
 - entry jumps into `For`/`ForAll` blocks;
 - List-element expressions passed directly to `ByRef` parameters;
-- unsupported dynamic non-zero `ReDim` bounds;
 - multidimensional array shapes.
 
 The diagnostic keeps the XPscript filename and source span. MCP exposes the
