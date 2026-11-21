@@ -57,6 +57,9 @@ $appSession = Join-Path $Root 'tests/ApiSurfaceAudit/application-session-combine
 & dotnet $CompilerPath compile $appSession --security=off
 if ($LASTEXITCODE -ne 0) { throw 'Combined Application/Session fixture failed.' }
 Write-Host 'API_SURFACE_FIXTURE_COMBINED_COMPILE_OK=Application+Session'
+$appSessionRun = @(& dotnet $CompilerPath run $appSession --security=off 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0 -or ($appSessionRun -notmatch 'APPLICATION_SESSION_COMBINED=OK')) { throw 'Combined Application/Session runtime fixture failed.' }
+Write-Host 'API_SURFACE_FIXTURE_COMBINED_RUNTIME_OK=Application+Session'
 $combined = Join-Path $Root 'tests/ApiSurfaceAudit/httpdb-domino-supabase-combined.xps'
 & dotnet $CompilerPath compile $combined --security=off
 if ($LASTEXITCODE -ne 0) { throw 'Combined Domino/Supabase fixture failed.' }
@@ -65,6 +68,9 @@ $uiCombined = Join-Path $Root 'tests/ApiSurfaceAudit/uiform-uijson-combined.xps'
 & dotnet $CompilerPath compile $uiCombined --security=off
 if ($LASTEXITCODE -ne 0) { throw 'Combined UIForm/UIListView/XPJson fixture failed.' }
 Write-Host 'API_SURFACE_FIXTURE_COMBINED_COMPILE_OK=UIForm+UIListView+XPJson'
+$uiCombinedRun = @(& dotnet $CompilerPath run $uiCombined --security=off 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0 -or ($uiCombinedRun -notmatch 'UIFORM_UILISTVIEW_XPJSON_COMBINED=OK')) { throw 'Combined UIForm/UIListView/XPJson runtime fixture failed.' }
+Write-Host 'API_SURFACE_FIXTURE_COMBINED_RUNTIME_OK=UIForm+UIListView+XPJson'
 $unused = Join-Path $Root 'tests/ApiSurfaceAudit/unused-db-http-family.xps'
 $unusedOutput = @(& dotnet $CompilerPath compile $unused --security=off --info 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0) { throw 'Unused-family fixture failed.' }
