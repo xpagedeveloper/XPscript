@@ -22,7 +22,12 @@ internal static class AstClassMethodSupport
         AstSpreadsheetSupport.IsSpreadsheet(name) || AstHttpSupport.IsHttp(name) ||
         new[] { "XPDBSQLite", "XPDbMySql", "XPDbMsSql", "XPDbSupabase", "XPSupabaseDB" }
             .Contains(name, StringComparer.OrdinalIgnoreCase) ||
-        AstObjectSupportRegistry.SupportsClassMethodNativeType(name);
+        AstObjectSupportRegistry.SupportsClassMethodNativeType(name) ||
+        name is not null && (AstUiFormSupport.RuntimeType(name) is not null ||
+            AstUiListViewSupport.RuntimeType(name) is not null) ||
+        // The runtime registry is the source of truth for newer native families
+        // (for example UIForm/UIListView); do not maintain a second allow-list.
+        name is not null && BoundExpressionEmitter.RuntimeObjectType(name) is not null;
 
     internal static XpTypeSymbol DeclaredType(TypeSyntax? syntax, SymbolTable symbols)
     {

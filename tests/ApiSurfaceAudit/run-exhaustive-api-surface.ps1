@@ -44,7 +44,8 @@ $fixtures = @(
     'tests/ast-compile-probe/resume-current-next-runtime.xps',
     'tests/ast-compile-probe/redim-dynamic-nonzero-runtime.xps',
     'tests/ast-compile-probe/multidimensional-redim.xps',
-    'tests/ast-compile-probe/class-method-parent-next.xps'
+    'tests/ast-compile-probe/class-method-parent-next.xps',
+    'tests/ast-compile-probe/class-method-ui-native-signatures.xps'
 )
 foreach ($relative in $fixtures) {
     $path = Join-Path $Root $relative
