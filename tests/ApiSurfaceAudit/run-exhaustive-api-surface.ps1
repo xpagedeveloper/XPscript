@@ -34,11 +34,12 @@ foreach ($relative in $fixtures) {
     $path = Join-Path $Root $relative
     Write-Host "API_SURFACE_FIXTURE_START=$relative"
     if ($relative -eq 'samples/web-session-api.xps') {
-        & dotnet $CompilerPath compile $path --target webiis --runtime false --security=off
+        $webOutput = @(& dotnet $CompilerPath compile $path --target webiis --runtime false --security=off 2>&1 | Out-String)
+        if (($webOutput -join "`n") -notmatch 'AST webiis package succeeded') { throw "Fixture failed: $relative" }
     } else {
         & dotnet $CompilerPath compile $path --security=off
+        if ($LASTEXITCODE -ne 0) { throw "Fixture failed: $relative" }
     }
-    if ($LASTEXITCODE -ne 0) { throw "Fixture failed: $relative" }
     Write-Host "API_SURFACE_FIXTURE_COMPILE_OK=$relative"
 }
 $sqlite = Join-Path $Root 'tests/ApiSurfaceAudit/xpdbsqlite-full-surface.xps'
