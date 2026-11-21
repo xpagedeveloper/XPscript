@@ -51,7 +51,7 @@ jobs:
       - name: Run AST runtime smoke fixtures
         shell: pwsh
         run: |
-          $compiler = './src/XPScript.Compiler/bin/Release/net10.0/XPScript.Compiler.dll'
+          $compiler = './src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
           $fixtures = @(
             './tests/ast-compile-probe/list-byval-element-runtime.xps',
             './tests/ast-compile-probe/class-method-ui-native-signatures.xps',
