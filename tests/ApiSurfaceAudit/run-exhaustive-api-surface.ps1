@@ -4,6 +4,11 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$auditOutput = @(& pwsh -NoProfile -File (Join-Path $PSScriptRoot 'run-api-surface-audit.ps1') 2>&1 | Out-String)
+if (($auditOutput -join "`n") -notmatch 'API_SURFACE_AUDIT_OK' -or ($auditOutput -join "`n") -notmatch 'API_SURFACE_GENERATED_FIXTURES=299') {
+    throw 'Documented API surface generation audit failed.'
+}
+Write-Host 'API_SURFACE_GENERATION_AUDIT_OK'
 $temp = Join-Path $Root 'out/api-surface-temp'
 New-Item -ItemType Directory -Force -Path $temp | Out-Null
 $env:XPSCRIPT_TEMP_ROOT = $temp

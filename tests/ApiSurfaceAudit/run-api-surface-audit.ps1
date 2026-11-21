@@ -44,6 +44,7 @@ foreach ($relative in $docs) {
 $unique = $members | Sort-Object Member,Doc -Unique
 $missing = @()
 $uninvoked = @()
+$generatedFixtures = [System.Collections.Generic.List[object]]::new()
 foreach ($item in $unique) {
     $needle = [regex]::Escape(($item.Member -split '\.')[-1])
     $found = $false
@@ -58,12 +59,32 @@ foreach ($item in $unique) {
     $isCall = $fixtureCode -match "(?i)\b$escapedMember\s*\("
     $isProperty = $fixtureCode -match "(?im)(?<![A-Za-z0-9_])$escapedMember(?![A-Za-z0-9_])\s*(?:=|\.|\r?$)|(?im)(?:=|\.|\()\s*$escapedMember(?![A-Za-z0-9_])"
     if (-not ($isCall -or $isProperty)) { $uninvoked += $item }
+    else {
+        $fixture = $fixtureFiles | Where-Object {
+            $text = Get-Content -LiteralPath $_ -Raw
+            $code = ($text -split "`r?`n" | Where-Object { $_ -notmatch '^\s*''' }) -join "`n"
+            $code -match "(?i)\b$escapedMember\s*\(" -or
+            $code -match "(?im)(?<![A-Za-z0-9_])$escapedMember(?![A-Za-z0-9_])\s*(?:=|\.|\r?$)|(?im)(?:=|\.|\()\s*$escapedMember(?![A-Za-z0-9_])"
+        } | Select-Object -First 1
+        if ($fixture) {
+            $generatedFixtures.Add([pscustomobject]@{
+                qualified = $item.Qualified
+                documentedIn = $item.Doc
+                fixture = [IO.Path]::GetRelativePath($Root, $fixture)
+                invocationKind = if ($isCall) { 'call' } else { 'property' }
+            })
+        }
+    }
 }
+$generatedPath = Join-Path $Root 'out/api-surface-generated-fixtures.json'
+New-Item -ItemType Directory -Force -Path (Split-Path $generatedPath) | Out-Null
+$generatedFixtures | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $generatedPath -Encoding UTF8
 Write-Host ("API_SURFACE_DOCUMENTED_MEMBERS=" + $unique.Count)
 Write-Host ("API_SURFACE_MEMBER_REFERENCES_FOUND=" + ($unique.Count - $missing.Count))
 Write-Host ("API_SURFACE_MEMBER_REFERENCES_MISSING=" + $missing.Count)
 foreach ($item in $missing) { Write-Host ("API_SURFACE_MISSING=" + $item.Doc + ':' + $item.Member) }
 Write-Host ("API_SURFACE_MEMBERS_WITHOUT_EXECUTABLE_XPS_REFERENCE=" + $uninvoked.Count)
+Write-Host ("API_SURFACE_GENERATED_FIXTURES=" + $generatedFixtures.Count)
 foreach ($item in $uninvoked) { Write-Host ("API_SURFACE_UNINVOKED=" + $item.Doc + ':' + $item.Member) }
 $symbolMissing = @()
 if (Test-Path -LiteralPath $CompilerPath) {
@@ -89,5 +110,5 @@ if (Test-Path -LiteralPath $CompilerPath) {
 }
 Write-Host ("API_SURFACE_SYMBOLS_MISSING=" + $symbolMissing.Count)
 foreach ($item in $symbolMissing) { Write-Host ("API_SURFACE_SYMBOL_MISSING=" + $item.Doc + ':' + $item.Member) }
-if ($missing.Count -gt 0 -or $uninvoked.Count -gt 0) { exit 1 }
+if ($missing.Count -gt 0 -or $uninvoked.Count -gt 0 -or $generatedFixtures.Count -ne $unique.Count) { exit 1 }
 Write-Host 'API_SURFACE_AUDIT_OK'
