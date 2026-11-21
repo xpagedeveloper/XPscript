@@ -2,7 +2,9 @@ param(
     [string]$CompilerPath
 )
 
-$ErrorActionPreference = 'Stop'
+# Native dotnet diagnostics written to stderr are surfaced as PowerShell errors;
+# this suite intentionally invokes failing commands and checks their exit codes.
+$ErrorActionPreference = 'Continue'
 $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $compiler = if ([string]::IsNullOrWhiteSpace($CompilerPath)) {
     Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
@@ -36,8 +38,12 @@ if ($LASTEXITCODE -ne 0 -or $validateOutput -notlike '*"result": "ok"*') {
     throw "Case-insensitive validate option regression: $validateOutput"
 }
 
+$previousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 $astHelp = (dotnet $compiler ast-compile 2>&1 | Out-String)
-if ($LASTEXITCODE -ne 1 -or $astHelp -notlike '*ast-compile requires an .xps source file*') {
+$astHelpExitCode = $LASTEXITCODE
+$ErrorActionPreference = $previousErrorActionPreference
+if ($astHelpExitCode -ne 1 -or $astHelp -notlike '*ast-compile requires an .xps source file*') {
     throw 'AST command argument handling regression.'
 }
 
@@ -145,16 +151,22 @@ if ($LASTEXITCODE -ne 0 -or $singleFileText -notlike '*AST compilation succeeded
 }
 
 $hostArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
-$hostRid = if ($IsWindows) { "win-$hostArchitecture" } elseif ($IsMacOS) { "osx-$hostArchitecture" } else { "linux-$hostArchitecture" }
-$hostExecutableName = if ($IsWindows) { 'Generated.exe' } else { 'Generated' }
+$isWindowsHost = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+$isMacHost = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::OSX)
+$hostRid = if ($isWindowsHost) { "win-$hostArchitecture" } elseif ($isMacHost) { "osx-$hostArchitecture" } else { "linux-$hostArchitecture" }
+$hostExecutableName = if ($isWindowsHost) { 'Generated.exe' } else { 'Generated' }
 $frameworkSingleFileOutput = Join-Path $resultRoot 'framework-single-file'
 $frameworkSingleFileText = dotnet $compiler ast-compile $astSource -o $frameworkSingleFileOutput --runtime=false --single-file=true --rid $hostRid | Out-String
 if ($LASTEXITCODE -ne 0 -or $frameworkSingleFileText -notlike '*AST compilation succeeded*' -or
     -not (Test-Path (Join-Path $frameworkSingleFileOutput $hostExecutableName))) {
     throw "AST framework-dependent single-file regression: $frameworkSingleFileText"
 }
-$singleFileRunOutput = & (Join-Path $frameworkSingleFileOutput $hostExecutableName) | Out-String
-if ($LASTEXITCODE -ne 0 -or $singleFileRunOutput -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $singleFileRunOutput -notlike '*APPLICATION_NEWLINE_END*') {
+$singleFileRunPath = Join-Path $frameworkSingleFileOutput $hostExecutableName
+$singleFileRunLog = Join-Path $frameworkSingleFileOutput 'run-output.log'
+$singleFileRunErrorLog = Join-Path $frameworkSingleFileOutput 'run-error.log'
+$singleFileRunProcess = Start-Process -FilePath $singleFileRunPath -Wait -PassThru -NoNewWindow -RedirectStandardOutput $singleFileRunLog -RedirectStandardError $singleFileRunErrorLog
+$singleFileRunOutput = if (Test-Path $singleFileRunLog) { Get-Content $singleFileRunLog -Raw } else { '' }
+if ($singleFileRunProcess.ExitCode -ne 0 -or $singleFileRunOutput -notlike '*APPLICATION_NEWLINE_BEGIN*' -or $singleFileRunOutput -notlike '*APPLICATION_NEWLINE_END*') {
     throw "AST framework-dependent single-file execution regression: $singleFileRunOutput"
 }
 
