@@ -117,7 +117,10 @@ public sealed class BoundStatementEmitter
                 var targetText = _expressions.Emit(assignment.Target);
                 var expressionText = ImageStorageValue(assignment);
                 if (assignment.Target is BoundMemberAccessExpression property)
+                {
                     expressionText = AstApplicationSupport.ConvertPropertyValue(property.Receiver.SemanticType.Name, property.Name, expressionText);
+                    expressionText = AstUiFormSupport.ConvertPropertyValue(property.Receiver.SemanticType.Name, property.Name, expressionText);
+                }
                 if (BoundExpressionEmitter.RuntimeObjectType(assignment.Target.SemanticType.Name) is { } targetJsonType)
                     expressionText = $"({targetJsonType})({expressionText})";
                 if (assignment.Target is BoundMemberAccessExpression { Receiver.SemanticType.IsVariant: true })

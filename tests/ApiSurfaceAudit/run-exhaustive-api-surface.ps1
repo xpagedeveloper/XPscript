@@ -16,7 +16,11 @@ $fixtures = @(
     'samples/application-crypto.xps',
     'samples/application-systemlog.xps',
     'samples/application-registry-secrets.xps',
-    'samples/web-session-api.xps'
+    'samples/web-session-api.xps',
+    'samples/ui-form-core.xps',
+    'samples/uiform-extended-fields.xps',
+    'tests/ast-compile-probe/ui-list-view-ast-core.xps',
+    'tests/ast-compile-probe/ui-list-view-event-dispatch.xps'
 )
 foreach ($relative in $fixtures) {
     $path = Join-Path $Root $relative
@@ -43,6 +47,10 @@ $combined = Join-Path $Root 'tests/ApiSurfaceAudit/httpdb-domino-supabase-combin
 & dotnet $CompilerPath compile $combined --security=off
 if ($LASTEXITCODE -ne 0) { throw 'Combined Domino/Supabase fixture failed.' }
 Write-Host 'API_SURFACE_FIXTURE_COMBINED_COMPILE_OK=Domino+Supabase+XPJson'
+$uiCombined = Join-Path $Root 'tests/ApiSurfaceAudit/uiform-uijson-combined.xps'
+& dotnet $CompilerPath compile $uiCombined --security=off
+if ($LASTEXITCODE -ne 0) { throw 'Combined UIForm/UIListView/XPJson fixture failed.' }
+Write-Host 'API_SURFACE_FIXTURE_COMBINED_COMPILE_OK=UIForm+UIListView+XPJson'
 $unused = Join-Path $Root 'tests/ApiSurfaceAudit/unused-db-http-family.xps'
 $unusedOutput = @(& dotnet $CompilerPath compile $unused --security=off --info 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0) { throw 'Unused-family fixture failed.' }
@@ -50,4 +58,8 @@ if (($unusedOutput -join "`n") -match 'SQLite|Npgsql|MySqlConnector|Microsoft.Da
     throw 'Unused database dependencies were staged for a source that uses no database objects.'
 }
 Write-Host 'API_SURFACE_UNUSED_DB_HTTP_DEPENDENCIES_PRUNED=OK'
+$unusedUi = Join-Path $Root 'tests/ApiSurfaceAudit/unused-ui-family.xps'
+& dotnet $CompilerPath compile $unusedUi --security=off --info *> $null
+if ($LASTEXITCODE -ne 0) { throw 'Unused UI fixture failed.' }
+Write-Host 'API_SURFACE_UNUSED_UI_DEPENDENCIES_PRUNED=OK'
 Write-Host 'API_SURFACE_FIXTURE_BATCH_OK'

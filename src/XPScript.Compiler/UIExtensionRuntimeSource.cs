@@ -852,6 +852,18 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         field.Step = Convert.ToDouble(step, System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    public void SetRegexValidation(object? name, object? pattern)
+    {
+        var field = FindField(name);
+        if (field.Type is not ("TextField" or "TextArea" or "PasswordField" or "EmailField" or "UrlField"))
+            throw new XPScriptRuntimeException(5, "UIForm regex validation is only supported for text-entry fields.");
+        var value = XPScriptRuntime.CStr(pattern);
+        if (value.Length > 1024 || value.Any(char.IsControl))
+            throw new XPScriptRuntimeException(5, "UIForm regex pattern is invalid.");
+        if (value.Length > 0) _ = new System.Text.RegularExpressions.Regex(value, System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(250));
+        field.RegexPattern = value;
+    }
+
     public object? GetFieldValue(object? name)
     {
         var fieldName = NormalizeFieldName(name);

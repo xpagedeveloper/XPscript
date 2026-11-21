@@ -143,5 +143,8 @@ internal static class AstUiFormSupport
     internal static IEnumerable<CompilerSymbolDefinition> Catalog => AstNativeObjectSurface.Catalog(RuntimeTypes.Keys.ToArray(), Members, LanguageType);
     internal static string? RuntimeType(string name) => RuntimeTypes.GetValueOrDefault(name);
     internal static void Import(SymbolTable symbols) => AstNativeObjectSurface.Import(symbols, Members, LanguageType);
+    internal static string ConvertPropertyValue(string owner, string name, string value) =>
+        owner.Equals("UIForm", StringComparison.OrdinalIgnoreCase) && name is "Width" or "Height" or "Top" or "Left" or "Right" or "Bottom"
+            ? $"checked((int)XPScriptRuntime.CLng({value}))" : value;
 
 }
