@@ -6,6 +6,10 @@ Class UiBridge
         ReturnList = Nothing
     End Function
 
+    Public Function ReturnEntries() As NotesViewEntryCollection
+        ReturnEntries = Nothing
+    End Function
+
 End Class
 
 Sub Main()

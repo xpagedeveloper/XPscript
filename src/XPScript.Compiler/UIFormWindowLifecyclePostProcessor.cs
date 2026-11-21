@@ -6,6 +6,44 @@ internal sealed class UIFormWindowLifecyclePostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
+        const string marker = "internal sealed partial class XPScriptUIForm";
+        var classStart = generated.IndexOf(marker, StringComparison.Ordinal);
+        if (classStart < 0) return generated;
+        var bodyStart = generated.IndexOf('{', classStart);
+        var classEnd = FindClassEnd(generated, bodyStart);
+        if (bodyStart < 0 || classEnd < 0) return generated;
+        var formSource = generated[classStart..classEnd];
+        var transformed = TransformForm(formSource);
+        return generated[..classStart] + transformed + generated[classEnd..];
+    }
+
+    private static int FindClassEnd(string source, int openingBrace)
+    {
+        if (openingBrace < 0) return -1;
+        var depth = 0;
+        var inString = false;
+        var escaped = false;
+        for (var i = openingBrace; i < source.Length; i++)
+        {
+            var c = source[i];
+            if (inString)
+            {
+                if (c == '"' && !escaped) inString = false;
+                escaped = c == '\\' && !escaped;
+                if (c != '\\') escaped = false;
+                continue;
+            }
+            if (c == '"') { inString = true; continue; }
+            if (c == '{') depth++;
+            else if (c == '}' && --depth == 0) return i + 1;
+        }
+        return -1;
+    }
+
+    private string TransformForm(string generated)
+    {
+        ArgumentNullException.ThrowIfNull(generated);
+
         if (!generated.Contains("private readonly string _instanceId", StringComparison.Ordinal))
             generated = ReplaceRequired(generated,
                 "    private readonly List<XPScriptUIField> _fields = [];\n    private readonly List<(string Name, string Command)> _mediaCommands = [];\n\n    internal XPScriptUIForm(string title, int? width, int? height, bool resizable)",
