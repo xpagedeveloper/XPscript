@@ -12,6 +12,12 @@ Write-Host 'API_SURFACE_GENERATION_AUDIT_OK'
 $temp = Join-Path $Root 'out/api-surface-temp'
 New-Item -ItemType Directory -Force -Path $temp | Out-Null
 $env:XPSCRIPT_TEMP_ROOT = $temp
+$staleHttpServers = Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+    Where-Object { $_.CommandLine -like '*tests/httpdb_mock_server.py*' }
+foreach ($stale in $staleHttpServers) {
+    Stop-Process -Id $stale.ProcessId -Force -ErrorAction SilentlyContinue
+}
+$httpRuntime = Join-Path $Root 'tests/ApiSurfaceAudit/run-http-runtime.py'
 $fixtures = @(
     'tests/ApiSurfaceAudit/xpdbsqlite-full-surface.xps',
     'tests/ApiSurfaceAudit/xphttpdbsupabase-full-surface.xps',
@@ -69,6 +75,9 @@ if ($LASTEXITCODE -ne 0 -or ($runOutput -notmatch 'XPDBSQLITE_FULL_SURFACE=OK'))
     throw 'SQLite full-surface runtime verification failed.'
 }
 Write-Host 'API_SURFACE_FIXTURE_RUNTIME_OK=XPDBSQLite'
+$httpOutput = @(& python $httpRuntime 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0 -or ($httpOutput -notmatch 'HTTP_RUNTIME_FIXTURE_BATCH_OK')) { throw 'HTTP database full-surface runtime verification failed.' }
+Write-Host 'API_SURFACE_FIXTURE_RUNTIME_OK=XPHttpDbSupabase+XPHttpDbDominoRest'
 $appSession = Join-Path $Root 'tests/ApiSurfaceAudit/application-session-combined.xps'
 & dotnet $CompilerPath compile $appSession --security=off
 if ($LASTEXITCODE -ne 0) { throw 'Combined Application/Session fixture failed.' }
