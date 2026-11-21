@@ -35,6 +35,8 @@ internal static class AstUiFormSupport
             ["object?"], ["modalValue"], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "Hide", "void",
             [], [], false, false, false))
+        .Append(new AstNativeObjectSurface.Member("UIForm", "IsDirty", "bool", [], [], false, true, false))
+        .Append(new AstNativeObjectSurface.Member("UIForm", "DirtyFields", "object", [], [], false, true, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "Navigate", "void",
             ["object?"], ["target"], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "Navigate", "void",

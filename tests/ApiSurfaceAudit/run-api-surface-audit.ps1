@@ -70,11 +70,18 @@ if (Test-Path -LiteralPath $CompilerPath) {
     $symbolJson = dotnet $CompilerPath symbols --result-format json 2>$null
     if ($LASTEXITCODE -eq 0) {
         $symbols = @($symbolJson -join "`n" | ConvertFrom-Json)
+        $symbolNames = @($symbols | ForEach-Object { [string]$_.name })
         foreach ($item in $unique) {
             $leaf = ($item.Member -split '\.')[-1]
             $qualified = [regex]::Escape($item.Qualified)
             $ownerAlias = [regex]::Escape(($item.Qualified -replace '^XP?', ''))
-            if (-not ($symbols | Where-Object { $_.name -eq $item.Qualified -or $_.name -match "\.$([regex]::Escape($leaf))$" -or $_.name -match "^(?:XP)?$ownerAlias$" })) {
+            $foundSymbol = $symbolNames | Where-Object {
+                $_ -ieq $item.Qualified -or
+                $_ -ieq $leaf -or
+                $_ -match "(?i)\.$([regex]::Escape($leaf))$" -or
+                $_ -match "(?i)^(?:XP)?$ownerAlias$"
+            }
+            if (-not $foundSymbol) {
                 $symbolMissing += $item
             }
         }
