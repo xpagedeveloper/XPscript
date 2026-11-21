@@ -62,6 +62,21 @@ jobs:
             --runtime=true --platform android-x64 --debug
           apk="$(find out/android-uiform-emulator -type f -name '*.apk' | head -n 1)"
           test -s "$apk"
+          keytool -genkeypair \
+            -keystore out/android-debug.keystore \
+            -storepass android \
+            -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          apksigner sign \
+            --ks out/android-debug.keystore \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            "$apk"
+          apksigner verify --verbose "$apk"
           cp "$apk" out/android-uiform-emulator.apk
       - uses: actions/upload-artifact@v4
         with:
@@ -91,10 +106,10 @@ jobs:
       - name: Run APK and verify logcat
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 30
           target: google_apis
           arch: x86_64
-          profile: pixel_2
+          profile: pixel_5
           disable-animations: false
           disable-linux-hw-accel: false
           pre-emulator-launch-script: '"$ANDROID_HOME/emulator/emulator" -accel-check'

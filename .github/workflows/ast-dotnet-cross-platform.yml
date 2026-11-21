@@ -40,7 +40,9 @@ jobs:
 
       - uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: ${{ matrix.dotnet }}
+          dotnet-version: |
+            10.0.404
+            ${{ matrix.dotnet }}
 
       - name: Restore compiler
         run: dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
@@ -59,6 +61,6 @@ jobs:
           )
           foreach ($fixture in $fixtures) {
             Write-Host "===== AST fixture: $fixture (.NET ${{ matrix.framework }}) ====="
-            dotnet exec $compiler ast-run $fixture --target-framework ${{ matrix.framework }} --security=off --no-daemon --debug
+            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-run $fixture --target-framework ${{ matrix.framework }} --security=off --no-daemon --debug
             if ($LASTEXITCODE -ne 0) { throw "AST fixture failed: $fixture" }
           }
