@@ -59,6 +59,6 @@ jobs:
           )
           foreach ($fixture in $fixtures) {
             Write-Host "===== AST fixture: $fixture (.NET ${{ matrix.framework }}) ====="
-            dotnet $compiler ast-run $fixture --target-framework ${{ matrix.framework }} --security=off --no-daemon --debug
+            dotnet exec $compiler ast-run $fixture --target-framework ${{ matrix.framework }} --security=off --no-daemon --debug
             if ($LASTEXITCODE -ne 0) { throw "AST fixture failed: $fixture" }
           }
