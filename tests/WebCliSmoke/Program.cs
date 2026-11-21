@@ -164,7 +164,7 @@ static async Task VerifyStaticWebAsync(string cliDll, string root)
 static async Task VerifyFastCgiAsync(string cliDll, string root)
 {
     var port = GetFreePort();
-    using var process = Start(cliDll, ["fastcgi", "--root", root, "--default-document", "home.xps", "--listen", $"127.0.0.1:{port}"]);
+    using var process = Start(cliDll, ["fastcgi", "--root", root, "--default-document", "home.xps", "--listen", $"127.0.0.1:{port}"], captureOutput: false);
     try
     {
         await WaitForTcpAsync(port, process, TimeSpan.FromSeconds(30));
@@ -177,13 +177,13 @@ static async Task VerifyFastCgiAsync(string cliDll, string root)
     }
 }
 
-static Process Start(string cliDll, IReadOnlyList<string> arguments)
+static Process Start(string cliDll, IReadOnlyList<string> arguments, bool captureOutput = true)
 {
     var start = new ProcessStartInfo("dotnet")
     {
         UseShellExecute = false,
-        RedirectStandardOutput = true,
-        RedirectStandardError = true,
+        RedirectStandardOutput = captureOutput,
+        RedirectStandardError = captureOutput,
         CreateNoWindow = true
     };
     start.ArgumentList.Add(cliDll);

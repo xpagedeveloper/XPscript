@@ -17,6 +17,11 @@ if (args.Contains("--headless-host-probe", StringComparer.Ordinal))
     await RunHeadlessHostProbe();
     return;
 }
+if (args.Contains("--headless-controls-probe", StringComparer.Ordinal))
+{
+    await RunHeadlessControlsProbe();
+    return;
+}
 if (args.Contains("--headless-ast-generated", StringComparer.Ordinal))
 {
     await RunHeadlessAstGeneratedProbe();
@@ -310,12 +315,13 @@ async Task RunHeadlessHostProbe()
 
     const string instanceId = "headless-uiform-probe";
     var request = "{\"instanceId\":\"" + instanceId + "\",\"title\":\"Headless probe\",\"fields\":[{\"name\":\"name\",\"label\":\"Name\",\"type\":\"TextField\"}]}";
+    DesktopApplicationHost.EnsureStarted();
     DesktopFormLifecycleHost.Show(request);
     Dispatcher.UIThread.Invoke(() =>
     {
         var window = DesktopFormLifecycleHost.GetWindowForTests(instanceId)
             ?? throw new InvalidOperationException("Headless UIForm window was not created.");
-        var text = window.GetVisualDescendants().OfType<TextBox>().Single();
+        var text = window.GetVisualDescendants().OfType<TextBox>().First();
         var close = window.GetVisualDescendants().OfType<Button>().Single();
         text.Focus();
         window.KeyTextInput("Alice");
@@ -327,7 +333,66 @@ async Task RunHeadlessHostProbe()
         throw new InvalidOperationException("Headless UIForm close action failed.");
     Console.WriteLine("HEADLESS_UIFORM_TEXT_OK");
     Console.WriteLine("HEADLESS_UIFORM_CLOSE_OK");
+    DesktopApplicationHost.SetProcessKeepAlive(false);
     await Task.CompletedTask;
+}
+
+async Task RunHeadlessControlsProbe()
+{
+    DesktopApplicationHost.TestConfigurator = builder => builder.UseHeadless(new AvaloniaHeadlessPlatformOptions());
+    const string instanceId = "headless-controls-probe";
+    var request = "{\"instanceId\":\"" + instanceId + "\",\"title\":\"Controls\",\"fields\":[" +
+        "{\"name\":\"name\",\"type\":\"TextField\"}," +
+        "{\"name\":\"enabled\",\"type\":\"CheckBox\"}," +
+        "{\"name\":\"mode\",\"type\":\"RadioGroup\",\"options\":[\"Basic\",\"Advanced\"]}," +
+        "{\"name\":\"color\",\"type\":\"Select\",\"options\":[\"Red\",\"Blue\"]}," +
+        "{\"name\":\"country\",\"type\":\"ListBox\",\"options\":[\"SE\",\"NO\",\"DK\"]}," +
+        "{\"name\":\"markets\",\"type\":\"MultiListBox\",\"options\":[\"EU\",\"US\",\"APAC\"]}]}";
+    DesktopApplicationHost.EnsureStarted();
+    var callbackEvents = new List<string>();
+    DesktopFormLifecycleHost.Show(request, (eventType, value) =>
+    {
+        callbackEvents.Add(eventType + "=" + value);
+        return "{}";
+    });
+    Window? controlsWindow = null;
+    for (var attempt = 0; attempt < 50 && controlsWindow is null; attempt++)
+    {
+        await Task.Delay(20);
+        controlsWindow = DesktopFormLifecycleHost.GetWindowForTests(instanceId);
+    }
+    Dispatcher.UIThread.Invoke(() =>
+    {
+        var window = controlsWindow ?? throw new InvalidOperationException("Controls window was not created.");
+        var text = window.GetVisualDescendants().OfType<TextBox>().First();
+        text.Text = "Alice";
+        var check = window.GetVisualDescendants().OfType<CheckBox>().Single();
+        check.IsChecked = true;
+        check.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        var radios = window.GetVisualDescendants().OfType<RadioButton>().ToArray();
+        radios.Single(x => Equals(x.Content, "Advanced")).IsChecked = true;
+        var combo = window.GetVisualDescendants().OfType<ComboBox>().Single();
+        combo.SelectedItem = "Blue";
+        var lists = window.GetVisualDescendants().OfType<ListBox>().ToArray();
+        lists[0].SelectedItem = "NO";
+        lists[1].SelectedItems!.Clear();
+        lists[1].SelectedItems!.Add("EU");
+        lists[1].SelectedItems!.Add("APAC");
+        if (text.Text != "Alice" || check.IsChecked != true || !radios.Single(x => Equals(x.Content, "Advanced")).IsChecked.GetValueOrDefault() ||
+            !Equals(combo.SelectedItem, "Blue") || !Equals(lists[0].SelectedItem, "NO") || lists[1].SelectedItems!.Count != 2)
+            throw new InvalidOperationException("One or more desktop control values were not applied.");
+        if (!callbackEvents.Any(x => x.StartsWith("change:", StringComparison.Ordinal)))
+            throw new InvalidOperationException("Desktop control callbacks were not dispatched.");
+        window.Close();
+    });
+    Console.WriteLine("HEADLESS_CONTROLS_TEXT_OK");
+    Console.WriteLine("HEADLESS_CONTROLS_CHECKBOX_OK");
+    Console.WriteLine("HEADLESS_CONTROLS_RADIO_OK");
+    Console.WriteLine("HEADLESS_CONTROLS_COMBO_OK");
+    Console.WriteLine("HEADLESS_CONTROLS_LISTBOX_OK");
+    Console.WriteLine("HEADLESS_CONTROLS_MULTILISTBOX_OK");
+    Console.WriteLine("HEADLESS_CONTROLS_CALLBACKS_OK");
+    DesktopApplicationHost.SetProcessKeepAlive(false);
 }
 
 async Task RunHeadlessAstGeneratedProbe()

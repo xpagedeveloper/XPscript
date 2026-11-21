@@ -30,13 +30,14 @@ internal static class AstUiFormSupport
     };
 
     internal static readonly AstNativeObjectSurface.Member[] Members = AstNativeObjectSurface
-        .ReadMembers(Classes, ["XPScriptUI", "XPScriptUIComponent", "XPScriptUIForm", "XPScriptUIField"], LanguageType)
+        .ReadMembers(Classes, ["XPScriptUI", "XPScriptUIComponent", "XPScriptUIForm", "XPScriptUIField", "XPScriptUIGrid", "XPScriptUITab", "XPScriptUIButton"], LanguageType)
         .Append(new AstNativeObjectSurface.Member("UIForm", "Show", "void",
             ["object?"], ["modalValue"], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "Hide", "void",
             [], [], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "IsDirty", "bool", [], [], false, true, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "DirtyFields", "object", [], [], false, true, false))
+        .Append(new AstNativeObjectSurface.Member("UIForm", "MarkClean", "void", [], [], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "Navigate", "void",
             ["object?"], ["target"], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "Navigate", "void",
@@ -76,6 +77,7 @@ internal static class AstUiFormSupport
             new AstNativeObjectSurface.Member("UIForm", "SetFieldTooltip", "void", ["object?", "object?"], ["name", "tooltip"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetOnChange", "void", ["object?", "object?"], ["name", "handlerName"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetOnChangeCallback", "void", ["object?", "object?", "object?"], ["name", "handlerName", "callbackArgument"], false, false, false),
+            new AstNativeObjectSurface.Member("UIForm", "SetOnChangeCallback", "void", ["object?", "object?", "object?", "object?"], ["name", "handlerName", "callbackArgument", "callbackArgument2"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetAutoCompleteProvider", "void", ["object?", "object?"], ["name", "handlerName"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetOnPlay", "void", ["object?", "object?"], ["name", "handlerName"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetOnPause", "void", ["object?", "object?"], ["name", "handlerName"], false, false, false),

@@ -276,6 +276,7 @@ public sealed class XpsBrowserWasmCompiler
 
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
+        CopySdkSelectionFile(workingDirectory);
         var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workingDirectory, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true }; foreach (var argument in arguments) psi.ArgumentList.Add(argument);
         // Keep generated SDK invocations isolated from the host profile. In
         // restricted Windows environments the default CLI telemetry lookup
@@ -287,6 +288,11 @@ public sealed class XpsBrowserWasmCompiler
         psi.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
         psi.Environment["DOTNET_NOLOGO"] = "1";
         using var process = Process.Start(psi) ?? throw new XpsWebCompilationException("Unable to start dotnet for browser-wasm compilation."); var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken); var stderr = process.StandardError.ReadToEndAsync(cancellationToken); await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false); var output = await stdout.ConfigureAwait(false) + Environment.NewLine + await stderr.ConfigureAwait(false); if (process.ExitCode != 0) { var details = Redact(output, workingDirectory); if (details.Contains("browser-wasm", StringComparison.OrdinalIgnoreCase) || details.Contains("wasm-tools", StringComparison.OrdinalIgnoreCase) || details.Contains("Microsoft.NETCore.App.Runtime.Mono.browser-wasm", StringComparison.OrdinalIgnoreCase)) throw new XpsWebCompilationException("Browser WASM requires the matching .NET WASM workload, but it is not available. XPScript does not install workloads; install it separately and retry." + Environment.NewLine + details); throw new XpsWebCompilationException("browser-wasm build failed." + Environment.NewLine + details); }
+    }
+    private static void CopySdkSelectionFile(string workingDirectory)
+    {
+        var source = Path.Combine(Directory.GetCurrentDirectory(), "global.json");
+        if (File.Exists(source)) File.Copy(source, Path.Combine(workingDirectory, "global.json"), overwrite: true);
     }
     private static string Redact(string value, string workspace) { var result = value.Replace(workspace, "<wasm-build>", StringComparison.OrdinalIgnoreCase); return result.Length <= 16_384 ? result : result[..16_384] + Environment.NewLine + "<diagnostics truncated>"; }
     private static void TryDelete(string path) { try { if (Directory.Exists(path)) Directory.Delete(path, true); } catch { } }

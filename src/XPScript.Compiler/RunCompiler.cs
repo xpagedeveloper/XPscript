@@ -417,6 +417,8 @@ internal static class RunCompiler
             : "  <ItemGroup>\n" + string.Join(Environment.NewLine, dependencies.Select(package =>
                 $"    <PackageReference Include=\"{EscapeXml(package.Name)}\" Version=\"{EscapeXml(package.Version)}\" />")) +
               "\n  </ItemGroup>\n";
+        if (Environment.GetEnvironmentVariable("XPSCRIPT_XAML_MCP") == "1")
+            packageItems += "  <ItemGroup>\n    <PackageReference Include=\"XamlMcp.Avalonia\" Version=\"1.0.0-preview.3\" PrivateAssets=\"all\" />\n  </ItemGroup>\n";
         if (IsAndroidRuntime(runtimeIdentifier) && dependencies.Any(package => package.Name == "Avalonia.Android"))
             packageItems += "  <ItemGroup>\n" +
                 "    <PackageReference Include=\"Xamarin.AndroidX.Tracing.Tracing\" Version=\"1.3.0.4\" />\n" +
@@ -487,6 +489,9 @@ internal static class RunCompiler
             "Avalonia.Themes.Fluent.dll",
             "Avalonia.Controls.WebView.dll"
         };
+        var xamlMcpEnabled = Environment.GetEnvironmentVariable("XPSCRIPT_XAML_MCP") == "1";
+        if (xamlMcpEnabled)
+            required = [.. required, "XamlMcp.Avalonia.dll"];
         foreach (var name in required)
         {
             var source = Path.Combine(directory, name);
@@ -504,6 +509,7 @@ internal static class RunCompiler
             {
                 var name = Path.GetFileName(path);
                 return name.Equals("XPScript.UI.Desktop.dll", StringComparison.OrdinalIgnoreCase) ||
+                       (xamlMcpEnabled && name.Equals("XamlMcp.Avalonia.dll", StringComparison.OrdinalIgnoreCase)) ||
                        name.StartsWith("Avalonia.", StringComparison.OrdinalIgnoreCase) ||
                        name.StartsWith("SkiaSharp", StringComparison.OrdinalIgnoreCase) ||
                        name.StartsWith("HarfBuzzSharp", StringComparison.OrdinalIgnoreCase) ||

@@ -1,4 +1,6 @@
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using System.Runtime.ExceptionServices;
 
@@ -111,6 +113,7 @@ internal static class DesktopApplicationHost
         Thread.CurrentThread.IsBackground = !keepAlive;
     }
 
+
     private static void Run()
     {
         try
@@ -132,6 +135,19 @@ internal static class DesktopApplicationHost
     {
         var builder = AppBuilder.Configure<XpsDesktopApplication>();
         builder = TestConfigurator?.Invoke(builder) ?? builder.UsePlatformDetect();
-        builder.SetupWithoutStarting();
+        if (OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable("XAML_MCP") == "1")
+        {
+            var assembly = System.Reflection.Assembly.Load("XamlMcp.Avalonia");
+            var extensions = assembly.GetType("XamlMcp.Avalonia.AttachExtensions", throwOnError: true)!;
+            var attach = extensions.GetMethod("AttachXamlMcp", [typeof(AppBuilder)])
+                ?? throw new InvalidOperationException("XamlMcp AttachXamlMcp extension is unavailable.");
+            builder = (AppBuilder)(attach.Invoke(null, [builder])
+                ?? throw new InvalidOperationException("XamlMcp AttachXamlMcp returned no AppBuilder."));
+        }
+        if (TestConfigurator is not null)
+            builder.SetupWithoutStarting();
+        else
+            _ = builder.SetupWithClassicDesktopLifetime(Array.Empty<string>(), desktop =>
+                desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown);
     }
 }

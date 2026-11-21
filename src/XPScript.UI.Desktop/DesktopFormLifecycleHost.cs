@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Windows.Input;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Threading;
@@ -9,6 +11,12 @@ namespace XPScript.UI.Desktop;
 
 public static class DesktopFormLifecycleHost
 {
+    private sealed class CallbackCommand(Action execute) : ICommand
+    {
+        public event EventHandler? CanExecuteChanged { add { } remove { } }
+        public bool CanExecute(object? parameter) => true;
+        public void Execute(object? parameter) => execute();
+    }
     public static void RunMacOS(Action script) => DesktopApplicationHost.RunMacOS(script);
     private static readonly ConcurrentDictionary<string, Window> Windows = new(StringComparer.Ordinal);
 
@@ -95,7 +103,7 @@ public static class DesktopFormLifecycleHost
             return;
         }
 
-        var panel = new StackPanel { Spacing = 8, Margin = new Avalonia.Thickness(16) };
+        var panel = new StackPanel { Spacing = 8, Margin = new Avalonia.Thickness(16), MinHeight = 400, VerticalAlignment = VerticalAlignment.Top };
         var editors = new Dictionary<string, Control>(StringComparer.OrdinalIgnoreCase);
         var fields = root.TryGetProperty("fields", out var fieldArray) && fieldArray.ValueKind == JsonValueKind.Array
             ? fieldArray.EnumerateArray().Select(x => x.Clone()).ToArray()
@@ -116,6 +124,103 @@ public static class DesktopFormLifecycleHost
             panel.Children.Add(wrap);
         }
 
+        void ApplyCallbackState(string stateJson)
+        {
+            if (string.IsNullOrWhiteSpace(stateJson)) return;
+            using var state = JsonDocument.Parse(stateJson);
+            if (!state.RootElement.TryGetProperty("fields", out var returnedFields) || returnedFields.ValueKind != JsonValueKind.Array) return;
+            foreach (var returned in returnedFields.EnumerateArray())
+            {
+                var name = Read(returned, "name", string.Empty);
+                if (!editors.TryGetValue(name, out var editor)) continue;
+                if (returned.TryGetProperty("value", out var value) && value.ValueKind == JsonValueKind.String)
+                {
+                    switch (editor)
+                    {
+                        case TextBox text: text.Text = value.GetString() ?? string.Empty; break;
+                        case ComboBox combo: combo.Text = value.GetString() ?? string.Empty; break;
+                        case CheckBox check: check.IsChecked = value.GetString()?.Equals("true", StringComparison.OrdinalIgnoreCase) == true; break;
+                        case ListBox list when list.SelectionMode == SelectionMode.Single:
+                            list.SelectedItem = value.GetString() ?? string.Empty;
+                            break;
+                    }
+                }
+                if (returned.TryGetProperty("values", out var values) && values.ValueKind == JsonValueKind.Array && editor is ListBox multiList)
+                {
+                    var selected = values.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.String)
+                        .Select(item => item.GetString() ?? string.Empty).ToHashSet(StringComparer.Ordinal);
+                    var selectedItems = multiList.SelectedItems;
+                    if (selectedItems is null) continue;
+                    selectedItems.Clear();
+                    foreach (var item in multiList.ItemsView.OfType<object>().Where(item => selected.Contains(item?.ToString() ?? string.Empty)))
+                        selectedItems.Add(item);
+                }
+                if (returned.TryGetProperty("enabled", out var enabled) && enabled.ValueKind is JsonValueKind.True or JsonValueKind.False)
+                    editor.IsEnabled = enabled.GetBoolean();
+            }
+        }
+
+        string SerializeEditorState()
+        {
+            var values = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in fields)
+            {
+                var name = Read(field, "name", string.Empty);
+                if (!editors.TryGetValue(name, out var editor)) continue;
+                var type = Read(field, "type", "TextField");
+                if (type.Equals("MultiListBox", StringComparison.OrdinalIgnoreCase) && editor is ListBox list)
+                {
+                    values[name] = list.SelectedItems?.Cast<object?>().Select(item => item?.ToString() ?? string.Empty).ToArray()
+                        ?? Array.Empty<string>();
+                }
+                else
+                {
+                    values[name] = ReadEditor(editor);
+                }
+            }
+            return JsonSerializer.Serialize(values);
+        }
+
+        if (root.TryGetProperty("buttons", out var buttonArray) && buttonArray.ValueKind == JsonValueKind.Array)
+        {
+            var actionButtons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Spacing = 8, Height = 40, MinHeight = 40 };
+            var buttonIndex = 0;
+            var automationNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var buttonDefinition in buttonArray.EnumerateArray())
+            {
+                var callbackName = Read(buttonDefinition, "name", string.Empty);
+                var buttonName = Read(buttonDefinition, "id", string.Empty);
+                if (buttonName.Length == 0) buttonName = callbackName;
+                if (buttonName.Length == 0) buttonName = $"button-{++buttonIndex}";
+                var baseName = buttonName;
+                var suffix = 2;
+                while (!automationNames.Add(buttonName)) buttonName = baseName + "-" + suffix++;
+                var button = new Button
+                {
+                    Content = Read(buttonDefinition, "label", buttonName),
+                    IsVisible = ReadBool(buttonDefinition, "visible", true),
+                    IsEnabled = ReadBool(buttonDefinition, "enabled", true),
+                    MinWidth = 80,
+                    MinHeight = 32,
+                    Height = 32
+                };
+                AutomationProperties.SetName(button, buttonName);
+                AutomationProperties.SetAutomationId(button, buttonName);
+                // The generated callback dispatcher first applies the submitted
+                // editor state so callbacks can read the current form values.
+                void InvokeCallback()
+                {
+                    if (Environment.GetEnvironmentVariable("XAML_MCP") == "1")
+                        button.Content = Read(buttonDefinition, "label", buttonName) + " (clicked)";
+                    var callbackState = eventCallback?.Invoke("button:" + callbackName, SerializeEditorState());
+                    if (callbackState is not null) ApplyCallbackState(callbackState);
+                }
+                button.Command = new CallbackCommand(InvokeCallback);
+                actionButtons.Children.Add(button);
+            }
+            if (actionButtons.Children.Count > 0) panel.Children.Add(actionButtons);
+        }
+
         var close = new Button { Content = "Close", HorizontalAlignment = HorizontalAlignment.Right, MinWidth = 80 };
         panel.Children.Add(close);
         var window = new Window
@@ -124,6 +229,7 @@ public static class DesktopFormLifecycleHost
             CanResize = ReadBool(root, "resizable", true),
             Width = ReadInt(root, "width", 640),
             Height = ReadInt(root, "height", 480),
+            Topmost = OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable("XAML_MCP") == "1",
             Content = new ScrollViewer { Content = panel }
         };
         ApplyPosition(window, root);
@@ -156,6 +262,11 @@ public static class DesktopFormLifecycleHost
 
         window.Opened += (_, _) =>
         {
+            if (Environment.GetEnvironmentVariable("XAML_MCP") == "1")
+            {
+                window.Activate();
+                window.Focus();
+            }
             DesktopAccessibilityHost.Register(instanceId, window, editors);
             var initialFocus = Read(root, "initialFocus", string.Empty);
             if (initialFocus.Length > 0 && editors.TryGetValue(initialFocus, out var initial)) initial.Focus();
@@ -165,6 +276,7 @@ public static class DesktopFormLifecycleHost
         };
 
         window.Show();
+        window.UpdateLayout();
         DesktopApplicationHost.SetProcessKeepAlive(true);
     }
 
@@ -205,6 +317,21 @@ public static class DesktopFormLifecycleHost
             var list = new ListBox { ItemsSource = options, IsEnabled = enabled, SelectionMode = type == "MultiListBox" ? SelectionMode.Multiple | SelectionMode.Toggle : SelectionMode.Single };
             if (type == "ListBox") list.SelectedItem = value;
             return list;
+        }
+        if (type is "RadioGroup" or "CheckBoxGroup")
+        {
+            var options = field.TryGetProperty("options", out var values) && values.ValueKind == JsonValueKind.Array
+                ? values.EnumerateArray().Select(x => x.GetString() ?? string.Empty).ToArray()
+                : Array.Empty<string>();
+            var panel = new StackPanel { Spacing = 4 };
+            foreach (var option in options)
+            {
+                if (type == "RadioGroup")
+                    panel.Children.Add(new RadioButton { Content = option, GroupName = name, IsChecked = option.Equals(value, StringComparison.Ordinal) });
+                else
+                    panel.Children.Add(new CheckBox { Content = option, IsChecked = value.Split('\u001f', StringSplitOptions.RemoveEmptyEntries).Contains(option, StringComparer.Ordinal) });
+            }
+            return panel;
         }
         return new TextBox { Text = value, IsEnabled = enabled, IsReadOnly = ReadBool(field, "readOnly", false), AcceptsReturn = type.Equals("TextArea", StringComparison.OrdinalIgnoreCase) };
     }

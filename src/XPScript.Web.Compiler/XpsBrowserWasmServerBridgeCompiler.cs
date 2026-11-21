@@ -345,6 +345,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
 
     private static async Task RunDotNetAsync(string workingDirectory, IReadOnlyList<string> arguments, string operation, CancellationToken cancellationToken)
     {
+        CopySdkSelectionFile(workingDirectory);
         var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workingDirectory, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
         foreach (var argument in arguments) psi.ArgumentList.Add(argument);
         var cliHome = Path.Combine(workingDirectory, "dotnet-home");
@@ -380,6 +381,11 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             }
             throw new XpsWebCompilationException(operation + " failed with exit code " + process.ExitCode + "." + Environment.NewLine + Redact(output, workingDirectory));
         }
+    }
+    private static void CopySdkSelectionFile(string workingDirectory)
+    {
+        var source = Path.Combine(Directory.GetCurrentDirectory(), "global.json");
+        if (File.Exists(source)) File.Copy(source, Path.Combine(workingDirectory, "global.json"), overwrite: true);
     }
 
     private static void LogBuildStep(string message)

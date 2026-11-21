@@ -110,9 +110,17 @@ internal static class TargetPrerequisiteValidator
         if (string.IsNullOrWhiteSpace(sdkRoot) || !Directory.Exists(sdkRoot))
             throw new CompilerException("Android SDK was not found. Set ANDROID_SDK_ROOT or ANDROID_HOME and install Android SDK Platform 36 and Build Tools manually.", "", "configuration");
 
-        var platformJar = Path.Combine(sdkRoot, "platforms", "android-36", "android.jar");
-        if (!File.Exists(platformJar))
-            throw new CompilerException($"Android SDK Platform 36 is required. Install it manually with: sdkmanager \"platforms;android-36\" (SDK root: {sdkRoot})", "", "configuration");
+        var platformRoot = Path.Combine(sdkRoot, "platforms");
+        var platform = Directory.Exists(platformRoot)
+            ? Directory.EnumerateDirectories(platformRoot, "android-*", SearchOption.TopDirectoryOnly)
+                .Select(path => (path, name: Path.GetFileName(path)))
+                .Where(item => Version.TryParse(item.name[8..], out var version) && version.Major >= 36)
+                .OrderByDescending(item => Version.Parse(item.name[8..]))
+                .Select(item => item.path)
+                .FirstOrDefault()
+            : null;
+        if (platform is null || !File.Exists(Path.Combine(platform, "android.jar")))
+            throw new CompilerException($"Android SDK Platform 36 or newer is required. Install it manually with: sdkmanager \"platforms;android-36\" (SDK root: {sdkRoot})", "", "configuration");
 
         var buildToolsRoot = Path.Combine(sdkRoot, "build-tools");
         var aapt2Name = OperatingSystem.IsWindows() ? "aapt2.exe" : "aapt2";

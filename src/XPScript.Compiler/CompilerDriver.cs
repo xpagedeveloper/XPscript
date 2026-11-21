@@ -782,6 +782,7 @@ public sealed class CompilerDriver
         var androidProperties = isAndroid
             ? $"""
     <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
+    <TargetPlatformVersion>36.1</TargetPlatformVersion>
     <AndroidApplication>true</AndroidApplication>
     <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>
     <AndroidPackageFormat>apk</AndroidPackageFormat>

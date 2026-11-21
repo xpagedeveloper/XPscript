@@ -199,6 +199,7 @@ public static class XPScriptCompilerCommandLine
         var info = false;
         ApplicationSecurityMode? securityMode = null;
         var embedAssets = false;
+        var xamlMcp = false;
         var sourceRoots = new List<string>();
         var sourcePreprocessors = new List<string>();
         static bool Is(string value, string expected) => value.Equals(expected, StringComparison.OrdinalIgnoreCase);
@@ -249,6 +250,8 @@ public static class XPScriptCompilerCommandLine
                     securityMode = ApplicationSecurityModeContext.Parse(args[++i]);
                 else if (Is(args[i], "--embed-assets"))
                     embedAssets = true;
+                else if (Is(args[i], "--XAML_MCP"))
+                    xamlMcp = true;
                 else if (Is(args[i], "--source-root") && i + 1 < args.Length)
                 {
                     restricted = true;
@@ -265,6 +268,7 @@ public static class XPScriptCompilerCommandLine
             targetFramework = DotNetVersionSelection.NormalizeTargetFramework(targetFramework);
             _ = DotNetVersionSelection.SelectSdk(targetFramework);
             Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", targetFramework);
+            Environment.SetEnvironmentVariable("XPSCRIPT_XAML_MCP", xamlMcp ? "1" : "0");
             if (target is not null && target is not ("desktop" or "console" or "webiis"))
                 throw new ArgumentException("--target must be desktop, console, or webiis.");
             if (target == "webiis" && embedAssets)
@@ -357,6 +361,7 @@ public static class XPScriptCompilerCommandLine
         var sourceRoots = new List<string>();
         var sourcePreprocessors = new List<string>();
         var embedAssets = false;
+        var xamlMcp = false;
         // Match the legacy CLI contract: option names are case-insensitive while
         // their values and paths retain their original spelling.
         static bool Is(string value, string expected) => value.Equals(expected, StringComparison.OrdinalIgnoreCase);
@@ -413,6 +418,8 @@ public static class XPScriptCompilerCommandLine
                 sourcePreprocessors.Add(args[++i]);
             else if (Is(args[i], "--embed-assets"))
                 embedAssets = true;
+            else if (Is(args[i], "--XAML_MCP"))
+                xamlMcp = true;
             else if (Is(args[i], "--result-format") && i + 1 < args.Length)
                 resultFormat = args[++i].ToLowerInvariant();
             else
@@ -424,6 +431,7 @@ public static class XPScriptCompilerCommandLine
             targetFramework = DotNetVersionSelection.NormalizeTargetFramework(targetFramework);
             _ = DotNetVersionSelection.SelectSdk(targetFramework);
             Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", targetFramework);
+            Environment.SetEnvironmentVariable("XPSCRIPT_XAML_MCP", xamlMcp ? "1" : "0");
             // Keep the established framework-dependent AST layout by default. When
             // either publish switch explicitly requests a non-default layout, pass
             // that choice into the generated-project backend.
@@ -483,7 +491,7 @@ public static class XPScriptCompilerCommandLine
                     message.Contains("dotnet", StringComparison.OrdinalIgnoreCase) ||
                     message.Contains("Roslyn", StringComparison.OrdinalIgnoreCase);
                 Console.Error.WriteLine(!debug && containsBackendDetail
-                    ? "Kompileringen misslyckades. Kör med --debug för teknisk diagnostik."
+                    ? "Compilation failed. Run with --debug for technical diagnostics."
                     : message);
             }
             else
@@ -503,7 +511,7 @@ public static class XPScriptCompilerCommandLine
             }
             Console.Error.WriteLine(debug
                 ? ex.ToString()
-                : "Kompileringen misslyckades. Kör med --debug för teknisk diagnostik.");
+                : "Compilation failed. Run with --debug for technical diagnostics.");
             return 1;
         }
     }
