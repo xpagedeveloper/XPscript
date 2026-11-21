@@ -1,5 +1,6 @@
 name: AST UIForm Show Hide Platforms
 # Push changes to this workflow deliberately retrigger the platform probe.
+# The macOS desktop UIForm job is included in this focused platform run.
 
 on:
   push:
