@@ -61,6 +61,11 @@ jobs:
           )
           foreach ($fixture in $fixtures) {
             Write-Host "===== AST fixture: $fixture (.NET ${{ matrix.framework }}) ====="
-            dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-run $fixture --target-framework ${{ matrix.framework }} --security=off --no-daemon --debug
+            if ($fixture -like '*class-method-ui-native-signatures.xps') {
+              $output = Join-Path $env:RUNNER_TEMP 'ast-class-method-signatures'
+              dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile $fixture -o $output --target-framework ${{ matrix.framework }} --security=off --debug
+            } else {
+              dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-run $fixture --target-framework ${{ matrix.framework }} --security=off --no-daemon --debug
+            }
             if ($LASTEXITCODE -ne 0) { throw "AST fixture failed: $fixture" }
           }
