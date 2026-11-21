@@ -1,0 +1,22 @@
+Option Declare
+
+Sub Main()
+    Dim zero As Integer
+    Dim value As Integer
+    Dim handled As Integer
+
+    zero = 0
+    handled = 0
+    On Error GoTo Handler
+    value = 10 / zero
+    Print "UNEXPECTED"
+    Exit Sub
+
+Handler:
+    handled = 1
+    Resume RetryPoint
+
+RetryPoint:
+    If handled <> 1 Then Error 9901, "Resume label did not preserve handler state"
+    Print "RESUME_LABEL_RUNTIME=OK"
+End Sub

@@ -39,7 +39,9 @@ $fixtures = @(
     'tests/ast-compile-probe/ai-native-metadata-next.xps',
     'tests/ast-compile-probe/ai-tool-properties-next.xps',
     'tests/ast-compile-probe/ai-tool-function-next.xps',
-    'tests/ast-compile-probe/ai-tool-lifecycle-next.xps'
+    'tests/ast-compile-probe/ai-tool-lifecycle-next.xps',
+    'tests/ast-compile-probe/resume-label-runtime.xps',
+    'tests/ast-compile-probe/resume-current-next-runtime.xps'
 )
 foreach ($relative in $fixtures) {
     $path = Join-Path $Root $relative
@@ -57,6 +59,14 @@ $applicationNative = Join-Path $Root 'tests/ast-compile-probe/application-native
 $applicationNativeRun = @(& dotnet $CompilerPath run $applicationNative --security=off --Args 'Åsa "two words"' 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0 -or ($applicationNativeRun -notmatch 'APPLICATION_NATIVE_OK')) { throw 'Application native runtime fixture failed.' }
 Write-Host 'API_SURFACE_FIXTURE_RUNTIME_OK=Application'
+$resumeLabel = Join-Path $Root 'tests/ast-compile-probe/resume-label-runtime.xps'
+$resumeLabelOutput = @(& dotnet $CompilerPath run $resumeLabel --security=off 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0 -or ($resumeLabelOutput -notmatch 'RESUME_LABEL_RUNTIME=OK')) { throw 'Resume-label runtime fixture failed.' }
+Write-Host 'AST_ERROR_FLOW_RUNTIME_OK=ResumeLabel'
+$resumeCurrentNext = Join-Path $Root 'tests/ast-compile-probe/resume-current-next-runtime.xps'
+$resumeCurrentNextOutput = @(& dotnet $CompilerPath run $resumeCurrentNext --security=off 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0 -or ($resumeCurrentNextOutput -notmatch 'RESUME_NEXT_RUNTIME=OK')) { throw 'Resume current/next runtime fixture failed.' }
+Write-Host 'AST_ERROR_FLOW_RUNTIME_OK=ResumeCurrent+ResumeNext'
 $applicationRuntimeFixtures = @(
     @{ Path = (Join-Path $Root 'samples/application-crypto.xps'); Marker = 'APPLICATION_CRYPTO_OK'; Name = 'Application.Crypto' },
     @{ Path = (Join-Path $Root 'samples/application-systemlog.xps'); Marker = 'APPLICATION-SYSTEMLOG=OK'; Name = 'Application.SystemLog' },

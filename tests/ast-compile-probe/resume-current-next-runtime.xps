@@ -1,0 +1,24 @@
+Option Declare
+
+Sub Main()
+    Dim zero As Integer
+    Dim value As Integer
+
+    zero = 0
+    On Error GoTo RetryHandler
+    value = 10 / zero
+    If value <> 10 Then Error 9901, "Resume current did not retry the faulting statement"
+
+    zero = 0
+    On Error GoTo NextHandler
+    value = 20 / zero
+    Print "RESUME_NEXT_RUNTIME=OK"
+    Exit Sub
+
+RetryHandler:
+    zero = 1
+    Resume
+
+NextHandler:
+    Resume Next
+End Sub
