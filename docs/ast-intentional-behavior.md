@@ -26,17 +26,16 @@ partial or misleading C# program for features whose lowering is not complete:
 - `GoSub`;
 - entry jumps into `For`/`ForAll` blocks;
 - List-element expressions passed directly to `ByRef` parameters;
-- multidimensional array shapes.
+- truly unsupported syntax is reported as `XPS1012` rather than approximated.
 
 The diagnostic keeps the XPscript filename and source span. MCP exposes the
 same structured diagnostic as the CLI.
 
 ## Deliberately deferred semantics
 
-Multidimensional arrays, complete error-handler transfer semantics and class
-lowering stay deferred until their shared
-bound/runtime representations are available. These features must not be
-silently approximated with dynamic values or generated C# behavior.
+Complete error-handler transfer semantics and class lowering stay deferred
+until their shared bound/runtime representations are available. These features
+must not be silently approximated with dynamic values or generated C# behavior.
 
 AST image ownership also covers exception exits and evaluates replacements before
 recycling old images. The legacy image preprocessor's end-of-procedure cleanup

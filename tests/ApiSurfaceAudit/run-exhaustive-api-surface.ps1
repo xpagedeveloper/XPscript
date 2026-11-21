@@ -42,7 +42,8 @@ $fixtures = @(
     'tests/ast-compile-probe/ai-tool-lifecycle-next.xps',
     'tests/ast-compile-probe/resume-label-runtime.xps',
     'tests/ast-compile-probe/resume-current-next-runtime.xps',
-    'tests/ast-compile-probe/redim-dynamic-nonzero-runtime.xps'
+    'tests/ast-compile-probe/redim-dynamic-nonzero-runtime.xps',
+    'tests/ast-compile-probe/multidimensional-redim.xps'
 )
 foreach ($relative in $fixtures) {
     $path = Join-Path $Root $relative
@@ -72,6 +73,10 @@ $redimNonZero = Join-Path $Root 'tests/ast-compile-probe/redim-dynamic-nonzero-r
 $redimNonZeroOutput = @(& dotnet $CompilerPath run $redimNonZero --security=off 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0 -or ($redimNonZeroOutput -notmatch 'REDIM_DYNAMIC_NONZERO_RUNTIME=OK')) { throw 'Dynamic non-zero ReDim runtime fixture failed.' }
 Write-Host 'AST_ARRAY_RUNTIME_OK=DynamicNonZeroReDim'
+$multiDimensional = Join-Path $Root 'tests/ast-compile-probe/multidimensional-redim.xps'
+$multiDimensionalOutput = @(& dotnet $CompilerPath run $multiDimensional --security=off 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0 -or ($multiDimensionalOutput -notmatch '1\r?\n4\r?\n11\r?\n22\r?\n1\r?\n5')) { throw 'Multidimensional ReDim runtime fixture failed.' }
+Write-Host 'AST_ARRAY_RUNTIME_OK=MultidimensionalReDim'
 $applicationRuntimeFixtures = @(
     @{ Path = (Join-Path $Root 'samples/application-crypto.xps'); Marker = 'APPLICATION_CRYPTO_OK'; Name = 'Application.Crypto' },
     @{ Path = (Join-Path $Root 'samples/application-systemlog.xps'); Marker = 'APPLICATION-SYSTEMLOG=OK'; Name = 'Application.SystemLog' },
