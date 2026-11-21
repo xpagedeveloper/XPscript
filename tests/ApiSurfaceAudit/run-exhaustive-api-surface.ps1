@@ -45,7 +45,8 @@ $fixtures = @(
     'tests/ast-compile-probe/redim-dynamic-nonzero-runtime.xps',
     'tests/ast-compile-probe/multidimensional-redim.xps',
     'tests/ast-compile-probe/class-method-parent-next.xps',
-    'tests/ast-compile-probe/class-method-ui-native-signatures.xps'
+    'tests/ast-compile-probe/class-method-ui-native-signatures.xps',
+    'tests/ast-compile-probe/list-byval-element-runtime.xps'
 )
 foreach ($relative in $fixtures) {
     $path = Join-Path $Root $relative
@@ -83,6 +84,10 @@ $classParent = Join-Path $Root 'tests/ast-compile-probe/class-method-parent-next
 $classParentOutput = @(& dotnet $CompilerPath run $classParent --security=off 2>&1 | Out-String)
 if ($LASTEXITCODE -ne 0 -or ($classParentOutput -notmatch '(?m)^7\s*$')) { throw 'Class inheritance/Parent runtime fixture failed.' }
 Write-Host 'AST_CLASS_RUNTIME_OK=Inheritance+Parent'
+$listByValByRef = Join-Path $Root 'tests/ast-compile-probe/list-byval-element-runtime.xps'
+$listByValByRefOutput = @(& dotnet $CompilerPath run $listByValByRef --security=off 2>&1 | Out-String)
+if ($LASTEXITCODE -ne 0 -or ($listByValByRefOutput -notmatch 'LIST_BYVAL_BYREF_ELEMENT_RUNTIME=OK')) { throw 'List ByVal/ByRef element runtime fixture failed.' }
+Write-Host 'AST_LIST_RUNTIME_OK=ByValCopy+ByRefAlias'
 $applicationRuntimeFixtures = @(
     @{ Path = (Join-Path $Root 'samples/application-crypto.xps'); Marker = 'APPLICATION_CRYPTO_OK'; Name = 'Application.Crypto' },
     @{ Path = (Join-Path $Root 'samples/application-systemlog.xps'); Marker = 'APPLICATION-SYSTEMLOG=OK'; Name = 'Application.SystemLog' },

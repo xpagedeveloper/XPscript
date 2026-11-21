@@ -1,0 +1,19 @@
+Option Declare
+
+Sub Mutate(ByVal value As Long)
+    value = 99
+End Sub
+
+Sub MutateRef(ByRef value As Long)
+    value = 77
+End Sub
+
+Sub Main()
+    Dim values List As Long
+    values("count") = 3
+    Call Mutate(values("count"))
+    If values("count") <> 3 Then Error 9901, "ByVal list element wrote back"
+    Call MutateRef(values("count"))
+    If values("count") <> 77 Then Error 9902, "ByRef list element did not write back"
+    Print "LIST_BYVAL_BYREF_ELEMENT_RUNTIME=OK"
+End Sub
