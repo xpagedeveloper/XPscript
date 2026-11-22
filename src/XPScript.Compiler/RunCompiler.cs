@@ -178,10 +178,19 @@ internal static class RunCompiler
                 .Select(group => group.First())
                 .ToList();
             await File.WriteAllTextAsync(projectPath, BuildProject(references, dependencies, runtimeIdentifier, startupObject), cancellationToken).ConfigureAwait(false);
-            if (IsAndroidRuntime(runtimeIdentifier))
-                await File.WriteAllTextAsync(Path.Combine(tempRoot, "global.json"), DotNetVersionSelection.CreateGlobalJson("net10.0"), cancellationToken).ConfigureAwait(false);
-            else if (Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selectedFramework)
-                await File.WriteAllTextAsync(Path.Combine(tempRoot, "global.json"), DotNetVersionSelection.CreateGlobalJson(selectedFramework), cancellationToken).ConfigureAwait(false);
+            // Pin every generated project to the compiler-selected SDK. Without
+            // this, browser-WASM builds can be picked up by a newer machine-wide
+            // SDK (for example .NET 11), which may invoke a different workload
+            // resolver and fail while copying transient workload metadata such as
+            // msi.json. Android already required this pin; browser and desktop
+            // generated projects need the same deterministic boundary.
+            var generatedFramework = Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selectedFramework
+                ? selectedFramework
+                : "net10.0";
+            await File.WriteAllTextAsync(
+                Path.Combine(tempRoot, "global.json"),
+                DotNetVersionSelection.CreateGlobalJson(generatedFramework),
+                cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(programPath,
                 isAndroid && !androidUi ? CombineGeneratedSources(generatedSource, AndroidHostSource.Code) : generatedSource,
                 cancellationToken).ConfigureAwait(false);
@@ -222,7 +231,8 @@ internal static class RunCompiler
                 return apkPath;
             }
 
-            var assemblyPath = CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile
+            var browserWasm = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase);
+            var assemblyPath = CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile && !browserWasm
                 ? Path.Combine(outputRoot, IsWindowsRuntime(runtimeIdentifier) ? "Generated.exe" : "Generated")
                 : Path.Combine(outputRoot, "Generated.dll");
             if (!File.Exists(assemblyPath))
@@ -289,7 +299,8 @@ internal static class RunCompiler
             CreateNoWindow = true,
             WorkingDirectory = tempRoot
         };
-        psi.ArgumentList.Add(CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile
+        var browserWasm = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase);
+        psi.ArgumentList.Add(CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile && !browserWasm
             ? "publish"
             : "build");
         psi.ArgumentList.Add(projectPath);
@@ -439,8 +450,9 @@ internal static class RunCompiler
               "    <RunAOTCompilation>false</RunAOTCompilation>\n" +
               "    <ApplicationId>eu.xpscript.app</ApplicationId>\n"
             : string.Empty;
-        var useAppHost = !isAndroid && (CompilePublishLayoutContext.IncludeRuntime || (CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile));
-        var publishSingleFile = !isAndroid && CompilePublishLayoutContext.SingleFile;
+        var isBrowserWasm = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase);
+        var useAppHost = !isAndroid && !isBrowserWasm && (CompilePublishLayoutContext.IncludeRuntime || (CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile));
+        var publishSingleFile = !isAndroid && !isBrowserWasm && CompilePublishLayoutContext.SingleFile;
         var projectSdk = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase)
             ? "Microsoft.NET.Sdk.WebAssembly"
             : "Microsoft.NET.Sdk";

@@ -100,6 +100,25 @@ dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -
   --runtime=true --platform browser-wasm --debug
 ```
 
+To verify SDK compatibility explicitly, repeat with separate output directories:
+
+```powershell
+$env:XPSCRIPT_TARGET_FRAMEWORK = "net10.0"
+dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- `
+  ast-compile samples/browser-wasm-uiform.xps -o out/manual-browser-wasm-net10 `
+  --runtime=true --platform browser-wasm --debug
+
+$env:XPSCRIPT_TARGET_FRAMEWORK = "net11.0"
+dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- `
+  ast-compile samples/browser-wasm-uiform.xps -o out/manual-browser-wasm-net11 `
+  --runtime=true --platform browser-wasm --debug
+Remove-Item Env:XPSCRIPT_TARGET_FRAMEWORK -ErrorAction SilentlyContinue
+```
+
+Generated browser projects pin the selected SDK and disable single-file/app-host
+publishing, which is required by the WebAssembly toolchain. Both commands must
+end with `AST compilation succeeded` before starting the browser server.
+
 Serve the generated browser output from a local HTTP server (do not open the
 HTML file directly):
 
