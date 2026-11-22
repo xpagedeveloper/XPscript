@@ -29,6 +29,7 @@ tests/notes-dxl-diagnostic-temp/
 csv-parity.csv
 example.zip
 tests/ast-compile-probe/roundtrip.xlsx
+tests/cli-compiler-benchmark/string-number-array-500.xps
 tests/ast-compile-probe/ast-image-parity.png
 samples/xpimage-format-*.png
 samples/xpscript-xpimage-*.png

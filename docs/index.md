@@ -52,16 +52,17 @@ XPScript is distributed under the [Apache License, Version 2.0](../LICENSE). See
 25. [Domino CGI hosting](domino-cgi-hosting.md), HCL Domino HTTP/Internet Site CGI mapping, XPScript environment setup, permissions and troubleshooting.
 26. [Nginx FastCGI hosting](nginx-fastcgi.md), Nginx reverse proxy configuration, systemd worker setup, HTTPS, testing and troubleshooting.
 27. [AST migration verification environment](ast-migration-environment.md), recorded OS, SDK, workload, Android, browser, CI and hosting environment versions.
-28. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
-29. [Extended UIForm fields](uiform-fields.md), file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.
-30. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
-31. [HTTP database clients](httpdb.md), Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.
-32. [SQLite database](sqlite.md), local parameterized SQL, JSON query results, transactions and file-path boundaries.
-33. [SQL Server database](mssql.md), SQL Server and SQL Server Express connections, parameterized SQL, JSON results and transactions.
-34. [XPAi client](ai.md), OpenAI-compatible AI requests, provider configuration, response metadata and SSE streaming.
-35. [XPAi tools and session memory](ai-tools-sessions.md), XPAITool schemas/callbacks, automatic tool execution and provider session continuation.
-36. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
-37. [Documentation rules](documentation-rules.md), the required structure and CI validation for command/API documentation and demos.
+28. [AST migration audit results](ast-migration-audit-results.md), syntax coverage, compatibility-path decisions, cache evidence and benchmark observations.
+29. [UIForm](uiform.md), shared form API for desktop and web, including the web Bootstrap grid.
+30. [Extended UIForm fields](uiform-fields.md), file uploads, multi-value fields, telephone/week/decimal/currency, rich text, lookup and autocomplete data sources.
+31. [HTTP client](http-client.md), outgoing REST calls, JSON requests, query/form encoding and direct UIForm load/save helpers.
+32. [HTTP database clients](httpdb.md), Supabase Cloud/self-hosted CRUD and SQL administration plus self-hosted HCL Domino REST API data access.
+33. [SQLite database](sqlite.md), local parameterized SQL, JSON query results, transactions and file-path boundaries.
+34. [SQL Server database](mssql.md), SQL Server and SQL Server Express connections, parameterized SQL, JSON results and transactions.
+35. [XPAi client](ai.md), OpenAI-compatible AI requests, provider configuration, response metadata and SSE streaming.
+36. [XPAi tools and session memory](ai-tools-sessions.md), XPAITool schemas/callbacks, automatic tool execution and provider session continuation.
+37. [Browser WebAssembly](browser-wasm.md), browser UIForm hosting, WASM compilation/cache and browser runtime behavior.
+38. [Documentation rules](documentation-rules.md), the required structure and CI validation for command/API documentation and demos.
 
 ## How XPScript runs
 
