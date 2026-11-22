@@ -27,7 +27,7 @@ AST_BOUND_CACHE_HIT_OK hits=3 misses=8
 AST_EDIT_COMPILE_BENCHMARK clean_ms=8342.4 cached_ms=1027.7 include_edit_ms=1051.7 source_edit_ms=1138.3 emission_hits=3
 ```
 
-This verifies opt-in process-local bound-tree and method-emission reuse, source/include invalidation and clean/cached output equivalence for the probe. It does not yet implement a persistent dependency-aware workspace or selective multi-file C# project emission. Those remain open architectural work and must not be enabled by default until a dependency graph and cross-file symbol snapshot are implemented.
+This verifies opt-in process-local bound-tree and method-emission reuse, source/include invalidation and clean/cached output equivalence for the probe. It now also verifies the opt-in persistent artifact manifest (`XPSCRIPT_AST_PERSISTENT_CACHE=1`): an unchanged output directory is reused, while an included-file edit invalidates it. The persistent layer reuses a completed target artifact; selective per-file C# project emission and a persistent cross-file symbol workspace remain future architectural work.
 
 ## CLI compilation benchmark
 
@@ -41,3 +41,13 @@ CLI_BENCHMARK_AST_TOTAL_BYTES=271797
 ```
 
 These are local observations only, not a cross-runner performance claim. Phase-level legacy-versus-AST timings still require instrumentation around preprocessing, lexing/parsing, binding, emission and Roslyn/build.
+
+## AST phase timing instrumentation
+
+Set `XPSCRIPT_AST_PHASE_TIMINGS=1` to emit one JSON record per successful AST compilation on stderr:
+
+```text
+AST_PHASE_TIMINGS={"preprocessing":27.8,"lexing_parsing":315.8,"binding":77.3,"emission":39.8,"roslyn_build":1387.5,"source":"shared-runtime.xps","total_ms":1849.6}
+```
+
+The legacy compiler entry point is intentionally disabled in this branch, so a legacy-versus-AST phase comparison requires running the published legacy-compatible compiler separately. The AST phase instrumentation is now available for that controlled comparison without changing normal output.

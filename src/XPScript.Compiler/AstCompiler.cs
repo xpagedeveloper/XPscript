@@ -122,6 +122,7 @@ public static class AstCompiler
         IReadOnlyList<string>? sourceRoots, IReadOnlyList<string>? sourcePreprocessors,
         bool embedAssets, CancellationToken cancellationToken, bool emitSourceOnly = false, string? sourceOverride = null)
     {
+        var phaseTiming = new AstPhaseTiming();
         if (runtimeIdentifier is not null)
             TargetPrerequisiteValidator.Validate(runtimeIdentifier.Trim().ToLowerInvariant());
         using var securityScope = ApplicationSecurityModeContext.Push(securityMode);
@@ -134,6 +135,16 @@ public static class AstCompiler
         // AST compiler has the same multi-file source contract as the legacy path.
         var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
         source = includeResult.Source;
+        phaseTiming.Mark("preprocessing");
+        var cachedArtifact = PersistentAstCompilationCache.TryGet(outputDirectory, sourcePath, source, includeResult,
+            runtimeIdentifier, securityMode, restricted, sourceRoots, sourcePreprocessors, embedAssets, emitSourceOnly,
+            generatedSourceTransform is not null);
+        if (cachedArtifact is not null)
+        {
+            phaseTiming.Mark("persistent_cache");
+            phaseTiming.Write(sourcePath);
+            return cachedArtifact;
+        }
         new NotesDocumentSendWarningPreprocessor().Transform(source);
         try
         {
@@ -311,6 +322,7 @@ public static class AstCompiler
                 + source[declarationStart.Index..];
         var parser = new DeclarationParser(source);
         var unit = parser.ParseCompilationUnit();
+        phaseTiming.Mark("lexing_parsing");
         if (parser.Diagnostics.Count > 0)
             throw SyntaxDiagnosticException(parser.Diagnostics[0], sourcePath, source, fullSource);
         foreach (var item in unit.Declarations)
@@ -874,6 +886,7 @@ public static class AstCompiler
             for (var count = parameters.Length - 1; count >= 0 && procedureParameters[count].IsOptional; count--)
                 methods.Add(OptionalCallLowering.Forward(name, returnType, parameters, defaults, count));
         }
+        phaseTiming.Mark("binding");
         var declarationName = sub?.Identifier.Text ?? function!.Identifier.Text;
         var methodName = declarationName;
         var usesMacDesktopUi = runtimeFeatures.Ui &&
@@ -1898,6 +1911,7 @@ internal static class Program
             generated += Environment.NewLine + JsonSchemaRuntimeSource.Code;
         if (generatedSourceTransform is not null)
             generated = generatedSourceTransform(generated);
+        phaseTiming.Mark("emission");
         // AST applications emit a static Program container. UI
         // post-processors share runtime snippets with the legacy Script
         // container, so normalize any late-injected type references after all
@@ -1917,7 +1931,13 @@ internal static class Program
             outputResult = await RunCompiler.CompileGeneratedWithDependenciesAsync(generated, outputDirectory, false, cancellationToken, runtimeIdentifier, managedReferences.Managed, sourcePath, generatedSourceTransform is not null ? "Script" : null).ConfigureAwait(false);
         else
             outputResult = await RunRoslynCompiler.CompileAsync(generated, outputDirectory, cancellationToken: cancellationToken).ConfigureAwait(false);
+        phaseTiming.Mark("roslyn_build");
+        phaseTiming.Write(sourcePath);
         new NativeDependencyPackager(runtimeIdentifier ?? CompilerDriver.CurrentRuntimeIdentifier()).Stage(sourcePath, outputDirectory, nativeDependencies);
+        if (!emitSourceOnly)
+            PersistentAstCompilationCache.Store(outputDirectory, sourcePath, source, includeResult,
+                runtimeIdentifier, securityMode, restricted, sourceRoots, sourcePreprocessors, embedAssets, emitSourceOnly,
+                generatedSourceTransform is not null, outputResult);
         return outputResult;
     }
 

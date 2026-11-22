@@ -4,8 +4,10 @@ using XPScript.Compiler.Emission;
 
 Environment.SetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE", "1");
 Environment.SetEnvironmentVariable("XPSCRIPT_AST_EMISSION_CACHE", "1");
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_PERSISTENT_CACHE", "1");
 BoundTreeCache.Clear();
 BoundEmissionCache.Clear();
+PersistentAstCompilationCache.ClearCounters();
 var root = Path.Combine(Path.GetTempPath(), "xpscript-ast-cache-probe-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(root);
 try
@@ -58,14 +60,28 @@ try
     if (BoundTreeCache.Misses <= missesAfterFirst + 1)
         throw new InvalidOperationException("Source edit did not invalidate the bound tree.");
 
+    var persistentOutput = Path.Combine(root, "persistent");
+    await AstCompiler.CompileAsync(source, persistentOutput);
+    await AstCompiler.CompileAsync(source, persistentOutput);
+    if (PersistentAstCompilationCache.Hits == 0 || !File.Exists(Path.Combine(persistentOutput, ".xpscript-ast-cache.json")))
+        throw new InvalidOperationException($"Persistent dependency-aware cache did not reuse the completed output. hits={PersistentAstCompilationCache.Hits} misses={PersistentAstCompilationCache.Misses} manifest={File.Exists(Path.Combine(persistentOutput, ".xpscript-ast-cache.json"))}");
+    var persistentHits = PersistentAstCompilationCache.Hits;
+    File.WriteAllText(include, "Const SharedValue As Long = 9\n");
+    await AstCompiler.CompileAsync(source, persistentOutput);
+    if (PersistentAstCompilationCache.Hits != persistentHits)
+        throw new InvalidOperationException("Included-file edit incorrectly reused persistent output.");
+
     Console.WriteLine($"AST_BOUND_CACHE_HIT_OK hits={BoundTreeCache.Hits} misses={BoundTreeCache.Misses}");
     Console.WriteLine($"AST_EDIT_COMPILE_BENCHMARK clean_ms={cleanMilliseconds:F1} cached_ms={cachedMilliseconds:F1} include_edit_ms={includeEditMilliseconds:F1} source_edit_ms={sourceEditMilliseconds:F1} emission_hits={BoundEmissionCache.Hits}");
+    Console.WriteLine($"AST_PERSISTENT_CACHE_OK hits={PersistentAstCompilationCache.Hits} misses={PersistentAstCompilationCache.Misses}");
 }
 finally
 {
     Environment.SetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE", null);
     Environment.SetEnvironmentVariable("XPSCRIPT_AST_EMISSION_CACHE", null);
+    Environment.SetEnvironmentVariable("XPSCRIPT_AST_PERSISTENT_CACHE", null);
     BoundTreeCache.Clear();
     BoundEmissionCache.Clear();
+    PersistentAstCompilationCache.ClearCounters();
     if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
 }

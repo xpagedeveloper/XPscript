@@ -4,7 +4,7 @@ This page is the searchable reference for the XPScript compiler and host command
 
 ## `xpscript` compiler and runtime
 
-Running `xpscript` (or the shipped `xpscriptc` executable) with no arguments prints the built-in CLI usage reference. `compile` and `run` use the AST compiler by default. The explicit `ast-compile` and `ast-run` names are available when a script or automation wants to state that choice directly. During migration, `legacy-compile`/`compilev1` and `legacy-run`/`runv1` retain the previous compiler behavior. For `run` and `compile`, `--info` may be placed before or after the command name. Program arguments for `run` are accepted only through `--Args`, which keeps XPScript CLI options unambiguous regardless of their position.
+Running `xpscript` (or the shipped `xpscriptc` executable) with no arguments prints the built-in CLI usage reference. `compile` and `run` use the AST compiler by default. The explicit `ast-compile` and `ast-run` names are available when a script or automation wants to state that choice directly. The historical `legacy-compile`/`compilev1` and `legacy-run`/`runv1` names remain rejected compatibility aliases on this branch. For `run` and `compile`, `--info` may be placed before or after the command name. Program arguments for `run` are accepted only through `--Args`, which keeps XPScript CLI options unambiguous regardless of their position.
 
 
 | Command/option | Syntax | Parameters | Description | Example |
@@ -147,3 +147,16 @@ FastCGI should normally listen on a private loopback address or Unix socket behi
 | WebIIS `-o` | `-o PATH` | `PATH`: deployment output directory outside the source application directory. | Selects the WebIIS package output directory. | [main.xps](../demo/webiis/main.xps) |
 
 For the generated IIS package layout, permissions, ASP.NET Core Module V2 requirements, and deployment workflow, see [WebIIS deployment target](webiis.md).
+
+## AST diagnostics and cache instrumentation
+
+These environment variables are opt-in developer diagnostics and do not change normal compiler output:
+
+| Variable | Value | Description |
+|---|---|---|
+| `XPSCRIPT_AST_PHASE_TIMINGS` | `1` | Emits a JSON `AST_PHASE_TIMINGS` record on stderr with preprocessing, lexing/parsing, binding, emission and Roslyn/build durations. |
+| `XPSCRIPT_AST_BOUND_CACHE` | `1` | Enables process-local bound-tree reuse. |
+| `XPSCRIPT_AST_EMISSION_CACHE` | `1` | Enables process-local method-emission reuse. |
+| `XPSCRIPT_AST_PERSISTENT_CACHE` | `1` | Enables the dependency-aware output manifest. An unchanged completed output directory can be reused across compiler processes; changed source/include dependencies invalidate it. |
+
+The persistent cache is deliberately opt-in while selective per-file cross-project emission is still under development.
