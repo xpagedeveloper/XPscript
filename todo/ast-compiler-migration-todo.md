@@ -1143,7 +1143,7 @@ Run this phase only after all preceding implementation work, permanent FullTest 
 - [ ] Run direct IIS Server/ARR deployment and hosting checks; IIS Express/WebIIS packaging and automated adapter checks remain covered by CI.
 - [ ] Run any remaining externally socketed Kestrel, CGI, and FastCGI checks that require local host permissions or machine-specific configuration.
 - [ ] Run manual WebAssembly/browser smoke checks on a configured browser when CI packaging/workload checks do not cover the local browser runtime.
-- [ ] Record the machine, OS, SDK/workload, emulator/device, Notes/Domino, IIS, and browser versions together with the exact commands and any environment-specific skips.
+- [x] Record the machine, OS, SDK/workload, emulator/device, Notes/Domino, IIS, and browser versions together with the exact commands and any environment-specific skips in `docs/ast-migration-environment.md`.
 
 ## DoD audit update — 2026-11-17
 
