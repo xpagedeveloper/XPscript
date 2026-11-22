@@ -17,6 +17,8 @@ docs-site/dist/
 .tmp*
 *.bin
 *.tmp
+__pycache__/
+*.pyc
 ast-file-text-next.txt
 tmp*
 
