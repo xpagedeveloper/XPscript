@@ -5,6 +5,12 @@ using XPScript.Compiler.Emission;
 Environment.SetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE", "1");
 Environment.SetEnvironmentVariable("XPSCRIPT_AST_EMISSION_CACHE", "1");
 Environment.SetEnvironmentVariable("XPSCRIPT_AST_PERSISTENT_CACHE", "1");
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE", null);
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_EMISSION_CACHE", null);
+if (!BoundTreeCache.Enabled || !BoundEmissionCache.Enabled)
+    throw new InvalidOperationException("Process-local AST caches are not enabled by default.");
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE", "1");
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_EMISSION_CACHE", "1");
 BoundTreeCache.Clear();
 BoundEmissionCache.Clear();
 PersistentAstCompilationCache.ClearCounters();

@@ -17,7 +17,7 @@ public static class BoundTreeCache
     private static long _hits;
     private static long _misses;
 
-    public static bool Enabled => string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE"), "1", StringComparison.Ordinal);
+    public static bool Enabled => !string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE"), "0", StringComparison.Ordinal);
 
     public static long Hits => Interlocked.Read(ref _hits);
     public static long Misses => Interlocked.Read(ref _misses);

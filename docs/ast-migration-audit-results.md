@@ -20,7 +20,7 @@ The remaining shims require a separate removal decision because deleting them wo
 
 ## Incremental and cross-file cache evidence
 
-`tests/AstIncrementalCacheProbe` passed with:
+`tests/AstIncrementalCacheProbe` passed with the process-local caches enabled explicitly (the same behavior is now the default; set the variables to `0` to opt out):
 
 ```text
 AST_BOUND_CACHE_HIT_OK hits=3 misses=8

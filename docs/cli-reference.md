@@ -155,8 +155,8 @@ These environment variables are opt-in developer diagnostics and do not change n
 | Variable | Value | Description |
 |---|---|---|
 | `XPSCRIPT_AST_PHASE_TIMINGS` | `1` | Emits a JSON `AST_PHASE_TIMINGS` record on stderr with preprocessing, lexing/parsing, binding, emission and Roslyn/build durations. |
-| `XPSCRIPT_AST_BOUND_CACHE` | `1` | Enables process-local bound-tree reuse. |
-| `XPSCRIPT_AST_EMISSION_CACHE` | `1` | Enables process-local method-emission reuse. |
+| `XPSCRIPT_AST_BOUND_CACHE` | unset/`1` | Enables process-local bound-tree reuse by default. Set to `0` to disable it. |
+| `XPSCRIPT_AST_EMISSION_CACHE` | unset/`1` | Enables process-local method-emission reuse by default. Set to `0` to disable it. |
 | `XPSCRIPT_AST_PERSISTENT_CACHE` | `1` | Enables the dependency-aware output manifest. An unchanged completed output directory can be reused across compiler processes; changed source/include dependencies invalidate it. |
 
 The persistent cache is deliberately opt-in while selective per-file cross-project emission is still under development.
