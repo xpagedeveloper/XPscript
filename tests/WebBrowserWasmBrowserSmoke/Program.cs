@@ -82,7 +82,13 @@ End Sub
     await Task.Delay(500);
     using var playwright = await Playwright.CreateAsync();
     var browserErrors = new List<string>();
-    var chromiumPath = new[] { "/usr/bin/google-chrome-stable", "/usr/bin/google-chrome", "/usr/bin/chromium" }
+    var chromiumPath = new[]
+        {
+            "/usr/bin/google-chrome-stable", "/usr/bin/google-chrome", "/usr/bin/chromium",
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Google", "Chrome", "Application", "chrome.exe"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Google", "Chrome", "Application", "chrome.exe"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Google", "Chrome", "Application", "chrome.exe")
+        }
         .FirstOrDefault(File.Exists);
     await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
     {
