@@ -1176,6 +1176,30 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         if (_bootText.Length > 0)
             html.Append("<div class=\"xpscript-uiform-boot-text\">").Append(System.Net.WebUtility.HtmlEncode(_bootText)).Append("</div>");
         if (_title.Length > 0) html.Append("<h1>").Append(System.Net.WebUtility.HtmlEncode(_title)).Append("</h1>");
+        if (_tabs.Count > 0)
+        {
+            html.Append("<div class=\"xpscript-uiform-tabs nav nav-tabs mb-3\" role=\"tablist\">");
+            foreach (var tab in _tabs)
+            {
+                var active = tab.Name.Equals(_activeTab, StringComparison.OrdinalIgnoreCase);
+                html.Append("<button type=\"button\" class=\"nav-link").Append(active ? " active" : "").Append("\" style=\"")
+                    .Append(string.IsNullOrWhiteSpace(active ? tab.SelectedBackground : tab.Background) ? "" : "background:")
+                    .Append(System.Net.WebUtility.HtmlEncode(active ? tab.SelectedBackground : tab.Background)).Append(";")
+                    .Append(string.IsNullOrWhiteSpace(active ? tab.SelectedFontColor : tab.FontColor) ? "" : "color:")
+                    .Append(System.Net.WebUtility.HtmlEncode(active ? tab.SelectedFontColor : tab.FontColor)).Append(";")
+                    .Append(string.IsNullOrWhiteSpace(active ? tab.SelectedFont : tab.Font) ? "" : "font-family:")
+                    .Append(System.Net.WebUtility.HtmlEncode(active ? tab.SelectedFont : tab.Font)).Append(";")
+                    .Append("font-size:").Append((active ? tab.SelectedFontSize : tab.FontSize).ToString(System.Globalization.CultureInfo.InvariantCulture)).Append("px;")
+                    .Append((active ? tab.SelectedBold : tab.Bold) ? "font-weight:700;" : "")
+                    .Append("\" data-xps-tab=\"").Append(System.Net.WebUtility.HtmlEncode(tab.Name))
+                    .Append("\" data-tab-bg=\"").Append(System.Net.WebUtility.HtmlEncode(tab.Background))
+                    .Append("\" data-tab-color=\"").Append(System.Net.WebUtility.HtmlEncode(tab.FontColor))
+                    .Append("\" data-tab-selected-bg=\"").Append(System.Net.WebUtility.HtmlEncode(tab.SelectedBackground))
+                    .Append("\" data-tab-selected-color=\"").Append(System.Net.WebUtility.HtmlEncode(tab.SelectedFontColor)).Append("\">")
+                    .Append(System.Net.WebUtility.HtmlEncode(tab.Label)).Append("</button>");
+            }
+            html.Append("</div>");
+        }
         foreach (var field in _fields)
         {
             var name = System.Net.WebUtility.HtmlEncode(field.Name);
@@ -1195,6 +1219,11 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
             var range = (field.Minimum.HasValue ? $" min=\"{field.Minimum.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}\"" : string.Empty)
                 + (field.Maximum.HasValue ? $" max=\"{field.Maximum.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}\"" : string.Empty);
             html.Append("<div id=\"xps_field_").Append(name).Append("\" class=\"xpscript-uiform-field\"");
+            if (field.TabName.Length > 0)
+            {
+                html.Append(" data-xps-tab-panel=\"").Append(System.Net.WebUtility.HtmlEncode(field.TabName)).Append("\"");
+                if (!field.TabName.Equals(_activeTab, StringComparison.OrdinalIgnoreCase)) html.Append(" style=\"display:none\"");
+            }
             if (parentId.Length > 0) html.Append(" data-parent-id=\"").Append(parentId).Append("\"");
             if (field.Id.Length > 0) html.Append(" data-component-id=\"").Append(System.Net.WebUtility.HtmlEncode(field.Id)).Append("\"");
             html.Append(controlStyle).Append(">").Append("<label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
@@ -1272,7 +1301,7 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
             }
             html.Append("</div>");
         }
-        html.Append("<script>(function(){for(const child of document.querySelectorAll('[data-parent-id]')){const id=child.dataset.parentId;const parent=document.querySelector('[data-component-id=\"'+CSS.escape(id)+'\"]')||document.getElementById('xps_field_'+CSS.escape(id));const target=parent?.querySelector('.xpscript-uiform-container-children');if(target)target.appendChild(child);}})();</script>");
+        html.Append("<script>(function(){for(const child of document.querySelectorAll('[data-parent-id]')){const id=child.dataset.parentId;const parent=document.querySelector('[data-component-id=\"'+CSS.escape(id)+'\"]')||document.getElementById('xps_field_'+CSS.escape(id));const target=parent?.querySelector('.xpscript-uiform-container-children');if(target)target.appendChild(child);}function xpsUIFormTab(b){var n=b.getAttribute('data-xps-tab');document.querySelectorAll('[data-xps-tab]').forEach(function(x){var s=x===b;x.classList.toggle('active',s);x.style.background=s?(x.dataset.tabSelectedBg||x.dataset.tabBg||''):(x.dataset.tabBg||'');x.style.color=s?(x.dataset.tabSelectedColor||x.dataset.tabColor||''):(x.dataset.tabColor||'');});document.querySelectorAll('[data-xps-tab-panel]').forEach(function(x){x.style.display=x.getAttribute('data-xps-tab-panel')===n?'':'none'});}document.querySelectorAll('[data-xps-tab]').forEach(function(x){x.addEventListener('click',function(){xpsUIFormTab(x);});});})();</script>");
         html.Append("<button type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
         return html.ToString();
     }
