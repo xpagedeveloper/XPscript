@@ -5,6 +5,12 @@ Sub Main()
     Dim session As NotesSession
     Dim db As NotesDatabase
     Dim view As NotesView
+    Dim views As Variant
+    Dim firstDoc As NotesDocument
+    Dim items As Variant
+    Dim viewCount As Integer
+    Dim itemCount As Integer
+    Dim i As Integer
     Dim openErr As Integer
 
     Set session = New NotesSession()
@@ -28,12 +34,31 @@ Sub Main()
     Print "FILEPATH=" & db.FilePath
     Print "REPLICAID=" & db.ReplicaID
     Print "ACCESSLEVEL=" & CStr(db.CurrentAccessLevel)
-    Set view = db.GetView("vimpeople")
+    views = db.Views
+    ForAll candidate In views
+        viewCount = viewCount + 1
+        If view Is Nothing Then Set view = db.OpenView(candidate.Name)
+        If viewCount <= 10 Then Print "AVAILABLE-VIEW=" & candidate.Name
+        Call candidate.Recycle()
+    End ForAll
+    Print "VIEWCOUNT=" & CStr(viewCount)
     If view Is Nothing Then
-        Print "VIEW=vimpeople MISSING"
+        Print "VIEW=NONE"
     Else
-        Print "VIEW=vimpeople OK"
-        Print "VIEWCOLUMNS=" & CStr(view.ColumnCount)
+        Print "VIEW=" & view.Name & " OK"
+        Set firstDoc = view.GetFirstDocument()
+        If firstDoc Is Nothing Then
+            Print "VIEW-FIRST-DOCUMENT=NONE"
+        Else
+            items = firstDoc.Items
+            For i = LBound(items) To UBound(items)
+                itemCount = itemCount + 1
+                If itemCount <= 10 Then Print "VIEW-FIRST-ITEM=" & items(i).Name
+            Next
+            Print "VIEW-FIRST-ITEM-COUNT=" & CStr(itemCount)
+            Call firstDoc.Recycle()
+        End If
+        Call view.Recycle()
     End If
 
     Call db.Recycle()
