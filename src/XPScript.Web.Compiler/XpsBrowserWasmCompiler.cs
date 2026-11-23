@@ -316,7 +316,7 @@ public sealed class XpsBrowserWasmCompiler
             StringComparison.Ordinal);
         source = source.Replace(
             "if(type!=='radiogroup'&&type!=='separator'&&type!=='spacer')editor.name=field.name||'';",
-            "if(field.id&&(type==='card'||type==='panel'||type==='scrollview'))componentContainers.set(String(field.id),editor);if(type!=='radiogroup'&&type!=='separator'&&type!=='spacer')editor.name=field.name||'';",
+            "if(field.id&&(type==='card'||type==='panel'||type==='scrollview'))componentContainers.set(String(field.id),editor);if(type!=='radiogroup'&&type!=='separator'&&type!=='spacer'){editor.name=field.name||'';editor.id='xps_'+String(field.id||field.name||'');}",
             StringComparison.Ordinal);
         source = source.Replace(
             "form.appendChild(wrap);if(field.schemaValidationError)",
@@ -324,7 +324,7 @@ public sealed class XpsBrowserWasmCompiler
             StringComparison.Ordinal);
         source = source.Replace(
             "const wrap=document.createElement('div');if(field.columnSpan)",
-            "const wrap=document.createElement('div');if(field.label){const label=document.createElement('label');label.textContent=String(field.label);label.htmlFor='xps_'+String(field.name||'');label.style.display='block';label.style.fontWeight='600';wrap.appendChild(label);}if(field.tabName){wrap.setAttribute('data-xps-tab-panel',String(field.tabName));const activeTab=String(request.activeTab||request.tabs?.[0]?.name||'');if(String(field.tabName)!==activeTab)wrap.style.display='none';}if(field.columnSpan)",
+            "const wrap=document.createElement('div');if(field.label){const label=document.createElement('label');label.textContent=String(field.label);label.htmlFor='xps_'+String(field.id||field.name||'');label.style.display='block';label.style.fontWeight='600';wrap.appendChild(label);}if(field.tabName){wrap.setAttribute('data-xps-tab-panel',String(field.tabName));const activeTab=String(request.activeTab||request.tabs?.[0]?.name||'');if(String(field.tabName)!==activeTab)wrap.style.display='none';}if(field.columnSpan)",
             StringComparison.Ordinal);
         source = source.Replace(
             "root.appendChild(actions);}return JSON.stringify({result:'Pending',values:{}});}",

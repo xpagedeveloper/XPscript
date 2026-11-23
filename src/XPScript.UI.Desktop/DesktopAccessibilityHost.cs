@@ -95,6 +95,7 @@ public static class DesktopAccessibilityHost
     {
         ApplyCommon(
             editor,
+            field.Id.Length > 0 ? field.Id : field.Name,
             field.Label,
             field.AccessibleName,
             field.AccessibleDescription,
@@ -114,6 +115,7 @@ public static class DesktopAccessibilityHost
     {
         ApplyCommon(
             editor,
+            Read(field, "id").Length > 0 ? Read(field, "id") : Read(field, "name"),
             fallbackLabel,
             Read(field, "accessibleName"),
             Read(field, "accessibleDescription"),
@@ -132,6 +134,7 @@ public static class DesktopAccessibilityHost
 
     private static void ApplyCommon(
         Control editor,
+        string componentId,
         string fallbackLabel,
         string accessibleName,
         string accessibleDescription,
@@ -149,7 +152,9 @@ public static class DesktopAccessibilityHost
         editor.IsTabStop = isTabStop && !accessibilityHidden;
         editor.TabIndex = tabIndex;
 
-        var name = accessibleName.Length > 0 ? accessibleName : fallbackLabel;
+        var normalizedId = string.IsNullOrWhiteSpace(componentId) ? fallbackLabel : componentId.Trim();
+        if (normalizedId.Length > 0) AutomationProperties.SetAutomationId(editor, normalizedId);
+        var name = accessibleName.Length > 0 ? accessibleName : normalizedId;
         if (name.Length > 0) AutomationProperties.SetName(editor, name);
         var help = string.Join(" ", new[] { accessibleDescription, accessibleHelpText }.Where(value => !string.IsNullOrWhiteSpace(value)));
         if (help.Length > 0) AutomationProperties.SetHelpText(editor, help);
