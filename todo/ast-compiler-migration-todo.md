@@ -880,6 +880,8 @@ Only start this after the full AST front-end, binder, bound tree, diagnostics, e
   - [ ] Record results and variance without making a performance claim until the benchmark contract is stable.
     - Blocked by the missing phase instrumentation above; no benchmark result or performance claim is recorded until legacy/AST phase timings are available under the defined runner/corpus protocol.
 - [ ] Measure where compile time is spent across preprocessing, lexing, parsing, binding, C# generation and Roslyn.
+
+Benchmark tooling note (2026-11-23): `scripts/ast-phase-benchmark.ps1` now runs bounded clean AST compilations and reports median/min/max timings for preprocessing, lexing/parsing, binding, emission and Roslyn. It does not claim legacy-vs-AST parity until an equivalent legacy phase decomposition is available.
 - [ ] Investigate caching the parsed AST per source file.
   - [ ] Define cache key/version inputs for source text, parser/compiler version, language mode and parse options.
   - [ ] Define invalidation and memory/ownership behavior for syntax trees, diagnostics and source spans.
