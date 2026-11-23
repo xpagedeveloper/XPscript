@@ -44,15 +44,7 @@ internal sealed class UIFormActionModelPostProcessor
 """, "field-state");
         }
 
-        if (!generated.Contains("""
-internal sealed class XPScriptUITab
-{
-    public required string Name { get; init; }
-    public required string Label { get; set; }
-}
-
-internal sealed class XPScriptUIButton
-""", StringComparison.Ordinal))
+        if (!generated.Contains("internal sealed class XPScriptUITab", StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
                 @"internal\s+sealed\s+(?:partial\s+)?class\s+XPScriptUIForm(?:\s*:\s*[^\{]+)?\s*\{",
@@ -163,6 +155,14 @@ internal sealed partial class XPScriptUIForm
         _tabs.Add(tab);
         if (_activeTab.Length == 0) _activeTab = tabName;
         return tab;
+    }
+
+    public XPScriptUITabContainer AddTabContainer(object? name)
+    {
+        var containerName = NormalizeControlName(name, "tabs");
+        var container = new XPScriptUITabContainer(this, containerName);
+        AddChild(container);
+        return container;
     }
 
     public void SetFieldTab(object? name, object? tabName)

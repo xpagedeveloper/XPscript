@@ -495,6 +495,37 @@ internal sealed class XPScriptUITab
     public required string Label { get; set; }
 }
 
+internal sealed class XPScriptUITabContainer : XPScriptUIComponent
+{
+    private readonly XPScriptUIForm _form;
+    private readonly string _name;
+    private string _tabPlacement = "Top";
+
+    internal XPScriptUITabContainer(XPScriptUIForm form, string name) : base(form, "TabContainer")
+    {
+        _form = form;
+        _name = name;
+        Id = name;
+    }
+
+    public string Name => _name;
+    public string TabPlacement
+    {
+        get => _tabPlacement;
+        set
+        {
+            var placement = XPScriptRuntime.CStr(value).Trim();
+            if (!placement.Equals("Top", StringComparison.OrdinalIgnoreCase) && !placement.Equals("Bottom", StringComparison.OrdinalIgnoreCase))
+                throw new XPScriptRuntimeException(5, "UITabContainer TabPlacement must be Top or Bottom.");
+            _tabPlacement = placement.Equals("Bottom", StringComparison.OrdinalIgnoreCase) ? "Bottom" : "Top";
+        }
+    }
+
+    public string VisibleTab => _form.ActiveTab;
+    public XPScriptUITab AddTab(object? name, object? label) => _form.AddTab(name, label);
+    public void SetVisibleTab(object? name) => _form.SetActiveTab(name);
+}
+
 internal sealed class XPScriptUIButton
 {
     public required string Name { get; init; }

@@ -68,6 +68,7 @@ internal static class AstUiFormSupport
             new AstNativeObjectSurface.Member("UIForm", "SetMonthRange", "void", ["object?", "object?", "object?"], ["name", "minimum", "maximum"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetFieldLabel", "void", ["object?", "object?"], ["name", "label"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "AddTab", "XPScriptUITab", ["object?", "object?"], ["name", "label"], false, false, false),
+            new AstNativeObjectSurface.Member("UIForm", "AddTabContainer", "XPScriptUITabContainer", ["object?"], ["name"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetFieldTab", "void", ["object?", "object?"], ["name", "tabName"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetActiveTab", "void", ["object?"], ["name"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetFieldVisible", "void", ["object?", "object?"], ["name", "visible"], false, false, false),

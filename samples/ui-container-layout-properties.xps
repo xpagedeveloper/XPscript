@@ -3,7 +3,13 @@ Option Declare
 Sub Main()
     Dim form As New UIForm("Container layout properties")
     Dim grid As Variant
+    Dim tabs As Variant
     Set grid = form.AddGrid("content", 2)
+    Set tabs = form.AddTabContainer("mainTabs")
+    Call tabs.AddTab("main", "Main")
+    Call tabs.AddTab("details", "Details")
+    tabs.TabPlacement = "Bottom"
+    Call tabs.SetVisibleTab("details")
     grid.Width = 480
     grid.Height = 240
     grid.Margin = 8
@@ -13,4 +19,5 @@ Sub Main()
     grid.Background = "#FFFFFF"
     grid.Border = "#CCCCCC"
     Print "UI_CONTAINER_LAYOUT_PROPERTIES_OK"
+    Print "VISIBLE_TAB=" & tabs.VisibleTab
 End Sub
