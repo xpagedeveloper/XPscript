@@ -585,7 +585,7 @@ public static class AndroidFormHost
                 tabControl = new TabControl
                 {
                     ItemsSource = tabItems,
-                    TabStripPlacement = Dock.Top,
+                    TabStripPlacement = string.Equals(request.TryGetProperty("tabPlacement", out var tabPlacementValue) ? tabPlacementValue.GetString() : null, "Bottom", StringComparison.OrdinalIgnoreCase) ? Dock.Bottom : Dock.Top,
                     Margin = new Thickness(0, 8, 0, 8),
                     HorizontalContentAlignment = HorizontalAlignment.Stretch
                 };
