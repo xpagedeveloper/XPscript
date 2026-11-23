@@ -3,11 +3,14 @@ Sub Main()
     Dim form As New UIForm("Android UIForm Regression")
     Dim result As String
     Dim detailsGrid As Variant
+    Dim tabs As Variant
 
     Call Application.Debug.Info("ANDROID-UIFORM-REGRESSION=start")
     Call form.BindData(data)
-    Call form.AddTab("main", "Main")
-    Call form.AddTab("details", "Details")
+    tabs = form.AddTabContainer("mainTabs")
+    Call tabs.AddTab("main", "Main")
+    Call tabs.AddTab("details", "Details")
+    tabs.TabPlacement = "Bottom"
     Call form.AddTextField("name", "Name")
     Call form.SetFieldTab("name", "main")
     Call form.AddTextArea("notes", "Notes")
