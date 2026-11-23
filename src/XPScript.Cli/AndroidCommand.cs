@@ -432,7 +432,7 @@ internal static class AndroidCommand
         return result.ExitCode == 0 && !string.IsNullOrWhiteSpace(result.Output) ? result.Output.Trim() : "unknown";
     }
 
-    private const string AndroidCompileApiLevel = "36";
+    private const int MinimumAndroidCompileApiLevel = 36;
 
     private static void ValidateAndroidBuildEnvironment(bool emulatorRequired)
     {
@@ -441,13 +441,17 @@ internal static class AndroidCommand
             _ = ResolveAndroidTool("emulator");
 
         var sdkRoot = ResolveAndroidSdkRoot();
-        var platformJar = Path.Combine(sdkRoot, "platforms", "android-" + AndroidCompileApiLevel, "android.jar");
-        if (!File.Exists(platformJar))
+        var platformJar = Directory.Exists(Path.Combine(sdkRoot, "platforms"))
+            ? Directory.EnumerateDirectories(Path.Combine(sdkRoot, "platforms"), "android-*", SearchOption.TopDirectoryOnly)
+                .Where(path => int.TryParse(Path.GetFileName(path)[8..], out var api) && api >= MinimumAndroidCompileApiLevel)
+                .OrderByDescending(path => int.Parse(Path.GetFileName(path)[8..]))
+                .Select(path => Path.Combine(path, "android.jar"))
+                .FirstOrDefault(File.Exists)
+            : null;
+        if (platformJar is null)
         {
             throw new InvalidOperationException(
-                "Android SDK platform API " + AndroidCompileApiLevel + " is required to compile Android applications, " +
-                "but android.jar was not found at '" + platformJar + "'. " +
-                "Install Android SDK Platform " + AndroidCompileApiLevel + " or configure ANDROID_SDK_ROOT/ANDROID_HOME to the SDK containing it.");
+                "Android SDK platform API " + MinimumAndroidCompileApiLevel + " or newer is required to compile Android applications under '" + sdkRoot + "'.");
         }
 
         var buildToolsRoot = Path.Combine(sdkRoot, "build-tools");

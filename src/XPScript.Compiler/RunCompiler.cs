@@ -436,11 +436,12 @@ internal static class RunCompiler
                 "    <PackageReference Include=\"Xamarin.AndroidX.Tracing.Tracing.Ktx\" Version=\"1.2.0.10\" ExcludeAssets=\"all\" />\n" +
                 "  </ItemGroup>\n";
         var isAndroid = IsAndroidRuntime(runtimeIdentifier);
-        var targetFramework = isAndroid ? "net10.0-android" :
+        var targetFramework = isAndroid ? "net10.0-android36.1" :
             (Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selected ? selected : "net10.0");
         var startup = isAndroid || string.IsNullOrWhiteSpace(startupObject) ? string.Empty : $"    <StartupObject>{EscapeXml(startupObject)}</StartupObject>\n";
         var androidProperties = isAndroid
             ? $"    <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>\n" +
+              "    <AndroidUseLatestPlatformSdk>true</AndroidUseLatestPlatformSdk>\n" +
               "    <AndroidApplication>true</AndroidApplication>\n" +
               $"    <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>\n" +
               "    <AndroidPackageFormat>apk</AndroidPackageFormat>\n" +
