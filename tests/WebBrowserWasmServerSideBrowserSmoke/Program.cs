@@ -21,7 +21,13 @@ Function ServerTransform() As String
 End Function
 Sub Main()
     Dim form As New UIForm("WASM ServerSide")
+    Dim tabs As Variant
+    tabs = form.AddTabContainer("mainTabs")
+    Call tabs.AddTab("main", "Main")
+    Call tabs.AddTab("details", "Details")
+    tabs.TabPlacement = "Bottom"
     Call form.AddTextField("status", "Status")
+    Call form.SetFieldTab("status", "main")
     Call form.SetFieldValue("status", "CLIENT")
     Call form.AddButtonCallback("send", "Send to server", "HandleSend")
     Call form.Show(False)
