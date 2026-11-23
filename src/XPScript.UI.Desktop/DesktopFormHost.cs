@@ -171,7 +171,7 @@ public static class DesktopFormHost
         {
             var text = new TextBlock { Text = tab.Label, FontWeight = tab.Bold ? FontWeight.Bold : FontWeight.SemiBold };
             if (!string.IsNullOrWhiteSpace(tab.Font)) text.FontFamily = new Avalonia.Media.FontFamily(tab.Font);
-            if (tab.FontSize is > 0) text.FontSize = tab.FontSize.Value;
+            if (tab.FontSize > 0) text.FontSize = tab.FontSize;
             return new Border { Background = string.IsNullOrWhiteSpace(tab.Background) ? null : Avalonia.Media.Brush.Parse(tab.Background), Padding = new Thickness(6, 2), Child = text };
         }
 
@@ -190,11 +190,11 @@ public static class DesktopFormHost
             else if (header is TextBlock text) ApplyTabTextStyle(text, color, font, size, bold);
         }
 
-        static void ApplyTabTextStyle(TextBlock text, string color, string font, double? size, bool bold)
+        static void ApplyTabTextStyle(TextBlock text, string color, string font, double size, bool bold)
         {
             if (!string.IsNullOrWhiteSpace(color)) text.Foreground = Avalonia.Media.Brush.Parse(color);
             if (!string.IsNullOrWhiteSpace(font)) text.FontFamily = new Avalonia.Media.FontFamily(font);
-            if (size is > 0) text.FontSize = size.Value;
+            if (size > 0) text.FontSize = size;
             text.FontWeight = bold ? FontWeight.Bold : FontWeight.SemiBold;
         }
 

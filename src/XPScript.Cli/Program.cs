@@ -50,7 +50,9 @@ static string[] NormalizeGlobalDiagnosticOptions(string[] arguments)
 {
     var commandIndex = Array.FindIndex(arguments, value =>
         value.Equals("compile", StringComparison.OrdinalIgnoreCase) ||
-        value.Equals("run", StringComparison.OrdinalIgnoreCase));
+        value.Equals("run", StringComparison.OrdinalIgnoreCase) ||
+        value.Equals("web", StringComparison.OrdinalIgnoreCase) ||
+        value.Equals("fastcgi", StringComparison.OrdinalIgnoreCase));
 
     if (commandIndex <= 0)
         return arguments;

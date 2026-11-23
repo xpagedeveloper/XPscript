@@ -170,7 +170,13 @@ internal static class XPScriptUIDesktopAdapter
         }
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
         {
-            throw new XPScriptRuntimeException(5, "UIForm failed: " + ex.InnerException.Message);
+            var failedComponent = form.Tabs.Count > 0
+                ? "tabs=" + string.Join(",", form.Tabs.Select(tab => tab.Name))
+                : "fields=" + string.Join(",", fields.Select(field => field.Name));
+            var diagnostic = Environment.GetEnvironmentVariable("XPSCRIPT_RUNTIME_DEBUG") == "1" || Environment.GetEnvironmentVariable("XPSCRIPT_WEB_DEBUG") == "1"
+                ? "\n" + ex.InnerException
+                : string.Empty;
+            throw new XPScriptRuntimeException(5, $"UIForm failed (title='{form.Title}', {failedComponent}): {ex.InnerException.Message}{diagnostic}");
         }
 
         if (!modal || string.IsNullOrWhiteSpace(resultJson)) return "Pending";
