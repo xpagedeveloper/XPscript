@@ -63,7 +63,6 @@ public static class DesktopFormHost
         if (!string.IsNullOrWhiteSpace(request.BootImage)) panel.Children.Add(DesktopImageHost.Create(request.BootImage, string.Empty));
         if (!string.IsNullOrWhiteSpace(request.BootText)) panel.Children.Add(new TextBlock { Text = request.BootText, FontSize = 20, HorizontalAlignment = HorizontalAlignment.Center });
         var fieldsGrid = CreateFieldsGrid(request.GridColumns);
-        panel.Children.Add(fieldsGrid);
         var validationText = new TextBlock { IsVisible = false, TextWrapping = TextWrapping.Wrap, Foreground = Brushes.Red };
 
         var automaticRow = 0;
@@ -122,6 +121,47 @@ public static class DesktopFormHost
             Grid.SetColumnSpan(fieldPanel, columnSpan);
             Grid.SetRowSpan(fieldPanel, rowSpan);
             fieldsGrid.Children.Add(fieldPanel);
+        }
+
+        if (request.Tabs.Count == 0)
+        {
+            panel.Children.Add(fieldsGrid);
+        }
+        else
+        {
+            var tabPanels = request.Tabs.ToDictionary(tab => tab.Name, tab => new StackPanel { Spacing = 8 }, StringComparer.OrdinalIgnoreCase);
+            foreach (var field in request.Fields)
+            {
+                if (!fieldPanels.TryGetValue(field.Name, out var fieldPanel)) continue;
+                if (field.TabName.Length > 0 && tabPanels.TryGetValue(field.TabName, out var tabPanel))
+                {
+                    fieldsGrid.Children.Remove(fieldPanel);
+                    tabPanel.Children.Add(fieldPanel);
+                }
+            }
+            var tabItems = request.Tabs.Select(tab => new TabItem
+            {
+                Header = new TextBlock { Text = tab.Label, FontWeight = FontWeight.SemiBold },
+                Tag = tab.Name,
+                Content = tabPanels[tab.Name]
+            }).ToArray();
+            var tabControl = new TabControl
+            {
+                ItemsSource = tabItems,
+                SelectedIndex = Math.Max(0, request.Tabs.Select(tab => tab.Name).ToList().FindIndex(name => name.Equals(request.ActiveTab, StringComparison.OrdinalIgnoreCase))),
+                TabStripPlacement = request.TabPlacement.Equals("Bottom", StringComparison.OrdinalIgnoreCase) ? Dock.Bottom : Dock.Top,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch
+            };
+            void ApplyTabVisibility()
+            {
+                var active = tabControl.SelectedItem is TabItem item ? item.Tag?.ToString() ?? string.Empty : request.ActiveTab;
+                foreach (var field in request.Fields)
+                    if (fieldPanels.TryGetValue(field.Name, out var fieldPanel) && field.TabName.Length > 0)
+                        fieldPanel.IsVisible = field.TabName.Equals(active, StringComparison.OrdinalIgnoreCase) && field.Visible;
+            }
+            tabControl.SelectionChanged += (_, _) => ApplyTabVisibility();
+            panel.Children.Add(tabControl);
+            ApplyTabVisibility();
         }
 
         var eventInProgress = false;

@@ -128,6 +128,7 @@ public sealed record DesktopFormRequest(
     public IReadOnlyList<DesktopFormTab> Tabs { get; init; } = Array.Empty<DesktopFormTab>();
     public IReadOnlyList<DesktopFormGrid> Grids { get; init; } = Array.Empty<DesktopFormGrid>();
     public string ActiveTab { get; init; } = string.Empty;
+    public string TabPlacement { get; init; } = "Top";
     public string ApplicationTitle { get; init; } = string.Empty;
     public string ApplicationIcon { get; init; } = string.Empty;
     public string InstanceId { get; init; } = string.Empty;
