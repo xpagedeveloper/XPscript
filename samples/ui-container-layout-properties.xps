@@ -1,0 +1,16 @@
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("Container layout properties")
+    Dim grid As Variant
+    Set grid = form.AddGrid("content", 2)
+    grid.Width = 480
+    grid.Height = 240
+    grid.Margin = 8
+    grid.Padding = 12
+    grid.HorizontalAlignment = "Stretch"
+    grid.VerticalAlignment = "Top"
+    grid.Background = "#FFFFFF"
+    grid.Border = "#CCCCCC"
+    Print "UI_CONTAINER_LAYOUT_PROPERTIES_OK"
+End Sub

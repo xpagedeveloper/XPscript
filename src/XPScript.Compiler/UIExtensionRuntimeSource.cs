@@ -91,6 +91,14 @@ internal abstract class XPScriptUIComponent
     public virtual string Type { get; }
     public XPScriptUIComponent? Parent { get; internal set; }
     public XPScriptUIComponent[] Children => _children.ToArray();
+    public double? Width { get; set; }
+    public double? Height { get; set; }
+    public double Margin { get; set; }
+    public double Padding { get; set; }
+    public string HorizontalAlignment { get; set; } = "Stretch";
+    public string VerticalAlignment { get; set; } = "Top";
+    public string Background { get; set; } = string.Empty;
+    public string Border { get; set; } = string.Empty;
 
     public void AddChild(object? component)
     {
