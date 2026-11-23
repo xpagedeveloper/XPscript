@@ -277,7 +277,11 @@ internal sealed partial class XPScriptUIForm
             foreach (var tab in _tabs)
             {
                 var active = tab.Name.Equals(_activeTab, StringComparison.OrdinalIgnoreCase);
-                html.Append("<button type=\"button\" class=\"nav-link").Append(active ? " active" : "").Append("\" data-xps-tab=\"")
+                html.Append("<button type=\"button\" class=\"nav-link").Append(active ? " active" : "").Append("\" style=\"")
+                    .Append(string.IsNullOrWhiteSpace(tab.Background) ? "" : "background:").Append(string.IsNullOrWhiteSpace(tab.Background) ? "" : System.Net.WebUtility.HtmlEncode(tab.Background) + ";")
+                    .Append(string.IsNullOrWhiteSpace(tab.Font) ? "" : "font-family:").Append(string.IsNullOrWhiteSpace(tab.Font) ? "" : System.Net.WebUtility.HtmlEncode(tab.Font) + ";")
+                    .Append(tab.FontSize is > 0 ? "font-size:" + tab.FontSize.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + "px;" : "")
+                    .Append(tab.Bold ? "font-weight:700;" : "").Append("\" data-xps-tab=\"")
                     .Append(System.Net.WebUtility.HtmlEncode(tab.Name)).Append("\" onclick=\"xpsUIFormTab(this)\">")
                     .Append(System.Net.WebUtility.HtmlEncode(tab.Label)).Append("</button>");
             }
@@ -325,7 +329,11 @@ internal sealed partial class XPScriptUIForm
             foreach (var tab in _tabs)
             {
                 var active = tab.Name.Equals(_activeTab, StringComparison.OrdinalIgnoreCase);
-                html.Append("<button type=\"button\" class=\"nav-link").Append(active ? " active" : "").Append("\" data-xps-tab=\"")
+                html.Append("<button type=\"button\" class=\"nav-link").Append(active ? " active" : "").Append("\" style=\"")
+                    .Append(string.IsNullOrWhiteSpace(tab.Background) ? "" : "background:").Append(string.IsNullOrWhiteSpace(tab.Background) ? "" : System.Net.WebUtility.HtmlEncode(tab.Background) + ";")
+                    .Append(string.IsNullOrWhiteSpace(tab.Font) ? "" : "font-family:").Append(string.IsNullOrWhiteSpace(tab.Font) ? "" : System.Net.WebUtility.HtmlEncode(tab.Font) + ";")
+                    .Append(tab.FontSize is > 0 ? "font-size:" + tab.FontSize.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) + "px;" : "")
+                    .Append(tab.Bold ? "font-weight:700;" : "").Append("\" data-xps-tab=\"")
                     .Append(System.Net.WebUtility.HtmlEncode(tab.Name)).Append("\" onclick=\"xpsUIFormTab(this)\">")
                     .Append(System.Net.WebUtility.HtmlEncode(tab.Label)).Append("</button>");
             }

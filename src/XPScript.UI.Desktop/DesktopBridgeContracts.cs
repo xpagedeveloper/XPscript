@@ -101,7 +101,7 @@ public sealed record DesktopFormButton(
     public double? FontSize { get; init; }
 }
 
-public sealed record DesktopFormTab(string Name, string Label);
+public sealed record DesktopFormTab(string Name, string Label, string Background = "", string Font = "", double? FontSize = null, bool Bold = false);
 public sealed record DesktopFormGrid(string Name, int Columns, string TabName);
 
 public sealed record DesktopFormRequest(

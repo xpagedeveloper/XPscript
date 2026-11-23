@@ -273,7 +273,7 @@ internal sealed class UIFormEventDispatcherPostProcessor
             refreshAll = _refreshAllRequested,
             refreshRegions = _requestedRefreshRegions.ToArray(),
             activeTab = _activeTab,
-            tabs = _tabs.Select(tab => new { name = tab.Name, label = tab.Label }).ToArray(),
+            tabs = _tabs.Select(tab => new { name = tab.Name, label = tab.Label, background = tab.Background, font = tab.Font, fontSize = tab.FontSize, bold = tab.Bold }).ToArray(),
             tabPlacement = TabPlacement,
             navigation = _navigationTarget.Length == 0 ? null : new
             {

@@ -576,7 +576,14 @@ public static class AndroidFormHost
                         {
                             Padding = new Thickness(18, 10),
                             Margin = new Thickness(2, 0),
-                            Child = new TextBlock { Text = tabLabel, FontSize = 16, FontWeight = FontWeight.SemiBold }
+                            Background = tab.TryGetProperty("background", out var backgroundValue) && !string.IsNullOrWhiteSpace(backgroundValue.GetString()) ? Avalonia.Media.Brush.Parse(backgroundValue.GetString()!) : null,
+                            Child = new TextBlock
+                            {
+                                Text = tabLabel,
+                                FontSize = tab.TryGetProperty("fontSize", out var fontSizeValue) && fontSizeValue.ValueKind == JsonValueKind.Number ? fontSizeValue.GetDouble() : 16,
+                                FontFamily = tab.TryGetProperty("font", out var fontValue) && !string.IsNullOrWhiteSpace(fontValue.GetString()) ? new Avalonia.Media.FontFamily(fontValue.GetString()!) : null,
+                                FontWeight = tab.TryGetProperty("bold", out var boldValue) && boldValue.ValueKind == JsonValueKind.True ? FontWeight.Bold : FontWeight.SemiBold
+                            }
                         },
                         Tag = tabName,
                         Content = new ScrollViewer { Content = tabPanel }

@@ -494,6 +494,10 @@ internal sealed class XPScriptUITab
 {
     public required string Name { get; init; }
     public required string Label { get; set; }
+    public string Background { get; set; } = string.Empty;
+    public string Font { get; set; } = string.Empty;
+    public double? FontSize { get; set; }
+    public bool Bold { get; set; }
 }
 
 internal sealed class XPScriptUITabContainer : XPScriptUIComponent

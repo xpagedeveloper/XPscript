@@ -131,6 +131,10 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             // XPScriptDatabaseAttachmentApi without its implementation.
             browserGenerated = AstCompiler.EnsureAttachmentRuntime(browserGenerated, includeNativeDatabaseProviders: false);
             var browserModule = BrowserWasmServerBridgeTransportInstaller.TransformBrowserModule(BrowserRuntimeConstant("BrowserModuleJs"));
+            browserModule = browserModule
+                .Replace("const wrap=document.createElement('div');if(field.columnSpan)", "const wrap=document.createElement('div');if(field.tabName){wrap.setAttribute('data-xps-tab-panel',String(field.tabName));const activeTab=String(request.activeTab||request.tabs?.[0]?.name||'');if(String(field.tabName)!==activeTab)wrap.style.display='none';}if(field.columnSpan)", StringComparison.Ordinal)
+                .Replace("const collectValues=()=>{", "renderTabs(request,form);const collectValues=()=>{", StringComparison.Ordinal)
+                .Replace("request.fields=mergeByName(request.fields||[],state.fields||[]);request.buttons=mergeByName(request.buttons||[],state.buttons||[]);", "request.fields=mergeByName(request.fields||[],state.fields||[]);request.buttons=mergeByName(request.buttons||[],state.buttons||[]);if(Array.isArray(state.tabs))request.tabs=state.tabs;if(state.tabPlacement)request.tabPlacement=state.tabPlacement;if(state.activeTab)request.activeTab=state.activeTab;", StringComparison.Ordinal);
 
             await File.WriteAllTextAsync(Path.Combine(workspace, "Generated.cs"), browserGenerated, cancellationToken).ConfigureAwait(false);
             // Generated #line directives retain the original XPScript filename.

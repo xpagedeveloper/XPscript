@@ -141,7 +141,7 @@ public static class DesktopFormHost
             }
             var tabItems = request.Tabs.Select(tab => new TabItem
             {
-                Header = new TextBlock { Text = tab.Label, FontWeight = FontWeight.SemiBold },
+                Header = CreateTabHeader(tab),
                 Tag = tab.Name,
                 Content = tabPanels[tab.Name]
             }).ToArray();
@@ -162,6 +162,15 @@ public static class DesktopFormHost
             tabControl.SelectionChanged += (_, _) => ApplyTabVisibility();
             panel.Children.Add(tabControl);
             ApplyTabVisibility();
+        }
+
+        static Control CreateTabHeader(DesktopFormTab tab)
+        {
+            var text = new TextBlock { Text = tab.Label, FontWeight = tab.Bold ? FontWeight.Bold : FontWeight.SemiBold };
+            if (!string.IsNullOrWhiteSpace(tab.Font)) text.FontFamily = new Avalonia.Media.FontFamily(tab.Font);
+            if (tab.FontSize is > 0) text.FontSize = tab.FontSize.Value;
+            if (string.IsNullOrWhiteSpace(tab.Background)) return text;
+            return new Border { Background = Avalonia.Media.Brush.Parse(tab.Background), Padding = new Thickness(6, 2), Child = text };
         }
 
         var eventInProgress = false;

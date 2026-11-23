@@ -22,8 +22,13 @@ End Function
 Sub Main()
     Dim form As New UIForm("WASM ServerSide")
     Dim tabs As Variant
+    Dim mainTab As Variant
     tabs = form.AddTabContainer("mainTabs")
-    Call tabs.AddTab("main", "Main")
+    mainTab = tabs.AddTab("main", "Main")
+    mainTab.Background = "#e8f0ff"
+    mainTab.Font = "Arial"
+    mainTab.FontSize = 18
+    mainTab.Bold = True
     Call tabs.AddTab("details", "Details")
     tabs.TabPlacement = "Bottom"
     Call form.AddTextField("status", "Status")
@@ -101,6 +106,13 @@ End Function
         throw;
     }
     if (await status.InputValueAsync() != "CLIENT") throw new Exception("Initial WASM state missing.");
+    var tabButton = page.Locator("[data-xps-tab]").First;
+    await tabButton.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 30000 });
+    var tabTop = await tabButton.EvaluateAsync<double>("element => element.parentElement.getBoundingClientRect().top");
+    var fieldTop = await status.EvaluateAsync<double>("element => element.getBoundingClientRect().top");
+    if (tabTop <= fieldTop) throw new Exception($"Bottom tab strip was rendered above the form fields (tabs={tabTop}, field={fieldTop}).");
+    if (!await tabButton.EvaluateAsync<bool>("element => element.style.backgroundColor !== '' && element.style.fontFamily.toLowerCase().includes('arial') && element.style.fontSize === '18px' && element.style.fontWeight === '700'"))
+        throw new Exception("Tab formatting properties were not applied in the browser renderer.");
     await page.GetByRole(AriaRole.Button, new() { Name = "Send to server" }).ClickAsync();
     try
     {
