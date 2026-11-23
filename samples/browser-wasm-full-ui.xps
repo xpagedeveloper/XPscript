@@ -1,0 +1,78 @@
+[Platform:browser-wasm]
+[Anonymous]
+[Get]
+
+Public gForm As UIForm
+
+Sub Main()
+    Dim form As New UIForm("WASM full control manual test")
+    Set gForm = form
+    Dim tabs As Variant
+    Dim mainTab As Variant
+    Dim detailsTab As Variant
+
+    tabs = form.AddTabContainer("tabs")
+    mainTab = tabs.AddTab("main", "Main")
+    mainTab.Background = "#E8F0FF"
+    mainTab.SelectedBackground = "#164E8A"
+    mainTab.SelectedFontColor = "#FFFFFF"
+    mainTab.SelectedBold = True
+    detailsTab = tabs.AddTab("details", "Details")
+    detailsTab.Background = "#EAF8EE"
+    detailsTab.SelectedBackground = "#166534"
+    detailsTab.SelectedFontColor = "#FFFFFF"
+    detailsTab.SelectedBold = True
+    tabs.TabPlacement = "Top"
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddEmailField("email", "Email")
+    Call form.AddPasswordField("password", "Password")
+    Call form.AddNumberField("age", "Age")
+    Call form.AddDateField("birthDate", "Birth date")
+    Call form.AddTimeField("meetingTime", "Meeting time")
+    Call form.AddCheckBox("enabled", "Enabled")
+    Call form.AddRadioGroup("priority", "Priority")
+    Call form.AddOption("priority", "Low")
+    Call form.AddOption("priority", "High")
+    Call form.AddSelect("country", "Country")
+    Call form.AddOption("country", "Sweden")
+    Call form.AddOption("country", "Norway")
+    Call form.AddListBox("roles", "Roles")
+    Call form.AddOption("roles", "Admin")
+    Call form.AddOption("roles", "User")
+    Call form.AddMultiSelect("permissions", "Permissions")
+    Call form.AddOption("permissions", "Read")
+    Call form.AddOption("permissions", "Write")
+    Call form.AddTextArea("notes", "Notes")
+    Call form.AddFileField("attachment", "Attachment")
+    Call form.AddButtonCallback("save", "Save", "SaveForm")
+    Call form.AddButtonCallback("clear", "Clear", "ClearForm")
+    Call form.SetRequired("name", True)
+    Call form.SetFieldTab("name", "main")
+    Call form.SetFieldTab("email", "main")
+    Call form.SetFieldTab("password", "main")
+    Call form.SetFieldTab("notes", "details")
+    Call form.SetFieldTab("attachment", "details")
+    Call form.Show(False)
+End Sub
+
+Sub SaveForm(evt As Variant)
+    Print "WASM_FULL_UI_SAVE=OK"
+End Sub
+
+Sub ClearForm(evt As Variant)
+    Call gForm.SetFieldValue("name", "")
+    Call gForm.SetFieldValue("email", "")
+    Call gForm.SetFieldValue("password", "")
+    Call gForm.SetFieldValue("age", "")
+    Call gForm.SetFieldValue("birthDate", "")
+    Call gForm.SetFieldValue("meetingTime", "")
+    Call gForm.SetFieldValue("enabled", False)
+    Call gForm.SetFieldValue("priority", "")
+    Call gForm.SetFieldValue("country", "")
+    Call gForm.SetFieldValue("roles", "")
+    Call gForm.SetFieldValue("permissions", "")
+    Call gForm.SetFieldValue("notes", "")
+    Call gForm.RefreshForm()
+    Print "WASM_FULL_UI_CLEAR=OK"
+End Sub
