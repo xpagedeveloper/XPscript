@@ -712,7 +712,7 @@ public static class AndroidFormHost
                     _ => new TextBox { CornerRadius = new CornerRadius(fieldCornerRadius) }
                 };
 
-                AutomationProperties.SetAutomationId(editor, "xps-field-" + name);
+                AutomationProperties.SetAutomationId(editor, "xps-field-" + (componentId.Length > 0 ? componentId : name));
                 if (field.TryGetProperty("width", out var widthValue) && widthValue.ValueKind == JsonValueKind.Number && widthValue.TryGetDouble(out var width)) editor.Width = width;
                 if (field.TryGetProperty("height", out var heightValue) && heightValue.ValueKind == JsonValueKind.Number && heightValue.TryGetDouble(out var height)) editor.Height = height;
                 if (editor is TemplatedControl styledEditor)
