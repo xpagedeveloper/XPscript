@@ -354,5 +354,10 @@ public static class DesktopFormLifecycleHost
         => root.TryGetProperty(name, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False ? value.GetBoolean() : fallback;
 
     private static int ReadInt(JsonElement root, string name, int fallback)
-        => root.TryGetProperty(name, out var value) && value.TryGetInt32(out var number) && number > 0 ? number : fallback;
+        => root.TryGetProperty(name, out var value)
+            && value.ValueKind == JsonValueKind.Number
+            && value.TryGetInt32(out var number)
+            && number > 0
+            ? number
+            : fallback;
 }
