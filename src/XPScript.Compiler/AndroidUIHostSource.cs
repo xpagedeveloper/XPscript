@@ -570,9 +570,25 @@ public static class AndroidFormHost
                     var tabLabel = tab.TryGetProperty("label", out var tabLabelValue) ? tabLabelValue.GetString() ?? tabName : tabName;
                     var tabPanel = new StackPanel { Spacing = 12 };
                     tabPanels[tabName] = tabPanel;
-                    tabItems.Add(new TabItem { Header = tabLabel, Tag = tabName, Content = new ScrollViewer { Content = tabPanel } });
+                    tabItems.Add(new TabItem
+                    {
+                        Header = new Border
+                        {
+                            Padding = new Thickness(18, 10),
+                            Margin = new Thickness(2, 0),
+                            Child = new TextBlock { Text = tabLabel, FontSize = 16, FontWeight = FontWeight.SemiBold }
+                        },
+                        Tag = tabName,
+                        Content = new ScrollViewer { Content = tabPanel }
+                    });
                 }
-                tabControl = new TabControl { ItemsSource = tabItems };
+                tabControl = new TabControl
+                {
+                    ItemsSource = tabItems,
+                    TabStripPlacement = Dock.Top,
+                    Margin = new Thickness(0, 8, 0, 8),
+                    HorizontalContentAlignment = HorizontalAlignment.Stretch
+                };
                 var activeTab = request.TryGetProperty("activeTab", out var activeTabValue) ? activeTabValue.GetString() ?? string.Empty : string.Empty;
                 var selected = tabItems.FindIndex(item => string.Equals(item.Tag?.ToString(), activeTab, StringComparison.OrdinalIgnoreCase));
                 tabControl.SelectedIndex = selected >= 0 ? selected : 0;
@@ -876,7 +892,16 @@ public static class AndroidFormHost
         }
 
         if (Dispatcher.UIThread.CheckAccess())
-            throw new InvalidOperationException("A modal UIForm cannot be opened synchronously from an Android UI callback.");
+        {
+            // Entry-point code may run on Android's UI thread. Keep a nested
+            // dispatcher frame so Avalonia can render and process buttons while
+            // the XPScript call waits for OK/Cancel.
+            Show();
+            var frame = new DispatcherFrame();
+            completion.Task.ContinueWith(_ => Dispatcher.UIThread.Post(() => frame.Continue = false), TaskScheduler.Default);
+            Dispatcher.UIThread.PushFrame(frame);
+            return completion.Task.GetAwaiter().GetResult();
+        }
         Dispatcher.UIThread.Post(() =>
         {
             try { Show(); }
