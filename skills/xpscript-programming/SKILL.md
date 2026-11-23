@@ -562,7 +562,9 @@ Configure UIForm controls through the object returned by `Add...`: `Set field = 
 
 For tabbed forms, create a `form.AddTabContainer(name)`, add tabs to that
 container, and set `container.TabPlacement` to `Top` or `Bottom`. The returned
-tab supports `Background`, `Font`, `FontSize`, and `Bold`; use
+tab supports `Background`, `FontColor`, `Font`, `FontSize`, and `Bold`, plus
+`SelectedBackground`, `SelectedFontColor`, `SelectedFont`, `SelectedFontSize`,
+and `SelectedBold` for the active tab state; use
 `VisibleTab`/`SetVisibleTab` for selection. This API is shared by desktop,
 Android, server-rendered web, and Browser-WASM.
 

@@ -155,6 +155,9 @@ public static class DesktopFormHost
             void ApplyTabVisibility()
             {
                 var active = tabControl.SelectedItem is TabItem item ? item.Tag?.ToString() ?? string.Empty : request.ActiveTab;
+                foreach (var tab in request.Tabs)
+                    if (tabItems.FirstOrDefault(item => string.Equals(item.Tag?.ToString(), tab.Name, StringComparison.OrdinalIgnoreCase))?.Header is Control header)
+                        ApplyTabHeaderStyle(header, tab, string.Equals(tab.Name, active, StringComparison.OrdinalIgnoreCase));
                 foreach (var field in request.Fields)
                     if (fieldPanels.TryGetValue(field.Name, out var fieldPanel) && field.TabName.Length > 0)
                         fieldPanel.IsVisible = field.TabName.Equals(active, StringComparison.OrdinalIgnoreCase) && field.Visible;
@@ -169,8 +172,30 @@ public static class DesktopFormHost
             var text = new TextBlock { Text = tab.Label, FontWeight = tab.Bold ? FontWeight.Bold : FontWeight.SemiBold };
             if (!string.IsNullOrWhiteSpace(tab.Font)) text.FontFamily = new Avalonia.Media.FontFamily(tab.Font);
             if (tab.FontSize is > 0) text.FontSize = tab.FontSize.Value;
-            if (string.IsNullOrWhiteSpace(tab.Background)) return text;
-            return new Border { Background = Avalonia.Media.Brush.Parse(tab.Background), Padding = new Thickness(6, 2), Child = text };
+            return new Border { Background = string.IsNullOrWhiteSpace(tab.Background) ? null : Avalonia.Media.Brush.Parse(tab.Background), Padding = new Thickness(6, 2), Child = text };
+        }
+
+        static void ApplyTabHeaderStyle(Control header, DesktopFormTab tab, bool selected)
+        {
+            var background = selected ? tab.SelectedBackground : tab.Background;
+            var color = selected ? tab.SelectedFontColor : tab.FontColor;
+            var font = selected ? tab.SelectedFont : tab.Font;
+            var size = selected ? tab.SelectedFontSize : tab.FontSize;
+            var bold = selected ? tab.SelectedBold : tab.Bold;
+            if (header is Border border)
+            {
+                border.Background = string.IsNullOrWhiteSpace(background) ? null : Avalonia.Media.Brush.Parse(background);
+                if (border.Child is TextBlock child) ApplyTabTextStyle(child, color, font, size, bold);
+            }
+            else if (header is TextBlock text) ApplyTabTextStyle(text, color, font, size, bold);
+        }
+
+        static void ApplyTabTextStyle(TextBlock text, string color, string font, double? size, bool bold)
+        {
+            if (!string.IsNullOrWhiteSpace(color)) text.Foreground = Avalonia.Media.Brush.Parse(color);
+            if (!string.IsNullOrWhiteSpace(font)) text.FontFamily = new Avalonia.Media.FontFamily(font);
+            if (size is > 0) text.FontSize = size.Value;
+            text.FontWeight = bold ? FontWeight.Bold : FontWeight.SemiBold;
         }
 
         var eventInProgress = false;

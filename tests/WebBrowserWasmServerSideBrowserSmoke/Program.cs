@@ -29,7 +29,15 @@ Sub Main()
     mainTab.Font = "Arial"
     mainTab.FontSize = 18
     mainTab.Bold = True
-    Call tabs.AddTab("details", "Details")
+    mainTab.SelectedBackground = "#3366CC"
+    mainTab.SelectedFontColor = "#FFFFFF"
+    mainTab.SelectedFontSize = 20
+    mainTab.SelectedBold = True
+    Dim detailsTab As Variant
+    detailsTab = tabs.AddTab("details", "Details")
+    detailsTab.Background = "#F0F0F0"
+    detailsTab.FontColor = "#111111"
+    detailsTab.FontSize = 13
     tabs.TabPlacement = "Bottom"
     Call form.AddTextField("status", "Status")
     Call form.SetFieldTab("status", "main")
@@ -111,8 +119,12 @@ End Function
     var tabTop = await tabButton.EvaluateAsync<double>("element => element.parentElement.getBoundingClientRect().top");
     var fieldTop = await status.EvaluateAsync<double>("element => element.getBoundingClientRect().top");
     if (tabTop <= fieldTop) throw new Exception($"Bottom tab strip was rendered above the form fields (tabs={tabTop}, field={fieldTop}).");
-    if (!await tabButton.EvaluateAsync<bool>("element => element.style.backgroundColor !== '' && element.style.fontFamily.toLowerCase().includes('arial') && element.style.fontSize === '18px' && element.style.fontWeight === '700'"))
-        throw new Exception("Tab formatting properties were not applied in the browser renderer.");
+    if (!await tabButton.EvaluateAsync<bool>("element => element.style.backgroundColor !== '' && element.style.color !== '' && element.style.fontSize === '20px' && element.style.fontWeight === '700'"))
+        throw new Exception("Selected tab formatting properties were not applied in the browser renderer.");
+    var detailsTab = page.Locator("[data-xps-tab='details']");
+    await detailsTab.ClickAsync();
+    if (!await detailsTab.EvaluateAsync<bool>("element => element.style.backgroundColor !== '' && element.style.color !== '' && element.style.fontSize === '13px' && element.classList.contains('active')"))
+        throw new Exception("Tab formatting did not update after selecting another tab.");
     await page.GetByRole(AriaRole.Button, new() { Name = "Send to server" }).ClickAsync();
     try
     {

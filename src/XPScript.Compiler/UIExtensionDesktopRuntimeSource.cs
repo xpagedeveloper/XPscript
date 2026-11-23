@@ -149,7 +149,7 @@ internal static class XPScriptUIDesktopAdapter
                 progressIndeterminate = field.Type == "ProgressBar" ? (bool?)field.IsIndeterminate : null,
                 activityRunning = field.Type == "ActivityIndicator" ? (bool?)field.IsRunning : null
             }).ToArray(),
-            tabs = form.Tabs.Select(tab => new { name = tab.Name, label = tab.Label, background = tab.Background, font = tab.Font, fontSize = tab.FontSize, bold = tab.Bold }).ToArray(),
+            tabs = form.Tabs.Select(tab => new { name = tab.Name, label = tab.Label, background = tab.Background, fontColor = tab.FontColor, font = tab.Font, fontSize = tab.FontSize, bold = tab.Bold, selectedBackground = tab.SelectedBackground, selectedFontColor = tab.SelectedFontColor, selectedFont = tab.SelectedFont, selectedFontSize = tab.SelectedFontSize, selectedBold = tab.SelectedBold }).ToArray(),
             grids = form.Grids.Select(grid => new { name = grid.Name, columns = grid.Columns, tabName = grid.TabName }).ToArray(),
             activeTab = form.ActiveTab,
             tabPlacement = form.TabPlacement,

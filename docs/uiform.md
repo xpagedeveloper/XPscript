@@ -57,8 +57,11 @@ Call form.RefreshForm()
 Use a tab container when a form has tabbed content. `TabPlacement` belongs to
 the container, not the form. `VisibleTab` reads the active tab and
 `SetVisibleTab(name)` selects one. The object returned by `AddTab` exposes
-`Background`, `Font`, `FontSize`, and `Bold` for the tab header. These settings
-are rendered by desktop, Android, server-rendered web, and Browser-WASM hosts.
+`Background`, `FontColor`, `Font`, `FontSize`, and `Bold` for the tab header.
+Each has a selected-state counterpart: `SelectedBackground`,
+`SelectedFontColor`, `SelectedFont`, `SelectedFontSize`, and `SelectedBold`.
+These settings are rendered by desktop, Android, server-rendered web, and
+Browser-WASM hosts.
 
 ```xpscript
 Dim form As New UIForm("Settings")
@@ -67,9 +70,14 @@ Dim generalTab As Variant
 Set tabs = form.AddTabContainer("settingsTabs")
 Set generalTab = tabs.AddTab("general", "General")
 generalTab.Background = "#E8F0FF"
+    generalTab.FontColor = "#111111"
 generalTab.Font = "Arial"
 generalTab.FontSize = 14
 generalTab.Bold = True
+    generalTab.SelectedBackground = "#3366CC"
+    generalTab.SelectedFontColor = "#FFFFFF"
+    generalTab.SelectedFontSize = 16
+    generalTab.SelectedBold = True
 Call tabs.AddTab("advanced", "Advanced")
 tabs.TabPlacement = "Bottom"
 Call tabs.SetVisibleTab("general")

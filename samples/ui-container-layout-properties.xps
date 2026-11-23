@@ -9,9 +9,14 @@ Sub Main()
     Set tabs = form.AddTabContainer("mainTabs")
     Set mainTab = tabs.AddTab("main", "Main")
     mainTab.Background = "#E8F0FF"
+    mainTab.FontColor = "#111111"
     mainTab.Font = "Arial"
     mainTab.FontSize = 14
     mainTab.Bold = True
+    mainTab.SelectedBackground = "#3366CC"
+    mainTab.SelectedFontColor = "#FFFFFF"
+    mainTab.SelectedFontSize = 16
+    mainTab.SelectedBold = True
     Call tabs.AddTab("details", "Details")
     tabs.TabPlacement = "Bottom"
     Call tabs.SetVisibleTab("details")

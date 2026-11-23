@@ -596,9 +596,32 @@ public static class AndroidFormHost
                     Margin = new Thickness(0, 8, 0, 8),
                     HorizontalContentAlignment = HorizontalAlignment.Stretch
                 };
+                void ApplyTabStyles()
+                {
+                    var activeName = tabControl.SelectedItem is TabItem selectedItem ? selectedItem.Tag?.ToString() ?? string.Empty : string.Empty;
+                    for (var index = 0; index < tabItems.Count; index++)
+                    {
+                        var tab = tabs[index];
+                        var selected = string.Equals(tab.GetProperty("name").GetString(), activeName, StringComparison.OrdinalIgnoreCase);
+                        var header = (Border)tabItems[index].Header!;
+                        var text = (TextBlock)header.Child!;
+                        var background = selected && tab.TryGetProperty("selectedBackground", out var sb) ? sb.GetString() : tab.TryGetProperty("background", out var bg) ? bg.GetString() : null;
+                        var color = selected && tab.TryGetProperty("selectedFontColor", out var sc) ? sc.GetString() : tab.TryGetProperty("fontColor", out var fc) ? fc.GetString() : null;
+                        var font = selected && tab.TryGetProperty("selectedFont", out var sf) ? sf.GetString() : tab.TryGetProperty("font", out var f) ? f.GetString() : null;
+                        var size = selected && tab.TryGetProperty("selectedFontSize", out var ss) && ss.ValueKind == JsonValueKind.Number ? ss.GetDouble() : tab.TryGetProperty("fontSize", out var fs) && fs.ValueKind == JsonValueKind.Number ? fs.GetDouble() : 16;
+                        var bold = selected && tab.TryGetProperty("selectedBold", out var sbold) && sbold.ValueKind == JsonValueKind.True || !selected && tab.TryGetProperty("bold", out var boldValue) && boldValue.ValueKind == JsonValueKind.True;
+                        header.Background = string.IsNullOrWhiteSpace(background) ? null : Avalonia.Media.Brush.Parse(background!);
+                        text.Foreground = string.IsNullOrWhiteSpace(color) ? Avalonia.Media.Brushes.Black : Avalonia.Media.Brush.Parse(color!);
+                        text.FontFamily = string.IsNullOrWhiteSpace(font) ? null : new Avalonia.Media.FontFamily(font!);
+                        text.FontSize = size;
+                        text.FontWeight = bold ? FontWeight.Bold : FontWeight.SemiBold;
+                    }
+                }
+                tabControl.SelectionChanged += (_, _) => ApplyTabStyles();
                 var activeTab = request.TryGetProperty("activeTab", out var activeTabValue) ? activeTabValue.GetString() ?? string.Empty : string.Empty;
                 var selected = tabItems.FindIndex(item => string.Equals(item.Tag?.ToString(), activeTab, StringComparison.OrdinalIgnoreCase));
                 tabControl.SelectedIndex = selected >= 0 ? selected : 0;
+                ApplyTabStyles();
                 panel.Children.Add(tabControl);
             }
 
