@@ -161,9 +161,16 @@ public static class AndroidFormHost
         }
 
         if (Dispatcher.UIThread.CheckAccess())
+        {
+            // The entry point can run on Android's UI thread. Waiting on the
+            // completion task there would prevent Avalonia from presenting the
+            // form. Attach it synchronously and let the caller observe the
+            // eventual button result through the normal callback/lifecycle path.
             Show();
-        else
-            Dispatcher.UIThread.Post(Show);
+            return JsonSerializer.Serialize(new { result = "Pending", values = new { } });
+        }
+
+        Dispatcher.UIThread.Post(Show);
 
         return completion.Task.GetAwaiter().GetResult();
     }

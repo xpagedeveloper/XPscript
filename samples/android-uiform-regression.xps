@@ -16,8 +16,11 @@ Sub Main()
     Call form.AddTextField("city", "City")
     Call detailsGrid.SetFieldPosition("email", 2)
     Call detailsGrid.SetFieldPosition("city", 1)
-    ' Mobile UIForms are hosted by the Android Activity and use Show.
-    Call form.Show(False)
+    ' Entry-point Android forms use ShowDialog so the Activity attaches the
+    ' generated control tree. Callback code should use Show(False) instead.
+    Dim result As String
+    result = form.ShowDialog()
     Call Application.Debug.Info("ANDROID-UIFORM-REGRESSION=shown")
     Print "ANDROID-UIFORM-REGRESSION=shown"
+    Print "ANDROID-UIFORM-RESULT=" & result
 End Sub
