@@ -1,8 +1,7 @@
 [Platform:browser-wasm]
+Public gForm As UIForm
 [Anonymous]
 [Get]
-
-Public gForm As UIForm
 
 Sub Main()
     Dim form As New UIForm("WASM full control manual test")
@@ -23,6 +22,9 @@ Sub Main()
     detailsTab.SelectedFontColor = "#FFFFFF"
     detailsTab.SelectedBold = True
     tabs.TabPlacement = "Top"
+    Dim layoutGrid As Variant
+    layoutGrid = form.AddGrid("layoutGrid", 2)
+    Call layoutGrid.SetTab("main")
 
     Call form.AddTextField("name", "Name")
     Call form.AddEmailField("email", "Email")
@@ -34,17 +36,38 @@ Sub Main()
     Call form.AddRadioGroup("priority", "Priority")
     Call form.AddOption("priority", "Low")
     Call form.AddOption("priority", "High")
-    Call form.AddSelect("country", "Country")
-    Call form.AddOption("country", "Sweden")
-    Call form.AddOption("country", "Norway")
-    Call form.AddListBox("roles", "Roles")
-    Call form.AddOption("roles", "Admin")
-    Call form.AddOption("roles", "User")
-    Call form.AddMultiSelect("permissions", "Permissions")
-    Call form.AddOption("permissions", "Read")
-    Call form.AddOption("permissions", "Write")
+    Dim country As Variant
+    country = form.AddSelect("country", "Select here")
+    Call country.AddOption("Sweden")
+    Call country.AddOption("Norway")
+    Call form.SetOnChange("country", "CountryChanged")
+    Dim city As Variant
+    city = form.AddSelect("city", "City")
+    Call city.AddOption("Stockholm")
+    Call city.AddOption("Gothenburg")
+    Dim lakes As Variant
+    lakes = form.AddListView("swedishLakes", "Swedish lakes")
+    Call lakes.AddOption("Vänern")
+    Call lakes.AddOption("Vättern")
+    Call lakes.AddOption("Mälaren")
+    Call lakes.AddOption("Hjälmaren")
+    Call lakes.AddOption("Storsjön")
+    Dim roles As Variant
+    roles = form.AddListBox("roles", "Roles")
+    Call roles.AddOption("Admin")
+    Call roles.AddOption("User")
+    Dim permissions As Variant
+    permissions = form.AddMultiSelect("permissions", "Permissions")
+    Call permissions.AddOption("Read")
+    Call permissions.AddOption("Write")
     Call form.AddTextArea("notes", "Notes")
     Call form.AddFileField("attachment", "Attachment")
+    Call form.AddLookupField("customer", "Customer", "http://127.0.0.1:18083/lookup", "id", "name")
+    Call form.AddAutoCompleteField("product", "Product", "http://127.0.0.1:18083/lookup", "id", "name")
+    Call form.AddOption("customer", "Sweden")
+    Call form.AddOption("customer", "Norway")
+    Call form.AddOption("product", "Sweden")
+    Call form.AddOption("product", "Norway")
     Call form.AddButtonCallback("save", "Save", "SaveForm")
     Call form.AddButtonCallback("clear", "Clear", "ClearForm")
     Call form.SetRequired("name", True)
@@ -53,6 +76,8 @@ Sub Main()
     Call form.SetFieldTab("password", "main")
     Call form.SetFieldTab("notes", "details")
     Call form.SetFieldTab("attachment", "details")
+    Call layoutGrid.SetFieldPosition("name", 1)
+    Call layoutGrid.SetFieldPosition("email", 1)
     Call form.Show(False)
 End Sub
 
@@ -70,9 +95,33 @@ Sub ClearForm(evt As Variant)
     Call gForm.SetFieldValue("enabled", False)
     Call gForm.SetFieldValue("priority", "")
     Call gForm.SetFieldValue("country", "")
+    Call gForm.SetFieldValue("city", "")
     Call gForm.SetFieldValue("roles", "")
     Call gForm.SetFieldValue("permissions", "")
     Call gForm.SetFieldValue("notes", "")
     Call gForm.RefreshForm()
     Print "WASM_FULL_UI_CLEAR=OK"
+End Sub
+
+Sub CountryChanged()
+    Call gForm.ClearOptions("city")
+    Call gForm.ClearOptions("roles")
+    Call gForm.ClearOptions("customer")
+    Call gForm.ClearOptions("product")
+    If gForm.GetFieldValue("country") = "Norway" Then
+        Call gForm.AddOption("city", "Oslo")
+        Call gForm.AddOption("city", "Bergen")
+        Call gForm.AddOption("roles", "Oslo")
+        Call gForm.AddOption("roles", "Bergen")
+        Call gForm.AddOption("customer", "Norway")
+        Call gForm.AddOption("product", "Norway")
+    Else
+        Call gForm.AddOption("city", "Stockholm")
+        Call gForm.AddOption("city", "Gothenburg")
+        Call gForm.AddOption("roles", "Stockholm")
+        Call gForm.AddOption("roles", "Gothenburg")
+        Call gForm.AddOption("customer", "Sweden")
+        Call gForm.AddOption("product", "Sweden")
+    End If
+    Call gForm.RefreshForm()
 End Sub

@@ -92,11 +92,12 @@ internal sealed class UIFormAdditionalFieldsPostProcessor
         field.DataSourceUrl = XPScriptUIAdditionalFieldRuntime.AbsoluteHttpUrl(url);
         field.ValueMember = XPScriptUIAdditionalFieldRuntime.MemberName(valueMember, "value member");
         field.LabelMember = XPScriptUIAdditionalFieldRuntime.MemberName(labelMember, "label member");
-        foreach (var option in XPScriptUIAdditionalFieldRuntime.LoadOptions(field.DataSourceUrl, field.ValueMember, field.LabelMember))
-        {
-            field.RemoteOptions.Add(option);
-            if (!field.Options.Contains(option.Value, StringComparer.Ordinal)) field.Options.Add(option.Value);
-        }
+        if (!OperatingSystem.IsBrowser())
+            foreach (var option in XPScriptUIAdditionalFieldRuntime.LoadOptions(field.DataSourceUrl, field.ValueMember, field.LabelMember))
+            {
+                field.RemoteOptions.Add(option);
+                if (!field.Options.Contains(option.Value, StringComparer.Ordinal)) field.Options.Add(option.Value);
+            }
         return field;
     }
 
@@ -282,6 +283,11 @@ internal static class XPScriptUIAdditionalFieldRuntime
     public static IReadOnlyList<XPScriptUIRemoteOption> LoadOptions(string url, string valueMember, string labelMember)
     {
         using var http = new XPScriptHttpClient();
+        // UIForm lookup sources are application-configured endpoints. Allow
+        // trusted local/intranet lookup servers so desktop and WASM manual
+        // fixtures can exercise lookup controls without the generic HTTP
+        // client rejecting loopback addresses.
+        http.AllowPrivateNetwork = true;
         var response = http.Get(url);
         if (!response.IsSuccess) throw new XPScriptRuntimeException(5, "UIForm lookup data source returned HTTP " + response.StatusCode + ".");
         var document = XPScriptNativeJson.Parse(response.Body);

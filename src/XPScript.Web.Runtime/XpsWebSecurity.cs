@@ -6,7 +6,8 @@ public static class XpsWebSecurity
     public const string CsrfFormFieldName = "__xps_csrf";
 
     private const string DefaultCsp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:";
-    private const string BrowserWasmCsp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https:";
+    // Browser WASM UIForm lookups may target an explicitly configured local/intranet endpoint.
+    private const string BrowserWasmCsp = "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tiny.cloud; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https: http://127.0.0.1:* http://localhost:*";
 
     public static bool IsUnsafeMethod(string method) =>
         method.Equals("POST", StringComparison.OrdinalIgnoreCase) ||

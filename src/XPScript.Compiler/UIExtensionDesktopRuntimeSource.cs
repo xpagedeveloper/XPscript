@@ -138,7 +138,7 @@ internal static class XPScriptUIDesktopAdapter
                 regexPattern = field.RegexPattern, schemaValidationError = ReadValidationError(form, field.Name),
                 value = field.Type is "PasswordField" or "MultiListBox" ? null : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
                 values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
-                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, step = field.Type == "RangeField" ? field.Step : (double?)null, options = field.Options, cornerRadius = field.CornerRadius, width = field.Width, height = field.Height, font = field.Font, fontSize = field.FontSize, tabName = field.TabName, gridName = field.GridName,
+                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, step = field.Type == "RangeField" ? field.Step : (double?)null, options = field.Options, dataSourceUrl = field.DataSourceUrl, valueMember = field.ValueMember, labelMember = field.LabelMember, cornerRadius = field.CornerRadius, width = field.Width, height = field.Height, font = field.Font, fontSize = field.FontSize, tabName = field.TabName, gridName = field.GridName,
                 webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground, icon = field.IconName,
                 source = field.Type is "Video" or "Audio" ? field.Source : null,
                 carouselSources = field.Type == "Carousel" ? (IReadOnlyList<string>)field.CarouselSources : Array.Empty<string>(),
