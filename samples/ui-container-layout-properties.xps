@@ -20,4 +20,5 @@ Sub Main()
     grid.Border = "#CCCCCC"
     Print "UI_CONTAINER_LAYOUT_PROPERTIES_OK"
     Print "VISIBLE_TAB=" & tabs.VisibleTab
+        Print "TAB_PLACEMENT=" & tabs.TabPlacement
 End Sub

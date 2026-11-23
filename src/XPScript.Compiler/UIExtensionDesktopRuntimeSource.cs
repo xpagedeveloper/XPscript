@@ -152,6 +152,7 @@ internal static class XPScriptUIDesktopAdapter
             tabs = form.Tabs.Select(tab => new { name = tab.Name, label = tab.Label }).ToArray(),
             grids = form.Grids.Select(grid => new { name = grid.Name, columns = grid.Columns, tabName = grid.TabName }).ToArray(),
             activeTab = form.ActiveTab,
+            tabPlacement = form.TabPlacement,
             buttons = form.Buttons.Select(button => new
             {
                 name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style, icon = button.Icon, image = button.Image, cornerRadius = button.CornerRadius, width = button.Width, height = button.Height, font = button.Font, fontSize = button.FontSize,

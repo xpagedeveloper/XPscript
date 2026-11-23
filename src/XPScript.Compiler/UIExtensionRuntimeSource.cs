@@ -99,6 +99,7 @@ internal abstract class XPScriptUIComponent
     public string VerticalAlignment { get; set; } = "Top";
     public string Background { get; set; } = string.Empty;
     public string Border { get; set; } = string.Empty;
+    public string TabPlacement { get; set; } = "Top";
 
     public void AddChild(object? component)
     {
@@ -518,6 +519,7 @@ internal sealed class XPScriptUITabContainer : XPScriptUIComponent
             if (!placement.Equals("Top", StringComparison.OrdinalIgnoreCase) && !placement.Equals("Bottom", StringComparison.OrdinalIgnoreCase))
                 throw new XPScriptRuntimeException(5, "UITabContainer TabPlacement must be Top or Bottom.");
             _tabPlacement = placement.Equals("Bottom", StringComparison.OrdinalIgnoreCase) ? "Bottom" : "Top";
+            _form.TabPlacement = _tabPlacement;
         }
     }
 

@@ -271,7 +271,7 @@ internal sealed partial class XPScriptUIForm
             "        if (_title.Length > 0) html.Append(\"<h1>\").Append(System.Net.WebUtility.HtmlEncode(_title)).Append(\"</h1>\");\n",
             """
         if (_title.Length > 0) html.Append("<h1 class=\"xpscript-uiform-title h3 mb-4\">").Append(System.Net.WebUtility.HtmlEncode(_title)).Append("</h1>");
-        if (_tabs.Count > 0)
+        if (_tabs.Count > 0 && !TabPlacement.Equals("Bottom", StringComparison.OrdinalIgnoreCase))
         {
             html.Append("<div class=\"xpscript-uiform-tabs nav nav-tabs mb-3\" role=\"tablist\">");
             foreach (var tab in _tabs)
@@ -319,6 +319,18 @@ internal sealed partial class XPScriptUIForm
             "        html.Append(\"<button type=\\\"submit\\\" name=\\\"__xps_uiform_submit\\\" value=\\\"1\\\">OK</button></form>\");\n",
             """
         html.Append("</div>");
+        if (_tabs.Count > 0 && TabPlacement.Equals("Bottom", StringComparison.OrdinalIgnoreCase))
+        {
+            html.Append("<div class=\"xpscript-uiform-tabs nav nav-tabs mt-3\" role=\"tablist\">");
+            foreach (var tab in _tabs)
+            {
+                var active = tab.Name.Equals(_activeTab, StringComparison.OrdinalIgnoreCase);
+                html.Append("<button type=\"button\" class=\"nav-link").Append(active ? " active" : "").Append("\" data-xps-tab=\"")
+                    .Append(System.Net.WebUtility.HtmlEncode(tab.Name)).Append("\" onclick=\"xpsUIFormTab(this)\">")
+                    .Append(System.Net.WebUtility.HtmlEncode(tab.Label)).Append("</button>");
+            }
+            html.Append("</div>");
+        }
         if (_grids.Count > 0)
             html.Append("<script>document.querySelectorAll('[data-xps-grid-field]').forEach(function(f){var g=document.querySelector('[data-xps-grid=\\\"'+f.getAttribute('data-xps-grid-field')+'\\\"]');if(g)g.appendChild(f)});</script>");
         if (_tabs.Count > 0)
