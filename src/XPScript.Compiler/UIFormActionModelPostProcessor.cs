@@ -109,7 +109,6 @@ internal sealed partial class XPScriptUIForm
     private readonly List<XPScriptUIButton> _buttons = [];
     private readonly List<XPScriptUITab> _tabs = [];
     private string _activeTab = string.Empty;
-    private string _tabPlacement = "Top";
     private readonly HashSet<string> _requestedRefreshRegions = new(StringComparer.Ordinal);
     private bool _refreshAllRequested;
     private string _navigationTarget = string.Empty;
@@ -130,21 +129,11 @@ internal sealed partial class XPScriptUIForm
     internal IReadOnlyList<XPScriptUIButton> Buttons => _buttons;
     internal IReadOnlyList<XPScriptUITab> Tabs => _tabs;
     public string ActiveTab { get => _activeTab; set => SetActiveTab(value); }
-    public string TabPlacement
-    {
-        get => _tabPlacement;
-        set
-        {
-            var placement = XPScriptRuntime.CStr(value).Trim();
-            if (!placement.Equals("Top", StringComparison.OrdinalIgnoreCase) && !placement.Equals("Bottom", StringComparison.OrdinalIgnoreCase))
-                throw new XPScriptRuntimeException(5, "UIForm TabPlacement must be Top or Bottom.");
-            _tabPlacement = placement.Equals("Bottom", StringComparison.OrdinalIgnoreCase) ? "Bottom" : "Top";
-        }
-    }
     public object GetData() => _data;
     public void SetData(object? value) => BindData(value);
 """, "form-api");
         }
+
 
         if (!generated.Contains("public void SetFieldLabel(object? name, object? label)", StringComparison.Ordinal))
         {

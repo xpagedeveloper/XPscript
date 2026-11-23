@@ -62,7 +62,6 @@ internal static class AstUiFormSupport
             new AstNativeObjectSurface.Member("UIForm", "AddCarousel", "XPScriptUIField", ["object?", "object?", "object?"], ["name", "source", "source2"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "AddCarousel", "XPScriptUIField", ["object?", "object?", "object?", "object?"], ["name", "source", "source2", "source3"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetTheme", "void", ["object?"], ["theme"], false, false, false),
-            new AstNativeObjectSurface.Member("UIForm", "TabPlacement", "string", [], [], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetDateRange", "void", ["object?", "object?", "object?"], ["name", "minimum", "maximum"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetTimeRange", "void", ["object?", "object?", "object?"], ["name", "minimum", "maximum"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "SetDateTimeRange", "void", ["object?", "object?", "object?"], ["name", "minimum", "maximum"], false, false, false),
