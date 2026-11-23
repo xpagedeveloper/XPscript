@@ -28,11 +28,11 @@ Sub Main()
     Print "FILEPATH=" & db.FilePath
     Print "REPLICAID=" & db.ReplicaID
     Print "ACCESSLEVEL=" & CStr(db.CurrentAccessLevel)
-    Set view = db.GetView("XPScriptTestView")
+    Set view = db.GetView("vimpeople")
     If view Is Nothing Then
-        Print "VIEW=XPScriptTestView MISSING"
+        Print "VIEW=vimpeople MISSING"
     Else
-        Print "VIEW=XPScriptTestView OK"
+        Print "VIEW=vimpeople OK"
         Print "VIEWCOLUMNS=" & CStr(view.ColumnCount)
     End If
 
