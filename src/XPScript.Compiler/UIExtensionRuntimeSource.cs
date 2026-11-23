@@ -533,9 +533,11 @@ internal sealed class XPScriptUITabContainer : XPScriptUIComponent
         }
     }
 
-    public string VisibleTab => _form.ActiveTab;
-    public XPScriptUITab AddTab(object? name, object? label) => _form.AddTab(name, label);
-    public void SetVisibleTab(object? name) => _form.SetActiveTab(name);
+    public string VisibleTab => _form.GetType().GetProperty("ActiveTab")?.GetValue(_form)?.ToString() ?? string.Empty;
+    public XPScriptUITab AddTab(object? name, object? label)
+        => (XPScriptUITab)(_form.GetType().GetMethod("AddTab")?.Invoke(_form, [name, label]) ?? throw new XPScriptRuntimeException(5, "UIListView tab support is unavailable."));
+    public void SetVisibleTab(object? name)
+        => _form.GetType().GetMethod("SetActiveTab")?.Invoke(_form, [name]);
 }
 
 internal sealed class XPScriptUIButton
