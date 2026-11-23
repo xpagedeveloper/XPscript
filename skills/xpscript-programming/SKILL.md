@@ -560,6 +560,12 @@ Experimental `ast-compile` supports `On Error Resume Next`, `On Error GoTo label
 
 Configure UIForm controls through the object returned by `Add...`: `Set field = form.AddSelect("mode", "Mode")`, then use `field.AddOption("Standard")` and `field.SelectedValue = "Standard"`. Form-level option/value helpers remain compatibility APIs. See `docs/uiform.md` for the supported control-object properties and platform behavior.
 
+For tabbed forms, create a `form.AddTabContainer(name)`, add tabs to that
+container, and set `container.TabPlacement` to `Top` or `Bottom`. The returned
+tab supports `Background`, `Font`, `FontSize`, and `Bold`; use
+`VisibleTab`/`SetVisibleTab` for selection. This API is shared by desktop,
+Android, server-rendered web, and Browser-WASM.
+
 Experimental AST compilation uses the same scalar runtime for `CStr`, `CInt`, `CLng`, `CDbl`, `CBool`, byte/single/currency/date conversions, printing, Null/Empty, string helpers and `Environ` as normal compilation. `CInt` checks the Integer range; overflow can be handled with ordinary XPscript `On Error` handling. `XPScriptRuntime` is internal generated support, not a user-facing XPscript object.
 
 XPscript targets Windows, Linux, and macOS. When writing portable programs:

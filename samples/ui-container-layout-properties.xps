@@ -4,9 +4,14 @@ Sub Main()
     Dim form As New UIForm("Container layout properties")
     Dim grid As Variant
     Dim tabs As Variant
+    Dim mainTab As Variant
     Set grid = form.AddGrid("content", 2)
     Set tabs = form.AddTabContainer("mainTabs")
-    Call tabs.AddTab("main", "Main")
+    Set mainTab = tabs.AddTab("main", "Main")
+    mainTab.Background = "#E8F0FF"
+    mainTab.Font = "Arial"
+    mainTab.FontSize = 14
+    mainTab.Bold = True
     Call tabs.AddTab("details", "Details")
     tabs.TabPlacement = "Bottom"
     Call tabs.SetVisibleTab("details")

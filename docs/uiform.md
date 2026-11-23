@@ -52,6 +52,29 @@ Call form.RefreshForm()
 
 ## Shared control appearance
 
+### Tab containers and tab appearance
+
+Use a tab container when a form has tabbed content. `TabPlacement` belongs to
+the container, not the form. `VisibleTab` reads the active tab and
+`SetVisibleTab(name)` selects one. The object returned by `AddTab` exposes
+`Background`, `Font`, `FontSize`, and `Bold` for the tab header. These settings
+are rendered by desktop, Android, server-rendered web, and Browser-WASM hosts.
+
+```xpscript
+Dim form As New UIForm("Settings")
+Dim tabs As Variant
+Dim generalTab As Variant
+Set tabs = form.AddTabContainer("settingsTabs")
+Set generalTab = tabs.AddTab("general", "General")
+generalTab.Background = "#E8F0FF"
+generalTab.Font = "Arial"
+generalTab.FontSize = 14
+generalTab.Bold = True
+Call tabs.AddTab("advanced", "Advanced")
+tabs.TabPlacement = "Bottom"
+Call tabs.SetVisibleTab("general")
+```
+
 ### Component identity and hierarchy
 
 Every UI component exposes a writable `Id`, a read-only `Type`, and a read-only `Parent`. IDs are optional but must be unique within the form. `UIForm.Components` returns all controls registered on the form, while `GetComponentById(id)` returns one component (or `Nothing`) and `GetComponentsByType(type)` returns an array of matching components. A field assigned to a named grid has that grid as its parent; the grid's parent is the form.
