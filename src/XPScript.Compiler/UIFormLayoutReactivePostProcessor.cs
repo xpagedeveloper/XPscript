@@ -232,6 +232,9 @@ internal sealed partial class XPScriptUIForm
         field.Options.Clear();
     }
 
+    public void SetRefreshOnChange(object? sourceField, object? targetRegion)
+        => SetRefreshOnChange(sourceField, targetRegion, string.Empty);
+
     public void SetRefreshOnChange(object? sourceField, object? targetRegion, object? handlerName)
     {
         var field = FindField(sourceField);
@@ -239,7 +242,7 @@ internal sealed partial class XPScriptUIForm
         if (!_fields.Any(candidate => candidate.RegionId.Equals(region, StringComparison.Ordinal)))
             throw new XPScriptRuntimeException(5, $"UIForm refresh target region '{region}' does not exist.");
         var handler = XPScriptRuntime.CStr(handlerName).Trim();
-        if (handler.Length is < 1 or > 128 || !handler.All(ch => char.IsLetterOrDigit(ch) || ch == '_') || !char.IsLetter(handler[0]) && handler[0] != '_')
+        if (handler.Length > 128 || handler.Length > 0 && (!handler.All(ch => char.IsLetterOrDigit(ch) || ch == '_') || !char.IsLetter(handler[0]) && handler[0] != '_'))
             throw new XPScriptRuntimeException(5, "UIForm refresh handler name is invalid.");
         field.RefreshTargetRegion = region;
         field.RefreshHandler = handler;

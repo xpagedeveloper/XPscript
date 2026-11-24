@@ -948,16 +948,24 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
             throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured desktop UI backend or an active XPScript web request.");
         if (XPScriptUIWebAdapter.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
         {
+            var eventToken = XPScriptUIWebAdapter.FormFirst("__xps_uiform_event").Trim();
+            var eventFieldName = eventToken.StartsWith("change:", StringComparison.OrdinalIgnoreCase)
+                ? eventToken["change:".Length..]
+                : string.Empty;
             foreach (var field in _fields)
             {
+                if (eventFieldName.Length > 0 && !field.Name.Equals(eventFieldName, StringComparison.OrdinalIgnoreCase))
+                    continue;
                 if (IsMultiValueType(field.Type)) ApplySubmittedValues(field, XPScriptUIWebAdapter.FormValues(field.Name));
                 else ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
             }
-            var eventToken = XPScriptUIWebAdapter.FormFirst("__xps_uiform_event").Trim();
             if (eventToken.Length > 0)
             {
                 var eventValue = XPScriptUIWebAdapter.FormFirst("__xps_uiform_event_value");
-                XPScriptUIWebAdapter.WriteJson(DispatchRegisteredEvent(eventToken, eventValue));
+                var eventField = eventFieldName.Length > 0 ? _fields.FirstOrDefault(field => field.Name.Equals(eventFieldName, StringComparison.OrdinalIgnoreCase)) : null;
+                XPScriptUIWebAdapter.WriteJson(eventField is not null && eventField.RefreshHandler.Length == 0
+                    ? SerializeActionState()
+                    : DispatchRegisteredEvent(eventToken, eventValue));
                 return "Pending";
             }
             return "OK";
@@ -1318,7 +1326,7 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
 
     private string RenderWebEventScript()
     {
-        var fields = _fields.Where(field => field.OnChangeHandler.Length > 0).ToArray();
+        var fields = _fields.Where(field => field.OnChangeHandler.Length > 0 || field.RefreshTargetRegion.Length > 0).ToArray();
         if (fields.Length == 0) return string.Empty;
         var map = System.Text.Json.JsonSerializer.Serialize(fields.ToDictionary(field => field.Name, field => "change:" + field.Name));
         return "<script>(function(){const f=document.currentScript.previousElementSibling?.previousElementSibling?.closest('form')||document.querySelector('form.xpscript-uiform');if(!f)return;const ev=" + map + ";function apply(s){for(const x of s.fields||[]){const e=f.elements.namedItem(x.name);if(!e)continue;if(e.tagName==='SELECT'&&Array.isArray(x.options)){e.replaceChildren(...x.options.map(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;return o;}));e.value=x.value||'';}}}f.addEventListener('change',async e=>{const n=e.target?.name;if(!ev[n])return;const d=new FormData(f);d.set('__xps_uiform_event',ev[n]);d.set('__xps_uiform_event_value',e.target.value||'');const r=await fetch(location.href,{method:'POST',body:d,credentials:'same-origin',headers:{'X-XPScript-Event':'1'}});if(r.ok)apply(await r.json());});})();</script>";
