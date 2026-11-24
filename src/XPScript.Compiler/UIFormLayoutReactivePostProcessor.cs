@@ -247,6 +247,9 @@ internal sealed partial class XPScriptUIForm
             throw new XPScriptRuntimeException(5, "UIForm refresh handler name is invalid.");
         field.RefreshTargetRegion = region;
         field.RefreshHandler = handler;
+        // The browser/WASM request model binds change events through OnChangeHandler.
+        // Keep the explicit refresh handler as the dispatch target as well.
+        if (handler.Length > 0) field.OnChangeHandler = handler;
     }
 
     private static string NormalizeRegionId(object? value)

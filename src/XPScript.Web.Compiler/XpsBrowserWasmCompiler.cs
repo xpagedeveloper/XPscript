@@ -341,8 +341,7 @@ public sealed class XpsBrowserWasmCompiler
         source = source.Replace("if(!e.multiple&&type!=='select')throw new Error('select.multiple could not be enabled');", string.Empty, StringComparison.Ordinal);
         source = source.Replace("if((type==='multilistbox'||type==='multiselect'||type==='checkboxgroup')&&!e.multiple)throw new Error('select.multiple could not be enabled');", string.Empty, StringComparison.Ordinal);
         source = source.Replace("if(type==='select'||type==='listbox'||type==='multilistbox'", "if(type==='select'||type==='listbox'||type==='listview'||type==='multilistbox'", StringComparison.Ordinal);
-        source = source.Replace("if(field.onChangeHandler&&type!=='separator'", "if(field.hasChangeHandler&&type!=='separator'", StringComparison.Ordinal);
-        source = source.Replace("if(field.hasChangeHandler&&type!=='separator'", "if((field.hasChangeHandler||field.name==='country')&&type!=='separator'", StringComparison.Ordinal);
+        source = source.Replace("if(field.onChangeHandler&&type!=='separator'", "if((field.hasChangeHandler||field.onChangeHandler||field.refreshTargetRegion||type==='select'||type==='listbox'||type==='listview')&&type!=='separator'", StringComparison.Ordinal);
         source = source.Replace("else e.type='text';if(type==='checkbox')", "else if(type!=='textarea')e.type='text';if(type==='checkbox')", StringComparison.Ordinal);
         return source;
     }

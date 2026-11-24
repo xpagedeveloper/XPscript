@@ -19,6 +19,16 @@ try
 Function ServerTransform() As String
     ServerTransform = "WASM-SERVER"
 End Function
+Sub RefreshCities(form As UIForm)
+    Call form.ClearOptions("city")
+    If form.GetFieldValue("country") = "Norway" Then
+        Call form.AddOption("city", "Oslo")
+        Call form.AddOption("city", "Bergen")
+    Else
+        Call form.AddOption("city", "Stockholm")
+        Call form.AddOption("city", "Gothenburg")
+    End If
+End Sub
 Sub Main()
     Dim form As New UIForm("WASM ServerSide")
     Dim tabs As Variant
@@ -42,6 +52,19 @@ Sub Main()
     Call form.AddTextField("status", "Status")
     Call form.SetFieldTab("status", "main")
     Call form.SetFieldValue("status", "CLIENT")
+    Dim country As Variant
+    country = form.NewSelect("country", "Country")
+    Call country.AddOption("Sweden")
+    Call country.AddOption("Norway")
+    Dim city As Variant
+    city = form.NewSelect("city", "City")
+    Call city.AddOption("Stockholm")
+    Call city.AddOption("Gothenburg")
+    Dim cityRegion As Variant
+    cityRegion = form.NewFieldRegion("city", "cityRegion")
+    Call cityRegion.AddUIElement(city)
+    Call form.AddUIElement(cityRegion)
+    Call form.SetRefreshOnChange("country", "cityRegion", "RefreshCities")
     Call form.AddButtonCallback("send", "Send to server", "HandleSend")
     Call form.Show(False)
 End Sub
@@ -125,6 +148,11 @@ End Function
     await detailsTab.ClickAsync();
     if (!await detailsTab.EvaluateAsync<bool>("element => element.style.backgroundColor !== '' && element.style.color !== '' && element.style.fontSize === '13px' && element.classList.contains('active')"))
         throw new Exception("Tab formatting did not update after selecting another tab.");
+    await page.Locator("select[name='country']").SelectOptionAsync(new[] { "Norway" });
+    await page.Locator("select[name='city'] option").Filter(new LocatorFilterOptions { HasText = "Oslo" }).WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Attached, Timeout = 30000 });
+    var cityOptions = await page.Locator("select[name='city'] option").AllTextContentsAsync();
+    if (!cityOptions.Contains("Oslo")) throw new Exception("WASM backend partial refresh did not update city options.");
+    Console.WriteLine("WASM_BACKEND_PARTIAL_REFRESH_OK");
     await page.GetByRole(AriaRole.Button, new() { Name = "Send to server" }).ClickAsync();
     try
     {

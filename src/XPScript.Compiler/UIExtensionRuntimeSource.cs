@@ -118,10 +118,31 @@ internal abstract class XPScriptUIComponent
         if (!_children.Contains(child)) _children.Add(child);
     }
 
+    public void AddUIElement(object? component) => AddChild(component);
+
     internal IReadOnlyList<XPScriptUIComponent> ChildComponents => _children;
 
     internal void AttachOwner(XPScriptUIForm owner) => _owner = owner;
     internal XPScriptUIForm? Owner => _owner;
+}
+
+internal sealed class XPScriptUIFieldRegion : XPScriptUIComponent
+{
+    public XPScriptUIFieldRegion(XPScriptUIForm owner, string name, string regionId)
+        : base(owner, "FieldRegion")
+    {
+        Name = name;
+        RegionId = regionId;
+    }
+
+    public string Name { get; }
+    public string RegionId { get; }
+
+    public void AddUIElement(object? component)
+    {
+        AddChild(component);
+        if (component is XPScriptUIField field) field.RegionId = RegionId;
+    }
 }
 
 internal sealed class XPScriptUIField : XPScriptUIComponent
@@ -752,6 +773,18 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
     public XPScriptUIField AddPasswordField(object? name, object? label) => AddField(name, label, "PasswordField");
     public XPScriptUIField AddSelect(object? name) => AddField(name, name, "Select");
     public XPScriptUIField AddSelect(object? name, object? label) => AddField(name, label, "Select");
+    public XPScriptUIField NewSelect(object? name) => AddSelect(name);
+    public XPScriptUIField NewSelect(object? name, object? label) => AddSelect(name, label);
+    public XPScriptUIFieldRegion NewFieldRegion(object? name, object? regionId)
+    {
+        var regionName = XPScriptRuntime.CStr(name).Trim();
+        var region = XPScriptRuntime.CStr(regionId).Trim();
+        if (region.Length is < 1 or > 128 || region.Any(ch => !(char.IsLetterOrDigit(ch) || ch is '_' or '-')))
+            throw new XPScriptRuntimeException(5, "UIForm field region ID is invalid.");
+        var result = new XPScriptUIFieldRegion(this, regionName, region);
+        RegisterComponent(result);
+        return result;
+    }
     public XPScriptUIField AddListBox(object? name) => AddField(name, name, "ListBox");
     public XPScriptUIField AddListBox(object? name, object? label) => AddField(name, label, "ListBox");
     public XPScriptUIField AddListView(object? name) => AddField(name, name, "ListView");

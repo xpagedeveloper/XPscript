@@ -14,6 +14,7 @@ internal static class AstUiFormSupport
             ["UIForm"] = "XPScriptUIForm",
             ["UIComponent"] = "XPScriptUIComponent",
             ["UIFormField"] = "XPScriptUIField",
+            ["FieldRegion"] = "XPScriptUIFieldRegion",
             ["UIFormGrid"] = "XPScriptUIGrid",
             ["UIFormTab"] = "XPScriptUITab",
             ["UIButton"] = "XPScriptUIButton"
@@ -26,11 +27,11 @@ internal static class AstUiFormSupport
     private static string LanguageType(string type) => type.TrimEnd('?') switch
     {
         "object" => "Variant", "int" => "Integer", "double" => "Double", "string" => "String", "bool" => "Boolean",
-        "XPScriptUIForm" => "UIForm", "XPScriptUIComponent" => "UIComponent", "XPScriptUIField" => "UIFormField", "XPScriptUIGrid" => "UIFormGrid", "XPScriptUITab" => "UIFormTab", "XPScriptUIButton" => "UIButton", "XPScriptJsonValidationResult" => "XPJsonValidationResult", _ => type
+        "XPScriptUIForm" => "UIForm", "XPScriptUIComponent" => "UIComponent", "XPScriptUIField" => "UIFormField", "XPScriptUIFieldRegion" => "FieldRegion", "XPScriptUIGrid" => "UIFormGrid", "XPScriptUITab" => "UIFormTab", "XPScriptUIButton" => "UIButton", "XPScriptJsonValidationResult" => "XPJsonValidationResult", _ => type
     };
 
     internal static readonly AstNativeObjectSurface.Member[] Members = AstNativeObjectSurface
-        .ReadMembers(Classes, ["XPScriptUI", "XPScriptUIComponent", "XPScriptUIForm", "XPScriptUIField", "XPScriptUIGrid", "XPScriptUITab", "XPScriptUIButton"], LanguageType)
+        .ReadMembers(Classes, ["XPScriptUI", "XPScriptUIComponent", "XPScriptUIForm", "XPScriptUIField", "XPScriptUIFieldRegion", "XPScriptUIGrid", "XPScriptUITab", "XPScriptUIButton"], LanguageType)
         .Append(new AstNativeObjectSurface.Member("UIForm", "Show", "void",
             ["object?"], ["modalValue"], false, false, false))
         .Append(new AstNativeObjectSurface.Member("UIForm", "Hide", "void",
@@ -58,6 +59,11 @@ internal static class AstUiFormSupport
             ["XPScriptUIComponent"], ["component"], false, false, false))
         .Concat(new[]
         {
+            new AstNativeObjectSurface.Member("UIComponent", "AddUIElement", "void", ["object?"], ["component"], false, false, false),
+            new AstNativeObjectSurface.Member("UIForm", "NewSelect", "XPScriptUIField", ["object?"], ["name"], false, false, false),
+            new AstNativeObjectSurface.Member("UIForm", "NewSelect", "XPScriptUIField", ["object?", "object?"], ["name", "label"], false, false, false),
+            new AstNativeObjectSurface.Member("UIForm", "NewFieldRegion", "XPScriptUIFieldRegion", ["object?", "object?"], ["name", "regionId"], false, false, false),
+            new AstNativeObjectSurface.Member("FieldRegion", "AddUIElement", "void", ["object?"], ["component"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "AddCarousel", "XPScriptUIField", ["object?", "object?"], ["name", "source"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "AddCarousel", "XPScriptUIField", ["object?", "object?", "object?"], ["name", "source", "source2"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "AddCarousel", "XPScriptUIField", ["object?", "object?", "object?", "object?"], ["name", "source", "source2", "source3"], false, false, false),
