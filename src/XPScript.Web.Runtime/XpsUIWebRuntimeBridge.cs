@@ -89,6 +89,7 @@ public static class XpsUIWebRuntimeBridge
             .Replace("<label for=\"xps_", "<label class=\"form-label\" for=\"xps_", StringComparison.Ordinal)
             .Replace("<textarea id=\"xps_", "<textarea class=\"form-control\" id=\"xps_", StringComparison.Ordinal)
             .Replace("<select id=\"xps_", "<select class=\"form-select\" id=\"xps_", StringComparison.Ordinal)
+            .Replace("<select multiple", "<select class=\"form-select\" multiple", StringComparison.Ordinal)
             .Replace("<input type=\"text\"", "<input class=\"form-control\" type=\"text\"", StringComparison.Ordinal)
             .Replace("<input type=\"email\"", "<input class=\"form-control\" type=\"email\"", StringComparison.Ordinal)
             .Replace("<input type=\"password\"", "<input class=\"form-control\" type=\"password\"", StringComparison.Ordinal)
