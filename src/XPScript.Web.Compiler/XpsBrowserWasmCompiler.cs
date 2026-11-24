@@ -328,7 +328,7 @@ public sealed class XpsBrowserWasmCompiler
             StringComparison.Ordinal);
         source = source.Replace(
             "root.appendChild(actions);}return JSON.stringify({result:'Pending',values:{}});}",
-            "root.appendChild(actions);}applyLookupOptions(request);enableRemoteLookups(request);const updateCities=()=>{const country=document.querySelector('[name=country]');const city=document.querySelector('[name=city]');if(!country||!city)return;const selected=country.options&&country.selectedIndex>=0?country.options[country.selectedIndex]:null;const countryName=String(selected?.textContent||country.value||'');const values=countryName==='Norway'?['Oslo','Bergen']:['Stockholm','Gothenburg'];const current=city.value;city.replaceChildren(...values.map(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;return o;}));city.value=values.includes(current)?current:values[0];};form.addEventListener('input',e=>{if(e.target&&e.target.name==='country')updateCities();});form.addEventListener('change',e=>{if(e.target&&e.target.name==='country'){updateCities();setTimeout(updateCities,1000);}});updateCities();setInterval(updateCities,250);return JSON.stringify({result:'Pending',values:{}});}",
+            "root.appendChild(actions);}applyLookupOptions(request);enableRemoteLookups(request);return JSON.stringify({result:'Pending',values:{}});}",
             StringComparison.Ordinal);
         source = source.Replace("renderForm(requestJson){", "renderForm(requestJson, targetRoot = null){", StringComparison.Ordinal)
             .Replace("const root=document.getElementById('xpscript-app');", "const root=targetRoot||document.getElementById('xpscript-app');", StringComparison.Ordinal)
