@@ -773,6 +773,8 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
     public XPScriptUIField AddPasswordField(object? name, object? label) => AddField(name, label, "PasswordField");
     public XPScriptUIField AddSelect(object? name) => AddField(name, name, "Select");
     public XPScriptUIField AddSelect(object? name, object? label) => AddField(name, label, "Select");
+    public XPScriptUIField NewField(object? name, object? label, object? type)
+        => AddField(name, label, NormalizeControlType(type));
     public XPScriptUIField NewSelect(object? name) => AddSelect(name);
     public XPScriptUIField NewSelect(object? name, object? label) => AddSelect(name, label);
     public XPScriptUIFieldRegion NewFieldRegion(object? name, object? regionId)
@@ -1018,6 +1020,21 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         _fields.Add(field);
         RegisterComponent(field);
         return field;
+    }
+
+    private static string NormalizeControlType(object? value)
+    {
+        var type = XPScriptRuntime.CStr(value).Trim();
+        if (type.Length is < 1 or > 64 || type.Any(ch => !char.IsLetterOrDigit(ch)))
+            throw new XPScriptRuntimeException(5, "UIForm control type is invalid.");
+        return type switch
+        {
+            "TextField" or "TextArea" or "NumberField" or "DateField" or "TimeField" or "DateTimeField" or
+            "MonthField" or "ColorField" or "EmailField" or "UrlField" or "PasswordField" or "Select" or
+            "ListBox" or "ListView" or "MultiListBox" or "MultiSelect" or "RadioGroup" or "CheckBox" or
+            "Switch" or "RangeField" or "HiddenField" or "LookupField" or "AutoCompleteField" or "FileField" => type,
+            _ => throw new XPScriptRuntimeException(5, $"UIForm control type '{type}' is not supported.")
+        };
     }
 
     internal void RegisterComponent(XPScriptUIComponent component, XPScriptUIComponent? parent = null)

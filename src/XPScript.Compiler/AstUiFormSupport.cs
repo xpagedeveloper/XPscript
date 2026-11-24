@@ -62,6 +62,7 @@ internal static class AstUiFormSupport
             new AstNativeObjectSurface.Member("UIComponent", "AddUIElement", "void", ["object?"], ["component"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "NewSelect", "XPScriptUIField", ["object?"], ["name"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "NewSelect", "XPScriptUIField", ["object?", "object?"], ["name", "label"], false, false, false),
+            new AstNativeObjectSurface.Member("UIForm", "NewField", "XPScriptUIField", ["object?", "object?", "object?"], ["name", "label", "type"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "NewFieldRegion", "XPScriptUIFieldRegion", ["object?", "object?"], ["name", "regionId"], false, false, false),
             new AstNativeObjectSurface.Member("FieldRegion", "AddUIElement", "void", ["object?"], ["component"], false, false, false),
             new AstNativeObjectSurface.Member("UIForm", "AddCarousel", "XPScriptUIField", ["object?", "object?"], ["name", "source"], false, false, false),
