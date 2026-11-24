@@ -77,6 +77,14 @@ public static class XpsUIWebRuntimeBridge
         response.Write(InjectCsrfFields(ApplyBootstrapMarkup(html)));
     }
 
+    public static void WriteJson(string json)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        var response = XpsWebContextAccessor.Current.Response;
+        response.ContentType = "application/json; charset=utf-8";
+        response.Write(json);
+    }
+
     private static string ApplyBootstrapMarkup(string html)
     {
         // Server-rendered UIForms are plain HTML at this point. Apply the same

@@ -953,6 +953,13 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
                 if (IsMultiValueType(field.Type)) ApplySubmittedValues(field, XPScriptUIWebAdapter.FormValues(field.Name));
                 else ApplySubmittedValue(field, XPScriptUIWebAdapter.FormFirst(field.Name));
             }
+            var eventToken = XPScriptUIWebAdapter.FormFirst("__xps_uiform_event").Trim();
+            if (eventToken.Length > 0)
+            {
+                var eventValue = XPScriptUIWebAdapter.FormFirst("__xps_uiform_event_value");
+                XPScriptUIWebAdapter.WriteJson(DispatchRegisteredEvent(eventToken, eventValue));
+                return "Pending";
+            }
             return "OK";
         }
         XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
@@ -1304,8 +1311,17 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
             html.Append("</div>");
         }
         html.Append("<script>(function(){for(const child of document.querySelectorAll('[data-parent-id]')){const id=child.dataset.parentId;const parent=document.querySelector('[data-component-id=\"'+CSS.escape(id)+'\"]')||document.getElementById('xps_field_'+CSS.escape(id));const target=parent?.querySelector('.xpscript-uiform-container-children');if(target)target.appendChild(child);}function xpsUIFormTab(b){var n=b.getAttribute('data-xps-tab');document.querySelectorAll('[data-xps-tab]').forEach(function(x){var s=x===b;x.classList.toggle('active',s);x.style.background=s?(x.dataset.tabSelectedBg||x.dataset.tabBg||''):(x.dataset.tabBg||'');x.style.color=s?(x.dataset.tabSelectedColor||x.dataset.tabColor||''):(x.dataset.tabColor||'');});document.querySelectorAll('[data-xps-tab-panel]').forEach(function(x){x.style.display=x.getAttribute('data-xps-tab-panel')===n?'':'none'});}document.querySelectorAll('[data-xps-tab]').forEach(function(x){x.addEventListener('click',function(){xpsUIFormTab(x);});});})();</script>");
+        html.Append(RenderWebEventScript());
         html.Append("<button type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
         return html.ToString();
+    }
+
+    private string RenderWebEventScript()
+    {
+        var fields = _fields.Where(field => field.OnChangeHandler.Length > 0).ToArray();
+        if (fields.Length == 0) return string.Empty;
+        var map = System.Text.Json.JsonSerializer.Serialize(fields.ToDictionary(field => field.Name, field => "change:" + field.Name));
+        return "<script>(function(){const f=document.currentScript.previousElementSibling?.previousElementSibling?.closest('form')||document.querySelector('form.xpscript-uiform');if(!f)return;const ev=" + map + ";function apply(s){for(const x of s.fields||[]){const e=f.elements.namedItem(x.name);if(!e)continue;if(e.tagName==='SELECT'&&Array.isArray(x.options)){e.replaceChildren(...x.options.map(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;return o;}));e.value=x.value||'';}}}f.addEventListener('change',async e=>{const n=e.target?.name;if(!ev[n])return;const d=new FormData(f);d.set('__xps_uiform_event',ev[n]);d.set('__xps_uiform_event_value',e.target.value||'');const r=await fetch(location.href,{method:'POST',body:d,credentials:'same-origin',headers:{'X-XPScript-Event':'1'}});if(r.ok)apply(await r.json());});})();</script>";
     }
 
     private static string BuildWebControlStyle(XPScriptUIField field)
@@ -1360,6 +1376,13 @@ internal static class XPScriptUIWebAdapter
         var method = type.GetMethod("WriteHtml", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
             ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is incomplete.");
         method.Invoke(null, [html]);
+    }
+    public static void WriteJson(string json)
+    {
+        var type = BridgeType ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is unavailable.");
+        var method = type.GetMethod("WriteJson", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            ?? throw new XPScriptRuntimeException(5, "XPScript web UI bridge is incomplete.");
+        method.Invoke(null, [json]);
     }
     private static string InvokeString(string methodName, params object?[] args)
     {
