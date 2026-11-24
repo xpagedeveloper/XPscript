@@ -25,6 +25,19 @@ Sub Index()
     Call form.BindData(data)
     Call form.AddTextField("existing", "Existing")
     Call form.AddTextField("missing", "Missing")
+    Dim firstPanel As Variant
+    firstPanel = form.AddPanel("firstPanel", "First")
+    firstPanel.Id = "firstPanel"
+    Dim secondPanel As Variant
+    secondPanel = form.AddPanel("secondPanel", "Second")
+    secondPanel.Id = "secondPanel"
+    Dim moved As Variant
+    moved = form.AddTextField("moved", "Moved")
+    moved.Id = "moved"
+    Call firstPanel.AddUIElement(moved)
+    Call secondPanel.AddUIElement(moved)
+    Call form.AddUIElement(firstPanel)
+    Call form.AddUIElement(secondPanel)
 
     result = form.ShowDialog()
     If result = "OK" Then
@@ -63,6 +76,8 @@ try
         if (!body.Contains(">Contact form</h1>", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not render title.");
         if (!body.Contains("name=\"existing\" value=\"Loaded from JSON\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not load existing JSON value.");
         if (!body.Contains("name=\"missing\" value=\"\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not render missing JSON field as empty.");
+        if (!body.Contains("data-parent-id=\"secondPanel\"", StringComparison.Ordinal) || body.Contains("data-parent-id=\"firstPanel\"", StringComparison.Ordinal))
+            throw new Exception("UIForm reparenting did not move the control to its new visual parent.");
     }
 
     using (var content = new StringContent("existing=Changed+value&missing=Created+by+user", Encoding.UTF8, "application/x-www-form-urlencoded"))
