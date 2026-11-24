@@ -96,8 +96,8 @@ public static class XpsUIWebRuntimeBridge
             .Replace("<input type=\"number\"", "<input class=\"form-control\" type=\"number\"", StringComparison.Ordinal)
             .Replace("<input type=\"date\"", "<input class=\"form-control\" type=\"date\"", StringComparison.Ordinal)
             .Replace("<input type=\"time\"", "<input class=\"form-control\" type=\"time\"", StringComparison.Ordinal)
-            .Replace("<input type=\"checkbox\"", "<input class=\"form-check-input me-2\" type=\"checkbox\"", StringComparison.Ordinal)
-            .Replace("<input type=\"radio\"", "<input class=\"form-check-input me-2\" type=\"radio\"", StringComparison.Ordinal)
+            .Replace("<input type=\"checkbox\"", "<input class=\"form-check-input ms-2 me-2\" type=\"checkbox\"", StringComparison.Ordinal)
+            .Replace("<label><input type=\"radio\"", "<label class=\"form-check form-check-inline px-2\"><input class=\"form-check-input me-2\" type=\"radio\"", StringComparison.Ordinal)
             .Replace("<button type=\"submit\"", "<button class=\"btn btn-primary\" type=\"submit\"", StringComparison.Ordinal);
     }
 
