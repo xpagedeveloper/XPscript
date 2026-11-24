@@ -38,12 +38,16 @@ Sub Index()
     Call secondPanel.AddUIElement(moved)
     Call form.AddUIElement(firstPanel)
     Call form.AddUIElement(secondPanel)
+    Call form.AddButton("save", "Save", "Noop")
 
     result = form.ShowDialog()
-    If result = "OK" Then
+    If result = "OK" Or result = "save" Then
         Response.ContentType = "application/json; charset=utf-8"
         Response.Write(data.Stringify())
     End If
+End Sub
+
+Sub Noop()
 End Sub
 """);
 
@@ -78,9 +82,11 @@ try
         if (!body.Contains("name=\"missing\" value=\"\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel GET did not render missing JSON field as empty.");
         if (!body.Contains("data-parent-id=\"secondPanel\"", StringComparison.Ordinal) || body.Contains("data-parent-id=\"firstPanel\"", StringComparison.Ordinal))
             throw new Exception("UIForm reparenting did not move the control to its new visual parent.");
+        if (!body.Contains("name=\"__xps_uiform_result\" value=\"save\"", StringComparison.Ordinal))
+            throw new Exception("UIForm did not render the custom dialog result button.");
     }
 
-    using (var content = new StringContent("existing=Changed+value&missing=Created+by+user", Encoding.UTF8, "application/x-www-form-urlencoded"))
+    using (var content = new StringContent("existing=Changed+value&missing=Created+by+user&__xps_uiform_result=save", Encoding.UTF8, "application/x-www-form-urlencoded"))
     using (var response = await client.PostAsync("/form.xps", content))
     {
         if ((int)response.StatusCode != 200) throw new Exception($"UIForm Kestrel POST expected 200, got {(int)response.StatusCode}.");

@@ -95,6 +95,7 @@ public sealed record DesktopFormButton(
     bool Visible,
     bool Enabled)
 {
+    public string Result { get; init; } = string.Empty;
     public double CornerRadius { get; init; }
     public double? Width { get; init; }
     public double? Height { get; init; }

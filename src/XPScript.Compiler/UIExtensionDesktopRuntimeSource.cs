@@ -155,7 +155,7 @@ internal static class XPScriptUIDesktopAdapter
             tabPlacement = form.TabPlacement,
             buttons = form.Buttons.Select(button => new
             {
-                name = button.Name, label = button.Label, visible = button.Visible, enabled = button.Enabled, style = button.Style, icon = button.Icon, image = button.Image, cornerRadius = button.CornerRadius, width = button.Width, height = button.Height, font = button.Font, fontSize = button.FontSize,
+                name = button.Name, label = button.Label, result = button.Result.Length > 0 ? button.Result : button.Name, visible = button.Visible, enabled = button.Enabled, style = button.Style, icon = button.Icon, image = button.Image, cornerRadius = button.CornerRadius, width = button.Width, height = button.Height, font = button.Font, fontSize = button.FontSize,
                 layoutRow = button.LayoutRow, layoutColumn = button.LayoutColumn, columnSpan = button.ColumnSpan, rowSpan = button.RowSpan
             }).ToArray()
         };
@@ -191,7 +191,8 @@ internal static class XPScriptUIDesktopAdapter
             DispatchCompiledNavigation(ReadNavigationValue(navigationValues, "__xps_navigation_target"));
             return "Navigate";
         }
-        if (!result.Equals("OK", StringComparison.OrdinalIgnoreCase)) return "Cancel";
+        if (!result.Equals("OK", StringComparison.OrdinalIgnoreCase) && !result.Equals("Cancel", StringComparison.OrdinalIgnoreCase))
+            return result;
         if (!root.TryGetProperty("values", out var values) || values.ValueKind != System.Text.Json.JsonValueKind.Object) return "OK";
         foreach (var property in values.EnumerateObject())
         {

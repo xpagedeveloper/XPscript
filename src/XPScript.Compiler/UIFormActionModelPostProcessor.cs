@@ -240,6 +240,7 @@ internal sealed partial class XPScriptUIForm
             Name = buttonName,
             Label = XPScriptRuntime.CStr(label),
             Handler = NormalizeHandlerName(handlerName),
+            Result = buttonName,
             CornerRadius = _cornerRadius
         };
         if (_defaultControlWidth.HasValue) button.Width = _defaultControlWidth;

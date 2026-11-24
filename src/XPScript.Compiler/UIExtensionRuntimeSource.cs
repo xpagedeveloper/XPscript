@@ -566,6 +566,7 @@ internal sealed class XPScriptUIButton
     public required string Name { get; init; }
     public required string Label { get; set; }
     public required string Handler { get; set; }
+    public string Result { get; set; } = string.Empty;
     public string Style { get; set; } = "Default";
     public string Icon { get; set; } = string.Empty;
     public string Image { get; set; } = string.Empty;
@@ -598,6 +599,7 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
     private readonly string _instanceId = Guid.NewGuid().ToString("N");
     private bool _visible;
     private bool _modal;
+    public string DialogResult { get; set; } = string.Empty;
     private int? _width;
     private int? _height;
     private bool _resizable;
@@ -1003,7 +1005,9 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
                     : DispatchRegisteredEvent(eventToken, eventValue));
                 return "Pending";
             }
-            return "OK";
+            var submittedResult = XPScriptUIWebAdapter.FormFirst("__xps_uiform_result").Trim();
+            DialogResult = submittedResult.Length > 0 ? submittedResult : "OK";
+            return DialogResult;
         }
         XPScriptUIWebAdapter.WriteHtml(RenderWebForm());
         return "Pending";
@@ -1370,7 +1374,16 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         }
         html.Append("<script>(function(){for(const child of document.querySelectorAll('[data-parent-id]')){const id=child.dataset.parentId;const parent=document.querySelector('[data-component-id=\"'+CSS.escape(id)+'\"]')||document.getElementById('xps_field_'+CSS.escape(id));const target=parent?.querySelector('.xpscript-uiform-container-children');if(target)target.appendChild(child);}function xpsUIFormTab(b){var n=b.getAttribute('data-xps-tab');document.querySelectorAll('[data-xps-tab]').forEach(function(x){var s=x===b;x.classList.toggle('active',s);x.style.background=s?(x.dataset.tabSelectedBg||x.dataset.tabBg||''):(x.dataset.tabBg||'');x.style.color=s?(x.dataset.tabSelectedColor||x.dataset.tabColor||''):(x.dataset.tabColor||'');});document.querySelectorAll('[data-xps-tab-panel]').forEach(function(x){x.style.display=x.getAttribute('data-xps-tab-panel')===n?'':'none'});}document.querySelectorAll('[data-xps-tab]').forEach(function(x){x.addEventListener('click',function(){xpsUIFormTab(x);});});})();</script>");
         html.Append(RenderWebEventScript());
-        html.Append("<button type=\"submit\" name=\"__xps_uiform_submit\" value=\"1\">OK</button></form>");
+        foreach (var button in _buttons.Where(button => button.Visible))
+        {
+            var result = System.Net.WebUtility.HtmlEncode(button.Result.Length > 0 ? button.Result : button.Name);
+            var label = System.Net.WebUtility.HtmlEncode(button.Label);
+            html.Append("<button type=\"submit\" name=\"__xps_uiform_result\" value=\"").Append(result).Append("\"");
+            if (!button.Enabled) html.Append(" disabled");
+            html.Append(">").Append(label).Append("</button>");
+        }
+        if (_buttons.Count == 0) html.Append("<button type=\"submit\" name=\"__xps_uiform_result\" value=\"OK\">OK</button>");
+        html.Append("</form>");
         return html.ToString();
     }
 
