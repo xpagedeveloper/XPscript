@@ -239,8 +239,9 @@ internal sealed partial class XPScriptUIForm
     {
         var field = FindField(sourceField);
         var region = NormalizeRegionId(targetRegion);
-        if (!_fields.Any(candidate => candidate.RegionId.Equals(region, StringComparison.Ordinal)))
-            throw new XPScriptRuntimeException(5, $"UIForm refresh target region '{region}' does not exist.");
+        if (!_fields.Any(candidate => candidate.RegionId.Equals(region, StringComparison.Ordinal)) &&
+            !_fields.Any(candidate => candidate.TabName.Equals(region, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm refresh target region or tab '{region}' does not exist.");
         var handler = XPScriptRuntime.CStr(handlerName).Trim();
         if (handler.Length > 128 || handler.Length > 0 && (!handler.All(ch => char.IsLetterOrDigit(ch) || ch == '_') || !char.IsLetter(handler[0]) && handler[0] != '_'))
             throw new XPScriptRuntimeException(5, "UIForm refresh handler name is invalid.");
