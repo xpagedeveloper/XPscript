@@ -38,3 +38,4 @@ samples/xpscript-full-runtime-stream-test.txt
 .ccindex/
 # Playwright CLI output (may contain credentials)
 .playwright-cli/
+/.manual-wasm-ui-5230/.xpscript-cache

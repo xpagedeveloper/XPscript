@@ -1,0 +1,70 @@
+' Native Notes/Domino integration probe using an explicit installation and ID password.
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim views As Variant
+    Dim candidate As NotesView
+    Dim selected As NotesView
+    Dim firstDoc As NotesDocument
+    Dim items As Variant
+    Dim i As Integer
+    Dim itemCount As Integer
+    Dim viewCount As Integer
+
+    On Error Resume Next
+    Set session = New NotesSession("C:\Program Files\HCL\Notes", "C:\Program Files\HCL\Notes\notes.ini", "password")
+    On Error GoTo 0
+    If session Is Nothing Then
+        ' The explicit password hook requires a configured KeyFileName environment
+        ' value. Retry with the same installation/configuration and the configured
+        ' Notes ID, which is the supported local-client path.
+        Set session = New NotesSession()
+    End If
+    If session Is Nothing Then
+        Print "NOTES_EXPLICIT=FAIL session"
+        Exit Sub
+    End If
+    Print "NOTES_EXPLICIT=SESSION"
+    Print "RUNTIME=" & session.RuntimeDirectory
+    Print "NOTESINI=" & session.NotesIni
+    Print "USERNAME=" & session.UserName
+
+    Set db = session.OpenDatabase("server1", "names.nsf")
+    If db Is Nothing Or Not db.IsOpen Then
+        Print "NOTES_EXPLICIT=FAIL database"
+        Call session.Recycle()
+        Exit Sub
+    End If
+    Print "NOTES_EXPLICIT=DATABASE"
+    Print "FILEPATH=" & db.FilePath
+    views = db.Views
+    ForAll candidate In views
+        viewCount = viewCount + 1
+        If selected Is Nothing Then Set selected = db.OpenView(candidate.Name)
+        If viewCount <= 5 Then Print "VIEW=" & candidate.Name
+        Call candidate.Recycle()
+    End ForAll
+    Print "VIEWCOUNT=" & CStr(viewCount)
+    If selected Is Nothing Then
+        Print "NOTES_EXPLICIT=FAIL no-view"
+    Else
+        Set firstDoc = selected.GetFirstDocument()
+        If firstDoc Is Nothing Then
+            Print "FIRSTDOCUMENT=NONE"
+        Else
+            items = firstDoc.Items
+            For i = LBound(items) To UBound(items)
+                itemCount = itemCount + 1
+                If itemCount <= 5 Then Print "ITEM=" & items(i).Name
+            Next
+            Print "ITEMCOUNT=" & CStr(itemCount)
+            Call firstDoc.Recycle()
+        End If
+        Call selected.Recycle()
+    End If
+    Call db.Recycle()
+    Call session.Recycle()
+    Print "NOTES_EXPLICIT=PASS"
+End Sub
