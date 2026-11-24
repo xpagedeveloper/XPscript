@@ -74,7 +74,30 @@ public static class XpsUIWebRuntimeBridge
         var response = XpsWebContextAccessor.Current.Response;
         response.ContentType = "text/html; charset=utf-8";
         EnsureBootstrap(response);
-        response.Write(InjectCsrfFields(html));
+        response.Write(InjectCsrfFields(ApplyBootstrapMarkup(html)));
+    }
+
+    private static string ApplyBootstrapMarkup(string html)
+    {
+        // Server-rendered UIForms are plain HTML at this point. Apply the same
+        // Bootstrap classes used by the browser renderer directly to the
+        // response so styling is present even when generated source shape
+        // differs between compiler/runtime versions.
+        return html
+            .Replace("class=\"xpscript-uiform\"", "class=\"xpscript-uiform container-fluid py-3\"", StringComparison.Ordinal)
+            .Replace("class=\"xpscript-uiform-field\"", "class=\"xpscript-uiform-field mb-3\"", StringComparison.Ordinal)
+            .Replace("<label for=\"xps_", "<label class=\"form-label\" for=\"xps_", StringComparison.Ordinal)
+            .Replace("<textarea id=\"xps_", "<textarea class=\"form-control\" id=\"xps_", StringComparison.Ordinal)
+            .Replace("<select id=\"xps_", "<select class=\"form-select\" id=\"xps_", StringComparison.Ordinal)
+            .Replace("<input type=\"text\"", "<input class=\"form-control\" type=\"text\"", StringComparison.Ordinal)
+            .Replace("<input type=\"email\"", "<input class=\"form-control\" type=\"email\"", StringComparison.Ordinal)
+            .Replace("<input type=\"password\"", "<input class=\"form-control\" type=\"password\"", StringComparison.Ordinal)
+            .Replace("<input type=\"number\"", "<input class=\"form-control\" type=\"number\"", StringComparison.Ordinal)
+            .Replace("<input type=\"date\"", "<input class=\"form-control\" type=\"date\"", StringComparison.Ordinal)
+            .Replace("<input type=\"time\"", "<input class=\"form-control\" type=\"time\"", StringComparison.Ordinal)
+            .Replace("<input type=\"checkbox\"", "<input class=\"form-check-input me-2\" type=\"checkbox\"", StringComparison.Ordinal)
+            .Replace("<input type=\"radio\"", "<input class=\"form-check-input me-2\" type=\"radio\"", StringComparison.Ordinal)
+            .Replace("<button type=\"submit\"", "<button class=\"btn btn-primary\" type=\"submit\"", StringComparison.Ordinal);
     }
 
     private static string InjectCsrfFields(string html)
