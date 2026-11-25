@@ -56,8 +56,10 @@ För varje komponent:
   UIForm. Testet klickar på en egen dialogknapp i Chrome och verifierar både
   `save`-resultatet och de skickade fältvärdena.
 - [x] Utöka Playwright-regressionen med inline message-, choice- och
-  input-dialoger, titelinställning, valknappar med egna etiketter/returvärden
-  och toast-stapling i fyra hörn med automatisk timeout. Webbdialogerna använder
+  input-dialoger (text, combo box och listbox multi-select), med egna labels,
+  actionknappar, titlar och choice-returvärden. Toasts stöder egen text, normal-
+  och warning-typ (röd), stapling i fyra hörn och automatisk timeout.
+  Webbdialogerna använder
   Bootstrap body-/textfärger, kortyta, padding och knappgap som server-renderad
   UIForm, med responsiv minsta storlek. Testet verifierar också remote lookup typeahead och att
   manipulerat lookup-ID avvisas. Detta är web-fixturens UI; XPScripts fristående

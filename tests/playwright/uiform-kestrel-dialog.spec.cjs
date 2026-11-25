@@ -70,26 +70,64 @@ test('manual UIForm shows working browser dialogs and validates remote lookups',
   await choiceDialog.getByRole('button', { name: 'Request changes' }).click();
   await expect(page.locator('#dialog-result')).toHaveText('Choice: changes_requested');
 
-  await inputButton.click();
   const inputDialog = page.getByRole('dialog', { name: 'Enter a short value' });
+  await page.locator('#input-label-setting').fill('Your name');
+  await page.locator('#input-button-setting').fill('Save answer');
+  await page.getByRole('button', { name: 'Apply input settings' }).click();
+  await inputButton.click();
   await expect(inputDialog).toBeVisible();
+  await expect(inputDialog.locator('#input-dialog-label')).toHaveText('Your name');
+  await expect(inputDialog.getByRole('button', { name: 'Save answer' })).toBeVisible();
   await page.locator('#input-dialog-value').fill('typed from Playwright');
-  await page.getByRole('button', { name: 'Use value' }).click();
+  await page.getByRole('button', { name: 'Save answer' }).click();
   await expect(inputDialog).not.toBeVisible();
-  await expect(page.locator('#dialog-result')).toHaveText('Input: typed from Playwright');
+  await expect(page.locator('#dialog-result')).toHaveText('Your name: typed from Playwright');
+
+  await page.locator('#input-kind-setting').selectOption('combo');
+  await page.locator('#input-label-setting').fill('Favorite color');
+  await page.locator('#input-button-setting').fill('Choose color');
+  await page.locator('#input-options-setting').fill('Red,Green,Blue');
+  await page.getByRole('button', { name: 'Apply input settings' }).click();
+  await inputButton.click();
+  await page.locator('#input-dialog-value').selectOption('Green');
+  await page.getByRole('button', { name: 'Choose color' }).click();
+  await expect(page.locator('#dialog-result')).toHaveText('Favorite color: Green');
+
+  await page.locator('#input-kind-setting').selectOption('multi');
+  await page.locator('#input-label-setting').fill('Favorite colors');
+  await page.locator('#input-button-setting').fill('Save colors');
+  await page.getByRole('button', { name: 'Apply input settings' }).click();
+  await inputButton.click();
+  await page.locator('#input-dialog-value').selectOption(['Red', 'Blue']);
+  await page.getByRole('button', { name: 'Save colors' }).click();
+  await expect(page.locator('#dialog-result')).toHaveText('Favorite colors: Red, Blue');
 
   await page.locator('#toast-duration').fill('1');
   for (const position of ['top-left', 'top-right', 'bottom-left', 'bottom-right']) {
+    await page.locator('#toast-message').fill(`Stacked toast at ${position}`);
+    await page.locator('#toast-type').selectOption('normal');
     await page.locator('#toast-position').selectOption(position);
     await page.getByRole('button', { name: 'Show toast' }).click();
     await page.getByRole('button', { name: 'Show toast' }).click();
     const toasts = page.locator(`#toast-${position} [role="status"]`);
     await expect(toasts).toHaveCount(2);
     await expect(toasts.first()).toContainText(position);
+    await expect(toasts.first().locator('.toast-header')).toHaveText('Message');
+    await expect(toasts.first().locator('.toast-body')).toContainText(`Stacked toast at ${position}`);
+    await expect(toasts.first()).toHaveClass(/bg-body/);
   }
   for (const position of ['top-left', 'top-right', 'bottom-left', 'bottom-right']) {
     await expect(page.locator(`#toast-${position} [role="status"]`)).toHaveCount(0, { timeout: 3000 });
   }
+  await page.locator('#toast-message').fill('Low disk space');
+  await page.locator('#toast-type').selectOption('warning');
+  await page.locator('#toast-position').selectOption('bottom-right');
+  await page.getByRole('button', { name: 'Show toast' }).click();
+  const warningToast = page.locator('#toast-bottom-right [role="alert"]');
+  await expect(warningToast).toContainText('Low disk space');
+  await expect(warningToast.locator('.toast-header strong')).toHaveClass(/text-danger/);
+  await expect(warningToast.locator('.toast-body')).toHaveClass(/text-danger/);
+  await expect(warningToast).toHaveCount(0, { timeout: 3000 });
 
   const search = page.getByPlaceholder('Search...');
   await search.fill('al');
