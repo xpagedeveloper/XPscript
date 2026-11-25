@@ -41,10 +41,11 @@ För varje komponent:
   UIListView-only Kestrel-appar inte kräver UIForm:s dispatcher.
 - [x] Gör desktop AST-livscykelregressionen oberoende av antalet knappar
   genom att välja Avalonia-hostens dedikerade `Close`-knapp.
-- [ ] Android AST-körningen i Platform FullTest väljer fortfarande .NET SDK
-  11 för det genererade Android-projektet trots att jobbet och kompilatorn
-  använder .NET 10. NETSDK1147 rapporterar att Android-workload saknas för
-  SDK 11. Fortsätt felsöka SDK-pinnen; inga paket installerades lokalt.
+- [ ] Android AST-körningarna i Platform FullTest och Android UIForm AST
+  Emulator väljer fortfarande .NET SDK 11 för det genererade Android-projektet
+  trots att jobbet och kompilatorn använder .NET 10. NETSDK1147 rapporterar att
+  Android-workload saknas för SDK 11. Fortsätt felsöka SDK-pinnen; inga paket
+  installerades lokalt.
 
 ## Fält och input-kontroller
 
