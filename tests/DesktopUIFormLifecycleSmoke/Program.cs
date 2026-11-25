@@ -32,6 +32,11 @@ if (args.Contains("--headless-uilistview", StringComparer.Ordinal))
     await RunHeadlessUIListViewProbe();
     return;
 }
+if (args.Contains("--headless-uiform-custom-result", StringComparer.Ordinal))
+{
+    await RunHeadlessUIFormCustomResultProbe();
+    return;
+}
 
 var parseDetachedRequest = typeof(DesktopFormLifecycleHost).GetMethod(
     "ParseDetachedRequest",
@@ -460,6 +465,33 @@ async Task RunHeadlessAstGeneratedProbe()
         DesktopApplicationHost.SetProcessKeepAlive(false);
     }
     Console.WriteLine("HEADLESS_AST_GENERATED_OK");
+}
+
+async Task RunHeadlessUIFormCustomResultProbe()
+{
+    DesktopApplicationHost.TestConfigurator = builder =>
+        builder.UseHeadless(new AvaloniaHeadlessPlatformOptions());
+
+    const string request = """{"title":"Custom result","instanceId":"custom-result","fields":[{"name":"name","label":"Name","type":"TextField","value":"Ada"}],"buttons":[{"name":"save","label":"Save","result":"save","visible":true,"enabled":true}],"showValidationErrors":false}""";
+    var dialogTask = Task.Run(() => DesktopFormHost.ShowDialog(request, (_, _) => string.Empty));
+    Window? window = null;
+    for (var attempt = 0; attempt < 100 && window is null; attempt++)
+    {
+        await Task.Delay(50);
+        window = DesktopFormHost.GetWindowForTests();
+    }
+    if (window is null) throw new InvalidOperationException("Headless UIForm window was not created.");
+    Dispatcher.UIThread.Invoke(() =>
+    {
+        var save = window.GetVisualDescendants().OfType<Button>().Single(button => button.Content?.ToString() == "Save");
+        save.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+    });
+    var result = JsonDocument.Parse(await dialogTask.WaitAsync(TimeSpan.FromSeconds(5)));
+    if (result.RootElement.GetProperty("result").GetString() != "save" ||
+        result.RootElement.GetProperty("values").GetProperty("name").GetString() != "Ada")
+        throw new InvalidOperationException("Custom UIForm action did not return its result and field values.");
+    DesktopApplicationHost.SetProcessKeepAlive(false);
+    Console.WriteLine("HEADLESS_UIFORM_CUSTOM_RESULT_OK");
 }
 
 async Task RunHeadlessUIListViewProbe()

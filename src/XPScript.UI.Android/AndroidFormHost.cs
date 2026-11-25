@@ -93,13 +93,26 @@ public static class AndroidFormHost
                         continue;
                     var buttonName = buttonValue.GetProperty("name").GetString() ?? string.Empty;
                     var buttonLabel = buttonValue.TryGetProperty("label", out var buttonLabelValue) ? buttonLabelValue.GetString() ?? buttonName : buttonName;
+                    var buttonResult = buttonValue.TryGetProperty("result", out var resultValue) ? resultValue.GetString() ?? buttonName : buttonName;
                     var actionButton = new Avalonia.Controls.Button { Content = buttonLabel, MinWidth = 100 };
                     actionButton.IsEnabled = !buttonValue.TryGetProperty("enabled", out var buttonEnabled) || buttonEnabled.ValueKind != JsonValueKind.False;
                     actionButton.Click += (_, _) =>
                     {
-                        if (eventCallback is null) return;
                         var submittedValues = JsonSerializer.Serialize(editors.ToDictionary(pair => pair.Key, pair => GetEditorValue(pair.Value), StringComparer.OrdinalIgnoreCase));
-                        eventCallback("button:" + buttonName, submittedValues);
+                        var result = JsonSerializer.Serialize(new { result = buttonResult, values = JsonSerializer.Deserialize<Dictionary<string, object?>>(submittedValues) });
+                        if (eventCallback is not null)
+                        {
+                            try
+                            {
+                                var callbackResult = eventCallback("button:" + buttonName, submittedValues);
+                                if (!string.IsNullOrWhiteSpace(callbackResult)) result = callbackResult;
+                            }
+                            catch
+                            {
+                            }
+                        }
+                        MainView.Current?.RestoreHome();
+                        completion.TrySetResult(result);
                     };
                     actions.Children.Add(actionButton);
                 }
@@ -141,6 +154,7 @@ public static class AndroidFormHost
 
                 var submittedValues = JsonSerializer.Serialize(values);
                 var result = JsonSerializer.Serialize(new { result = "OK", values });
+                MainView.Current?.RestoreHome();
 
                 if (eventCallback is not null)
                 {
@@ -155,7 +169,6 @@ public static class AndroidFormHost
                     }
                 }
 
-                MainView.Current?.RestoreHome();
                 completion.TrySetResult(result);
             };
         }

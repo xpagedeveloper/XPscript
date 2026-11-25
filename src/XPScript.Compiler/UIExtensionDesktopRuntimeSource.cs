@@ -191,31 +191,32 @@ internal static class XPScriptUIDesktopAdapter
             DispatchCompiledNavigation(ReadNavigationValue(navigationValues, "__xps_navigation_target"));
             return "Navigate";
         }
-        if (!result.Equals("OK", StringComparison.OrdinalIgnoreCase) && !result.Equals("Cancel", StringComparison.OrdinalIgnoreCase))
-            return result;
-        if (!root.TryGetProperty("values", out var values) || values.ValueKind != System.Text.Json.JsonValueKind.Object) return "OK";
-        foreach (var property in values.EnumerateObject())
+        if (root.TryGetProperty("values", out var values) && values.ValueKind == System.Text.Json.JsonValueKind.Object)
         {
-            var field = fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
-            if (field is null) continue;
-            if (field.Type == "MultiListBox")
+            foreach (var property in values.EnumerateObject())
             {
-                if (property.Value.ValueKind != System.Text.Json.JsonValueKind.Array) throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' returned an unsupported multi-value type.");
-                applyMany(field, property.Value.EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray());
-                continue;
+                var field = fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
+                if (field is null) continue;
+                if (field.Type == "MultiListBox")
+                {
+                    if (property.Value.ValueKind != System.Text.Json.JsonValueKind.Array) throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' returned an unsupported multi-value type.");
+                    applyMany(field, property.Value.EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray());
+                    continue;
+                }
+                var submitted = property.Value.ValueKind switch
+                {
+                    System.Text.Json.JsonValueKind.String => property.Value.GetString() ?? string.Empty,
+                    System.Text.Json.JsonValueKind.Number => property.Value.GetRawText(),
+                    System.Text.Json.JsonValueKind.True => "true",
+                    System.Text.Json.JsonValueKind.False => "false",
+                    System.Text.Json.JsonValueKind.Null => string.Empty,
+                    _ => throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' returned an unsupported value type.")
+                };
+                apply(field, submitted);
             }
-            var submitted = property.Value.ValueKind switch
-            {
-                System.Text.Json.JsonValueKind.String => property.Value.GetString() ?? string.Empty,
-                System.Text.Json.JsonValueKind.Number => property.Value.GetRawText(),
-                System.Text.Json.JsonValueKind.True => "true",
-                System.Text.Json.JsonValueKind.False => "false",
-                System.Text.Json.JsonValueKind.Null => string.Empty,
-                _ => throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' returned an unsupported value type.")
-            };
-            apply(field, submitted);
         }
-        return "OK";
+        if (result.Equals("Cancel", StringComparison.OrdinalIgnoreCase)) return "Cancel";
+        return result.Equals("OK", StringComparison.OrdinalIgnoreCase) ? "OK" : result;
     }
 
     private static void RegisterEventDispatcher(Type type, XPScriptUIForm form)

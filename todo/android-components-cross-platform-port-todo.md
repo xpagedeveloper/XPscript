@@ -18,6 +18,22 @@ För varje komponent:
 - [ ] Lägg till compiler-, runtime-, host- och executable sample-regression.
 - [ ] Lägg till FullTest och dokumentation/API-metadata.
 
+## UIForm dialog-resultat och fristående dialoger
+
+- [x] UIForm custom-knappar returnerar knappnamnet som `ShowDialog()`-resultat
+  på desktop, Android, server-renderad web och Browser-WASM. Android och desktop
+  tillämpar inmatade fältvärden innan resultatet återgår. Browser-WASM publicerar
+  resultatet i `xpscript:form-result` efter att knappens event-handler körts.
+- [ ] Lägg till host-interaktionstest för Android och desktop som verifierar
+  resultat, handler och submitted values tillsammans.
+- [ ] Lägg till Browser-WASM regression som klickar en knapp med ett eget
+  `result` och verifierar form-result-eventet efter handlern.
+- [ ] Skärp server-web Kestrel-regressionen så den verifierar att POST-svaret
+  innehåller exakt `save`-resultat tillsammans med fältvärdena.
+- [ ] `ShowDialog(message, ...)`, `MsgBox` och filväljare använder fortfarande
+  desktop-dialoghosten. Utred plattformsneutrala adaptrar och deterministiskt
+  unsupported-beteende för Android, server-web och Browser-WASM.
+
 ## Fält och input-kontroller
 
 ### TextField

@@ -520,6 +520,9 @@ jobs:
       - name: Verify desktop UIForm lifecycle
         shell: bash
         run: xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+      - name: Verify desktop UIForm custom dialog results
+        shell: bash
+        run: timeout --kill-after=5s 30s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uiform-custom-result
       - name: Verify desktop UIForm AST and legacy marker parity
         shell: bash
         run: |

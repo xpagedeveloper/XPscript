@@ -94,6 +94,7 @@ jobs:
           }
           if ($process.ExitCode -ne 0) { throw "AST Windows UIForm probe failed with exit code $($process.ExitCode)." }
           dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
+          dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uiform-custom-result
           dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uilistview
 
   desktop-linux:
@@ -126,6 +127,7 @@ jobs:
           run_probe AST_UIFORM_LIFECYCLE dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only
           run_probe AST_HOST dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
           run_probe AST_GENERATED dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-ast-generated
+          run_probe AST_UIFORM_CUSTOM_RESULT dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uiform-custom-result
           run_probe AST_UILISTVIEW dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uilistview
       - name: Upload Linux desktop probe logs
         if: always()

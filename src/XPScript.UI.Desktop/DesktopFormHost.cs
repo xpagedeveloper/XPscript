@@ -389,7 +389,13 @@ public static class DesktopFormHost
                 var button = new Button { Content = definition.Label, MinWidth = 80, IsVisible = definition.Visible, IsEnabled = definition.Enabled };
                 ApplyButtonStyle(definition, button);
                 customButtons[definition.Name] = button;
-                button.Click += (_, _) => TriggerEvent("button:" + definition.Name);
+                button.Click += (_, _) =>
+                {
+                    TriggerEvent("button:" + definition.Name);
+                    if (result is not null) return;
+                    result = new DesktopFormResult(definition.Result.Length > 0 ? definition.Result : definition.Name, ReadCurrentValues());
+                    window?.Close();
+                };
                 actionButtons.Children.Add(button);
             }
             panel.Children.Add(actionButtons);
@@ -418,6 +424,22 @@ public static class DesktopFormHost
         ApplyPosition(window, request);
 
         var loop = new DispatcherFrame();
+        IReadOnlyDictionary<string, JsonElement> ReadCurrentValues()
+        {
+            var values = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
+            foreach (var field in request.Fields)
+            {
+                if (field.Type.Equals("HiddenField", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (field.Value is not null) values[field.Name] = JsonSerializer.SerializeToElement(field.Value);
+                    continue;
+                }
+                if (editors.TryGetValue(field.Name, out var editor) && ReadEditorValue(field, editor) is { } value)
+                    values[field.Name] = value;
+            }
+            return new ReadOnlyDictionary<string, JsonElement>(values);
+        }
+
         ok.Click += (_, _) =>
         {
             foreach (var editor in editors.Values) DesktopAccessibilityHost.SetValidationError(editor, null);
@@ -464,20 +486,7 @@ public static class DesktopFormHost
                 }
             }
 
-            var values = new Dictionary<string, JsonElement>(StringComparer.OrdinalIgnoreCase);
-            foreach (var field in request.Fields)
-            {
-                if (field.Type.Equals("HiddenField", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (field.Value is not null) values[field.Name] = JsonSerializer.SerializeToElement(field.Value);
-                    continue;
-                }
-                if (!editors.TryGetValue(field.Name, out var editor)) continue;
-                var value = ReadEditorValue(field, editor);
-                if (value is not null) values[field.Name] = value.Value;
-            }
-
-            result = new DesktopFormResult("OK", new ReadOnlyDictionary<string, JsonElement>(values));
+            result = new DesktopFormResult("OK", ReadCurrentValues());
             window.Close();
         };
         cancel.Click += (_, _) => { result = EmptyResult("Cancel"); window.Close(); };

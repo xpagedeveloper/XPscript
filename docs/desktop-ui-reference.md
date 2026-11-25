@@ -2,6 +2,10 @@
 
 This is the reference for XPScript desktop dialog commands. These commands require the desktop UI runtime (`XPScript.UI.Desktop`) and are intended for Windows, Linux, and macOS desktop applications.
 
+These standalone desktop dialog functions are distinct from the cross-platform
+`UIForm.ShowDialog()` lifecycle. `ShowDialog(message, ...)`, `MsgBox` and
+the file pickers still require the desktop UI runtime.
+
 Every entry includes the command title, syntax, parameters, behavior, and a complete `.xps` example that can be copied and compiled.
 
 | Command | Syntax | Parameters | Description | Example |

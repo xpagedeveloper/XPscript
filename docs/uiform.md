@@ -48,7 +48,7 @@ Call country.AddOption("DK")
 Call form.RefreshForm()
 ```
 
-`RefreshForm()` is available through the AST UIForm route on Android, desktop, server-rendered web and browser-WASM. It only re-renders the current model. Android applications can call `ShowDialog()` from the script entry point to wait for `OK` or `Cancel`. On `OK`, read the submitted values from the form or its bound data. Use the modeless `Show(False)` path from Android UI callbacks. See the [Android modal form regression](../samples/android-uiform-modal-regression.xps) for a runnable example with validation.
+`RefreshForm()` is available through the AST UIForm route on Android, desktop, server-rendered web and browser-WASM. It only re-renders the current model. Android applications can call `ShowDialog()` from the script entry point to wait for `OK`, `Cancel`, or a custom action. Custom actions return the button name passed to `AddButton`; registered handlers run before the result is returned. Submitted field values are applied before a desktop or Android modal call returns. Browser-WASM publishes the result and values through the `xpscript:form-result` event after its handler runs. Server-rendered web returns the button name from the form POST. Use the modeless `Show(False)` path from Android UI callbacks. See the [Android modal form regression](../samples/android-uiform-modal-regression.xps) for a runnable example with validation.
 
 ## Shared control appearance
 

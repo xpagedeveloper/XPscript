@@ -95,6 +95,7 @@ try
         var body = await response.Content.ReadAsStringAsync();
         if (!body.Contains("\"existing\":\"Changed value\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel POST did not save existing field.");
         if (!body.Contains("\"missing\":\"Created by user\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel POST did not create missing JSON key.");
+        if (!body.Contains("\"save\"", StringComparison.Ordinal)) throw new Exception("UIForm Kestrel POST did not return the selected custom result.");
     }
 
     Console.WriteLine("WEB-UIFORM-KESTREL=OK");
