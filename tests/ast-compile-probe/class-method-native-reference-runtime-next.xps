@@ -34,6 +34,23 @@ Class TabularReferenceMethods
     End Sub
 End Class
 
+Class XmlReferenceMethods
+    Public Function Identity(ByVal value As XPXmlElement) As XPXmlElement
+        value.Value = "mutated"
+        Set Identity = value
+    End Function
+
+    Public Sub Replace(ByRef value As XPXmlElement)
+        Dim replacement As XPXmlDocument = XmlParse("<replacement>new</replacement>")
+        Set value = replacement.Root
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPXmlElement)
+        Call Replace(value)
+        Error 4287, "XML replacement must survive failure"
+    End Sub
+End Class
+
 Sub VerifySpreadsheetReferenceMethods()
     Dim book As New XPSpreadsheet
     Dim methods As New TabularReferenceMethods
@@ -59,6 +76,37 @@ ExpectedTabularFailure:
     If current.WorksheetCount <> 1 Or book.WorksheetCount <> 1 Then Error 4286
 End Sub
 
+Sub VerifyXmlReferenceMethods()
+    Dim methods As New XmlReferenceMethods
+    Dim originalDocument As XPXmlDocument = XmlParse("<root>original</root>")
+    Dim original As XPXmlElement = originalDocument.Root
+    Dim current As XPXmlElement
+    Dim returned As XPXmlElement
+    Set current = original
+    Set returned = methods.Identity(current)
+    If Not (returned Is original) Then Error 4288
+    If original.Value <> "mutated" Then Error 4289
+
+    Call methods.Replace(current)
+    If current Is original Then Error 4290
+    If current.Name <> "replacement" Or current.Value <> "new" Then Error 4291
+    If returned Is original And original.Value = "mutated" Then
+    Else
+        Error 4292
+    End If
+
+    Set current = original
+    On Error GoTo ExpectedXmlFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4293, "expected XML error missing"
+    Exit Sub
+ExpectedXmlFailure:
+    If Err <> 4287 Then Error 4294
+    If current Is original Then Error 4295
+    If current.Name <> "replacement" Or current.Value <> "new" Then Error 4296
+    If original.Value <> "mutated" Then Error 4297
+End Sub
+
 Sub Main()
     Dim methods As New NativeReferenceMethods
     Dim original As New XPJsonObject
@@ -74,6 +122,7 @@ Sub Main()
     If Not (returned Is original) Then Error 4271
 
     Call VerifySpreadsheetReferenceMethods()
+    Call VerifyXmlReferenceMethods()
     Set current = original
     On Error GoTo ExpectedFailure
     Call methods.ReplaceAndFail(current)
