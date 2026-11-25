@@ -118,6 +118,11 @@ foreach (var expected in new[]
 if (!generated.Contains("public string ShowDialog()", StringComparison.Ordinal))
     throw new InvalidOperationException("UIForm.ShowDialog method declaration was incorrectly rewritten.");
 
+var desktopDialogHostSource = File.ReadAllText(Path.Combine("src", "XPScript.UI.Desktop", "DesktopDialogHost.cs"));
+if (!desktopDialogHostSource.Contains("window.ShowDialog(owner)", StringComparison.Ordinal) ||
+    !desktopDialogHostSource.Contains("modalTask.GetAwaiter().GetResult()", StringComparison.Ordinal))
+    throw new InvalidOperationException("Desktop standalone dialogs must use a blocking owner-modal window.");
+
 var multiWindowSource = """
 Sub Main()
     Dim first As New UIForm("First", 480, 320, True)

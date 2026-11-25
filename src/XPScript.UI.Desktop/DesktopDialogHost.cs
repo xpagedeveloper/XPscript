@@ -138,8 +138,28 @@ public static class DesktopDialogHost
         }
 
         window.Closed += (_, _) => loop.Continue = false;
-        window.Show();
-        Dispatcher.UIThread.PushFrame(loop);
+        var owner = new Window
+        {
+            Width = 1,
+            Height = 1,
+            ShowInTaskbar = false,
+            CanResize = false,
+            Opacity = 0
+        };
+        owner.Show();
+        try
+        {
+            var modalTask = window.ShowDialog(owner);
+            modalTask.ContinueWith(
+                _ => Dispatcher.UIThread.Post(() => loop.Continue = false),
+                TaskScheduler.Default);
+            Dispatcher.UIThread.PushFrame(loop);
+            modalTask.GetAwaiter().GetResult();
+        }
+        finally
+        {
+            owner.Close();
+        }
         return result;
     }
 

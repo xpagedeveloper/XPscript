@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using System.Collections.Generic;
 
 namespace XPScript.UI.Android;
 
@@ -9,6 +10,7 @@ public sealed class MainView : UserControl
     internal static MainView? Current { get; private set; }
 
     private readonly ContentControl _contentHost = new();
+    private readonly Stack<Control?> _screenStack = new();
 
     public MainView()
     {
@@ -37,10 +39,23 @@ public sealed class MainView : UserControl
     }
 
     internal void ShowForm(Control form)
-        => _contentHost.Content = form;
+    {
+        _screenStack.Push(_contentHost.Content as Control);
+        _contentHost.Content = form;
+    }
 
     internal void RestoreHome()
-        => _contentHost.Content = new StackPanel
+    {
+        if (_screenStack.Count > 0)
+        {
+            _contentHost.Content = _screenStack.Pop();
+            return;
+        }
+        _contentHost.Content = CreateHomeScreen();
+    }
+
+    private static Control CreateHomeScreen()
+        => new StackPanel
         {
             Margin = new Thickness(24),
             Spacing = 16,

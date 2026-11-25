@@ -31,8 +31,32 @@ För varje komponent:
 - [x] Skärp server-web Kestrel-regressionen så den verifierar att POST-svaret
   innehåller exakt `save`-resultat tillsammans med fältvärdena.
 - [ ] `ShowDialog(message, ...)`, `MsgBox` och filväljare använder fortfarande
-  desktop-dialoghosten. Utred plattformsneutrala adaptrar och deterministiskt
-  unsupported-beteende för Android, server-web och Browser-WASM.
+  desktop-dialoghosten; desktop choice dialogs are now owner-modal and block
+  until the user chooses. Android UIForm navigation now pushes the visible
+  screen and restores that exact screen when the dialog closes, including in
+  generated Android hosts.
+- [ ] Route standalone `ShowDialog(message, ...)` and `MsgBox` to platform hosts:
+  server-web and Browser-WASM should render the same inline dialog controls,
+  while Android should present a dialog screen and restore the prior screen.
+- [ ] Add a shared nonblocking toast API and platform hosts. Four-corner
+  stacking and timeout behavior currently exists only in the manual Kestrel
+  fixture; desktop, Android and Browser-WASM runtime toasts are not implemented.
+- [ ] Extend Browser-WASM dialog parity coverage beyond UIForm. Current UIForm
+  modal rendering is inline in the browser; standalone dialog API parity is
+  still open.
+
+### Dialog platform behavior update 2026-11-25
+
+- [x] Desktop standalone choice dialogs now use Avalonia's owner-modal window
+  API and wait for the modal result.
+- [x] Android form screens now use a push/pop stack instead of rebuilding the
+  home view on close, so returning from a dialog restores the prior screen.
+- [x] Android Platform FullTest compiler probe checks both reusable and
+  generated Android hosts for push/pop restoration.
+- [ ] Validate Android navigation on an emulator; local Android API/workload
+  prerequisites are unavailable and no packages were installed.
+- [ ] Implement the standalone dialog and nonblocking toast host APIs across
+  desktop, server-web, Browser-WASM and Android.
 
 ### CI-uppföljning 2026-11-25
 

@@ -137,6 +137,7 @@ public sealed class MainView : UserControl
     internal static MainView? Current { get; private set; }
     private static int _runtimeStarted;
     private readonly ContentControl _contentHost = new();
+    private readonly Stack<Control?> _screenStack = new();
 
     public MainView()
     {
@@ -172,8 +173,21 @@ public sealed class MainView : UserControl
         }
     }
 
-    internal void ShowForm(Control form) => _contentHost.Content = form;
-    internal void RestoreHome() => _contentHost.Content = HomeContent();
+    internal void ShowForm(Control form)
+    {
+        _screenStack.Push(_contentHost.Content as Control);
+        _contentHost.Content = form;
+    }
+
+    internal void RestoreHome()
+    {
+        if (_screenStack.Count > 0)
+        {
+            _contentHost.Content = _screenStack.Pop();
+            return;
+        }
+        _contentHost.Content = HomeContent();
+    }
 
     private static Control HomeContent() => new Grid();
 }

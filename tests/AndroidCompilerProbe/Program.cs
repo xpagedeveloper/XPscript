@@ -244,6 +244,13 @@ if (!uiHostCode.Contains("var cancel = new Avalonia.Controls.Button { Content = 
 var androidFormHostSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "AndroidFormHost.cs"));
 if (!androidFormHostSource.Contains("defaultButtonCornerRadiusValue.TryGetDouble(out var defaultButtonRadius)", StringComparison.Ordinal))
     throw new Exception("Direct Android UIForm host must preserve theme default button radius and only override it when explicitly configured.");
+var androidMainViewSource = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "XPScript.UI.Android", "MainView.cs"));
+foreach (var screenStackContract in new[] { "Stack<Control?> _screenStack", "_screenStack.Push(_contentHost.Content as Control)", "_contentHost.Content = _screenStack.Pop()" })
+    if (!androidMainViewSource.Contains(screenStackContract, StringComparison.Ordinal))
+        throw new Exception("Android dialog navigation must restore the exact screen that was visible before the dialog: " + screenStackContract);
+foreach (var generatedScreenStackContract in new[] { "Stack<Control?> _screenStack", "_screenStack.Push(_contentHost.Content as Control)", "_contentHost.Content = _screenStack.Pop()" })
+    if (!uiHostCode.Contains(generatedScreenStackContract, StringComparison.Ordinal))
+        throw new Exception("Generated Android dialog navigation must restore the exact previous screen: " + generatedScreenStackContract);
 
 if (System.Text.RegularExpressions.Regex.IsMatch(uiHostCode, @"(?<!Avalonia\.Controls\.)\bRadioButton\b"))
     throw new Exception("Android UIForm host must fully qualify Avalonia RadioButton references to avoid Android.Widget ambiguity.");

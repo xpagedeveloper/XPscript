@@ -12,6 +12,27 @@ permissions:
   contents: read
 
 jobs:
+  dialog-host-contracts:
+    name: Desktop dialog host contracts (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Verify desktop dialogs use blocking modal host
+        shell: pwsh
+        run: |
+          Write-Host 'BEGIN DESKTOP_DIALOG_MODAL_CONTRACT'
+          dotnet run --project tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop modal dialog host contract failed.' }
+          Write-Host 'END DESKTOP_DIALOG_MODAL_CONTRACT'
+
   web-hosting:
     name: Web and REST hosting (${{ matrix.os }})
     strategy:
