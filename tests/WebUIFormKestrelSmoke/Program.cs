@@ -9,7 +9,14 @@ using XPScript.Web.Runtime;
 
 Environment.SetEnvironmentVariable("XPSCRIPT_WEB_CONSOLE_ERRORS", "1");
 
-var parent = Path.Combine(Path.GetTempPath(), "xps-uiform-kestrel-" + Guid.NewGuid().ToString("N"));
+var serving = args.Contains("--serve", StringComparer.OrdinalIgnoreCase);
+var configuredPort = int.TryParse(Environment.GetEnvironmentVariable("XPSCRIPT_WEBUIFORM_SMOKE_PORT"), out var portFromEnvironment)
+    && portFromEnvironment is > 0 and <= 65535
+        ? portFromEnvironment
+        : serving ? throw new InvalidOperationException("--serve requires XPSCRIPT_WEBUIFORM_SMOKE_PORT to name a valid port.") : 0;
+var parent = serving
+    ? Path.Combine(Path.GetTempPath(), "xps-uiform-kestrel-manual")
+    : Path.Combine(Path.GetTempPath(), "xps-uiform-kestrel-" + Guid.NewGuid().ToString("N"));
 var root = Path.Combine(parent, "site");
 Directory.CreateDirectory(root);
 var scriptPath = Path.Combine(root, "form.xps");
@@ -53,14 +60,64 @@ Sub Noop()
 End Sub
 """);
 
+await File.WriteAllTextAsync(Path.Combine(root, "manual.xps"), $$"""
+[Anonymous]
+[Get]
+[Post]
+Sub Index()
+    Dim form As New UIForm("UIForm manual test bench")
+    Call form.AddLookupField("customerId", "Customer lookup (try typing 'al', 'mar', or 'jo')", "http://127.0.0.1:{{configuredPort}}/lookup.xps", "id", "name", True)
+    Call form.SetRemoteSearchOptions("customerId", "q", "value", 2, 10)
+    Call form.AddTextField("notes", "Notes")
+    Call form.AddButton("save", "Save form", "Noop")
+    Dim result As String
+    result = form.ShowDialog()
+    If Request.Method = "POST" Then
+        Response.ContentType = "text/html; charset=utf-8"
+        Response.Write("<!doctype html><html><head><meta charset=""utf-8""><title>Form result</title></head><body><h1>Form submitted</h1><p>Selected action: " & Server.HtmlEncode(result) & "</p><p><a href=""/manual.xps"">Return to test bench</a></p></body></html>")
+    Else
+        Response.Write("<section style=""font-family:system-ui;max-width:760px;margin:0 auto;padding:0 16px 24px""><h2>Browser dialog probes</h2><p>These buttons open native browser dialogs:</p><button type=""button"" onclick=""alert('This is a message dialog.')"">Message (alert)</button> <button type=""button"" onclick=""document.getElementById('dialog-result').textContent=confirm('Do you want to continue?')?'Choice: Yes':'Choice: No'"">Choice (confirm)</button> <button type=""button"" onclick=""document.getElementById('dialog-result').textContent='Input: '+(prompt('Enter a short value:')??'(cancelled)')"">Input (prompt)</button><p id=""dialog-result"" aria-live=""polite""></p></section>")
+    End If
+End Sub
+
+Sub Noop()
+End Sub
+""");
+
+await File.WriteAllTextAsync(Path.Combine(root, "lookup.xps"), """
+[Anonymous]
+[Get]
+Sub Index()
+    Dim query As String
+    Dim value As String
+    query = LCase(Request.Query("q"))
+    value = Request.Query("value")
+    Response.ContentType = "application/json; charset=utf-8"
+    If value <> "" Then
+        Select Case value
+            Case "c1": Response.Write("[{""id"":""c1"",""name"":""Alex Morgan""}]")
+            Case "c2": Response.Write("[{""id"":""c2"",""name"":""Maria Chen""}]")
+            Case "c3": Response.Write("[{""id"":""c3"",""name"":""Jordan Lee""}]")
+            Case Else: Response.Write("[]")
+        End Select
+    ElseIf InStr("alex morgan", query) > 0 And query <> "" Then
+        Response.Write("[{""id"":""c1"",""name"":""Alex Morgan""}]")
+    ElseIf InStr("maria chen", query) > 0 And query <> "" Then
+        Response.Write("[{""id"":""c2"",""name"":""Maria Chen""}]")
+    ElseIf InStr("jordan lee", query) > 0 And query <> "" Then
+        Response.Write("[{""id"":""c3"",""name"":""Jordan Lee""}]")
+    Else
+        Response.Write("[]")
+    End If
+End Sub
+""");
+
 await using var cache = new XpsWebCompilationCache(new XpsWebCompiler());
 await using var dispatcher = new XpsWebDispatcher(root, cache);
 var options = new XpsKestrelOptions
 {
     Port = args.Contains("--serve", StringComparer.OrdinalIgnoreCase)
-        ? int.TryParse(Environment.GetEnvironmentVariable("XPSCRIPT_WEBUIFORM_SMOKE_PORT"), out var configuredPort) && configuredPort is > 0 and <= 65535
-            ? configuredPort
-            : throw new InvalidOperationException("--serve requires XPSCRIPT_WEBUIFORM_SMOKE_PORT to name a valid port.")
+        ? configuredPort
         : 0,
     MaxRequestBodySize = 1024 * 1024,
     AllowedHosts = ["localhost", "127.0.0.1", "::1"]
@@ -77,6 +134,16 @@ try
         ?? throw new Exception("Kestrel did not expose a listener address.");
     if (args.Contains("--serve", StringComparer.OrdinalIgnoreCase))
     {
+        using (var warmup = new HttpClient { BaseAddress = new Uri(address) })
+        {
+            foreach (var path in new[] { "/manual.xps", "/lookup.xps?q=al" })
+            using (var response = await warmup.GetAsync(path))
+            {
+                if (!response.IsSuccessStatusCode)
+                    throw new InvalidOperationException($"Manual UIForm warmup for {path} failed with HTTP {(int)response.StatusCode}.");
+                _ = await response.Content.ReadAsByteArrayAsync();
+            }
+        }
         Console.WriteLine($"WEBUIFORM-PLAYWRIGHT-READY={address}");
         await app.WaitForShutdownAsync();
         await app.StopAsync();
@@ -121,7 +188,7 @@ finally
 {
     if (!stopped) await app.StopAsync();
     await app.DisposeAsync();
-    if (Directory.Exists(parent)) Directory.Delete(parent, recursive: true);
+    if (!serving && Directory.Exists(parent)) Directory.Delete(parent, recursive: true);
 }
 
 sealed class SmokeApplicationState : IXpsApplicationState

@@ -55,12 +55,21 @@ För varje komponent:
 - [x] Lägg till en upptäckbar Playwright Test-regression för server-renderad
   UIForm. Testet klickar på en egen dialogknapp i Chrome och verifierar både
   `save`-resultatet och de skickade fältvärdena.
+- [x] Utöka Playwright-regressionen med synlighet och beteende för alert,
+  confirm och prompt i den manuella web-fixturen, remote lookup typeahead med
+  fasta värden samt avvisning av manipulerat lookup-ID vid submit. Dessa
+  browser-dialogprober testar webbläsarens dialoger; de implementerar inte
+  XPScripts fristående `MsgBox`/`ShowDialog`-backend för webben.
+- [x] Förvärm manuell Kestrel-fixturs form och lookup-endpoint före READY och
+  använd stabilt site-root så persistent compiler-cache återanvänds vid restart.
 - [ ] Lokal Android-kompilering hittar Android-workloaden och emulatorn, men
   genererat projekt kräver Android API 36.1. Den lokala SDK:n har API 37.0 och
   API 30; Android-workload eller plattformspaket installerades inte.
-- [ ] Browser-WASM smokeprojektens `project.assets.json` saknas. Playwright är
-  installerat, men `playwright test --list` hittar inga Playwright-testfiler i
-  repot. WASM-projekten behöver NuGet restore innan de kan köras.
+- [x] Browser-WASM smokeprojekten har återställda NuGet assets (`--no-restore`
+  används för efterföljande körningar; inga paket installerades).
+- [x] `playwright test --list` hittar nu UIForm-testfilen. Lokal körning av
+  Playwright-regressionerna passerar för custom result, browser dialogs,
+  remote lookup typeahead och server-side avvisning av ogiltigt lookup-ID.
 
 ## Fält och input-kontroller
 
