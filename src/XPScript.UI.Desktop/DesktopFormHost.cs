@@ -19,6 +19,9 @@ public static class DesktopFormHost
 {
     private static readonly object SyncRoot = new();
     private static bool _initialized;
+    private static Window? _testWindow;
+
+    internal static Window? GetWindowForTests() => _testWindow;
 
     public static string ShowDialog(string requestJson) => ShowDialog(requestJson, null);
 
@@ -499,7 +502,9 @@ public static class DesktopFormHost
             else editors.Values.FirstOrDefault(editor => editor.IsVisible && editor.IsEnabled && editor.Focusable && editor.IsTabStop)?.Focus();
         };
         window.Show();
+        _testWindow = window;
         Dispatcher.UIThread.PushFrame(loop);
+        _testWindow = null;
         return result ?? EmptyResult("Cancel");
     }
 

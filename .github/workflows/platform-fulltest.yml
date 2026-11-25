@@ -190,6 +190,7 @@ jobs:
       - name: Build compiler, verify Android metadata and compile AST target
         shell: bash
         run: |
+          export XPSCRIPT_TARGET_FRAMEWORK=net10.0
           dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
           dotnet run --project tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-debug-print.xps --output "$RUNNER_TEMP/ast-android-arm64" --runtime=false --platform android-arm64 --debug
