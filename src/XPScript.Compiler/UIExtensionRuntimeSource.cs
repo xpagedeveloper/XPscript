@@ -6,11 +6,14 @@ internal static class UIExtensionRuntimeSource
 internal static class XPScriptUI
 {
     private static readonly List<XPScriptUIForm> Forms = [];
+    private static XPScriptUIForm? ActiveForm;
     internal static bool SingleVisibleFormMode { get; set; }
+    internal static string CurrentBackground => ActiveForm?.Background ?? string.Empty;
 
     private static XPScriptUIForm Register(XPScriptUIForm form)
     {
         Forms.Add(form);
+        ActiveForm = form;
         return form;
     }
 
@@ -20,6 +23,7 @@ internal static class XPScriptUI
             foreach (var candidate in Forms) candidate.Visible = false;
         Forms.Remove(form);
         Forms.Add(form);
+        ActiveForm = form;
         form.Visible = true;
     }
 
@@ -27,6 +31,7 @@ internal static class XPScriptUI
     {
         form.Visible = false;
         Forms.Remove(form);
+        if (ReferenceEquals(ActiveForm, form)) ActiveForm = Forms.Count > 0 ? Forms[^1] : null;
         if (SingleVisibleFormMode && Forms.Count > 0) Forms[^1].Visible = true;
     }
 
@@ -1253,7 +1258,10 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
     private string RenderWebForm()
     {
         var html = new System.Text.StringBuilder();
-        html.Append("<form method=\"post\" class=\"xpscript-uiform\">");
+        html.Append("<form method=\"post\" class=\"xpscript-uiform\"");
+        if (!string.IsNullOrWhiteSpace(Background))
+            html.Append(" style=\"background-color:").Append(System.Net.WebUtility.HtmlEncode(Background)).Append("\"");
+        html.Append(">");
         if (_bootImage.Length > 0)
             html.Append("<img class=\"xpscript-uiform-boot-image\" src=\"").Append(System.Net.WebUtility.HtmlEncode(_bootImage)).Append("\" alt=\"\" aria-hidden=\"true\">");
         if (_bootText.Length > 0)

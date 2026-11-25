@@ -711,6 +711,8 @@ public static class AstCompiler
             symbols.Declare(new FunctionSymbol(dialog, typeof(string), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
             symbols.Declare(new FunctionSymbol(dialog, typeof(string), [typeof(object), typeof(object), typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         }
+        for (var argumentCount = 1; argumentCount <= 4; argumentCount++)
+            symbols.Declare(new FunctionSymbol("ShowToast", typeof(void), Enumerable.Repeat(typeof(object), argumentCount).ToArray(), null, Enumerable.Repeat(XpTypeSymbol.Variant, argumentCount).ToArray()));
         symbols.Declare(new FunctionSymbol("Abs", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Int", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Fix", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
@@ -1060,7 +1062,7 @@ using XpJsonArray = XPScriptJsonArray;
 using XpJsonElement = XPScriptJsonElement;
 {{AstJsonRuntimeSource.Code}}
 {{LegacyPrintFormattingRuntimeSource.Code}}
-{{(Regex.IsMatch(fullSource, @"(?i)\b(ShowDialog|LoadFileDialog|OpenFileDialog|SaveFileDialog)\b") ? UIDialogRuntimeSource.Code : "")}}
+{{(Regex.IsMatch(fullSource, @"(?i)\b(ShowDialog|LoadFileDialog|OpenFileDialog|SaveFileDialog|ShowToast)\b") ? UIDialogRuntimeSource.Code : "")}}
 {{(runtimeFeatures.Ui ? UIExtensionRuntimeSource.Code + (AstObjectSupportRegistry.UsesObject(fullSource, "UIListView") ? UIListViewRuntimeSource.Code : "") + (usesUIFormSchema ? Environment.NewLine + UIFormValidationRuntimeSource.Code : "") : "")}}
 {{(usesArchive ? ArchiveRuntimeSource.Code + ArchiveMemoryRuntimeSource.Code + ArchiveIteratorRuntimeSource.Code : "")}}
 {{(usesArchive && source.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ? ArchiveExtendedReaderRuntimeSource.Code + ArchiveExtendedWriterRuntimeSource.Code + ArchiveExtendedWriterFactoryRuntimeSource.Code : "")}}
@@ -1782,6 +1784,10 @@ internal static class Program
         public static string LoadFileDialog(object? title = null, object? initialPath = null, object? filter = null) => InvokeDialog("LoadFileDialog", [title, initialPath, filter]);
         public static string OpenFileDialog(object? title = null, object? initialPath = null, object? filter = null) => InvokeDialog("OpenFileDialog", [title, initialPath, filter]);
         public static string SaveFileDialog(object? title = null, object? initialPath = null, object? filter = null) => InvokeDialog("SaveFileDialog", [title, initialPath, filter]);
+        public static void ShowToast(object? message) => InvokeDialog("ShowToast", [message]);
+        public static void ShowToast(object? message, object? kind) => InvokeDialog("ShowToast", [message, kind]);
+        public static void ShowToast(object? message, object? kind, object? position) => InvokeDialog("ShowToast", [message, kind, position]);
+        public static void ShowToast(object? message, object? kind, object? position, object? durationSeconds) => InvokeDialog("ShowToast", [message, kind, position, durationSeconds]);
         public static bool Like(string value, string pattern) => System.Text.RegularExpressions.Regex.IsMatch(value ?? string.Empty, "^" + System.Text.RegularExpressions.Regex.Escape(pattern ?? string.Empty).Replace("\\\\*", ".*").Replace("\\\\?", ".") + "$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 {{moduleFields}}

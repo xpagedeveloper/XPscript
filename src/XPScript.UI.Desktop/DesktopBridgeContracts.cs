@@ -119,6 +119,7 @@ public sealed record DesktopFormRequest(
     public int Bottom { get; init; } = -1;
     public bool Center { get; init; }
     public string Theme { get; init; } = "System";
+    public string Background { get; init; } = string.Empty;
     public string BootText { get; init; } = string.Empty;
     public string BootImage { get; init; } = string.Empty;
     public bool ShowValidationErrors { get; init; } = true;

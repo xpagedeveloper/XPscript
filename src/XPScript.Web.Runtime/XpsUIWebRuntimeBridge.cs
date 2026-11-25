@@ -77,6 +77,31 @@ public static class XpsUIWebRuntimeBridge
         response.Write(InjectCsrfFields(ApplyBootstrapMarkup(html)));
     }
 
+    public static void ShowToast(string requestJson)
+    {
+        ArgumentNullException.ThrowIfNull(requestJson);
+        var request = System.Text.Json.JsonSerializer.Deserialize<ToastRequest>(requestJson,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)) ?? new ToastRequest();
+        var position = NormalizeToastPosition(request.Position);
+        var payload = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            message = request.Message,
+            title = string.IsNullOrWhiteSpace(request.Title)
+                ? request.Kind.Equals("warning", StringComparison.OrdinalIgnoreCase) ? "Warning" : "Message"
+                : request.Title,
+            warning = request.Kind.Equals("warning", StringComparison.OrdinalIgnoreCase),
+            position,
+            background = request.Background,
+            duration = Math.Clamp(request.DurationSeconds, 1, 30)
+        });
+        var response = XpsWebContextAccessor.Current.Response;
+        response.ContentType = "text/html; charset=utf-8";
+        EnsureBootstrap(response);
+        response.Write("""
+<style id="xpscript-toast-style">.xps-toast-region{position:fixed;z-index:1090;display:flex;gap:.5rem;max-width:min(26rem,calc(100vw - 2rem));pointer-events:none}.xps-toast-region.top-left{top:1rem;left:1rem;flex-direction:column}.xps-toast-region.top-right{top:1rem;right:1rem;flex-direction:column}.xps-toast-region.bottom-left{bottom:1rem;left:1rem;flex-direction:column-reverse}.xps-toast-region.bottom-right{bottom:1rem;right:1rem;flex-direction:column-reverse}.xps-toast-region .toast{pointer-events:auto;width:100%}.xps-toast-header{display:flex;align-items:center;gap:.75rem;padding:.5rem .75rem}.xps-toast-header strong{flex:1}</style><script>(()=>{const config=__TOAST_CONFIG__;const present=()=>{let region=document.getElementById('xps-toast-'+config.position);if(!region){region=document.createElement('div');region.id='xps-toast-'+config.position;region.className='xps-toast-region '+config.position;region.setAttribute('role','region');region.setAttribute('aria-label',config.position+' notifications');document.body.appendChild(region);}const toast=document.createElement('div');toast.className=config.background?'toast show text-body border shadow':'toast show bg-body text-body border shadow';if(config.background)toast.style.backgroundColor=config.background;toast.setAttribute('role',config.warning?'alert':'status');const header=document.createElement('div');header.className='xps-toast-header';const title=document.createElement('strong');title.textContent=config.title;if(config.warning)title.className='text-danger fw-bold';const close=document.createElement('button');close.type='button';close.className='btn-close';close.setAttribute('aria-label','Close notification');close.addEventListener('click',()=>toast.remove());header.append(title,close);const body=document.createElement('div');body.className='toast-body';body.textContent=config.message;if(config.warning)body.classList.add('text-danger');toast.append(header,body);region.appendChild(toast);window.setTimeout(()=>toast.remove(),config.duration*1000);};if(document.body)present();else document.addEventListener('DOMContentLoaded',present,{once:true});})();</script>
+""".Replace("__TOAST_CONFIG__", payload, StringComparison.Ordinal));
+    }
+
     public static void WriteJson(string json)
     {
         ArgumentNullException.ThrowIfNull(json);
@@ -109,6 +134,25 @@ public static class XpsUIWebRuntimeBridge
             .Replace("<label><input type=\"radio\"", "<label class=\"form-check form-check-inline px-2\"><input class=\"form-check-input me-2\" type=\"radio\"", StringComparison.Ordinal)
             .Replace("<button type=\"submit\"", "<button class=\"btn btn-primary\" type=\"submit\"", StringComparison.Ordinal);
     }
+
+    private sealed class ToastRequest
+    {
+        public string Message { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Kind { get; set; } = "normal";
+        public string Position { get; set; } = "top-right";
+        public int DurationSeconds { get; set; } = 3;
+        public string Background { get; set; } = string.Empty;
+    }
+
+    private static string NormalizeToastPosition(string? value)
+        => (value ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "top-left" or "topleft" => "top-left",
+            "bottom-left" or "bottomleft" => "bottom-left",
+            "bottom-right" or "bottomright" => "bottom-right",
+            _ => "top-right"
+        };
 
     private static string InjectCsrfFields(string html)
     {

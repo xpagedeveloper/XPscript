@@ -17,6 +17,87 @@ public static partial class BrowserFormHost
     private static Func<string, string, string>? _eventDispatcher;
     private static Func<string, string, Task<string>>? _asyncEventDispatcher;
 
+    public static void ShowToast(string requestJson)
+    {
+        var request = JsonSerializer.Deserialize<BrowserToastRequest>(requestJson,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? new BrowserToastRequest();
+        var position = NormalizeToastPosition(request.Position);
+        var warning = request.Kind.Equals("warning", StringComparison.OrdinalIgnoreCase);
+        var regionId = "xps-toast-" + position;
+        using var existingRegion = GetElementById(regionId);
+        var region = existingRegion ?? CreateElement("div");
+        if (existingRegion is null)
+        {
+            region.SetProperty("id", regionId);
+            region.SetProperty("className", "position-fixed p-3 d-flex flex-column gap-2 xpscript-toast-region " + position);
+            var placement = position switch
+            {
+                "top-left" => "top:0;left:0",
+                "bottom-left" => "bottom:0;left:0;flex-direction:column-reverse",
+                "bottom-right" => "bottom:0;right:0;flex-direction:column-reverse",
+                _ => "top:0;right:0"
+            };
+            SetAttribute(region, "style", $"position:fixed;z-index:1090;max-width:min(26rem,calc(100vw - 2rem));padding:1rem;display:flex;gap:.5rem;pointer-events:none;{placement}");
+            SetAttribute(region, "role", "region");
+            SetAttribute(region, "aria-label", position + " notifications");
+            AppendToBody(region);
+        }
+
+        var toast = CreateElement("div");
+        toast.SetProperty("className", string.IsNullOrWhiteSpace(request.Background) ? "toast show bg-body text-body border shadow" : "toast show text-body border shadow");
+        SetAttribute(toast, "role", warning ? "alert" : "status");
+        var toastStyle = "pointer-events:auto;width:100%";
+        if (!string.IsNullOrWhiteSpace(request.Background)) toastStyle += ";background-color:" + request.Background;
+        SetAttribute(toast, "style", toastStyle);
+        var header = CreateElement("div");
+        header.SetProperty("className", "d-flex align-items-center gap-2 px-3 py-2");
+        var title = CreateElement("strong");
+        title.SetProperty("className", warning ? "me-auto text-danger fw-bold" : "me-auto");
+        title.SetProperty("textContent", string.IsNullOrWhiteSpace(request.Title) ? warning ? "Warning" : "Message" : request.Title);
+        var close = CreateElement("button");
+        close.SetProperty("type", "button");
+        close.SetProperty("className", "btn-close");
+        SetAttribute(close, "aria-label", "Close notification");
+        SetAttribute(close, "onclick", "this.closest('.xpscript-toast').remove()");
+        AppendChild(header, title);
+        AppendChild(header, close);
+        var body = CreateElement("div");
+        body.SetProperty("className", warning ? "toast-body text-danger" : "toast-body");
+        body.SetProperty("textContent", request.Message);
+        AppendChild(toast, header);
+        AppendChild(toast, body);
+        SetAttribute(toast, "class", (string.IsNullOrWhiteSpace(request.Background) ? "toast show bg-body text-body border shadow" : "toast show text-body border shadow") + " xpscript-toast");
+        AppendChild(region, toast);
+        _ = ExpireToastAsync(toast, Math.Clamp(request.DurationSeconds, 1, 30));
+    }
+
+    private static async Task ExpireToastAsync(JSObject toast, int durationSeconds)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(durationSeconds)).ConfigureAwait(false);
+        try { RemoveElement(toast); }
+        catch { }
+        finally { toast.Dispose(); }
+    }
+
+    private static string NormalizeToastPosition(string? value)
+        => (value ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "top-left" or "topleft" => "top-left",
+            "bottom-left" or "bottomleft" => "bottom-left",
+            "bottom-right" or "bottomright" => "bottom-right",
+            _ => "top-right"
+        };
+
+    private sealed class BrowserToastRequest
+    {
+        public string Message { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Kind { get; set; } = "normal";
+        public string Position { get; set; } = "top-right";
+        public int DurationSeconds { get; set; } = 3;
+        public string Background { get; set; } = string.Empty;
+    }
+
     public static string ShowDialog(string requestJson)
     {
         ArgumentNullException.ThrowIfNull(requestJson);
@@ -207,8 +288,17 @@ public static partial class BrowserFormHost
     [JSImport("globalThis.document.createElement")]
     private static partial JSObject CreateElement(string tagName);
 
+    [JSImport("globalThis.document.getElementById")]
+    private static partial JSObject? GetElementById(string id);
+
     [JSImport("globalThis.document.body.appendChild")]
     private static partial JSObject AppendToBody(JSObject element);
+
+    [JSImport("globalThis.Element.prototype.setAttribute.call")]
+    private static partial void SetAttribute(JSObject element, string name, string value);
+
+    [JSImport("globalThis.Node.prototype.appendChild.call")]
+    private static partial JSObject AppendChild(JSObject parent, JSObject child);
 
     [JSImport("globalThis.HTMLElement.prototype.click.call")]
     private static partial void ClickElement(JSObject element);

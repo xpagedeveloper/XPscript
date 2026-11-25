@@ -38,9 +38,13 @@ För varje komponent:
 - [ ] Route standalone `ShowDialog(message, ...)` and `MsgBox` to platform hosts:
   server-web and Browser-WASM should render the same inline dialog controls,
   while Android should present a dialog screen and restore the prior screen.
-- [ ] Add a shared nonblocking toast API and platform hosts. Four-corner
-  stacking and timeout behavior currently exists only in the manual Kestrel
-  fixture; desktop, Android and Browser-WASM runtime toasts are not implemented.
+- [x] Add shared nonblocking `ShowToast` API and platform hosts. WebUI,
+  Browser-WASM and Android overlay toasts on the active form; desktop creates
+  a separate borderless window for each toast. Every host supports four-corner
+  placement, auto-expiry, and an accessible close button.
+- [x] Apply the active UIForm background color to the toast surface on every
+  platform. Added runtime/UIForm background propagation to desktop, Android,
+  server-rendered web and Browser-WASM renderers.
 - [ ] Extend Browser-WASM dialog parity coverage beyond UIForm. Current UIForm
   modal rendering is inline in the browser; standalone dialog API parity is
   still open.
@@ -54,9 +58,14 @@ För varje komponent:
 - [x] Android Platform FullTest compiler probe checks both reusable and
   generated Android hosts for push/pop restoration.
 - [ ] Validate Android navigation on an emulator; local Android API/workload
-  prerequisites are unavailable and no packages were installed.
+  UI interaction remains unverified locally.
 - [ ] Implement the standalone dialog and nonblocking toast host APIs across
-  desktop, server-web, Browser-WASM and Android.
+  desktop, server-web, Browser-WASM and Android. (The toast API is complete;
+  standalone message/choice/input dialog parity remains.)
+- [x] Add a close X and active-form background inheritance to every toast host;
+  Playwright now verifies immediate dismissal and matching form/toast colors.
+- [x] Run Browser-WASM toast interaction in Chromium and verify the close X
+  and form background color on the rendered application.
 
 ### CI-uppföljning 2026-11-25
 

@@ -3,6 +3,11 @@ const { expect, test } = require('playwright/test');
 test('UIForm custom dialog result includes submitted values', async ({ page }) => {
   await page.goto('/form.xps');
   await expect(page.getByRole('heading', { name: 'Contact form' })).toBeVisible();
+  await expect(page.locator('form.xpscript-uiform')).toHaveCSS('background-color', 'rgb(232, 240, 255)');
+  const readyToast = page.getByRole('status').filter({ hasText: 'Form is ready' });
+  await expect(readyToast).toHaveCSS('background-color', 'rgb(232, 240, 255)');
+  await readyToast.getByRole('button', { name: 'Close notification' }).click();
+  await expect(readyToast).toHaveCount(0);
 
   await page.getByLabel('Existing').fill('Changed in browser');
   await page.getByLabel('Missing').fill('Created in browser');
@@ -115,6 +120,9 @@ test('manual UIForm shows working browser dialogs and validates remote lookups',
     await expect(toasts.first().locator('.toast-header')).toHaveText('Message');
     await expect(toasts.first().locator('.toast-body')).toContainText(`Stacked toast at ${position}`);
     await expect(toasts.first()).toHaveClass(/bg-body/);
+    await expect(toasts.first().getByRole('button', { name: 'Close notification' })).toBeVisible();
+    await toasts.first().getByRole('button', { name: 'Close notification' }).click();
+    await expect(toasts).toHaveCount(1);
   }
   for (const position of ['top-left', 'top-right', 'bottom-left', 'bottom-right']) {
     await expect(page.locator(`#toast-${position} [role="status"]`)).toHaveCount(0, { timeout: 3000 });

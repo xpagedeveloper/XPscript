@@ -1,0 +1,7 @@
+Sub Main()
+    Dim form As New UIForm("Toast notifications")
+    form.Background = "#E8F0FF"
+    Call ShowToast("The record was saved.")
+    Call ShowToast("The connection is unstable.", "Warning", "TopLeft", 8)
+    Call ShowToast("Background sync completed.", "Normal", "BottomRight", 5)
+End Sub

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -10,6 +11,84 @@ namespace XPScript.UI.Android;
 
 public static class AndroidFormHost
 {
+    public static void ShowToast(string requestJson)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestJson);
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => ShowToast(requestJson));
+            return;
+        }
+        using var document = JsonDocument.Parse(requestJson);
+        var root = document.RootElement;
+        var message = root.TryGetProperty("message", out var messageValue) ? messageValue.GetString() ?? string.Empty : string.Empty;
+        var title = root.TryGetProperty("title", out var titleValue) ? titleValue.GetString() ?? string.Empty : string.Empty;
+        var kind = root.TryGetProperty("kind", out var kindValue) ? kindValue.GetString() ?? "normal" : "normal";
+        var position = NormalizeToastPosition(root.TryGetProperty("position", out var positionValue) ? positionValue.GetString() : null);
+        var duration = root.TryGetProperty("durationSeconds", out var durationValue) && durationValue.TryGetInt32(out var seconds) ? seconds : 3;
+        var background = root.TryGetProperty("background", out var backgroundValue) ? backgroundValue.GetString() ?? string.Empty : string.Empty;
+        if (MainView.Current is null) throw new InvalidOperationException("XPScript Android UIForm host is not initialized.");
+
+        var warning = kind.Equals("warning", StringComparison.OrdinalIgnoreCase);
+        var close = new Avalonia.Controls.Button
+        {
+            Content = "×",
+            Width = 36,
+            Height = 36,
+            Padding = new Thickness(0),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            FontSize = 24,
+            VerticalAlignment = VerticalAlignment.Top,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        AutomationProperties.SetName(close, "Close notification");
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        header.Children.Add(new TextBlock
+        {
+            Text = string.IsNullOrWhiteSpace(title) ? warning ? "Warning" : "Message" : title,
+            FontWeight = FontWeight.Bold,
+            Foreground = warning ? Brushes.Red : Brushes.Black,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        Grid.SetColumn(close, 1);
+        header.Children.Add(close);
+        var body = new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = warning ? Brushes.Red : Brushes.Black
+        };
+        var content = new StackPanel { Spacing = 6, Children = { header, body } };
+        var toast = new Border
+        {
+            Background = ParseToastBrush(background),
+            BorderBrush = Brushes.LightGray,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(12),
+            Child = content
+        };
+        close.Click += (_, _) => MainView.CloseToast(toast);
+        MainView.Current.ShowToast(toast, position, duration);
+    }
+
+    private static string NormalizeToastPosition(string? value)
+        => (value ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "top-left" or "topleft" => "top-left",
+            "bottom-left" or "bottomleft" => "bottom-left",
+            "bottom-right" or "bottomright" => "bottom-right",
+            _ => "top-right"
+        };
+
+    private static IBrush? ParseToastBrush(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        try { return Brush.Parse(value); }
+        catch (FormatException) { return null; }
+    }
+
     public static string ShowDialog(string requestJson) => ShowDialog(requestJson, null);
 
     public static string ShowDialog(string requestJson, Func<string, string, string>? eventCallback)
@@ -35,6 +114,11 @@ public static class AndroidFormHost
                 MaxWidth = 720,
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
+            if (request.TryGetProperty("background", out var formBackground) && formBackground.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(formBackground.GetString()))
+            {
+                try { panel.Background = Brush.Parse(formBackground.GetString()!); }
+                catch (FormatException) { }
+            }
 
             if (request.TryGetProperty("title", out var title))
                 panel.Children.Add(new TextBlock { Text = title.GetString() ?? "XPScript", FontSize = 24 });

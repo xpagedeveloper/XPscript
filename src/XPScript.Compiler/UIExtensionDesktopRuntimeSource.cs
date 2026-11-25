@@ -123,6 +123,7 @@ internal static class XPScriptUIDesktopAdapter
             center = form.Centered,
             resizable = form.Resizable,
             theme = form.Theme,
+            background = form.Background,
             showValidationErrors = form.ShowValidationErrors,
             showDefaultButtons = form.ShowDefaultButtons,
             defaultButtonCornerRadius = form.DefaultButtonCornerRadius,

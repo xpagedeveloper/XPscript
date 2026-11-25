@@ -251,6 +251,12 @@ foreach (var screenStackContract in new[] { "Stack<Control?> _screenStack", "_sc
 foreach (var generatedScreenStackContract in new[] { "Stack<Control?> _screenStack", "_screenStack.Push(_contentHost.Content as Control)", "_contentHost.Content = _screenStack.Pop()" })
     if (!uiHostCode.Contains(generatedScreenStackContract, StringComparison.Ordinal))
         throw new Exception("Generated Android dialog navigation must restore the exact previous screen: " + generatedScreenStackContract);
+foreach (var androidToastContract in new[] { "public static void ShowToast(string requestJson)", "Close notification", "MainView.Current.ShowToast(toast, position, duration)", "_toastRegions" })
+    if (!androidFormHostSource.Contains(androidToastContract, StringComparison.Ordinal) && !uiHostCode.Contains(androidToastContract, StringComparison.Ordinal))
+        throw new Exception("Android toast overlay is missing a cross-platform toast contract: " + androidToastContract);
+foreach (var androidBackgroundContract in new[] { "formBackground.GetString()", "Background = ParseToastBrush(background)" })
+    if (!androidFormHostSource.Contains(androidBackgroundContract, StringComparison.Ordinal))
+        throw new Exception("Android UIForm/toast background color propagation is incomplete: " + androidBackgroundContract);
 
 if (System.Text.RegularExpressions.Regex.IsMatch(uiHostCode, @"(?<!Avalonia\.Controls\.)\bRadioButton\b"))
     throw new Exception("Android UIForm host must fully qualify Avalonia RadioButton references to avoid Android.Widget ambiguity.");

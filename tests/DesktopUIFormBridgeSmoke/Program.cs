@@ -94,6 +94,7 @@ Sub Main()
     Dim form As New UIForm("Dialog declaration")
     Dim answer As String
     Dim fileName As String
+    Call ShowToast("Toast from compiler probe", "Warning", "TopLeft", 5)
     answer = ShowDialog("Save?", "Confirm", "YesNo")
     answer = ShowDialog("Environment", "Choose", "List", "Dev|Test|Prod")
     fileName = LoadFileDialog("Load", "", "JSON|*.json")
@@ -108,6 +109,7 @@ foreach (var expected in new[]
     "AstCompatibilityHelpers.LoadFileDialog(",
     "AstCompatibilityHelpers.OpenFileDialog(",
     "AstCompatibilityHelpers.SaveFileDialog(",
+    "AstCompatibilityHelpers.ShowToast(",
     "internal static class XPScriptUIDialogRuntime",
     "internal static class XPScriptUIDesktopAdapter"
 })
@@ -122,6 +124,14 @@ var desktopDialogHostSource = File.ReadAllText(Path.Combine("src", "XPScript.UI.
 if (!desktopDialogHostSource.Contains("window.ShowDialog(owner)", StringComparison.Ordinal) ||
     !desktopDialogHostSource.Contains("modalTask.GetAwaiter().GetResult()", StringComparison.Ordinal))
     throw new InvalidOperationException("Desktop standalone dialogs must use a blocking owner-modal window.");
+foreach (var toastContract in new[] { "public static void ShowToast(string requestJson)", "WindowDecorations = WindowDecorations.None", "Dispatcher.UIThread.Post(() => ShowToastCore(request))", "PositionToastStack(request.Position, stack)" })
+    if (!desktopDialogHostSource.Contains(toastContract, StringComparison.Ordinal))
+        throw new InvalidOperationException("Desktop toast must be a separate nonblocking borderless window at its requested position: " + toastContract);
+var desktopFormHostSource = File.ReadAllText(Path.Combine("src", "XPScript.UI.Desktop", "DesktopFormHost.cs"));
+var desktopRequestSource = File.ReadAllText(Path.Combine("src", "XPScript.Compiler", "UIExtensionDesktopRuntimeSource.cs"));
+if (!desktopFormHostSource.Contains("window.Background = Brush.Parse(request.Background)", StringComparison.Ordinal) ||
+    !desktopRequestSource.Contains("background = form.Background", StringComparison.Ordinal))
+    throw new InvalidOperationException("Desktop UIForm background must reach both the form window and active-toast runtime request.");
 
 var multiWindowSource = """
 Sub Main()

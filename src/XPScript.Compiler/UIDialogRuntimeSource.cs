@@ -54,6 +54,22 @@ internal static class XPScriptUIDialogRuntime
         };
     }
 
+    public static void ShowToast(object? message) => ShowToast(message, "Normal", "TopRight", 3);
+    public static void ShowToast(object? message, object? kind) => ShowToast(message, kind, "TopRight", 3);
+    public static void ShowToast(object? message, object? kind, object? position) => ShowToast(message, kind, position, 3);
+    public static void ShowToast(object? message, object? kind, object? position, object? durationSeconds)
+    {
+        var request = new
+        {
+            message = XPScriptRuntime.CStr(message),
+            kind = XPScriptRuntime.CStr(kind),
+            position = XPScriptRuntime.CStr(position),
+            durationSeconds = Math.Clamp(XPScriptRuntime.CInt(durationSeconds), 1, 30),
+            background = XPScriptUI.CurrentBackground
+        };
+        InvokeToast(System.Text.Json.JsonSerializer.Serialize(request));
+    }
+
     public static string LoadFileDialog() => OpenFileDialog();
     public static string LoadFileDialog(object? title) => OpenFileDialog(title);
     public static string LoadFileDialog(object? title, object? initialPath) => OpenFileDialog(title, initialPath);
@@ -114,6 +130,39 @@ internal static class XPScriptUIDialogRuntime
         {
             throw new XPScriptRuntimeException(5, "Desktop dialog failed: " + ex.InnerException.Message);
         }
+    }
+
+    private static void InvokeToast(string requestJson)
+    {
+        var candidates = OperatingSystem.IsAndroid()
+            ? new[] { "XPScript.UI.Android.AndroidFormHost, XPScript.UI.Android", "XPScript.UI.Android.AndroidFormHost" }
+            : OperatingSystem.IsBrowser()
+                ? new[] { "XPScript.UI.Browser.BrowserFormHost, XPScript.UI.Browser" }
+                : new[] { "XPScript.UI.Desktop.DesktopDialogHost, XPScript.UI.Desktop" };
+        if (!OperatingSystem.IsAndroid() && !OperatingSystem.IsBrowser())
+        {
+            var webBridge = Type.GetType("XPScript.Web.Runtime.XpsUIWebRuntimeBridge, XPScript.Web.Runtime", throwOnError: false, ignoreCase: false);
+            var available = webBridge?.GetMethod("IsAvailable", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            if (available?.Invoke(null, null) is true)
+                candidates = ["XPScript.Web.Runtime.XpsUIWebRuntimeBridge, XPScript.Web.Runtime"];
+        }
+
+        foreach (var typeName in candidates)
+        {
+            var type = Type.GetType(typeName, throwOnError: false, ignoreCase: false);
+            var method = type?.GetMethod("ShowToast", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(string)], null);
+            if (method is null) continue;
+            try
+            {
+                method.Invoke(null, [requestJson]);
+                return;
+            }
+            catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
+            {
+                throw new XPScriptRuntimeException(5, "Toast display failed: " + ex.InnerException.Message);
+            }
+        }
+        throw new XPScriptRuntimeException(5, "XPScript toast backend is unavailable.");
     }
 }
 """;

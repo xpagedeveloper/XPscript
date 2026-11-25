@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 
@@ -11,6 +13,16 @@ public static class DesktopDialogHost
 {
     private static readonly object SyncRoot = new();
     private static bool _initialized;
+    private static readonly Dictionary<string, List<Window>> ToastWindows = new(StringComparer.OrdinalIgnoreCase);
+
+    public static void ShowToast(string requestJson)
+    {
+        var request = JsonSerializer.Deserialize<ToastRequest>(requestJson, JsonOptions()) ?? new ToastRequest();
+        request.Position = NormalizeToastPosition(request.Position);
+        request.DurationSeconds = Math.Clamp(request.DurationSeconds, 1, 30);
+        DesktopApplicationHost.EnsureStarted();
+        Dispatcher.UIThread.Post(() => ShowToastCore(request));
+    }
 
     public static string ShowChoiceDialog(string requestJson)
     {
@@ -163,6 +175,128 @@ public static class DesktopDialogHost
         return result;
     }
 
+    private static void ShowToastCore(ToastRequest request)
+    {
+        var warning = request.Kind.Equals("warning", StringComparison.OrdinalIgnoreCase);
+        var toast = new Window
+        {
+            Width = 360,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            ShowInTaskbar = false,
+            Topmost = true,
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            WindowDecorations = WindowDecorations.None,
+            Content = CreateToastContent(request, warning, out var close)
+        };
+        if (!string.IsNullOrWhiteSpace(request.Background))
+        {
+            try { toast.Background = Brush.Parse(request.Background); }
+            catch (FormatException) { }
+        }
+        AutomationProperties.SetName(close, "Close notification");
+        close.Click += (_, _) => toast.Close();
+
+        if (!ToastWindows.TryGetValue(request.Position, out var stack))
+            ToastWindows[request.Position] = stack = [];
+        stack.Add(toast);
+        toast.Closed += (_, _) =>
+        {
+            stack.Remove(toast);
+            PositionToastStack(request.Position, stack);
+        };
+        toast.Show();
+        PositionToastStack(request.Position, stack);
+
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(request.DurationSeconds) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            if (toast.IsVisible) toast.Close();
+            PositionToastStack(request.Position, stack);
+        };
+        timer.Start();
+    }
+
+    private static Control CreateToastContent(ToastRequest request, bool warning, out Button close)
+    {
+        close = new Button
+        {
+            Content = "×",
+            Width = 30,
+            Height = 30,
+            Padding = new Thickness(0),
+            Background = Brushes.Transparent,
+            BorderThickness = new Thickness(0),
+            FontSize = 22,
+            VerticalAlignment = VerticalAlignment.Top,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        var content = new StackPanel { Spacing = 6 };
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        header.Children.Add(new TextBlock
+        {
+            Text = string.IsNullOrWhiteSpace(request.Title) ? (warning ? "Warning" : "Message") : request.Title,
+            FontWeight = FontWeight.Bold,
+            Foreground = warning ? Brushes.Red : Brushes.Black,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        Grid.SetColumn(close, 1);
+        header.Children.Add(close);
+        content.Children.Add(header);
+        content.Children.Add(new TextBlock
+        {
+            Text = request.Message,
+            TextWrapping = TextWrapping.Wrap,
+            Foreground = warning ? Brushes.Red : Brushes.Black
+        });
+        var border = new Border
+        {
+            Background = string.IsNullOrWhiteSpace(request.Background) ? null : ParseToastBrush(request.Background),
+            BorderBrush = Brushes.LightGray,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(12),
+            BoxShadow = new BoxShadows(new BoxShadow { Blur = 14, Color = Color.FromArgb(80, 0, 0, 0), OffsetY = 3 }),
+            Child = content
+        };
+        return border;
+    }
+
+    private static IBrush? ParseToastBrush(string value)
+    {
+        try { return Brush.Parse(value); }
+        catch (FormatException) { return null; }
+    }
+
+    private static void PositionToastStack(string position, List<Window> stack)
+    {
+        if (stack.Count == 0) return;
+        var screen = stack.LastOrDefault(window => window.IsVisible)?.Screens?.Primary;
+        if (screen is null) return;
+        var area = screen.WorkingArea;
+        var visible = stack.Where(window => window.IsVisible).ToArray();
+        var offset = 16;
+        foreach (var window in position.StartsWith("bottom", StringComparison.Ordinal) ? visible.Reverse() : visible)
+        {
+            var width = (int)Math.Ceiling(window.Bounds.Width > 0 ? window.Bounds.Width : 360);
+            var height = (int)Math.Ceiling(window.Bounds.Height > 0 ? window.Bounds.Height : 80);
+            var x = position.EndsWith("left", StringComparison.Ordinal) ? area.X + 16 : area.Right - width - 16;
+            var y = position.StartsWith("bottom", StringComparison.Ordinal) ? area.Bottom - height - offset : area.Y + offset;
+            window.Position = new Avalonia.PixelPoint(x, y);
+            offset += height + 8;
+        }
+    }
+
+    private static string NormalizeToastPosition(string? value)
+        => (value ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "top-left" or "topleft" => "top-left",
+            "bottom-left" or "bottomleft" => "bottom-left",
+            "bottom-right" or "bottomright" => "bottom-right",
+            _ => "top-right"
+        };
+
     private static string RunFilePicker(FileDialogRequest request, bool save)
     {
         var owner = new Window
@@ -280,5 +414,15 @@ public static class DesktopDialogHost
         public string Title { get; set; } = string.Empty;
         public string InitialPath { get; set; } = string.Empty;
         public string Filter { get; set; } = string.Empty;
+    }
+
+    private sealed class ToastRequest
+    {
+        public string Message { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Kind { get; set; } = "normal";
+        public string Position { get; set; } = "top-right";
+        public int DurationSeconds { get; set; } = 3;
+        public string Background { get; set; } = string.Empty;
     }
 }

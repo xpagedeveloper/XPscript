@@ -169,6 +169,9 @@ jobs:
           $controlsOutput = Join-Path $env:RUNNER_TEMP 'browser-wasm-uiform-controls'
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/android-uiform-controls-api.xps --output $controlsOutput --platform browser-wasm --target-framework $framework --runtime=false --debug
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $controlsOutput 'Generated.dll'))) { throw 'Browser-WASM AST UIForm controls compilation failed.' }
+          $toastOutput = Join-Path $env:RUNNER_TEMP 'browser-wasm-toasts'
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/ui-toast-notifications.xps --output $toastOutput --platform browser-wasm --target-framework $framework --runtime=false --debug
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $toastOutput 'Generated.dll'))) { throw 'Browser-WASM ShowToast API compilation failed.' }
           dotnet restore tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj --force-evaluate -p:WasmSmokeTargetFramework=$framework
           if ($LASTEXITCODE -ne 0) { throw 'Playwright smoke project restore failed.' }
           dotnet build tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-restore -p:WasmSmokeTargetFramework=$framework -p:UseSharedCompilation=false
@@ -218,6 +221,8 @@ jobs:
           test -f "$RUNNER_TEMP/ast-android-arm64/Generated.dll"
           dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-uiform-controls-api.xps --output "$RUNNER_TEMP/ast-android-x64-controls" --runtime=false --platform android-x64 --debug
           test -f "$RUNNER_TEMP/ast-android-x64-controls/Generated.dll"
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/ui-toast-notifications.xps --output "$RUNNER_TEMP/ast-android-x64-toasts" --runtime=false --platform android-x64 --debug
+          test -f "$RUNNER_TEMP/ast-android-x64-toasts/Generated.dll"
           echo 'AST_ANDROID_X64_CONTROLS_BUILD=OK'
           echo 'AST_ANDROID_TARGET_BUILD=OK'
       - name: Build Android modal form regression APK

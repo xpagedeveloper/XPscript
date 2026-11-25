@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using System.Collections.Generic;
+using Avalonia.Threading;
 
 namespace XPScript.UI.Android;
 
@@ -11,6 +12,8 @@ public sealed class MainView : UserControl
 
     private readonly ContentControl _contentHost = new();
     private readonly Stack<Control?> _screenStack = new();
+    private readonly Grid _root = new();
+    private readonly Dictionary<string, StackPanel> _toastRegions = new(StringComparer.OrdinalIgnoreCase);
 
     public MainView()
     {
@@ -35,7 +38,12 @@ public sealed class MainView : UserControl
                 }
             }
         };
-        Content = _contentHost;
+        _root.Children.Add(_contentHost);
+        AddToastRegion("top-left", HorizontalAlignment.Left, VerticalAlignment.Top);
+        AddToastRegion("top-right", HorizontalAlignment.Right, VerticalAlignment.Top);
+        AddToastRegion("bottom-left", HorizontalAlignment.Left, VerticalAlignment.Bottom);
+        AddToastRegion("bottom-right", HorizontalAlignment.Right, VerticalAlignment.Bottom);
+        Content = _root;
     }
 
     internal void ShowForm(Control form)
@@ -75,4 +83,39 @@ public sealed class MainView : UserControl
                 }
             }
         };
+
+    internal void ShowToast(Control toast, string position, int durationSeconds)
+    {
+        if (!_toastRegions.TryGetValue(position, out var region))
+            region = _toastRegions["top-right"];
+        if (position.StartsWith("bottom", StringComparison.OrdinalIgnoreCase)) region.Children.Insert(0, toast);
+        else region.Children.Add(toast);
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(Math.Clamp(durationSeconds, 1, 30)) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            CloseToast(toast);
+        };
+        timer.Start();
+    }
+
+    internal static void CloseToast(Control toast)
+    {
+        if (toast.Parent is Panel panel) panel.Children.Remove(toast);
+    }
+
+    private void AddToastRegion(string name, HorizontalAlignment horizontal, VerticalAlignment vertical)
+    {
+        var region = new StackPanel
+        {
+            Spacing = 8,
+            Margin = new Thickness(16),
+            HorizontalAlignment = horizontal,
+            VerticalAlignment = vertical,
+            MaxWidth = 420,
+            IsHitTestVisible = true
+        };
+        _toastRegions[name] = region;
+        _root.Children.Add(region);
+    }
 }

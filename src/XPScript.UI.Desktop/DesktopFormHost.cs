@@ -424,6 +424,8 @@ public static class DesktopFormHost
             Height = request.Height is > 0 ? request.Height.Value : 480,
             Content = new ScrollViewer { Content = panel }
         };
+        if (!string.IsNullOrWhiteSpace(request.Background))
+            window.Background = Brush.Parse(request.Background);
         ApplyPosition(window, request);
 
         var loop = new DispatcherFrame();

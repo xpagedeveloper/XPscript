@@ -328,6 +328,17 @@ See [XPAi client](ai.md) and [tools/session memory](ai-tools-sessions.md).
 
 `XPAIToolCall` passed to callbacks exposes `ToolName`, `FunctionName`, `CallId`, `Arguments` and `SessionId`. The compiler verifies static `AddFunction` callback names and arity.
 
+## Notifications
+
+`ShowToast` displays a temporary, nonblocking notification. WebUI, Browser-WASM,
+and Android overlay it on the current form; desktop uses a separate borderless
+window. All hosts support the four screen corners, automatic expiry, and an
+accessible close button.
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `ShowToast` | `ShowToast(message [, kind [, position [, durationSeconds]]])` | message; optional `Normal` or `Warning`; corner; 1–30 seconds. | Displays a nonblocking toast. Warning text is highlighted. | [ui-toast-notifications.xps](../samples/ui-toast-notifications.xps) |
+
 ## UIForm
 
 See [UIForm](uiform.md) and [extended fields](uiform-fields.md).

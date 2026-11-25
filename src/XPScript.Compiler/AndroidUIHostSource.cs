@@ -138,12 +138,19 @@ public sealed class MainView : UserControl
     private static int _runtimeStarted;
     private readonly ContentControl _contentHost = new();
     private readonly Stack<Control?> _screenStack = new();
+    private readonly Grid _root = new();
+    private readonly Dictionary<string, StackPanel> _toastRegions = new(StringComparer.OrdinalIgnoreCase);
 
     public MainView()
     {
         Current = this;
         _contentHost.Content = HomeContent();
-        Content = _contentHost;
+        _root.Children.Add(_contentHost);
+        AddToastRegion("top-left", HorizontalAlignment.Left, VerticalAlignment.Top);
+        AddToastRegion("top-right", HorizontalAlignment.Right, VerticalAlignment.Top);
+        AddToastRegion("bottom-left", HorizontalAlignment.Left, VerticalAlignment.Bottom);
+        AddToastRegion("bottom-right", HorizontalAlignment.Right, VerticalAlignment.Bottom);
+        Content = _root;
 
         if (Interlocked.Exchange(ref _runtimeStarted, 1) == 0)
         {
@@ -187,6 +194,36 @@ public sealed class MainView : UserControl
             return;
         }
         _contentHost.Content = HomeContent();
+    }
+
+    internal void ShowToast(Control toast, string position, int durationSeconds)
+    {
+        if (!_toastRegions.TryGetValue(position, out var region)) region = _toastRegions["top-right"];
+        if (position.StartsWith("bottom", StringComparison.OrdinalIgnoreCase)) region.Children.Insert(0, toast);
+        else region.Children.Add(toast);
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(Math.Clamp(durationSeconds, 1, 30)) };
+        timer.Tick += (_, _) => { timer.Stop(); CloseToast(toast); };
+        timer.Start();
+    }
+
+    internal static void CloseToast(Control toast)
+    {
+        if (toast.Parent is Panel panel) panel.Children.Remove(toast);
+    }
+
+    private void AddToastRegion(string name, HorizontalAlignment horizontal, VerticalAlignment vertical)
+    {
+        var region = new StackPanel
+        {
+            Spacing = 8,
+            Margin = new Thickness(16),
+            HorizontalAlignment = horizontal,
+            VerticalAlignment = vertical,
+            MaxWidth = 420,
+            IsHitTestVisible = true
+        };
+        _toastRegions[name] = region;
+        _root.Children.Add(region);
     }
 
     private static Control HomeContent() => new Grid();
@@ -445,6 +482,67 @@ public static class AndroidFormHost
 {
     private static readonly ConcurrentDictionary<string, Avalonia.Controls.NativeWebView> WebViews = new(StringComparer.Ordinal);
 
+    public static void ShowToast(string requestJson)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(requestJson);
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(() => ShowToast(requestJson));
+            return;
+        }
+        using var document = JsonDocument.Parse(requestJson);
+        var root = document.RootElement;
+        var message = root.TryGetProperty("message", out var messageValue) ? messageValue.GetString() ?? string.Empty : string.Empty;
+        var title = root.TryGetProperty("title", out var titleValue) ? titleValue.GetString() ?? string.Empty : string.Empty;
+        var kind = root.TryGetProperty("kind", out var kindValue) ? kindValue.GetString() ?? "normal" : "normal";
+        var position = NormalizeToastPosition(root.TryGetProperty("position", out var positionValue) ? positionValue.GetString() : null);
+        var duration = root.TryGetProperty("durationSeconds", out var durationValue) && durationValue.TryGetInt32(out var seconds) ? seconds : 3;
+        var background = root.TryGetProperty("background", out var backgroundValue) ? backgroundValue.GetString() ?? string.Empty : string.Empty;
+        if (MainView.Current is null) throw new InvalidOperationException("XPScript Android UIForm host is not initialized.");
+        var warning = kind.Equals("warning", StringComparison.OrdinalIgnoreCase);
+        var close = new Avalonia.Controls.Button
+        {
+            Content = "×", Width = 36, Height = 36, Padding = new Thickness(0),
+            Background = Brushes.Transparent, BorderThickness = new Thickness(0), FontSize = 24,
+            VerticalAlignment = VerticalAlignment.Top, HorizontalAlignment = HorizontalAlignment.Right
+        };
+        AutomationProperties.SetName(close, "Close notification");
+        var header = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        header.Children.Add(new TextBlock
+        {
+            Text = string.IsNullOrWhiteSpace(title) ? warning ? "Warning" : "Message" : title,
+            FontWeight = FontWeight.Bold, Foreground = warning ? Brushes.Red : Brushes.Black,
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        Grid.SetColumn(close, 1);
+        header.Children.Add(close);
+        var body = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap, Foreground = warning ? Brushes.Red : Brushes.Black };
+        var toast = new Border
+        {
+            Background = ParseToastBrush(background), BorderBrush = Brushes.LightGray, BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8), Padding = new Thickness(12),
+            Child = new StackPanel { Spacing = 6, Children = { header, body } }
+        };
+        close.Click += (_, _) => MainView.CloseToast(toast);
+        MainView.Current.ShowToast(toast, position, duration);
+    }
+
+    private static string NormalizeToastPosition(string? value)
+        => (value ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "top-left" or "topleft" => "top-left",
+            "bottom-left" or "bottomleft" => "bottom-left",
+            "bottom-right" or "bottomright" => "bottom-right",
+            _ => "top-right"
+        };
+
+    private static IBrush? ParseToastBrush(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        try { return Brush.Parse(value); }
+        catch (FormatException) { return null; }
+    }
+
     public static string ShowDialog(string requestJson) => ShowDialog(requestJson, null);
 
     public static string ShowDialog(string requestJson, Func<string, string, string>? eventCallback)
@@ -486,6 +584,11 @@ public static class AndroidFormHost
             var fieldLabels = new Dictionary<string, TextBlock>(StringComparer.OrdinalIgnoreCase);
             var actionButtons = new Dictionary<string, Avalonia.Controls.Button>(StringComparer.OrdinalIgnoreCase);
             var panel = new StackPanel { Spacing = 12, Margin = new Thickness(16), MaxWidth = 720, HorizontalAlignment = HorizontalAlignment.Stretch };
+            if (request.TryGetProperty("background", out var formBackground) && formBackground.ValueKind == JsonValueKind.String && !string.IsNullOrWhiteSpace(formBackground.GetString()))
+            {
+                try { panel.Background = Brush.Parse(formBackground.GetString()!); }
+                catch (FormatException) { }
+            }
             TabControl? tabControl = null;
             var dispatchingFieldChange = false;
 

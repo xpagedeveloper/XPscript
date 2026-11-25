@@ -32,6 +32,11 @@ result = form.ShowDialog()
 
 The form title belongs to the top-level form container. On the web it is rendered before the field grid.
 
+`UIForm` inherits `Background` from `UIComponent`. Set it to a color such
+as `"#E8F0FF"` to change the form surface. A `ShowToast` call uses the active
+form's background color on every host, including the separate desktop toast
+window.
+
 ## Clearing fields and forcing a refresh
 
 Every `UIFormField` has `Clear()`, which removes its current value. Controls that support choices also expose `AddOption(value)` and `ClearOptions()`. These methods change the shared AST form model; call `RefreshForm()` when an already displayed form must be rendered again immediately with the new value or option list.

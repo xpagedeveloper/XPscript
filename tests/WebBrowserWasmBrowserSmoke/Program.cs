@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using System.Net;
 using Microsoft.Playwright;
 using XPScript.Web.Compiler;
 
@@ -27,6 +27,8 @@ Sub Main()
     Print "WASM_SPREADSHEET_BOUNDARY_OK"
 
     Dim form As New UIForm("Browser interaction")
+    form.Background = "#e8f0ff"
+    Call ShowToast("WASM form ready", "Normal", "TopLeft", 30)
     Call form.AddTextField("name", "Name")
     Call form.AddButton("save", "Save", "SaveForm")
     Call form.Show(False)
@@ -55,11 +57,8 @@ End Sub
     if (coreLibraries.Length == 0)
         throw new InvalidOperationException($"{source}: published WASM framework is missing System.Private.CoreLib.");
     var port = Random.Shared.Next(18000, 28000);
-    var python = new[] { "python.exe", "python3", "py.exe" }
-        .FirstOrDefault(command => command is "python3" || File.Exists(command) || Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator).Any(path => File.Exists(Path.Combine(path, command))) == true)
-        ?? throw new InvalidOperationException("Could not find Python for the local WASM static server.");
-    // Serve from a short deployment path: Python normalizes URL paths and
-    // cannot reliably serve Windows extended-path cache directories.
+    // Serve from a short deployment path so browser requests avoid Windows
+    // extended-path cache directories.
     var serverRoot = Path.Combine(root, "site");
     var deploymentRoot = Path.Combine(serverRoot, "app.xps");
     foreach (var file in Directory.EnumerateFiles(appRoot, "*", SearchOption.AllDirectories))
@@ -68,18 +67,8 @@ End Sub
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         File.Copy(file, target);
     }
-    using var server = Process.Start(new ProcessStartInfo(python, $"-m http.server {port} --bind 127.0.0.1 --directory \"{serverRoot}\"")
-    {
-        WorkingDirectory = Environment.CurrentDirectory,
-        RedirectStandardError = true,
-        RedirectStandardOutput = true,
-        UseShellExecute = false
-    }) ?? throw new InvalidOperationException("Could not start static WASM server.");
-    // Drain request logs continuously: a WASM app requests enough assemblies
-    // to fill the redirected pipe and otherwise stall the Python server.
-    server.BeginErrorReadLine();
-    server.BeginOutputReadLine();
-    await Task.Delay(500);
+    using var server = new WasmStaticFileServer(serverRoot, port);
+    server.Start();
     using var playwright = await Playwright.CreateAsync();
     var browserErrors = new List<string>();
     var chromiumPath = new[]
@@ -115,6 +104,16 @@ End Sub
     page.RequestFailed += (_, request) => Console.WriteLine($"BROWSER_REQUEST_FAILED: {request.Url}: {request.Failure}");
     await page.GotoAsync($"http://127.0.0.1:{port}/app.xps/", new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle });
     var name = page.Locator("input[name='name']");
+    var wasmFormBackground = await page.Locator("form.xpscript-uiform").EvaluateAsync<string>("element => getComputedStyle(element).backgroundColor");
+    if (wasmFormBackground != "rgb(232, 240, 255)")
+        throw new InvalidOperationException("WASM UIForm background color was not applied.");
+    var wasmToast = page.GetByRole(AriaRole.Status).Filter(new LocatorFilterOptions { HasTextString = "WASM form ready" });
+    await wasmToast.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 120000 });
+    var wasmToastBackground = await wasmToast.EvaluateAsync<string>("element => getComputedStyle(element).backgroundColor");
+    if (wasmToastBackground != "rgb(232, 240, 255)")
+        throw new InvalidOperationException("WASM toast did not follow the UIForm background color.");
+    await wasmToast.GetByRole(AriaRole.Button, new() { Name = "Close notification" }).ClickAsync();
+    await wasmToast.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
     try
     {
         await name.WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Visible, Timeout = 120000 });
@@ -135,4 +134,70 @@ End Sub
 finally
 {
     try { Directory.Delete(root, true); } catch { }
+}
+
+sealed class WasmStaticFileServer(string root, int port) : IDisposable
+{
+    private readonly HttpListener _listener = new();
+
+    public void Start()
+    {
+        _listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+        _listener.Start();
+        _ = Task.Run(ServeAsync);
+    }
+
+    private async Task ServeAsync()
+    {
+        while (_listener.IsListening)
+        {
+            HttpListenerContext context;
+            try { context = await _listener.GetContextAsync(); }
+            catch (HttpListenerException) when (!_listener.IsListening) { return; }
+            catch (ObjectDisposedException) { return; }
+            _ = Task.Run(() => Respond(context));
+        }
+    }
+
+    private void Respond(HttpListenerContext context)
+    {
+        try
+        {
+            var relative = Uri.UnescapeDataString(context.Request.Url?.AbsolutePath.TrimStart('/') ?? string.Empty);
+            if (relative.Length == 0 || relative.EndsWith("/", StringComparison.Ordinal)) relative += "index.html";
+            var file = Path.GetFullPath(Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar)));
+            var rootPrefix = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (!file.StartsWith(rootPrefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) || !File.Exists(file))
+            {
+                context.Response.StatusCode = 404;
+                context.Response.Close();
+                return;
+            }
+
+            var bytes = File.ReadAllBytes(file);
+            context.Response.StatusCode = 200;
+            context.Response.ContentType = Path.GetExtension(file).ToLowerInvariant() switch
+            {
+                ".html" => "text/html; charset=utf-8",
+                ".js" or ".mjs" => "text/javascript; charset=utf-8",
+                ".json" => "application/json; charset=utf-8",
+                ".css" => "text/css; charset=utf-8",
+                ".wasm" => "application/wasm",
+                _ => "application/octet-stream"
+            };
+            context.Response.ContentLength64 = bytes.Length;
+            context.Response.OutputStream.Write(bytes);
+            context.Response.Close();
+        }
+        catch
+        {
+            try { context.Response.Abort(); } catch { }
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_listener.IsListening) _listener.Stop();
+        _listener.Close();
+    }
 }
