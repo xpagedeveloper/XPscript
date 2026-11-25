@@ -54,9 +54,9 @@ internal static class XPScriptUIDialogRuntime
         };
     }
 
-    public static void ShowToast(object? message) => ShowToast(message, "Normal", "TopRight", 3);
-    public static void ShowToast(object? message, object? kind) => ShowToast(message, kind, "TopRight", 3);
-    public static void ShowToast(object? message, object? kind, object? position) => ShowToast(message, kind, position, 3);
+    public static void ShowToast(object? message) => ShowToast(message, "Normal", "TopRight", 5);
+    public static void ShowToast(object? message, object? kind) => ShowToast(message, kind, "TopRight", 5);
+    public static void ShowToast(object? message, object? kind, object? position) => ShowToast(message, kind, position, 5);
     public static void ShowToast(object? message, object? kind, object? position, object? durationSeconds)
     {
         var request = new

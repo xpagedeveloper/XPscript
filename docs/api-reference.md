@@ -330,10 +330,12 @@ See [XPAi client](ai.md) and [tools/session memory](ai-tools-sessions.md).
 
 ## Notifications
 
-`ShowToast` displays a temporary, nonblocking notification. WebUI, Browser-WASM,
+`ShowToast` displays a temporary, nonblocking notification. Its default lifetime is five seconds. WebUI, Browser-WASM,
 and Android overlay it on the current form; desktop uses a separate borderless
 window. All hosts support the four screen corners, automatic expiry, and an
-accessible close button.
+accessible close button. New notifications appear at the selected corner. Top
+stacks grow downward as older items move down; bottom stacks grow upward as
+older items move up.
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|

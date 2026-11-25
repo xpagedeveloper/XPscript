@@ -7,9 +7,14 @@ Directory.CreateDirectory(root);
 try
 {
     Console.WriteLine($"WASM_SMOKE_HOST_RUNTIME={Environment.Version}");
+    Directory.CreateDirectory(Path.Combine(root, "assets"));
+    File.Copy(Path.GetFullPath(Path.Combine("samples", "assets", "test-application-icon.ico")),
+        Path.Combine(root, "assets", "test-application-icon.ico"));
     var sourcePath = Path.Combine(root, "app.xps");
     await File.WriteAllTextAsync(sourcePath, """
 [Platform:browser-wasm]
+Application.Title = "Browser icon smoke"
+Application.Icon = "assets/test-application-icon.ico"
 
 [ServerSide]
 Function ServerTransform(value As String) As String
@@ -628,6 +633,9 @@ End Sub
         throw new Exception("Browser WASM bootstrap does not anchor relative assets to its owning .xps route.");
 
     var browserModule = await File.ReadAllTextAsync(Path.Combine(frameworkRoot, "xpscript-browser.js"));
+    if (!File.Exists(Path.Combine(frameworkRoot, "assets", "test-application-icon.ico")) ||
+        !browserModule.Contains("link.href=icon", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM Application.Icon is not bundled and assigned as the tab favicon.");
     if (!browserModule.Contains("url !== '__xpscript_bridge' && !url.startsWith('__xpscript_bridge/')", StringComparison.Ordinal) ||
         !browserModule.Contains("xhr.open(safeMethod, url, false)", StringComparison.Ordinal))
         throw new Exception("Browser-WASM server bridge no longer enforces a same-origin relative bridge URL.");

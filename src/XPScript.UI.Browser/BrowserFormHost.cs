@@ -16,6 +16,7 @@ public static partial class BrowserFormHost
     private static readonly object EventDispatcherSync = new();
     private static Func<string, string, string>? _eventDispatcher;
     private static Func<string, string, Task<string>>? _asyncEventDispatcher;
+    private static int _toastSequence;
 
     public static void ShowToast(string requestJson)
     {
@@ -29,15 +30,15 @@ public static partial class BrowserFormHost
         if (existingRegion is null)
         {
             region.SetProperty("id", regionId);
-            region.SetProperty("className", "position-fixed p-3 d-flex flex-column gap-2 xpscript-toast-region " + position);
+            region.SetProperty("className", "position-fixed p-3 d-flex flex-column xpscript-toast-region " + position);
             var placement = position switch
             {
                 "top-left" => "top:0;left:0",
-                "bottom-left" => "bottom:0;left:0;flex-direction:column-reverse",
-                "bottom-right" => "bottom:0;right:0;flex-direction:column-reverse",
+                "bottom-left" => "bottom:0;left:0;justify-content:flex-end",
+                "bottom-right" => "bottom:0;right:0;justify-content:flex-end",
                 _ => "top:0;right:0"
             };
-            SetAttribute(region, "style", $"position:fixed;z-index:1090;max-width:min(26rem,calc(100vw - 2rem));padding:1rem;display:flex;gap:.5rem;pointer-events:none;{placement}");
+            SetAttribute(region, "style", $"position:fixed;z-index:1090;max-width:min(26rem,calc(100vw - 2rem));padding:1rem;display:flex;gap:0;pointer-events:none;{placement}");
             SetAttribute(region, "role", "region");
             SetAttribute(region, "aria-label", position + " notifications");
             AppendToBody(region);
@@ -46,7 +47,9 @@ public static partial class BrowserFormHost
         var toast = CreateElement("div");
         toast.SetProperty("className", string.IsNullOrWhiteSpace(request.Background) ? "toast show bg-body text-body border shadow" : "toast show text-body border shadow");
         SetAttribute(toast, "role", warning ? "alert" : "status");
-        var toastStyle = "pointer-events:auto;width:100%";
+        var sequence = Interlocked.Increment(ref _toastSequence);
+        var overlap = position.StartsWith("bottom", StringComparison.Ordinal) ? "margin-top:-18px" : "margin-bottom:-18px";
+        var toastStyle = $"pointer-events:auto;position:relative;z-index:{sequence};width:100%;{overlap}";
         if (!string.IsNullOrWhiteSpace(request.Background)) toastStyle += ";background-color:" + request.Background;
         SetAttribute(toast, "style", toastStyle);
         var header = CreateElement("div");
@@ -67,7 +70,8 @@ public static partial class BrowserFormHost
         AppendChild(toast, header);
         AppendChild(toast, body);
         SetAttribute(toast, "class", (string.IsNullOrWhiteSpace(request.Background) ? "toast show bg-body text-body border shadow" : "toast show text-body border shadow") + " xpscript-toast");
-        AppendChild(region, toast);
+        if (position.StartsWith("bottom", StringComparison.Ordinal)) AppendChild(region, toast);
+        else PrependChild(region, toast);
         _ = ExpireToastAsync(toast, Math.Clamp(request.DurationSeconds, 1, 30));
     }
 
@@ -94,7 +98,7 @@ public static partial class BrowserFormHost
         public string Title { get; set; } = string.Empty;
         public string Kind { get; set; } = "normal";
         public string Position { get; set; } = "top-right";
-        public int DurationSeconds { get; set; } = 3;
+        public int DurationSeconds { get; set; } = 5;
         public string Background { get; set; } = string.Empty;
     }
 
@@ -299,6 +303,9 @@ public static partial class BrowserFormHost
 
     [JSImport("globalThis.Node.prototype.appendChild.call")]
     private static partial JSObject AppendChild(JSObject parent, JSObject child);
+
+    [JSImport("globalThis.Element.prototype.prepend.call")]
+    private static partial void PrependChild(JSObject parent, JSObject child);
 
     [JSImport("globalThis.HTMLElement.prototype.click.call")]
     private static partial void ClickElement(JSObject element);

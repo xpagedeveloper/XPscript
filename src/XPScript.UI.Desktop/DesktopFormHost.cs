@@ -62,6 +62,7 @@ public static class DesktopFormHost
         var currentValidationErrors = request.Fields.ToDictionary(field => field.Name, field => field.ValidationError.Length > 0 ? field.ValidationError : field.SchemaValidationError, StringComparer.OrdinalIgnoreCase);
         var optionOverrides = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
         var customButtons = new Dictionary<string, Button>(StringComparer.OrdinalIgnoreCase);
+        var footerButtons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };
         var panel = new StackPanel { Spacing = 8, Margin = new Thickness(16) };
         if (!string.IsNullOrWhiteSpace(request.BootImage)) panel.Children.Add(DesktopImageHost.Create(request.BootImage, string.Empty));
         if (!string.IsNullOrWhiteSpace(request.BootText)) panel.Children.Add(new TextBlock { Text = request.BootText, FontSize = 20, HorizontalAlignment = HorizontalAlignment.Center });
@@ -386,7 +387,6 @@ public static class DesktopFormHost
         panel.Children.Add(validationText);
         if (request.Buttons.Count > 0)
         {
-            var actionButtons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
             foreach (var definition in request.Buttons)
             {
                 var button = new Button { Content = definition.Label, MinWidth = 80, IsVisible = definition.Visible, IsEnabled = definition.Enabled };
@@ -399,12 +399,10 @@ public static class DesktopFormHost
                     result = new DesktopFormResult(definition.Result.Length > 0 ? definition.Result : definition.Name, ReadCurrentValues());
                     window?.Close();
                 };
-                actionButtons.Children.Add(button);
+                footerButtons.Children.Add(button);
             }
-            panel.Children.Add(actionButtons);
         }
 
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Margin = new Thickness(0, 8, 0, 0) };
         var ok = new Button { Content = "OK", MinWidth = 80 };
         var cancel = new Button { Content = "Cancel", MinWidth = 80 };
         if (request.DefaultButtonCornerRadius is double defaultButtonRadius)
@@ -412,9 +410,17 @@ public static class DesktopFormHost
             ok.CornerRadius = new CornerRadius(defaultButtonRadius);
             cancel.CornerRadius = new CornerRadius(defaultButtonRadius);
         }
-        buttons.Children.Add(ok);
-        buttons.Children.Add(cancel);
-        panel.Children.Add(buttons);
+        footerButtons.Children.Add(ok);
+        footerButtons.Children.Add(cancel);
+        var formLayout = new Grid();
+        formLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Star });
+        formLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var scroll = new ScrollViewer { Content = panel };
+        Grid.SetRow(scroll, 0);
+        formLayout.Children.Add(scroll);
+        var footer = new Border { Padding = new Thickness(16, 8, 16, 12), Child = footerButtons };
+        Grid.SetRow(footer, 1);
+        formLayout.Children.Add(footer);
 
         window = new Window
         {
@@ -422,7 +428,8 @@ public static class DesktopFormHost
             CanResize = request.Resizable,
             Width = request.Width is > 0 ? request.Width.Value : 640,
             Height = request.Height is > 0 ? request.Height.Value : 480,
-            Content = new ScrollViewer { Content = panel }
+            Icon = DesktopWindowIcon.Load(request.ApplicationIcon),
+            Content = formLayout
         };
         if (!string.IsNullOrWhiteSpace(request.Background))
             window.Background = Brush.Parse(request.Background);

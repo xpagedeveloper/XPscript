@@ -19,6 +19,10 @@ public static class DesktopFormLifecycleHost
     }
     public static void RunMacOS(Action script) => DesktopApplicationHost.RunMacOS(script);
     private static readonly ConcurrentDictionary<string, Window> Windows = new(StringComparer.Ordinal);
+    private static Window? _activeWindow;
+
+    internal static Window? GetActiveWindow()
+        => _activeWindow is { IsVisible: true } active ? active : Windows.Values.LastOrDefault(window => window.IsVisible);
 
     public static string Show(string requestJson) => Show(requestJson, null);
 
@@ -99,6 +103,7 @@ public static class DesktopFormLifecycleHost
     {
         if (Windows.TryGetValue(instanceId, out var existing))
         {
+            _activeWindow = existing;
             existing.Activate();
             return;
         }
@@ -181,9 +186,9 @@ public static class DesktopFormLifecycleHost
             return JsonSerializer.Serialize(values);
         }
 
+        var footerButtons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };
         if (root.TryGetProperty("buttons", out var buttonArray) && buttonArray.ValueKind == JsonValueKind.Array)
         {
-            var actionButtons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top, Spacing = 8, Height = 40, MinHeight = 40 };
             var buttonIndex = 0;
             var automationNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var buttonDefinition in buttonArray.EnumerateArray())
@@ -216,28 +221,41 @@ public static class DesktopFormLifecycleHost
                     if (callbackState is not null) ApplyCallbackState(callbackState);
                 }
                 button.Command = new CallbackCommand(InvokeCallback);
-                actionButtons.Children.Add(button);
+                footerButtons.Children.Add(button);
             }
-            if (actionButtons.Children.Count > 0) panel.Children.Add(actionButtons);
         }
 
         var close = new Button { Content = "Close", HorizontalAlignment = HorizontalAlignment.Right, MinWidth = 80 };
-        panel.Children.Add(close);
+        footerButtons.Children.Add(close);
+        var formLayout = new Grid();
+        formLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Star });
+        formLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var scroll = new ScrollViewer { Content = panel };
+        Grid.SetRow(scroll, 0);
+        formLayout.Children.Add(scroll);
+        var footer = new Border { Padding = new Avalonia.Thickness(16, 8, 16, 12), Child = footerButtons };
+        Grid.SetRow(footer, 1);
+        formLayout.Children.Add(footer);
         var window = new Window
         {
             Title = Read(root, "title", string.Empty),
             CanResize = ReadBool(root, "resizable", true),
             Width = ReadInt(root, "width", 640),
             Height = ReadInt(root, "height", 480),
+            Icon = DesktopWindowIcon.Load(Read(root, "applicationIcon", string.Empty)),
             Topmost = OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable("XAML_MCP") == "1",
-            Content = new ScrollViewer { Content = panel }
+            Content = formLayout
         };
+        _activeWindow = window;
+        window.Activated += (_, _) => _activeWindow = window;
         ApplyPosition(window, root);
         Windows[instanceId] = window;
         close.Click += (_, _) => window.Close();
         window.Closed += (_, _) =>
         {
             Windows.TryRemove(instanceId, out _);
+            if (ReferenceEquals(_activeWindow, window))
+                _activeWindow = Windows.Values.LastOrDefault(candidate => candidate.IsVisible);
             DesktopWebViewHost.RemoveInstance(instanceId);
             DesktopAccessibilityHost.Unregister(instanceId);
             if (Windows.IsEmpty) DesktopApplicationHost.SetProcessKeepAlive(false);

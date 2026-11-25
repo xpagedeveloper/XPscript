@@ -32,6 +32,10 @@ result = form.ShowDialog()
 
 The form title belongs to the top-level form container. On the web it is rendered before the field grid.
 
+Desktop forms keep their action buttons in a fixed footer while long field lists
+scroll independently. This keeps the primary actions visible at the bottom of
+resizable forms.
+
 `UIForm` inherits `Background` from `UIComponent`. Set it to a color such
 as `"#E8F0FF"` to change the form surface. A `ShowToast` call uses the active
 form's background color on every host, including the separate desktop toast

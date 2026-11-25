@@ -66,6 +66,9 @@ För varje komponent:
   Playwright now verifies immediate dismissal and matching form/toast colors.
 - [x] Run Browser-WASM toast interaction in Chromium and verify the close X
   and form background color on the rendered application.
+- [x] Anchor desktop UIForm action buttons to a fixed bottom footer while the
+  field content scrolls; keep the same layout behavior for modal and modeless
+  desktop forms.
 
 ### CI-uppföljning 2026-11-25
 

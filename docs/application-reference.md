@@ -52,7 +52,7 @@ These properties are writable. Their values are stored in the application state 
 |---|---|---|---|---|
 | `Application.Id` | `Application.Id = value` | `value`: stable application identifier. | Gets or sets the application identity. `Application.Secrets` requires it before credential-store access and binds to the first value used. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
 | `Application.Title` | `Application.Title = value` | `value`: application/window title. | Gets or sets the application title metadata. | [application-object.xps](../samples/application-object.xps) |
-| `Application.Icon` | `Application.Icon = path` | `path`: icon path/value. | Compatibility alias for `Application.Executable.Icon`. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
+| `Application.Icon` | `Application.Icon = path` | `path`: icon path/value. | Compatibility alias for `Application.Executable.Icon`; supplies the desktop UIForm window icon and the browser tab favicon for WebUI and Browser-WASM. | [application-icon-test.xps](../samples/application-icon-test.xps) |
 | `Application.Width` | `Application.Width = value` | `value`: preferred application/window width. | Gets or sets width metadata. | [application-object.xps](../samples/application-object.xps) |
 | `Application.Height` | `Application.Height = value` | `value`: preferred application/window height. | Gets or sets height metadata. | [application-object.xps](../samples/application-object.xps) |
 
@@ -60,7 +60,7 @@ These properties are writable. Their values are stored in the application state 
 
 `Application.Executable` exposes metadata that the compiler writes into the generated application. Assign string literals when you want the values embedded in the build output. The same values are also readable through the XPScript application state during execution.
 
-`Application.Icon` and `Application.Executable.Icon` address the same icon value. `Application.Icon` remains available as a compatibility alias.
+`Application.Icon` and `Application.Executable.Icon` address the same icon value. `Application.Icon` remains available as a compatibility alias. UIForm desktop windows use the configured local icon file. WebUI and Browser-WASM set the browser favicon to the configured URL or bundled `assets/` path. When no icon is configured, the host/browser keeps its normal default icon.
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|

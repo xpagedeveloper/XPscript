@@ -25,7 +25,7 @@ On Android, call `UIForm.ShowDialog()` from the script entry point to wait for `
 Use `ShowToast(message [, kind [, position [, durationSeconds]]])` for a
 nonblocking notification. `kind` is `Normal` or `Warning`; `position` is
 `TopLeft`, `TopRight`, `BottomLeft` or `BottomRight`; duration defaults to
-3 seconds and is limited to 1–30 seconds. The toast includes a close button.
+5 seconds and is limited to 1–30 seconds. The toast includes a close button.
 WebUI, Browser-WASM and Android overlay the current form; desktop opens a
 separate borderless window at the requested screen corner.
 

@@ -72,9 +72,17 @@ public static class DesktopDialogHost
     private static string ShowChoiceDialogCore(ChoiceDialogRequest request)
     {
         var kind = request.Kind.Trim().ToLowerInvariant();
-        var panel = new StackPanel { Spacing = 12, Margin = new Thickness(16) };
+        var content = new StackPanel { Spacing = 12 };
+        var panel = new Grid
+        {
+            RowDefinitions = new RowDefinitions("*,Auto"),
+            Margin = new Thickness(20),
+            RowSpacing = 16
+        };
+        Grid.SetRow(content, 0);
+        panel.Children.Add(content);
         if (!string.IsNullOrWhiteSpace(request.Message))
-            panel.Children.Add(new TextBlock { Text = request.Message, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+            content.Children.Add(new TextBlock { Text = request.Message, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
 
         ComboBox? list = null;
         TextBox? input = null;
@@ -82,7 +90,7 @@ public static class DesktopDialogHost
         {
             list = new ComboBox { ItemsSource = request.Options ?? [] };
             if ((request.Options?.Length ?? 0) > 0) list.SelectedIndex = 0;
-            panel.Children.Add(list);
+            content.Children.Add(list);
         }
         else if (kind is "input" or "password")
         {
@@ -91,7 +99,7 @@ public static class DesktopDialogHost
                 Text = request.Options?.FirstOrDefault() ?? string.Empty,
                 PasswordChar = kind == "password" ? '•' : '\0'
             };
-            panel.Children.Add(input);
+            content.Children.Add(input);
         }
 
         var buttons = new StackPanel
@@ -100,13 +108,17 @@ public static class DesktopDialogHost
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = 8
         };
-        panel.Children.Add(buttons);
+        var footer = new Border { Padding = new Thickness(0, 8, 0, 0), Child = buttons };
+        Grid.SetRow(footer, 1);
+        panel.Children.Add(footer);
 
         var window = new Window
         {
             Title = string.IsNullOrWhiteSpace(request.Title) ? "XPScript" : request.Title,
-            Width = 460,
-            Height = kind is "list" or "input" or "password" ? 220 : 180,
+            Width = 520,
+            MinWidth = 520,
+            SizeToContent = SizeToContent.Height,
+            MinHeight = 120,
             CanResize = false,
             Content = panel
         };
@@ -150,17 +162,23 @@ public static class DesktopDialogHost
         }
 
         window.Closed += (_, _) => loop.Continue = false;
-        var owner = new Window
+        var owner = DesktopFormLifecycleHost.GetActiveWindow();
+        var ownsOwner = owner is null;
+        if (owner is null)
         {
-            Width = 1,
-            Height = 1,
-            ShowInTaskbar = false,
-            CanResize = false,
-            Opacity = 0
-        };
-        owner.Show();
+            owner = new Window
+            {
+                Width = 1,
+                Height = 1,
+                ShowInTaskbar = false,
+                CanResize = false,
+                Opacity = 0
+            };
+            owner.Show();
+        }
         try
         {
+            window.WindowStartupLocation = WindowStartupLocation.CenterOwner;
             var modalTask = window.ShowDialog(owner);
             modalTask.ContinueWith(
                 _ => Dispatcher.UIThread.Post(() => loop.Continue = false),
@@ -170,7 +188,7 @@ public static class DesktopDialogHost
         }
         finally
         {
-            owner.Close();
+            if (ownsOwner) owner.Close();
         }
         return result;
     }
@@ -205,6 +223,7 @@ public static class DesktopDialogHost
             stack.Remove(toast);
             PositionToastStack(request.Position, stack);
         };
+        toast.Opened += (_, _) => PositionToastStack(request.Position, stack);
         toast.Show();
         PositionToastStack(request.Position, stack);
 
@@ -272,19 +291,21 @@ public static class DesktopDialogHost
     private static void PositionToastStack(string position, List<Window> stack)
     {
         if (stack.Count == 0) return;
-        var screen = stack.LastOrDefault(window => window.IsVisible)?.Screens?.Primary;
+        var anchor = stack.LastOrDefault(window => window.IsVisible);
+        var screen = anchor?.Screens?.ScreenFromWindow(anchor) ?? anchor?.Screens?.Primary;
         if (screen is null) return;
         var area = screen.WorkingArea;
+        var scale = screen.Scaling;
         var visible = stack.Where(window => window.IsVisible).ToArray();
         var offset = 16;
-        foreach (var window in position.StartsWith("bottom", StringComparison.Ordinal) ? visible.Reverse() : visible)
+        foreach (var window in visible.Reverse())
         {
-            var width = (int)Math.Ceiling(window.Bounds.Width > 0 ? window.Bounds.Width : 360);
-            var height = (int)Math.Ceiling(window.Bounds.Height > 0 ? window.Bounds.Height : 80);
+            var width = (int)Math.Ceiling((window.Bounds.Width > 0 ? window.Bounds.Width : 360) * scale);
+            var height = (int)Math.Ceiling((window.Bounds.Height > 0 ? window.Bounds.Height : 80) * scale);
             var x = position.EndsWith("left", StringComparison.Ordinal) ? area.X + 16 : area.Right - width - 16;
             var y = position.StartsWith("bottom", StringComparison.Ordinal) ? area.Bottom - height - offset : area.Y + offset;
             window.Position = new Avalonia.PixelPoint(x, y);
-            offset += height + 8;
+            offset += Math.Max(1, height - 10);
         }
     }
 
@@ -422,7 +443,7 @@ public static class DesktopDialogHost
         public string Title { get; set; } = string.Empty;
         public string Kind { get; set; } = "normal";
         public string Position { get; set; } = "top-right";
-        public int DurationSeconds { get; set; } = 3;
+        public int DurationSeconds { get; set; } = 5;
         public string Background { get; set; } = string.Empty;
     }
 }

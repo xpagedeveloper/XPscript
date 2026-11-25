@@ -1,0 +1,11 @@
+Option Declare
+
+Sub Main()
+    Application.Title = "Application icon test"
+    Application.Icon = "assets/test-application-icon.ico"
+
+    Dim form As New UIForm("Application icon test", 720, 480, True)
+    Call form.AddTextField("status", "Icon test")
+    Call form.SetFieldValue("status", "The application icon should appear on desktop and in browser tabs.")
+    Call form.Show(False)
+End Sub

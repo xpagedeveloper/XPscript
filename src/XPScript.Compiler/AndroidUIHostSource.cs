@@ -140,6 +140,7 @@ public sealed class MainView : UserControl
     private readonly Stack<Control?> _screenStack = new();
     private readonly Grid _root = new();
     private readonly Dictionary<string, StackPanel> _toastRegions = new(StringComparer.OrdinalIgnoreCase);
+    private int _toastSequence;
 
     public MainView()
     {
@@ -199,8 +200,12 @@ public sealed class MainView : UserControl
     internal void ShowToast(Control toast, string position, int durationSeconds)
     {
         if (!_toastRegions.TryGetValue(position, out var region)) region = _toastRegions["top-right"];
-        if (position.StartsWith("bottom", StringComparison.OrdinalIgnoreCase)) region.Children.Insert(0, toast);
-        else region.Children.Add(toast);
+        // New items stay at the selected edge: top regions prepend, while
+        // bottom anchored regions append so older items move upward.
+        Panel.SetZIndex(toast, Interlocked.Increment(ref _toastSequence));
+        region.Spacing = -10;
+        if (position.StartsWith("bottom", StringComparison.OrdinalIgnoreCase)) region.Children.Add(toast);
+        else region.Children.Insert(0, toast);
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(Math.Clamp(durationSeconds, 1, 30)) };
         timer.Tick += (_, _) => { timer.Stop(); CloseToast(toast); };
         timer.Start();
@@ -496,7 +501,7 @@ public static class AndroidFormHost
         var title = root.TryGetProperty("title", out var titleValue) ? titleValue.GetString() ?? string.Empty : string.Empty;
         var kind = root.TryGetProperty("kind", out var kindValue) ? kindValue.GetString() ?? "normal" : "normal";
         var position = NormalizeToastPosition(root.TryGetProperty("position", out var positionValue) ? positionValue.GetString() : null);
-        var duration = root.TryGetProperty("durationSeconds", out var durationValue) && durationValue.TryGetInt32(out var seconds) ? seconds : 3;
+        var duration = root.TryGetProperty("durationSeconds", out var durationValue) && durationValue.TryGetInt32(out var seconds) ? seconds : 5;
         var background = root.TryGetProperty("background", out var backgroundValue) ? backgroundValue.GetString() ?? string.Empty : string.Empty;
         if (MainView.Current is null) throw new InvalidOperationException("XPScript Android UIForm host is not initialized.");
         var warning = kind.Equals("warning", StringComparison.OrdinalIgnoreCase);
@@ -521,6 +526,7 @@ public static class AndroidFormHost
         {
             Background = ParseToastBrush(background), BorderBrush = Brushes.LightGray, BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8), Padding = new Thickness(12),
+            BoxShadow = new BoxShadows(new BoxShadow { Blur = 14, Color = Color.FromArgb(80, 0, 0, 0), OffsetY = 3 }),
             Child = new StackPanel { Spacing = 6, Children = { header, body } }
         };
         close.Click += (_, _) => MainView.CloseToast(toast);
