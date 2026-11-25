@@ -187,6 +187,7 @@ internal static class RunCompiler
             var generatedFramework = Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selectedFramework
                 ? selectedFramework
                 : "net10.0";
+            var generatedSdk = DotNetVersionSelection.SelectSdk(generatedFramework);
             await File.WriteAllTextAsync(
                 Path.Combine(tempRoot, "global.json"),
                 DotNetVersionSelection.CreateGlobalJson(generatedFramework),
@@ -197,7 +198,7 @@ internal static class RunCompiler
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
 
-            var build = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken, runtimeIdentifier).ConfigureAwait(false);
+            var build = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken, runtimeIdentifier, generatedSdk).ConfigureAwait(false);
             ApplicationSecurityAudit.Report(build.Stdout + Environment.NewLine + build.Stderr);
             if (build.ExitCode != 0)
             {
@@ -210,7 +211,7 @@ internal static class RunCompiler
                 {
                     await File.WriteAllTextAsync(programPath, DisableSourceMappings(generatedSource), cancellationToken).ConfigureAwait(false);
                     CompilerPathSecurity.HardenTemporaryFile(programPath);
-                    var generatedBuild = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken, runtimeIdentifier).ConfigureAwait(false);
+                    var generatedBuild = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken, runtimeIdentifier, generatedSdk).ConfigureAwait(false);
                     if (diagnosticText.Length == 0)
                         diagnosticText = (generatedBuild.Stdout + Environment.NewLine + generatedBuild.Stderr).Trim();
                     generatedDiagnostics = ParseGeneratedBuildDiagnostics(generatedBuild.Stdout + Environment.NewLine + generatedBuild.Stderr);
@@ -288,7 +289,8 @@ internal static class RunCompiler
         string projectPath,
         string outputRoot,
         CancellationToken cancellationToken,
-        string? runtimeIdentifier = null)
+        string? runtimeIdentifier = null,
+        Version? selectedSdk = null)
     {
         var psi = new ProcessStartInfo
         {
@@ -327,6 +329,14 @@ internal static class RunCompiler
             psi.ArgumentList.Add(runtimeIdentifier ?? CompilerDriver.CurrentRuntimeIdentifier());
         }
         CompilerBuildEnvironment.Configure(psi, tempRoot);
+        if (selectedSdk is not null)
+        {
+            var dotnetRoot = Path.GetDirectoryName(CompilerToolResolver.ResolveDotnetHost())
+                ?? throw new CompilerException("Unable to resolve the .NET SDK directory for the generated build.");
+            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_SDKS_DIR"] = Path.Combine(dotnetRoot, "sdk", selectedSdk.ToString(), "Sdks");
+            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_SDKS_VER"] = selectedSdk.ToString();
+            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR"] = dotnetRoot;
+        }
         const string extensionsPrefix = "-p:MSBuildProjectExtensionsPath=";
         var extensions = psi.ArgumentList.FirstOrDefault(argument => argument.StartsWith(extensionsPrefix, StringComparison.Ordinal));
         var assetsPath = Path.Combine(extensions is null ? Path.Combine(tempRoot, "obj") : extensions[extensionsPrefix.Length..], "project.assets.json");

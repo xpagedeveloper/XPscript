@@ -42,10 +42,11 @@ För varje komponent:
 - [x] Gör desktop AST-livscykelregressionen oberoende av antalet knappar
   genom att välja Avalonia-hostens dedikerade `Close`-knapp.
 - [ ] Android AST-körningarna i Platform FullTest och Android UIForm AST
-  Emulator väljer fortfarande .NET SDK 11 för det genererade Android-projektet
-  trots att jobbet och kompilatorn använder .NET 10. NETSDK1147 rapporterar att
-  Android-workload saknas för SDK 11. Fortsätt felsöka SDK-pinnen; inga paket
-  installerades lokalt.
+  Emulator valde .NET SDK 11 för det genererade Android-projektet trots att
+  jobbet och kompilatorn använder .NET 10. Genererade byggen sätter nu även
+  MSBuild SDK resolver-override till samma SDK som `global.json` väljer. Verifiera
+  i nästa Android CI-körning att NETSDK1147 är borta; inga paket installerades
+  lokalt.
 
 ## Fält och input-kontroller
 
