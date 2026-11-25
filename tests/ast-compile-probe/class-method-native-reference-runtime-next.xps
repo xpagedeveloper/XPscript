@@ -51,6 +51,22 @@ Class XmlReferenceMethods
     End Sub
 End Class
 
+Class CsvReferenceMethods
+    Public Function Identity(ByVal value As XPCsvDocument) As XPCsvDocument
+        Call value.Rows[0].Set("name", "mutated")
+        Set Identity = value
+    End Function
+
+    Public Sub Replace(ByRef value As XPCsvDocument)
+        Set value = New XPCsvDocument("id,name" & Chr(10) & "002,replacement")
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPCsvDocument)
+        Call Replace(value)
+        Error 4298, "CSV replacement must survive failure"
+    End Sub
+End Class
+
 Sub VerifySpreadsheetReferenceMethods()
     Dim book As New XPSpreadsheet
     Dim methods As New TabularReferenceMethods
@@ -107,6 +123,36 @@ ExpectedXmlFailure:
     If original.Value <> "mutated" Then Error 4297
 End Sub
 
+Sub VerifyCsvReferenceMethods()
+    Dim methods As New CsvReferenceMethods
+    Dim original As New XPCsvDocument("id,name" & Chr(10) & "001,initial")
+    Dim current As XPCsvDocument
+    Dim returned As XPCsvDocument
+    Set current = original
+    Set returned = methods.Identity(current)
+    If Not (returned Is original) Then Error 4299
+    If original.Rows[0].Get("name") <> "mutated" Then Error 4300
+
+    Call methods.Replace(current)
+    If current Is original Then Error 4301
+    If current.Rows[0].Get("name") <> "replacement" Then Error 4302
+    If returned Is original And original.Rows[0].Get("name") = "mutated" Then
+    Else
+        Error 4303
+    End If
+
+    Set current = original
+    On Error GoTo ExpectedCsvFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4304, "expected CSV error missing"
+    Exit Sub
+ExpectedCsvFailure:
+    If Err <> 4298 Then Error 4305
+    If current Is original Then Error 4306
+    If current.Rows[0].Get("name") <> "replacement" Then Error 4307
+    If original.Rows[0].Get("name") <> "mutated" Then Error 4308
+End Sub
+
 Sub Main()
     Dim methods As New NativeReferenceMethods
     Dim original As New XPJsonObject
@@ -123,6 +169,7 @@ Sub Main()
 
     Call VerifySpreadsheetReferenceMethods()
     Call VerifyXmlReferenceMethods()
+    Call VerifyCsvReferenceMethods()
     Set current = original
     On Error GoTo ExpectedFailure
     Call methods.ReplaceAndFail(current)
