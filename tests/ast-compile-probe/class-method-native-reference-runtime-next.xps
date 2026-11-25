@@ -67,6 +67,23 @@ Class CsvReferenceMethods
     End Sub
 End Class
 
+Class HttpRequestReferenceMethods
+    Public Function Identity(ByVal value As XPHttpRequest) As XPHttpRequest
+        value.Method = "PATCH"
+        Set Identity = value
+    End Function
+
+    Public Sub Replace(ByRef value As XPHttpRequest)
+        Set value = New XPHttpRequest
+        value.Method = "PUT"
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPHttpRequest)
+        Call Replace(value)
+        Error 4309, "HTTP request replacement must survive failure"
+    End Sub
+End Class
+
 Sub VerifySpreadsheetReferenceMethods()
     Dim book As New XPSpreadsheet
     Dim methods As New TabularReferenceMethods
@@ -153,6 +170,36 @@ ExpectedCsvFailure:
     If original.Rows[0].Get("name") <> "mutated" Then Error 4308
 End Sub
 
+Sub VerifyHttpRequestReferenceMethods()
+    Dim methods As New HttpRequestReferenceMethods
+    Dim original As New XPHttpRequest
+    Dim current As XPHttpRequest
+    Dim returned As XPHttpRequest
+    Set current = original
+    Set returned = methods.Identity(current)
+    If Not (returned Is original) Then Error 4310
+    If original.Method <> "PATCH" Then Error 4311
+
+    Call methods.Replace(current)
+    If current Is original Then Error 4312
+    If current.Method <> "PUT" Then Error 4313
+    If returned Is original And original.Method = "PATCH" Then
+    Else
+        Error 4314
+    End If
+
+    Set current = original
+    On Error GoTo ExpectedHttpFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4315, "expected HTTP request error missing"
+    Exit Sub
+ExpectedHttpFailure:
+    If Err <> 4309 Then Error 4316
+    If current Is original Then Error 4317
+    If current.Method <> "PUT" Then Error 4318
+    If original.Method <> "PATCH" Then Error 4319
+End Sub
+
 Sub Main()
     Dim methods As New NativeReferenceMethods
     Dim original As New XPJsonObject
@@ -170,6 +217,7 @@ Sub Main()
     Call VerifySpreadsheetReferenceMethods()
     Call VerifyXmlReferenceMethods()
     Call VerifyCsvReferenceMethods()
+    Call VerifyHttpRequestReferenceMethods()
     Set current = original
     On Error GoTo ExpectedFailure
     Call methods.ReplaceAndFail(current)
