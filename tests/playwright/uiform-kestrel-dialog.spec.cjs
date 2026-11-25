@@ -39,8 +39,10 @@ test('manual UIForm shows working browser dialogs and validates remote lookups',
   const messageDialog = page.getByRole('dialog', { name: 'Custom message title' });
   await messageButton.click();
   await expect(messageDialog).toBeVisible();
-  await expect(messageDialog.locator('.modal-content')).toBeVisible();
-  await expect(messageDialog.locator('.modal-title')).toHaveClass(/modal-title/);
+  await expect(messageDialog).toHaveClass(/bg-body/);
+  await expect(messageDialog).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(messageDialog).toHaveCSS('padding', '24px');
+  await expect(messageDialog).toHaveCSS('min-height', '192px');
   await expect(messageDialog.getByRole('button', { name: 'OK' })).toHaveClass(/btn-primary/);
   await messageDialog.getByRole('button', { name: 'OK' }).click();
   await expect(messageDialog).not.toBeVisible();
@@ -58,6 +60,7 @@ test('manual UIForm shows working browser dialogs and validates remote lookups',
   const choiceDialog = page.getByRole('dialog', { name: 'Deployment decision' });
   await choiceButton.click();
   await expect(choiceDialog).toBeVisible();
+  await expect(choiceDialog.locator('#choice-actions')).toHaveCSS('gap', '8px');
   await expect(choiceDialog.getByRole('button')).toHaveCount(3);
   await choiceDialog.getByRole('button', { name: 'Approve' }).click();
   await expect(choiceDialog).not.toBeVisible();

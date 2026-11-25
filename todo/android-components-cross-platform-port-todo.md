@@ -58,8 +58,8 @@ För varje komponent:
 - [x] Utöka Playwright-regressionen med inline message-, choice- och
   input-dialoger, titelinställning, valknappar med egna etiketter/returvärden
   och toast-stapling i fyra hörn med automatisk timeout. Webbdialogerna använder
-  samma Bootstrap-klasser som server-renderad UIForm i stället för egna
-  stilinställningar. Testet verifierar också remote lookup typeahead och att
+  Bootstrap body-/textfärger, kortyta, padding och knappgap som server-renderad
+  UIForm, med responsiv minsta storlek. Testet verifierar också remote lookup typeahead och att
   manipulerat lookup-ID avvisas. Detta är web-fixturens UI; XPScripts fristående
   `MsgBox`/`ShowDialog`-backend för webben återstår.
 - [x] Förvärm manuell Kestrel-fixturs form och lookup-endpoint före READY och
