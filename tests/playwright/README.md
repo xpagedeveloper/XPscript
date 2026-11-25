@@ -9,8 +9,8 @@ playwright test
 ```
 
 The root `playwright.config.cjs` starts the local Kestrel UIForm fixture. Tests
-verify submitted form values and custom result buttons, inline message/choice/
-input dialogs, dialog title and style overrides, configurable choice labels and
+verify submitted form values and custom result buttons, Bootstrap-styled inline
+message/choice/input dialogs, configurable dialog titles, choice labels and
 return values, stacked toast notifications in all four corners with automatic
 expiry, remote lookup typeahead, and server-side rejection of forged lookup
 values. Open `/manual.xps` on the fixture server to try the controls yourself.

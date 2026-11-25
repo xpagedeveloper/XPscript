@@ -32,31 +32,23 @@ test('manual UIForm shows working browser dialogs and validates remote lookups',
   await expect(choiceButton).toBeVisible();
   await expect(inputButton).toBeVisible();
 
-  await page.locator('#dialog-style-target').selectOption('message');
-  await page.locator('#dialog-title-value').fill('Styled message');
-  await page.locator('#dialog-override-background').check();
-  await page.locator('#dialog-background').fill('#123456');
-  await page.locator('#dialog-font-family').fill('Georgia');
-  await page.locator('#dialog-override-font-color').check();
-  await page.locator('#dialog-font-color').fill('#ffeecc');
-  await page.locator('#dialog-bold').check();
-  await page.getByRole('button', { name: 'Apply dialog settings' }).click();
-  await expect(page.locator('#dialog-style-status')).toHaveText('Updated message dialog');
+  await page.locator('#dialog-title-target').selectOption('message');
+  await page.locator('#dialog-title-value').fill('Custom message title');
+  await page.getByRole('button', { name: 'Apply title' }).click();
 
-  const messageDialog = page.getByRole('dialog', { name: 'Styled message' });
+  const messageDialog = page.getByRole('dialog', { name: 'Custom message title' });
   await messageButton.click();
   await expect(messageDialog).toBeVisible();
-  await expect(messageDialog).toHaveCSS('background-color', 'rgb(18, 52, 86)');
-  await expect(messageDialog).toHaveCSS('color', 'rgb(255, 238, 204)');
-  await expect(messageDialog).toHaveCSS('font-family', /Georgia/);
-  await expect(messageDialog).toHaveCSS('font-weight', '700');
+  await expect(messageDialog.locator('.modal-content')).toBeVisible();
+  await expect(messageDialog.locator('.modal-title')).toHaveClass(/modal-title/);
+  await expect(messageDialog.getByRole('button', { name: 'OK' })).toHaveClass(/btn-primary/);
   await messageDialog.getByRole('button', { name: 'OK' }).click();
   await expect(messageDialog).not.toBeVisible();
   await expect(page.locator('#dialog-result')).toHaveText('Message: closed');
 
-  await page.locator('#dialog-style-target').selectOption('choice');
+  await page.locator('#dialog-title-target').selectOption('choice');
   await page.locator('#dialog-title-value').fill('Deployment decision');
-  await page.getByRole('button', { name: 'Apply dialog settings' }).click();
+  await page.getByRole('button', { name: 'Apply title' }).click();
   await page.locator('#choice-label-1').fill('Approve');
   await page.locator('#choice-value-1').fill('accepted');
   await page.locator('#choice-label-2').fill('Request changes');

@@ -56,11 +56,11 @@ För varje komponent:
   UIForm. Testet klickar på en egen dialogknapp i Chrome och verifierar både
   `save`-resultatet och de skickade fältvärdena.
 - [x] Utöka Playwright-regressionen med inline message-, choice- och
-  input-dialoger, per-dialog titel/stil (bakgrund, font, textfärg, fetstil),
-  konfigurerbara choice-knappnamn/returvärden och toast-stapling i fyra hörn med
-  automatisk timeout. Dialogernas grundstil ärver UIForm-stilen när overrides
-  inte valts. Testet verifierar också remote lookup typeahead och att manipulerat
-  lookup-ID avvisas. Detta är web-fixturens UI; XPScripts fristående
+  input-dialoger, titelinställning, valknappar med egna etiketter/returvärden
+  och toast-stapling i fyra hörn med automatisk timeout. Webbdialogerna använder
+  samma Bootstrap-klasser som server-renderad UIForm i stället för egna
+  stilinställningar. Testet verifierar också remote lookup typeahead och att
+  manipulerat lookup-ID avvisas. Detta är web-fixturens UI; XPScripts fristående
   `MsgBox`/`ShowDialog`-backend för webben återstår.
 - [x] Förvärm manuell Kestrel-fixturs form och lookup-endpoint före READY och
   använd stabilt site-root så persistent compiler-cache återanvänds vid restart.
