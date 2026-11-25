@@ -43,10 +43,21 @@ För varje komponent:
   genom att välja Avalonia-hostens dedikerade `Close`-knapp.
 - [ ] Android AST-körningarna i Platform FullTest och Android UIForm AST
   Emulator valde .NET SDK 11 för det genererade Android-projektet trots att
-  jobbet och kompilatorn använder .NET 10. Genererade byggen sätter nu även
-  MSBuild SDK resolver-override till samma SDK som `global.json` väljer. Verifiera
-  i nästa Android CI-körning att NETSDK1147 är borta; inga paket installerades
+  jobbet och kompilatorn använder .NET 10. Genererade byggen sätter nu
+  `MSBuildSDKsPath` och `MSBUILD_EXE_PATH` till den valda SDK-versionen. Verifiera
+  i nästa Android CI-körning om NETSDK1147 är borta; inga paket installerades
   lokalt.
+
+### Lokal verifiering 2026-11-25
+
+- [x] Windows headless AST UIForm-livscykelregression passerar.
+- [x] Kestrel UIForm-resultat och UIListView-regressioner passerar.
+- [ ] Lokal Android-kompilering hittar Android-workloaden och emulatorn, men
+  genererat projekt kräver Android API 36.1. Den lokala SDK:n har API 37.0 och
+  API 30; Android-workload eller plattformspaket installerades inte.
+- [ ] Browser-WASM smokeprojektens `project.assets.json` saknas. Playwright är
+  installerat, men `playwright test --list` hittar inga Playwright-testfiler i
+  repot. WASM-projekten behöver NuGet restore innan de kan köras.
 
 ## Fält och input-kontroller
 

@@ -331,11 +331,13 @@ internal static class RunCompiler
         CompilerBuildEnvironment.Configure(psi, tempRoot);
         if (selectedSdk is not null)
         {
+            // Keep MSBuild's imported targets and workload resolvers aligned
+            // with the SDK recorded in this generated project's global.json.
             var dotnetRoot = Path.GetDirectoryName(CompilerToolResolver.ResolveDotnetHost())
                 ?? throw new CompilerException("Unable to resolve the .NET SDK directory for the generated build.");
-            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_SDKS_DIR"] = Path.Combine(dotnetRoot, "sdk", selectedSdk.ToString(), "Sdks");
-            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_SDKS_VER"] = selectedSdk.ToString();
-            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR"] = dotnetRoot;
+            var sdkDirectory = Path.Combine(dotnetRoot, "sdk", selectedSdk.ToString());
+            psi.Environment["MSBuildSDKsPath"] = Path.Combine(sdkDirectory, "Sdks");
+            psi.Environment["MSBUILD_EXE_PATH"] = Path.Combine(sdkDirectory, OperatingSystem.IsWindows() ? "MSBuild.exe" : "MSBuild");
         }
         const string extensionsPrefix = "-p:MSBuildProjectExtensionsPath=";
         var extensions = psi.ArgumentList.FirstOrDefault(argument => argument.StartsWith(extensionsPrefix, StringComparison.Ordinal));
