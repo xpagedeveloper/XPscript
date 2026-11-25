@@ -17,6 +17,48 @@ Class NativeReferenceMethods
     End Sub
 End Class
 
+Class TabularReferenceMethods
+    Public Function Identity(ByVal value As XPSpreadsheet) As XPSpreadsheet
+        Call value.AddWorksheet("mutated")
+        Set Identity = value
+    End Function
+
+    Public Sub Replace(ByRef value As XPSpreadsheet)
+        Set value = New XPSpreadsheet
+        Call value.AddWorksheet("replacement")
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPSpreadsheet)
+        Call Replace(value)
+        Error 4277, "tabular replacement must survive failure"
+    End Sub
+End Class
+
+Sub VerifySpreadsheetReferenceMethods()
+    Dim book As New XPSpreadsheet
+    Dim methods As New TabularReferenceMethods
+    Dim current As XPSpreadsheet
+    Dim returned As XPSpreadsheet
+    Set current = book
+    Set returned = methods.Identity(book)
+    If Not (returned Is book) Then Error 4278
+    If book.WorksheetCount <> 1 Then Error 4279
+    Call methods.Replace(current)
+    If current Is book Then Error 4280
+    If current.WorksheetCount <> 1 Or book.WorksheetCount <> 1 Then Error 4281
+    If Not (returned Is book) Then Error 4282
+
+    Set current = book
+    On Error GoTo ExpectedTabularFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4283, "expected tabular error missing"
+    Exit Sub
+ExpectedTabularFailure:
+    If Err <> 4277 Then Error 4284
+    If current Is book Then Error 4285
+    If current.WorksheetCount <> 1 Or book.WorksheetCount <> 1 Then Error 4286
+End Sub
+
 Sub Main()
     Dim methods As New NativeReferenceMethods
     Dim original As New XPJsonObject
@@ -30,6 +72,8 @@ Sub Main()
     If current Is original Then Error 4269
     If CLng(current.Get("replacement")) <> 9 Then Error 4270
     If Not (returned Is original) Then Error 4271
+
+    Call VerifySpreadsheetReferenceMethods()
     Set current = original
     On Error GoTo ExpectedFailure
     Call methods.ReplaceAndFail(current)
