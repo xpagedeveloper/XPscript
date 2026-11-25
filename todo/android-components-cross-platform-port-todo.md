@@ -52,6 +52,9 @@ För varje komponent:
 
 - [x] Windows headless AST UIForm-livscykelregression passerar.
 - [x] Kestrel UIForm-resultat och UIListView-regressioner passerar.
+- [x] Lägg till en upptäckbar Playwright Test-regression för server-renderad
+  UIForm. Testet klickar på en egen dialogknapp i Chrome och verifierar både
+  `save`-resultatet och de skickade fältvärdena.
 - [ ] Lokal Android-kompilering hittar Android-workloaden och emulatorn, men
   genererat projekt kräver Android API 36.1. Den lokala SDK:n har API 37.0 och
   API 30; Android-workload eller plattformspaket installerades inte.

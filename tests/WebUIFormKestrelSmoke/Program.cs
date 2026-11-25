@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using XPScript.Web.Compiler;
 using XPScript.Web.Kestrel;
 using XPScript.Web.Runtime;
@@ -56,7 +57,11 @@ await using var cache = new XpsWebCompilationCache(new XpsWebCompiler());
 await using var dispatcher = new XpsWebDispatcher(root, cache);
 var options = new XpsKestrelOptions
 {
-    Port = 0,
+    Port = args.Contains("--serve", StringComparer.OrdinalIgnoreCase)
+        ? int.TryParse(Environment.GetEnvironmentVariable("XPSCRIPT_WEBUIFORM_SMOKE_PORT"), out var configuredPort) && configuredPort is > 0 and <= 65535
+            ? configuredPort
+            : throw new InvalidOperationException("--serve requires XPSCRIPT_WEBUIFORM_SMOKE_PORT to name a valid port.")
+        : 0,
     MaxRequestBodySize = 1024 * 1024,
     AllowedHosts = ["localhost", "127.0.0.1", "::1"]
 };
@@ -70,6 +75,15 @@ try
     var server = app.Services.GetRequiredService<IServer>();
     var address = server.Features.Get<IServerAddressesFeature>()?.Addresses.Single()
         ?? throw new Exception("Kestrel did not expose a listener address.");
+    if (args.Contains("--serve", StringComparer.OrdinalIgnoreCase))
+    {
+        Console.WriteLine($"WEBUIFORM-PLAYWRIGHT-READY={address}");
+        await app.WaitForShutdownAsync();
+        await app.StopAsync();
+        stopped = true;
+        return;
+    }
+
     using var client = new HttpClient { BaseAddress = new Uri(address) };
 
     using (var response = await client.GetAsync("/form.xps"))
