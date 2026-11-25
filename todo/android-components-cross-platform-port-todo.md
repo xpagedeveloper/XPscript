@@ -28,11 +28,23 @@ För varje komponent:
   resultat, handler och submitted values tillsammans.
 - [ ] Lägg till Browser-WASM regression som klickar en knapp med ett eget
   `result` och verifierar form-result-eventet efter handlern.
-- [ ] Skärp server-web Kestrel-regressionen så den verifierar att POST-svaret
+- [x] Skärp server-web Kestrel-regressionen så den verifierar att POST-svaret
   innehåller exakt `save`-resultat tillsammans med fältvärdena.
 - [ ] `ShowDialog(message, ...)`, `MsgBox` och filväljare använder fortfarande
   desktop-dialoghosten. Utred plattformsneutrala adaptrar och deterministiskt
   unsupported-beteende för Android, server-web och Browser-WASM.
+
+### CI-uppföljning 2026-11-25
+
+- [x] Åtgärda AST-kompilering för UIListView utan UIForm. Den gemensamma
+  UIExtension-runtime har nu valfri reflektionsbaserad event-dispatch, så
+  UIListView-only Kestrel-appar inte kräver UIForm:s dispatcher.
+- [x] Gör desktop AST-livscykelregressionen oberoende av antalet knappar
+  genom att välja Avalonia-hostens dedikerade `Close`-knapp.
+- [ ] Android AST-körningen i Platform FullTest väljer fortfarande .NET SDK
+  11 för det genererade Android-projektet trots att jobbet och kompilatorn
+  använder .NET 10. NETSDK1147 rapporterar att Android-workload saknas för
+  SDK 11. Fortsätt felsöka SDK-pinnen; inga paket installerades lokalt.
 
 ## Fält och input-kontroller
 

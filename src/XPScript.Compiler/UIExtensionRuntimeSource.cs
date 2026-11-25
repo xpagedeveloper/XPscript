@@ -979,6 +979,18 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
         _data.Set(fieldName, value ?? string.Empty);
     }
 
+    private string DispatchDialogEvent(string eventToken, string eventValue)
+    {
+        var method = GetType().GetMethod("DispatchRegisteredEvent", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return method?.Invoke(this, [eventToken, eventValue]) as string ?? "{}";
+    }
+
+    private string SerializeDialogActionState()
+    {
+        var method = GetType().GetMethod("SerializeActionState", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        return method?.Invoke(this, [null]) as string ?? "{}";
+    }
+
     public string ShowDialog()
     {
         if (!XPScriptUIWebAdapter.IsAvailable)
@@ -1001,8 +1013,8 @@ internal sealed partial class XPScriptUIForm : XPScriptUIComponent
                 var eventValue = XPScriptUIWebAdapter.FormFirst("__xps_uiform_event_value");
                 var eventField = eventFieldName.Length > 0 ? _fields.FirstOrDefault(field => field.Name.Equals(eventFieldName, StringComparison.OrdinalIgnoreCase)) : null;
                 XPScriptUIWebAdapter.WriteJson(eventField is not null && eventField.RefreshHandler.Length == 0
-                    ? SerializeActionState()
-                    : DispatchRegisteredEvent(eventToken, eventValue));
+                    ? SerializeDialogActionState()
+                    : DispatchDialogEvent(eventToken, eventValue));
                 return "Pending";
             }
             var submittedResult = XPScriptUIWebAdapter.FormFirst("__xps_uiform_result").Trim();

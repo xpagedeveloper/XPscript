@@ -26,7 +26,8 @@ internal sealed class UIFormEventDispatcherPostProcessor
         typeof(XPScriptUIFormEvent))]
     [System.Diagnostics.CodeAnalysis.DynamicDependency(
         System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties |
-        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicMethods,
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicMethods |
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.NonPublicMethods,
         typeof(XPScriptUIForm))]
     internal string DispatchRegisteredEvent(string eventToken, string submittedValue)
     {
