@@ -1,6 +1,14 @@
 Option Declare
 
 Class JsonAliasByRefMethods
+    Public Sub MutateArray(ByRef value As XPJSONArray)
+        Call value.Add("array-mutation")
+    End Sub
+
+    Public Sub MutateElement(ByRef value As XPJSONElement)
+        value.Value = "element-mutation"
+    End Sub
+
     Public Sub ReplaceArray(ByRef value As XPJSONArray)
         Set value = New XPJSONArray
         Call value.Add("array-replacement")
@@ -21,6 +29,8 @@ Sub Main()
     Dim originalArray As New XPJSONArray
     Dim currentArray As XPJSONArray
     Set currentArray = originalArray
+    Call methods.MutateArray(currentArray)
+    If CStr(originalArray.Get(0)) <> "array-mutation" Then Error 4347
     Call methods.ReplaceArray(currentArray)
     If currentArray Is originalArray Then Error 4341
     If CStr(currentArray.Get(0)) <> "array-replacement" Then Error 4342
@@ -28,6 +38,8 @@ Sub Main()
     Dim originalElement As New XPJSONElement("name", "original")
     Dim currentElement As XPJSONElement
     Set currentElement = originalElement
+    Call methods.MutateElement(currentElement)
+    If CStr(originalElement.Value) <> "element-mutation" Then Error 4348
     On Error GoTo ExpectedFailure
     Call methods.ReplaceAndFail(currentElement)
     Error 4343, "expected error missing"

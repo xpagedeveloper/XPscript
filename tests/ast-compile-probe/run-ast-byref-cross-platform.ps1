@@ -47,5 +47,6 @@ foreach ($name in @('byref-readonly-property-error')) {
 Invoke-Fixture 'class-method-database-next' "True`nTrue`nTrue`nTrue`nTrue`nAST_DATABASE_CLASS_METHOD_BYREF_OK" -Debug
 Invoke-Fixture 'byref-indexed-property-next' 'AST_BYREF_INDEXED_PROPERTY_OK' -Debug
 Invoke-Fixture 'class-method-native-reference-runtime-next' 'AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK'
+Invoke-Fixture 'class-method-json-alias-byref-runtime-next' 'AST_JSON_ALIAS_BYREF_OK'
 Invoke-Fixture 'class-method-archive-next' 'AST_ARCHIVE_CLASS_METHOD_OK'
 Write-Host 'AST_CLI_CHECKPOINT=byref-cross-platform-complete'
