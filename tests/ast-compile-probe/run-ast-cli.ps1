@@ -44,6 +44,11 @@ $outputRoot = $cliContext.OutputRoot
 $output = Join-Path $outputRoot ('ast-cli/' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 Write-AstCliCheckpoint 'full-corpus-start'
+$objectRoutesProbe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $root 'tests/ast-compile-probe/AstCompileProbe.csproj'), '-c', 'Release', '--', '--audit-object-routes')
+if ($objectRoutesProbe.TimedOut -or $objectRoutesProbe.ExitCode -ne 0 -or $objectRoutesProbe.Output -notmatch 'AST_OBJECT_ROUTES_OK') {
+    throw "AST registered-object route audit failed before the compatibility corpus.`n$($objectRoutesProbe.Output)"
+}
+Write-AstCliCheckpoint 'object-routes-complete'
 $apiAudit = pwsh -NoProfile -File (Join-Path $root 'tests/ApiSurfaceAudit/run-api-surface-audit.ps1')
 if ($LASTEXITCODE -ne 0 -or ($apiAudit -join "`n") -notmatch 'API_SURFACE_AUDIT_OK') { throw "Documented API-surface audit failed.`n$($apiAudit -join "`n")" }
 Write-Host 'AST_API_SURFACE_AUDIT_OK'
@@ -2567,7 +2572,7 @@ $targetSourceProbe = Invoke-BoundedDotnetRun @('run', '--project', (Join-Path $r
 if ($targetSourceProbe.ExitCode -ne 0 -or $targetSourceProbe.Output -notmatch 'AST_TARGET_GENERATED_DESKTOP_OK' -or
     $targetSourceProbe.Output -notmatch 'AST_TARGET_GENERATED_ANDROID_SKIPPED=ANDROID_PREREQUISITES_NOT_REQUESTED' -or
     $targetSourceProbe.Output -notmatch 'AST_TARGET_GENERATED_BROWSER_SKIPPED=WASM_WORKLOAD_NOT_REQUESTED') {
-    throw 'Target-specific generated-source regression failed.'
+    throw "AST compiler object-route/target generated-source probe failed before all expected markers were emitted.`n$($targetSourceProbe.Output)"
 }
 Write-Host 'AST_TARGET_GENERATED_SOURCE_OK'
 Write-Host 'AST CLI compilation probe passed.'

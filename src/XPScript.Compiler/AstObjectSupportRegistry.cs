@@ -36,7 +36,7 @@ internal static class AstObjectSupportRegistry
         "XPJsonArray",
         "XPJsonObject",
         "XPJsonElement", "XPJsonNavigator", "XPJsonValidationResult", "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall", "XPAttachmentCollection", "Path",
-        "UIForm", "UIComponent", "UIFormField", "UIFormGrid", "UIFormTab", "UIButton", "UIListView", "UIListColumn",
+        "UIForm", "UIComponent", "UIFormField", "FieldRegion", "UIFormGrid", "UIFormTab", "UIButton", "UIListView", "UIListColumn",
         "NotesHTTPRequest", "XPNotesHTTPRequest", "NotesSession", "NotesMail", "NotesStream", "NotesAgent", "NotesDXLImporter", "NotesDXLExporter", "NotesDatabase", "NotesDatabaseAccess", "NotesView", "NotesNoteCollection", "NotesDateTime", "NotesName", "NotesDocument", "NotesDocumentCollection", "NotesItem",
         "NotesRichTextItem", "NotesRichTextNavigator", "NotesRichTextParagraphStyle", "NotesRichTextRange", "NotesRichTextSection", "NotesRichTextStyle", "NotesRichTextTab", "NotesRichTextTable", "NotesRichTextDocLink",
         "NotesMIMEEntity", "NotesMIMEHeader",
