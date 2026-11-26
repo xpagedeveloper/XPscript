@@ -128,6 +128,8 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
+  $byrefCrossPlatform = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compile-probe/run-ast-byref-cross-platform.ps1') 600000 'AST ByRef cross-platform regression'
+  if ($byrefCrossPlatform.ExitCode -ne 0 -or $byrefCrossPlatform.Output -notmatch 'AST_CLI_CHECKPOINT=byref-cross-platform-complete') { throw "AST ByRef cross-platform regression failed: $($byrefCrossPlatform.Output)" }
   $jsonParseScope = Invoke-Bounded 'dotnet' @($compilerDll,'ast-run','./tests/ast-compile-probe/jsonparse-member-scope.xps','--no-daemon','--debug') $compileTimeoutMilliseconds 'AST JsonParse member scope'
   if ($jsonParseScope.ExitCode -ne 0 -or $jsonParseScope.Output -notmatch '(?m)^JSONPARSE_MEMBER_SCOPE_OK\r?$') { throw "JsonParse member scope regression: $($jsonParseScope.Output)" }
   $arraySignatures = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-array-signature.ps1') $compileTimeoutMilliseconds 'AST array parameter syntax and explicit migration guards'

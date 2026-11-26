@@ -2,7 +2,7 @@ Option Declare
 
 Sub Main()
     Dim ai As New XPAi("https://example.invalid", "type-test-key")
-    ai.EndpointPath = "/v1/chat/completions"
+    ai.EndpointPath = "v1/chat/completions"
     ai.AutoExecuteTools = False
     Call ai.AddMessage("user", "hello")
     Dim messages As XPJsonDocument
