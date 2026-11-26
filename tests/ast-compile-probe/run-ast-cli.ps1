@@ -879,12 +879,15 @@ Write-Host 'AST_BYREF_PROPERTY_COPYBACK_OK'
 Write-Host 'AST_BYREF_READONLY_PROPERTY_REJECTED_OK'
 Write-Host 'AST_BYREF_PROPERTY_RECEIVER_REJECTED_OK'
 Write-Host 'AST_CLI_CHECKPOINT=byref-properties-complete'
+Write-Host 'AST_CLI_CHECKPOINT=database-provider-byref-start'
 $databaseClassMethodOutput = Join-Path $output 'class-method-database-next'
-dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-database-next.xps') -o $databaseClassMethodOutput
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-database-next.xps') -o $databaseClassMethodOutput --debug
 if ($LASTEXITCODE -ne 0) { throw 'AST database class-method parameter compilation failed.' }
 $databaseClassMethodResult = dotnet (Join-Path $databaseClassMethodOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($databaseClassMethodResult -join "`n") -ne "True`nTrue`nTrue`nTrue`nTrue") { throw 'AST database class-method parameter execution failed.' }
+if ($LASTEXITCODE -ne 0 -or ($databaseClassMethodResult -join "`n") -ne "True`nTrue`nTrue`nTrue`nTrue`nAST_DATABASE_CLASS_METHOD_BYREF_OK") { throw 'AST database class-method parameter/ByRef execution failed.' }
 Write-Host 'AST_DATABASE_CLASS_METHOD_PARAMETERS_OK'
+Write-Host 'AST_DATABASE_CLASS_METHOD_BYREF_OK'
+Write-Host 'AST_CLI_CHECKPOINT=database-provider-byref-complete'
 $databaseReferenceOutput = Join-Path $output 'database-reference-property-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'database-reference-property-next.xps') -o $databaseReferenceOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST database reference property compilation failed.' }

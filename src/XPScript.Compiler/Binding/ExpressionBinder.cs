@@ -737,8 +737,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         return new BoundIndexedPropertyExpression(receiver, property, arguments);
     }
 
-    // Indexed accessors and constructors share the same addressable storage
-    // contract. Passing a value-converted or accessor-backed temporary is unsafe.
+    // Indexed accessor indexes and constructor arguments still require direct storage;
+    // procedure-call scalar properties use the separate temporary/copy-back path.
     private BoundExpression? ValidateScalarReference(ExpressionSyntax syntax, BoundExpression argument, Type runtimeType,
         XpTypeSymbol targetType, string description)
     {
@@ -747,18 +747,13 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 "ByRef arguments require typed writable storage; this module variable does not have a typed storage carrier.");
         if (!_symbols.ClassifyConversion(argument.SemanticType, targetType).IsIdentity || argument.Type != runtimeType)
             return Error(syntax, CompilerDiagnosticCodes.ArgumentTypeMismatch, $"ByRef {description} requires exactly {targetType.Name}.");
-        if (argument is BoundMemberAccessExpression { IsFieldStorage: false, IsWritableAccessor: true } property &&
-            !IsStableByRefPropertyReceiver(property.Receiver))
-            return Error(syntax, CompilerDiagnosticCodes.TargetApiUnavailable,
-                "ByRef property receivers must be a named value or a field chain so the receiver is evaluated once.");
         if (argument is BoundIndexExpression location && !location.Expression.SemanticType.IsArray && !location.Expression.SemanticType.IsList
-            || argument is BoundMemberAccessExpression { IsFieldStorage: false, IsWritableAccessor: false } or BoundIndexedPropertyExpression)
+            || argument is BoundMemberAccessExpression { IsFieldStorage: false } or BoundIndexedPropertyExpression)
             return Error(syntax, CompilerDiagnosticCodes.TargetApiUnavailable,
-                "ByRef requires a writable scalar property; indexed property arguments and non-writable accessors are not supported.");
+                "Accessor-backed ByRef arguments are not supported here; use writable storage.");
         if (argument is not BoundNameExpression { Symbol: LocalSymbol or ParameterSymbol or FieldSymbol }
             and not BoundNameExpression { Symbol: VariableSymbol { HasTypedStorage: true } }
             and not BoundMemberAccessExpression { IsFieldStorage: true }
-            and not BoundMemberAccessExpression { IsWritableAccessor: true }
             and not BoundIndexExpression)
             return Error(syntax, CompilerDiagnosticCodes.TypeMismatch,
                 "A ByRef argument requires a writable local, parameter, class field or typed module variable.");
