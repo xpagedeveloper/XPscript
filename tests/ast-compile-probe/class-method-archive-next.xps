@@ -4,6 +4,15 @@ Class ArchiveMethods
         Call value.AddText("shared.txt", "shared archive")
         Set Identity = value
     End Function
+    Public Sub Replace(ByRef value As Archive)
+        Set value = New Archive()
+        Call value.Create("zip")
+        Call value.AddText("replacement.txt", "replacement archive")
+    End Sub
+    Public Sub ReplaceAndFail(ByRef value As Archive)
+        Call Replace(value)
+        Error 4296, "archive replacement must survive failure"
+    End Sub
     Public Function Entry(ByVal value As ArchiveEntry) As ArchiveEntry
         Set Entry = value
     End Function
@@ -19,5 +28,24 @@ Sub Main()
     Dim entryValue As ArchiveEntry
     Set entryValue = value.GetEntry("shared.txt")
     If Not (methods.Entry(entryValue) Is entryValue) Then Error 4295
+    Dim original As Archive
+    Dim current As Archive
+    Set original = value
+    Set current = original
+    Call methods.Replace(current)
+    If current Is original Then Error 4297
+    If current.ReadText("replacement.txt") <> "replacement archive" Then Error 4298
+    If original.ReadText("shared.txt") <> "shared archive" Then Error 4299
+    Set current = original
+    On Error GoTo ExpectedArchiveFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4300, "expected archive replacement error missing"
+    Exit Sub
+ExpectedArchiveFailure:
+    If Err <> 4296 Then Error 4301
+    If current Is original Then Error 4302
+    If current.ReadText("replacement.txt") <> "replacement archive" Then Error 4303
+    If original.ReadText("shared.txt") <> "shared archive" Then Error 4304
     Print "AST_ARCHIVE_CLASS_METHOD_OK"
+    Exit Sub
 End Sub

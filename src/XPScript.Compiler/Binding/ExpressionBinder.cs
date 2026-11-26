@@ -624,7 +624,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 ? function.SemanticParameterTypes[i]
                 : XpTypeSymbol.FromClr(function.ParameterTypes[i]);
             var conversion = _symbols.ClassifyConversion(arguments[i].SemanticType, targetType);
-            converted[i] = conversion.IsIdentity
+            // Some native facades (Archive) use Variant source storage and an object CLR parameter;
+            // when the storage types match, passing the caller's cell is the correct ByRef alias.
+            var byRefWithMatchingStorage = function.ByRefParameters?[i] == true &&
+                arguments[i] is BoundNameExpression && arguments[i].SemanticType.IsVariant &&
+                arguments[i].Type == function.ParameterTypes[i];
+            converted[i] = conversion.IsIdentity || byRefWithMatchingStorage
                 ? arguments[i]
                 : new BoundConversionExpression(arguments[i], targetType, conversion) { Span = arguments[i].Span };
         }
