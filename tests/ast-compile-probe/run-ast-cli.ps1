@@ -862,8 +862,9 @@ $sqliteClassMethodOutput = Join-Path $output 'class-method-sqlite-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-sqlite-next.xps') -o $sqliteClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST SQLite class-method parameter compilation failed.' }
 $sqliteClassMethodResult = dotnet (Join-Path $sqliteClassMethodOutput 'Generated.dll')
-if ($LASTEXITCODE -ne 0 -or ($sqliteClassMethodResult -join "`n") -ne 'True') { throw 'AST SQLite class-method parameter execution failed.' }
+if ($LASTEXITCODE -ne 0 -or ($sqliteClassMethodResult -join "`n") -ne "True`nAST_SQLITE_CLASS_METHOD_BYREF_OK") { throw 'AST SQLite class-method parameter/ByRef execution failed.' }
 Write-Host 'AST_SQLITE_CLASS_METHOD_PARAMETER_OK'
+Write-Host 'AST_SQLITE_CLASS_METHOD_BYREF_OK'
 $databaseClassMethodOutput = Join-Path $output 'class-method-database-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-database-next.xps') -o $databaseClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST database class-method parameter compilation failed.' }

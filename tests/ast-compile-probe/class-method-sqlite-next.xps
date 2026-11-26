@@ -4,9 +4,40 @@ Class Reader
     End Function
 End Class
 
+Class DatabaseReferenceMethods
+    Public Sub Replace(ByRef value As XPDBSQLite)
+        Set value = New XPDBSQLite(":memory:")
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPDBSQLite)
+        Call Replace(value)
+        Error 4331, "SQLite replacement must survive failure"
+    End Sub
+End Class
+
 Sub Main()
     Dim db As New XPDBSQLite(":memory:")
     Dim reader As New Reader
     Print CStr(reader.IsOpen(db))
     Call db.Close()
+
+    Dim original As New XPDBSQLite(":memory:")
+    Dim current As Variant
+    Set current = original
+    Dim methods As New DatabaseReferenceMethods
+    Call methods.Replace(current)
+    If current Is original Or Not current.IsOpen Or Not original.IsOpen Then Error 4332
+    Call current.Close()
+
+    Set current = original
+    On Error GoTo ExpectedReplacementFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4333, "expected SQLite replacement error missing"
+    Exit Sub
+ExpectedReplacementFailure:
+    If Err <> 4331 Then Error 4334
+    If current Is original Or Not current.IsOpen Or Not original.IsOpen Then Error 4335
+    Call current.Close()
+    Call original.Close()
+    Print "AST_SQLITE_CLASS_METHOD_BYREF_OK"
 End Sub
