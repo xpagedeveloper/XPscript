@@ -2,7 +2,7 @@ name: Runtime Placeholder Guard
 
 on:
   push:
-    branches: [main, investigate-ast-compiler]
+    branches: [main]
     paths:
       - 'src/XPScript.Compiler/**'
       - 'scripts/validate-runtime-placeholders.py'

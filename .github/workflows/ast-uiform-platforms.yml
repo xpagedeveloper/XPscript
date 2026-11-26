@@ -3,18 +3,6 @@ name: AST UIForm Show Hide Platforms
 # The macOS desktop UIForm job is included in this focused platform run.
 
 on:
-  push:
-    branches: [investigate-ast-compiler]
-    paths:
-      - '.github/workflows/ast-uiform-platforms.yml'
-      - 'src/XPScript.Compiler/**'
-      - 'src/XPScript.UI.Desktop/**'
-      - 'tests/DesktopUIFormLifecycleSmoke/**'
-      - 'tests/AndroidAstBackendProbe/**'
-      - 'src/XPScript.Web.Compiler/**'
-      - 'src/XPScript.Web.Runtime/**'
-      - 'tests/WebBrowserWasmSmoke/**'
-      - 'tests/WebBrowserWasmBrowserSmoke/**'
   workflow_dispatch:
 
 permissions:

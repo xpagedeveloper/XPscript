@@ -2,7 +2,7 @@ name: Notes FullTest
 
 on:
   push:
-    branches: [main, investigate-ast-compiler]
+    branches: [main]
     paths:
       - '.github/workflows/notes-fulltest.yml'
       - '.github/scripts/run-fulltests.ps1'

@@ -7,7 +7,7 @@ on:
       - "tests/WebRuntimeSmoke/**"
       - ".github/workflows/web-logging-fulltest.yml"
   push:
-    branches: [main, investigate-ast-compiler]
+    branches: [main]
     paths:
       - "src/XPScript.Web.*/**"
       - "tests/WebRuntimeSmoke/**"

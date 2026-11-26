@@ -1,8 +1,6 @@
 name: Temporary desktop AST UIForm verification
 
 on:
-  push:
-    branches: [investigate-ast-compiler]
   workflow_dispatch:
 
 permissions:
