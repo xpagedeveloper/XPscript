@@ -59,6 +59,13 @@ if (Directory.EnumerateFiles(markerOutput, "Magick*", SearchOption.AllDirectorie
     File.Exists(Path.Combine(markerOutput, "Third-party-license.txt")))
     throw new Exception("AST marker-text fixture acquired an unused XP runtime or package.");
 
+var inspectedSourcePath = Path.Combine(outputRoot, "inspected-image.xps");
+await File.WriteAllTextAsync(inspectedSourcePath, "Sub Main()\n    Dim image As New XPImage(4, 3, \"#ff0000\")\nEnd Sub\n");
+var inspectedGeneratedSource = await AstCompiler.GenerateSourceAsync(inspectedSourcePath, Path.Combine(outputRoot, "inspected-image-source"), "win-x64");
+var inspectedPackages = ApplicationDependencyCatalog.Detect(inspectedGeneratedSource);
+if (inspectedPackages.Count != 1 || inspectedPackages[0].Name != "Magick.NET-Q16-AnyCPU")
+    throw new Exception("AST-generated XPImage source did not expose its runtime package to dependency inspection.");
+
 var auditedUnusedObjects = new[]
 {
     "XPNetworkTools", "XPDate", "XPAttachmentCollection", "XPAttachment", "XPCell", "XPRange", "XPWorksheet",
