@@ -309,7 +309,7 @@ public sealed class BoundExpressionEmitter
         }
         if (call.Function.NativeParameterTypes is null && call.Function.NativeTargetName is null &&
             call.Arguments.Where((argument, index) => call.Function.ByRefParameters?[index] == true)
-                .Any(argument => argument is BoundConversionExpression))
+                .Any(argument => argument is BoundConversionExpression or BoundMemberAccessExpression { IsWritableAccessor: true }))
             return EmitByRefConversionCall(call);
         var tagArgument = call.Arguments.Count >= 1 ? call.Arguments[0] : null;
         if (tagArgument is BoundConversionExpression conversion) tagArgument = conversion.Expression;
@@ -390,6 +390,7 @@ public sealed class BoundExpressionEmitter
         var callArguments = new List<string>();
         var initializers = new List<string>();
         var copyBack = new List<string>();
+        var accessorCopyBack = new List<string>();
         var rewritten = new BoundExpression[call.Arguments.Count];
         var aliases = new Dictionary<Symbol, (string Name, string Type)>(ReferenceEqualityComparer.Instance);
         var target = call.Target;
@@ -439,6 +440,25 @@ public sealed class BoundExpressionEmitter
                 continue;
             }
 
+            if (byRef && argument is BoundMemberAccessExpression { IsWritableAccessor: true } property)
+            {
+                var receiver = _temporary();
+                var receiverType = BoundMethodEmitter.CSharpType(property.Receiver.SemanticType);
+                helperParameters.Add($"{receiverType} {receiver}");
+                callArguments.Add(Emit(property.Receiver));
+                var receiverSymbol = new LocalSymbol(receiver, property.Receiver.Type, property.Receiver.SemanticType);
+                var propertyTarget = new BoundMemberAccessExpression(new BoundNameExpression(receiverSymbol), property.Name,
+                    property.Type, property.SemanticType, property.IsFieldStorage, property.AssignmentKind, property.IsWritableAccessor);
+                var value = _temporary();
+                helperParameters.Add($"{type} {value}");
+                callArguments.Add(Emit(argument));
+                var temporary = _temporary();
+                initializers.Add($"{type} {temporary} = {value};");
+                accessorCopyBack.Add($"{Emit(propertyTarget)} = {temporary};");
+                rewritten[i] = new BoundNameExpression(new LocalSymbol(temporary, call.Function.ParameterTypes[i], semanticType));
+                continue;
+            }
+
             var name = _temporary();
             if (byRef)
             {
@@ -470,8 +490,14 @@ public sealed class BoundExpressionEmitter
 
         var invocation = EmitCall(new BoundCallExpression(target, call.Function, rewritten));
         var body = new System.Text.StringBuilder("{ ").AppendJoin(' ', initializers).Append(" try { ");
-        if (call.Function.ReturnType == typeof(void)) body.Append(invocation).Append(';');
-        else body.Append("return ").Append(invocation).Append(';');
+        if (call.Function.ReturnType == typeof(void))
+            body.Append(invocation).Append(';').AppendJoin(' ', accessorCopyBack);
+        else
+        {
+            var resultName = _temporary();
+            body.Append("var ").Append(resultName).Append(" = ").Append(invocation).Append(';')
+                .AppendJoin(' ', accessorCopyBack).Append(" return ").Append(resultName).Append(';');
+        }
         body.Append(" } finally { ").AppendJoin(' ', copyBack).Append(" } }");
         var returnType = BoundMethodEmitter.CSharpType(call.Function.SemanticReturnType ?? XpTypeSymbol.FromClr(call.Function.ReturnType));
         _byRefCallHelpers.Add($"{returnType} {helperName}({string.Join(", ", helperParameters)}) {body}");

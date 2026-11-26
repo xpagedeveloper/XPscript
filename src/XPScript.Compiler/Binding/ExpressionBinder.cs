@@ -537,7 +537,8 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         if (writing ? !property.CanWrite : !property.CanRead)
             return Error(syntax, CompilerDiagnosticCodes.TypeMismatch,
                 $"Property '{property.Name.Split('.').Last()}' is {(writing ? "read-only" : "write-only")}.");
-        return new BoundMemberAccessExpression(receiver, property.Name.Split('.').Last(), property.PropertyType, property.SemanticType, property.IsFieldStorage, property.AssignmentKind);
+        return new BoundMemberAccessExpression(receiver, property.Name.Split('.').Last(), property.PropertyType,
+            property.SemanticType, property.IsFieldStorage, property.AssignmentKind, property.CanWrite);
     }
 
     private BoundExpression BindOverloadSet(CallExpressionSyntax syntax, BoundExpression? target, string name, IReadOnlyList<FunctionSymbol> functions)
@@ -653,6 +654,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             // ambiguity instead of being misclassified as no-match.
             if (arguments[i].SemanticType.IsVariant && arguments[i] is BoundNameExpression)
                 continue;
+            if (arguments[i] is BoundMemberAccessExpression { IsWritableAccessor: true } property &&
+                IsStableByRefPropertyReceiver(property.Receiver))
+                continue;
             if (arguments[i] is not BoundNameExpression name ||
                 name.Symbol is not (VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol))
                 return false;
@@ -743,18 +747,30 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 "ByRef arguments require typed writable storage; this module variable does not have a typed storage carrier.");
         if (!_symbols.ClassifyConversion(argument.SemanticType, targetType).IsIdentity || argument.Type != runtimeType)
             return Error(syntax, CompilerDiagnosticCodes.ArgumentTypeMismatch, $"ByRef {description} requires exactly {targetType.Name}.");
-        if (argument is BoundIndexExpression location && !location.Expression.SemanticType.IsArray && !location.Expression.SemanticType.IsList
-            || argument is BoundMemberAccessExpression { IsFieldStorage: false } or BoundIndexedPropertyExpression)
+        if (argument is BoundMemberAccessExpression { IsFieldStorage: false, IsWritableAccessor: true } property &&
+            !IsStableByRefPropertyReceiver(property.Receiver))
             return Error(syntax, CompilerDiagnosticCodes.TargetApiUnavailable,
-                "Accessor-backed ByRef arguments are not implemented yet; use writable storage.");
+                "ByRef property receivers must be a named value or a field chain so the receiver is evaluated once.");
+        if (argument is BoundIndexExpression location && !location.Expression.SemanticType.IsArray && !location.Expression.SemanticType.IsList
+            || argument is BoundMemberAccessExpression { IsFieldStorage: false, IsWritableAccessor: false } or BoundIndexedPropertyExpression)
+            return Error(syntax, CompilerDiagnosticCodes.TargetApiUnavailable,
+                "ByRef requires a writable scalar property; indexed property arguments and non-writable accessors are not supported.");
         if (argument is not BoundNameExpression { Symbol: LocalSymbol or ParameterSymbol or FieldSymbol }
             and not BoundNameExpression { Symbol: VariableSymbol { HasTypedStorage: true } }
             and not BoundMemberAccessExpression { IsFieldStorage: true }
+            and not BoundMemberAccessExpression { IsWritableAccessor: true }
             and not BoundIndexExpression)
             return Error(syntax, CompilerDiagnosticCodes.TypeMismatch,
                 "A ByRef argument requires a writable local, parameter, class field or typed module variable.");
         return null;
     }
+
+    private static bool IsStableByRefPropertyReceiver(BoundExpression receiver) => receiver switch
+    {
+        BoundNameExpression => true,
+        BoundMemberAccessExpression { IsFieldStorage: true } field => IsStableByRefPropertyReceiver(field.Receiver),
+        _ => false
+    };
 
     private BoundExpression BindCallTarget(CallExpressionSyntax syntax, BoundExpression? target, FunctionSymbol function)
     {

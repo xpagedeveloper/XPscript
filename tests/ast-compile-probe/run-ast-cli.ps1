@@ -865,6 +865,20 @@ $sqliteClassMethodResult = dotnet (Join-Path $sqliteClassMethodOutput 'Generated
 if ($LASTEXITCODE -ne 0 -or ($sqliteClassMethodResult -join "`n") -ne "True`nAST_SQLITE_CLASS_METHOD_BYREF_OK") { throw 'AST SQLite class-method parameter/ByRef execution failed.' }
 Write-Host 'AST_SQLITE_CLASS_METHOD_PARAMETER_OK'
 Write-Host 'AST_SQLITE_CLASS_METHOD_BYREF_OK'
+Write-Host 'AST_CLI_CHECKPOINT=byref-properties-start'
+$propertyByRefOutput = Join-Path $output 'byref-property-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'byref-property-next.xps') -o $propertyByRefOutput --debug
+if ($LASTEXITCODE -ne 0) { throw 'AST writable property ByRef compilation failed.' }
+$propertyByRefResult = dotnet (Join-Path $propertyByRefOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($propertyByRefResult -join "`n") -ne 'AST_BYREF_PROPERTY_COPYBACK_OK') { throw 'AST writable property ByRef copy-back failed.' }
+$readOnlyPropertyError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'byref-readonly-property-error.xps') -o (Join-Path $output 'byref-readonly-property-error') --debug 2>&1
+if ($LASTEXITCODE -ne 2 -or ($readOnlyPropertyError -join "`n") -notmatch 'byref-readonly-property-error\.xps:13:\d+: XPS2004: No matching overload') { throw 'AST accepted a read-only property as a ByRef argument or lost its source diagnostic.' }
+$sideEffectPropertyError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'byref-property-receiver-error.xps') -o (Join-Path $output 'byref-property-receiver-error') --debug 2>&1
+if ($LASTEXITCODE -ne 2 -or ($sideEffectPropertyError -join "`n") -notmatch 'byref-property-receiver-error\.xps:19:\d+: XPS2004: No matching overload') { throw 'AST accepted a side-effecting property receiver as a ByRef argument or lost its source diagnostic.' }
+Write-Host 'AST_BYREF_PROPERTY_COPYBACK_OK'
+Write-Host 'AST_BYREF_READONLY_PROPERTY_REJECTED_OK'
+Write-Host 'AST_BYREF_PROPERTY_RECEIVER_REJECTED_OK'
+Write-Host 'AST_CLI_CHECKPOINT=byref-properties-complete'
 $databaseClassMethodOutput = Join-Path $output 'class-method-database-next'
 dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-method-database-next.xps') -o $databaseClassMethodOutput
 if ($LASTEXITCODE -ne 0) { throw 'AST database class-method parameter compilation failed.' }
