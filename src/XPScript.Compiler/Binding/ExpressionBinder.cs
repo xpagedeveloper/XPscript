@@ -495,7 +495,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             // the member is a scalar property, bind it as the argument value;
             // otherwise a read-only Property Get such as box.Value is mistaken
             // for a zero-argument member call and loses its accessor metadata.
-            if (syntax.Arguments.Count == 0 && memberSymbols.OfType<PropertySymbol>().LastOrDefault() is { } scalarProperty)
+            if (syntax.Arguments.Count == 0 &&
+                !memberSymbols.OfType<FunctionSymbol>().Any() &&
+                memberSymbols.OfType<PropertySymbol>().LastOrDefault() is { } scalarProperty)
                 return BindProperty(syntax, receiver, scalarProperty);
             if (memberSymbols.Count == 0 && _allowDynamicMembers && receiver.SemanticType.IsVariant)
             {
@@ -668,9 +670,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 indexedProperty.Property.CanRead && indexedProperty.Property.CanWrite &&
                 indexedProperty.Property.SetterName is not null)
                 continue;
-            if (function.IsUserDefined && !IsWritableByRefArgument(arguments[i]) &&
-                !IsTemporaryByRefArgument(arguments[i]))
-                return false;
+            if (function.IsUserDefined && !IsWritableByRefArgument(arguments[i]))
+            {
+                if (!IsTemporaryByRefArgument(arguments[i]))
+                    return false;
+                continue;
+            }
             if (arguments[i] is not BoundNameExpression name ||
                 name.Symbol is not (VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol))
                 return false;

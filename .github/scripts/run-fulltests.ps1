@@ -128,10 +128,12 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
-  $byrefCrossPlatform = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compile-probe/run-ast-byref-cross-platform.ps1') 600000 'AST ByRef cross-platform regression'
-  if ($byrefCrossPlatform.ExitCode -ne 0 -or $byrefCrossPlatform.Output -notmatch 'AST_CLI_CHECKPOINT=byref-cross-platform-complete') { throw "AST ByRef cross-platform regression failed: $($byrefCrossPlatform.Output)" }
   $jsonParseScope = Invoke-Bounded 'dotnet' @($compilerDll,'ast-run','./tests/ast-compile-probe/jsonparse-member-scope.xps','--no-daemon','--debug') $compileTimeoutMilliseconds 'AST JsonParse member scope'
   if ($jsonParseScope.ExitCode -ne 0 -or $jsonParseScope.Output -notmatch '(?m)^JSONPARSE_MEMBER_SCOPE_OK\r?$') { throw "JsonParse member scope regression: $($jsonParseScope.Output)" }
+  $functionNotByRef = Run-Xps ./samples/function-not-byref-regression.xps function-not-byref-regression
+  if ($functionNotByRef.Output -notmatch 'FUNCTION-NOT-BYREF=OK') { throw 'Boolean default-ByRef function under Not regression failed.' }
+  $byrefCrossPlatform = Invoke-Bounded 'pwsh' @('-NoProfile','-File','./tests/ast-compile-probe/run-ast-byref-cross-platform.ps1') 600000 'AST ByRef cross-platform regression'
+  if ($byrefCrossPlatform.ExitCode -ne 0 -or $byrefCrossPlatform.Output -notmatch 'AST_CLI_CHECKPOINT=byref-cross-platform-complete') { throw "AST ByRef cross-platform regression failed: $($byrefCrossPlatform.Output)" }
   $arraySignatures = Invoke-Bounded 'pwsh' @('-File','./tests/ast-compile-probe/run-ast-array-signature.ps1') $compileTimeoutMilliseconds 'AST array parameter syntax and explicit migration guards'
   if ($arraySignatures.ExitCode -ne 0 -or $arraySignatures.Output -notmatch 'AST_ARRAY_SIGNATURES_OK') { throw 'AST array signature regression failed.' }
   $astCliShards = @(
@@ -191,10 +193,6 @@ if (Should-Run 'language') {
   # Keep the smallest regression for the latest compiler failure first.
   $isNothing = Run-Xps ./samples/is-nothing-unary-not-regression.xps is-nothing-unary-not-regression
   if ($isNothing.Output -notmatch 'IS-NOTHING=OK') { throw 'Is Nothing unary-Not rewrite regression failed.' }
-
-  # Keep the smallest regression for the latest runtime/compiler interaction first.
-  $functionNotByRef = Run-Xps ./samples/function-not-byref-regression.xps function-not-byref-regression
-  if ($functionNotByRef.Output -notmatch 'FUNCTION-NOT-BYREF=OK') { throw 'Boolean default-ByRef function under Not regression failed.' }
 
   # Keep the smallest regression for the latest compiler failure first.
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./samples/function-result-name-conflict-error.xps','-o','./out/fulltest/function-result-name-conflict-error','--runtime=false','--debug') $compileTimeoutMilliseconds 'function result name conflict'

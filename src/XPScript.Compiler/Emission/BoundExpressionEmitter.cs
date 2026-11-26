@@ -287,12 +287,6 @@ public sealed class BoundExpressionEmitter
                 nativeArguments = nativeArguments.Prepend(Emit(extension.Receiver));
             return $"{(call.Function.NativeTargetName ?? Emit(call.Target!))}({string.Join(", ", nativeArguments)})";
         }
-        if (call.Function.IsUserDefined && call.Arguments.Where((argument, index) => call.Function.ByRefParameters?[index] == true)
-            .Any(argument => argument is not BoundNameExpression))
-            return EmitByRefAccessorCall(call);
-        if (call.Arguments.Where((argument, index) => call.Function.ByRefParameters?[index] == true)
-            .Any(argument => argument is BoundIndexedPropertyExpression or BoundMemberAccessExpression { IsWritableAccessor: true }))
-            return EmitByRefAccessorCall(call);
         if (BoundListCallLowering.RequiresWrapper(call))
         {
             var wrapperArguments = new List<string>();
@@ -313,6 +307,12 @@ public sealed class BoundExpressionEmitter
                 wrapperArguments.Insert(0, Emit(member.Receiver));
             return $"{BoundListCallLowering.Name(call)}({string.Join(", ", wrapperArguments)})";
         }
+        if (call.Function.IsUserDefined && call.Arguments.Where((argument, index) => call.Function.ByRefParameters?[index] == true)
+            .Any(argument => argument is not BoundNameExpression))
+            return EmitByRefAccessorCall(call);
+        if (call.Arguments.Where((argument, index) => call.Function.ByRefParameters?[index] == true)
+            .Any(argument => argument is BoundIndexedPropertyExpression or BoundMemberAccessExpression { IsWritableAccessor: true }))
+            return EmitByRefAccessorCall(call);
         if (call.Function.NativeParameterTypes is null && call.Function.NativeTargetName is null &&
             call.Arguments.Where((argument, index) => call.Function.ByRefParameters?[index] == true)
                 .Any(argument => argument is BoundConversionExpression or BoundMemberAccessExpression { IsWritableAccessor: true }))

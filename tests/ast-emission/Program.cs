@@ -173,6 +173,20 @@ if (byRefReceiverCode.Contains("() =>", StringComparison.Ordinal) ||
     !byRefReceiverCode.Contains("System.Action<XpReceiver>", StringComparison.Ordinal) ||
     !byRefReceiverCode.EndsWith(")(receiver)", StringComparison.Ordinal))
     throw new Exception($"ByRef accessor lowering captured its ByRef receiver instead of passing it to the wrapper: {byRefReceiverCode}");
+var listValueType = XpTypeSymbol.FromClr(typeof(long));
+var listValues = new BoundNameExpression(new LocalSymbol("values", typeof(object), XpTypeSymbol.ListOf(listValueType)));
+var listElement = new BoundIndexExpression(listValues,
+    new BoundLiteralExpression("item", typeof(string)), typeof(long), listValueType);
+var listCall = new BoundCallExpression(null,
+    new FunctionSymbol("Touch", typeof(long), [typeof(long), typeof(long)], XpTypeSymbol.FromClr(typeof(long)),
+        [listValueType, listValueType], [true, true]) { IsUserDefined = true },
+    [listElement, new BoundNameExpression(new ParameterSymbol("other", typeof(long), true, listValueType))]);
+var listCallCode = expressions.Emit(listCall);
+if (!listCallCode.Contains("__xpsListCall_", StringComparison.Ordinal) ||
+    !listCallCode.Contains("new LSListByRef<long>(values, \"item\")", StringComparison.Ordinal) ||
+    !listCallCode.Contains("ref other", StringComparison.Ordinal) ||
+    listCallCode.Contains("() =>", StringComparison.Ordinal))
+    throw new Exception($"List ByRef expression call captured a ByRef parameter instead of using its named wrapper: {listCallCode}");
 var variant = new BoundNameExpression(new VariableSymbol("value", typeof(object), XpTypeSymbol.Variant));
 var dynamicBooleanStore = statements.Emit([new BoundAssignmentStatement(
     new BoundMemberAccessExpression(variant, "Enabled", typeof(object), XpTypeSymbol.Variant),
