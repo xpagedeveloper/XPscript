@@ -654,8 +654,11 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             // ambiguity instead of being misclassified as no-match.
             if (arguments[i].SemanticType.IsVariant && arguments[i] is BoundNameExpression)
                 continue;
-            if (arguments[i] is BoundMemberAccessExpression { IsWritableAccessor: true } property &&
-                IsStableByRefPropertyReceiver(property.Receiver))
+            if (arguments[i] is BoundMemberAccessExpression { IsWritableAccessor: true })
+                continue;
+            if (arguments[i] is BoundIndexedPropertyExpression indexedProperty &&
+                indexedProperty.Property.CanRead && indexedProperty.Property.CanWrite &&
+                indexedProperty.Property.SetterName is not null)
                 continue;
             if (arguments[i] is not BoundNameExpression name ||
                 name.Symbol is not (VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol))
@@ -759,13 +762,6 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 "A ByRef argument requires a writable local, parameter, class field or typed module variable.");
         return null;
     }
-
-    private static bool IsStableByRefPropertyReceiver(BoundExpression receiver) => receiver switch
-    {
-        BoundNameExpression => true,
-        BoundMemberAccessExpression { IsFieldStorage: true } field => IsStableByRefPropertyReceiver(field.Receiver),
-        _ => false
-    };
 
     private BoundExpression BindCallTarget(CallExpressionSyntax syntax, BoundExpression? target, FunctionSymbol function)
     {

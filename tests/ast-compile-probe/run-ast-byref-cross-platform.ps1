@@ -34,7 +34,7 @@ function Invoke-Fixture([string]$name, [string]$expected, [switch]$Debug) {
 Write-Host 'AST_CLI_CHECKPOINT=byref-cross-platform-start'
 Invoke-Fixture 'class-method-sqlite-next' "True`nAST_SQLITE_CLASS_METHOD_BYREF_OK"
 Invoke-Fixture 'byref-property-next' 'AST_BYREF_PROPERTY_COPYBACK_OK' -Debug
-foreach ($name in @('byref-readonly-property-error', 'byref-property-receiver-error')) {
+foreach ($name in @('byref-readonly-property-error')) {
     $fixture = Join-Path $PSScriptRoot "$name.xps"
     Write-Host "AST_BYREF_FIXTURE_START=$fixture"
     $result = dotnet $compiler ast-compile $fixture -o (Join-Path $output $name) --debug 2>&1
@@ -45,6 +45,7 @@ foreach ($name in @('byref-readonly-property-error', 'byref-property-receiver-er
     Write-Host "AST_BYREF_FIXTURE_OK=$fixture"
 }
 Invoke-Fixture 'class-method-database-next' "True`nTrue`nTrue`nTrue`nTrue`nAST_DATABASE_CLASS_METHOD_BYREF_OK" -Debug
+Invoke-Fixture 'byref-indexed-property-next' 'AST_BYREF_INDEXED_PROPERTY_OK' -Debug
 Invoke-Fixture 'class-method-native-reference-runtime-next' 'AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK'
 Invoke-Fixture 'class-method-archive-next' 'AST_ARCHIVE_CLASS_METHOD_OK'
 Write-Host 'AST_CLI_CHECKPOINT=byref-cross-platform-complete'

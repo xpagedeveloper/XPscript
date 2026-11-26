@@ -873,11 +873,14 @@ $propertyByRefResult = dotnet (Join-Path $propertyByRefOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($propertyByRefResult -join "`n") -ne 'AST_BYREF_PROPERTY_COPYBACK_OK') { throw 'AST writable property ByRef copy-back failed.' }
 $readOnlyPropertyError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'byref-readonly-property-error.xps') -o (Join-Path $output 'byref-readonly-property-error') --debug 2>&1
 if ($LASTEXITCODE -ne 2 -or ($readOnlyPropertyError -join "`n") -notmatch 'byref-readonly-property-error\.xps:13:\d+: XPS2004: No matching overload') { throw 'AST accepted a read-only property as a ByRef argument or lost its source diagnostic.' }
-$sideEffectPropertyError = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'byref-property-receiver-error.xps') -o (Join-Path $output 'byref-property-receiver-error') --debug 2>&1
-if ($LASTEXITCODE -ne 2 -or ($sideEffectPropertyError -join "`n") -notmatch 'byref-property-receiver-error\.xps:19:\d+: XPS2004: No matching overload') { throw 'AST accepted a side-effecting property receiver as a ByRef argument or lost its source diagnostic.' }
+$indexedPropertyByRefOutput = Join-Path $output 'byref-indexed-property-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'byref-indexed-property-next.xps') -o $indexedPropertyByRefOutput --debug
+if ($LASTEXITCODE -ne 0) { throw 'AST indexed/scalar property ByRef compilation failed.' }
+$indexedPropertyByRefResult = Invoke-BoundedCompiledAssembly $indexedPropertyByRefOutput
+if ($indexedPropertyByRefResult.TimedOut -or $indexedPropertyByRefResult.ExitCode -ne 0 -or $indexedPropertyByRefResult.Output.Trim() -ne 'AST_BYREF_INDEXED_PROPERTY_OK') { throw 'AST indexed/scalar property ByRef copy-back failed.' }
 Write-Host 'AST_BYREF_PROPERTY_COPYBACK_OK'
 Write-Host 'AST_BYREF_READONLY_PROPERTY_REJECTED_OK'
-Write-Host 'AST_BYREF_PROPERTY_RECEIVER_REJECTED_OK'
+Write-Host 'AST_BYREF_INDEXED_PROPERTY_OK'
 Write-Host 'AST_CLI_CHECKPOINT=byref-properties-complete'
 Write-Host 'AST_CLI_CHECKPOINT=database-provider-byref-start'
 $databaseClassMethodOutput = Join-Path $output 'class-method-database-next'

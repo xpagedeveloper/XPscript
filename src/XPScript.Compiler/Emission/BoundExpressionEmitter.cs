@@ -287,6 +287,9 @@ public sealed class BoundExpressionEmitter
                 nativeArguments = nativeArguments.Prepend(Emit(extension.Receiver));
             return $"{(call.Function.NativeTargetName ?? Emit(call.Target!))}({string.Join(", ", nativeArguments)})";
         }
+        if (call.Arguments.Where((argument, index) => call.Function.ByRefParameters?[index] == true)
+            .Any(argument => argument is BoundIndexedPropertyExpression or BoundMemberAccessExpression { IsWritableAccessor: true }))
+            return EmitByRefAccessorCall(call);
         if (BoundListCallLowering.RequiresWrapper(call))
         {
             var wrapperArguments = new List<string>();
@@ -382,6 +385,213 @@ public sealed class BoundExpressionEmitter
             functionName = "Program.AstCompatibilityHelpers." + functionName;
         return $"{(call.Function.NativeTargetName ?? (call.Target is null ? call.Function.EmittedMemberName ?? functionName : Emit(call.Target)))}({string.Join(", ", arguments)})";
     }
+
+    private string EmitByRefAccessorCall(BoundCallExpression call)
+    {
+        var setup = new List<string>();
+        var copyBack = new List<string>();
+        var accessorCopyBack = new List<string>();
+        var rewritten = new BoundExpression[call.Arguments.Count];
+        var aliases = new Dictionary<Symbol, (string Name, string Type)>(ReferenceEqualityComparer.Instance);
+        var accessorAliases = new Dictionary<string, (string Name, string Type)>(StringComparer.Ordinal);
+        var target = call.Target;
+        if (target is BoundMemberAccessExpression member &&
+            member.Receiver is not BoundNameExpression { Symbol: TypeSymbol } &&
+            member.Receiver is not BoundNameExpression { Symbol: VariableSymbol { Name: "Me" or "Parent" } })
+        {
+            var receiver = _temporary();
+            setup.Add($"var {receiver} = {Emit(member.Receiver)};");
+            var symbol = new LocalSymbol(receiver, member.Receiver.Type, member.Receiver.SemanticType);
+            target = new BoundMemberAccessExpression(new BoundNameExpression(symbol), member.Name, member.Type,
+                member.SemanticType, member.IsFieldStorage, member.AssignmentKind);
+        }
+
+        for (var i = 0; i < call.Arguments.Count; i++)
+        {
+            var argument = call.Arguments[i];
+            var byRef = call.Function.ByRefParameters?[i] == true;
+            var semanticType = call.Function.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(call.Function.ParameterTypes[i]);
+            var type = BoundMethodEmitter.CSharpType(semanticType);
+            if (!byRef)
+            {
+                var value = _temporary();
+                setup.Add($"var {value} = {Emit(argument)};");
+                rewritten[i] = new BoundNameExpression(new LocalSymbol(value, argument.Type, argument.SemanticType));
+                continue;
+            }
+
+            if (argument is BoundIndexedPropertyExpression indexed)
+            {
+                var receiver = _temporary();
+                setup.Add($"var {receiver} = {Emit(indexed.Receiver)};");
+                var receiverSymbol = new LocalSymbol(receiver, indexed.Receiver.Type, indexed.Receiver.SemanticType);
+                var indexes = new BoundExpression[indexed.Arguments.Count];
+                for (var index = 0; index < indexed.Arguments.Count; index++)
+                {
+                    var indexArgument = indexed.Arguments[index];
+                    var indexSemanticType = indexed.Property.SemanticParameterTypes?[index] ?? XpTypeSymbol.FromClr(indexed.Property.ParameterTypes[index]);
+                    var indexType = BoundMethodEmitter.CSharpType(indexSemanticType);
+                    var indexName = _temporary();
+                    if (indexed.Property.ByRefIndexes?[index] == true)
+                    {
+                        setup.Add($"ref {indexType} {indexName} = ref {EmitIndexedReference(indexArgument)};");
+                        indexes[index] = new BoundNameExpression(new ParameterSymbol(indexName, indexed.Property.ParameterTypes[index], true, indexSemanticType));
+                    }
+                    else
+                    {
+                        setup.Add($"{indexType} {indexName} = {Emit(indexArgument)};");
+                        indexes[index] = new BoundNameExpression(new LocalSymbol(indexName, indexed.Property.ParameterTypes[index], indexSemanticType));
+                    }
+                }
+                var property = new BoundIndexedPropertyExpression(new BoundNameExpression(receiverSymbol), indexed.Property, indexes);
+                var accessorKey = StableIndexedPropertyKey(indexed);
+                if (accessorKey is not null && accessorAliases.TryGetValue(accessorKey, out var priorAccessor))
+                {
+                    if (!string.Equals(priorAccessor.Type, NormalizeStorageType(type), StringComparison.Ordinal))
+                        throw new NotSupportedException("One indexed ByRef property cannot use incompatible parameter storage types.");
+                    var alias = _temporary();
+                    setup.Add($"ref {type} {alias} = ref {priorAccessor.Name};");
+                    rewritten[i] = new BoundNameExpression(new ParameterSymbol(alias, call.Function.ParameterTypes[i], true, semanticType));
+                    continue;
+                }
+                var value = _temporary();
+                setup.Add($"{type} {value} = {Emit(property)};");
+                if (indexed.Property.SetterName is null)
+                    throw new NotSupportedException("An indexed ByRef property requires a setter.");
+                var setterIndexes = EmitIndexedArguments(property);
+                accessorCopyBack.Add($"{Emit(property.Receiver)}.{indexed.Property.SetterName}({setterIndexes}{(setterIndexes.Length == 0 ? string.Empty : ", ")}{value});");
+                if (accessorKey is not null)
+                    accessorAliases.Add(accessorKey, (value, NormalizeStorageType(type)));
+                rewritten[i] = new BoundNameExpression(new ParameterSymbol(value, call.Function.ParameterTypes[i], true, semanticType));
+                continue;
+            }
+
+            if (argument is BoundMemberAccessExpression { IsWritableAccessor: true } propertyAccess)
+            {
+                var receiver = _temporary();
+                setup.Add($"var {receiver} = {Emit(propertyAccess.Receiver)};");
+                var receiverSymbol = new LocalSymbol(receiver, propertyAccess.Receiver.Type, propertyAccess.Receiver.SemanticType);
+                var propertyTarget = new BoundMemberAccessExpression(new BoundNameExpression(receiverSymbol), propertyAccess.Name,
+                    propertyAccess.Type, propertyAccess.SemanticType, propertyAccess.IsFieldStorage, propertyAccess.AssignmentKind, propertyAccess.IsWritableAccessor);
+                var accessorKey = StablePropertyKey(propertyAccess);
+                if (accessorKey is not null && accessorAliases.TryGetValue(accessorKey, out var priorAccessor))
+                {
+                    if (!string.Equals(priorAccessor.Type, NormalizeStorageType(type), StringComparison.Ordinal))
+                        throw new NotSupportedException("One ByRef property cannot use incompatible parameter storage types.");
+                    var alias = _temporary();
+                    setup.Add($"ref {type} {alias} = ref {priorAccessor.Name};");
+                    rewritten[i] = new BoundNameExpression(new ParameterSymbol(alias, call.Function.ParameterTypes[i], true, semanticType));
+                    continue;
+                }
+                var value = _temporary();
+                setup.Add($"{type} {value} = {Emit(propertyTarget)};");
+                accessorCopyBack.Add($"{Emit(propertyTarget)} = {value};");
+                if (accessorKey is not null)
+                    accessorAliases.Add(accessorKey, (value, NormalizeStorageType(type)));
+                rewritten[i] = new BoundNameExpression(new ParameterSymbol(value, call.Function.ParameterTypes[i], true, semanticType));
+                continue;
+            }
+
+            if (argument is BoundConversionExpression { Expression: BoundNameExpression source })
+            {
+                if (aliases.TryGetValue(source.Symbol, out var prior))
+                {
+                    if (!string.Equals(prior.Type, NormalizeStorageType(type), StringComparison.Ordinal))
+                        throw new NotSupportedException("One ByRef location cannot use incompatible parameter storage types.");
+                    rewritten[i] = new BoundNameExpression(new ParameterSymbol(prior.Name, call.Function.ParameterTypes[i], true, semanticType));
+                    continue;
+                }
+                var value = _temporary();
+                setup.Add($"{type} {value} = {Emit(argument)};");
+                copyBack.Add($"{Emit(source)} = {value};");
+                aliases.Add(source.Symbol, (value, NormalizeStorageType(type)));
+                rewritten[i] = new BoundNameExpression(new ParameterSymbol(value, call.Function.ParameterTypes[i], true, semanticType));
+                continue;
+            }
+
+            if (argument is BoundIndexExpression { Expression.SemanticType.IsList: true } listElement)
+            {
+                var wrapper = _temporary();
+                var value = _temporary();
+                setup.Add($"var {wrapper} = new LSListByRef<{type}>({Emit(listElement.Expression)}, {Emit(listElement.Index)});");
+                setup.Add($"{type} {value} = {wrapper}.Value;");
+                copyBack.Add($"{wrapper}.Value = {value};");
+                rewritten[i] = new BoundNameExpression(new ParameterSymbol(value, call.Function.ParameterTypes[i], true, semanticType));
+                continue;
+            }
+
+            if (argument is BoundNameExpression listAlias && listAlias.Symbol is LocalSymbol { IsListAlias: true } &&
+                _aliases.TryGetValue(listAlias.Symbol, out var listLocation))
+            {
+                var wrapper = _temporary();
+                var value = _temporary();
+                setup.Add($"var {wrapper} = new LSListByRef<{type}>({listLocation.Value[..^".Value".Length]});");
+                setup.Add($"{type} {value} = {wrapper}.Value;");
+                copyBack.Add($"{wrapper}.Value = {value};");
+                rewritten[i] = new BoundNameExpression(new ParameterSymbol(value, call.Function.ParameterTypes[i], true, semanticType));
+                continue;
+            }
+
+            if (argument is BoundNameExpression { SemanticType.IsVariant: true } aliasSource &&
+                aliases.TryGetValue(aliasSource.Symbol, out var existingAlias))
+            {
+                if (!string.Equals(existingAlias.Type, NormalizeStorageType(type), StringComparison.Ordinal))
+                    throw new NotSupportedException("One ByRef location cannot use incompatible parameter storage types.");
+                rewritten[i] = new BoundNameExpression(new ParameterSymbol(existingAlias.Name, call.Function.ParameterTypes[i], true, semanticType));
+                continue;
+            }
+
+            var location = argument is BoundIndexExpression { Expression.SemanticType.IsArray: true } arrayElement
+                ? EmitIndexedReference(arrayElement)
+                : Emit(argument);
+            var reference = _temporary();
+            setup.Add($"ref {type} {reference} = ref {location};");
+            rewritten[i] = new BoundNameExpression(new ParameterSymbol(reference, call.Function.ParameterTypes[i], true, semanticType));
+        }
+
+        var invocation = EmitCall(new BoundCallExpression(target, call.Function, rewritten));
+        var body = new System.Text.StringBuilder("{ ").AppendJoin(' ', setup).Append(' ');
+        if (call.Function.ReturnType == typeof(void))
+            body.Append("try { ").Append(invocation).Append("; ").AppendJoin(' ', accessorCopyBack)
+                .Append(" } finally { ").AppendJoin(' ', copyBack).Append(" }");
+        else
+        {
+            var result = _temporary();
+            body.Append("try { var ").Append(result).Append(" = ").Append(invocation).Append("; ")
+                .AppendJoin(' ', accessorCopyBack).Append(" return ").Append(result)
+                .Append("; } finally { ").AppendJoin(' ', copyBack).Append(" }");
+        }
+        body.Append(" }");
+        if (call.Function.ReturnType == typeof(void))
+            return $"((System.Action)(() => {body}))()";
+        var returnType = BoundMethodEmitter.CSharpType(call.Function.SemanticReturnType ?? XpTypeSymbol.FromClr(call.Function.ReturnType));
+        return $"((System.Func<{returnType}>)(() => {body}))()";
+    }
+
+    private static string? StablePropertyKey(BoundMemberAccessExpression property)
+    {
+        var receiver = StableByRefLocationKey(property.Receiver);
+        return receiver is null ? null : $"{receiver}.{property.Name.ToUpperInvariant()}";
+    }
+
+    private static string? StableIndexedPropertyKey(BoundIndexedPropertyExpression property)
+    {
+        var receiver = StableByRefLocationKey(property.Receiver);
+        var indexes = property.Arguments.Select(StableByRefLocationKey).ToArray();
+        return receiver is null || indexes.Any(index => index is null)
+            ? null
+            : $"{receiver}.{property.Property.Name.ToUpperInvariant()}({string.Join(",", indexes)})";
+    }
+
+    private static string? StableByRefLocationKey(BoundExpression expression) => expression switch
+    {
+        BoundNameExpression name => $"name:{System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(name.Symbol)}",
+        BoundLiteralExpression literal => $"literal:{literal.Type.FullName}:{Convert.ToString(literal.Value, CultureInfo.InvariantCulture)}",
+        BoundMemberAccessExpression { IsFieldStorage: true } field when StableByRefLocationKey(field.Receiver) is { } receiver =>
+            $"field:{receiver}.{field.Name.ToUpperInvariant()}",
+        BoundConversionExpression { Conversion.IsIdentity: true } conversion => StableByRefLocationKey(conversion.Expression),
+        _ => null
+    };
 
     private string EmitByRefConversionCall(BoundCallExpression call)
     {
