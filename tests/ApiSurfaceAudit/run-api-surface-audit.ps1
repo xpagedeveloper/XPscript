@@ -15,9 +15,17 @@ $docs = @(
     'docs/uiform-fields.md',
     'docs/uiform-media.md'
 )
-$corpus = @(rg --files -g '*.xps' -g '*.cs' -g '*.md' -g '!out/**' -g '!**/bin/**' -g '!**/obj/**' -g '!graphify-out/**' | ForEach-Object { Join-Path $Root $_ })
+function Get-AuditPaths([string[]]$Pathspecs) {
+    $paths = @(git -C $Root -c core.quotePath=false ls-files --cached --others --exclude-standard -- $Pathspecs)
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to enumerate repository files for the API-surface audit.' }
+    return @($paths | Where-Object {
+        $_ -notmatch '(^|/)(?:out|graphify-out|bin|obj)/' -and $_ -notmatch '(^|/)\.'
+    } | ForEach-Object { Join-Path $Root $_ })
+}
+
+$corpus = @(Get-AuditPaths @('*.xps', '*.cs', '*.md'))
 $corpusText = (($corpus | ForEach-Object { Get-Content -LiteralPath $_ -Raw }) -join "`n")
-$fixtureFiles = @(rg --files tests samples demo -g '*.xps' 2>$null | ForEach-Object { Join-Path $Root $_ })
+$fixtureFiles = @(Get-AuditPaths @('tests/*.xps', 'samples/*.xps', 'demo/*.xps'))
 $fixtureText = (($fixtureFiles | ForEach-Object { Get-Content -LiteralPath $_ -Raw }) -join "`n")
 $fixtureCode = (($fixtureText -split "`r?`n" | Where-Object { $_ -notmatch '^\s*''' }) -join "`n")
 $members = [System.Collections.Generic.List[object]]::new()

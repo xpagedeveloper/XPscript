@@ -1138,7 +1138,7 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
 
 ## Native reference audit update — 2026-11-26
 
-- [ ] Verify the ByRef cases in `tests/ast-compile-probe/run-ast-cli.ps1` through Language FullTest on Windows, Linux and macOS. The suite includes native class-method reference, SQLite/provider and writable-property copy-back cases; this migration branch now triggers the existing cross-platform FullTest as its automatic CI gate.
+- [ ] Verify the ByRef cases in `tests/ast-compile-probe/run-ast-cli.ps1` through Language FullTest on Windows, Linux and macOS. The suite includes native class-method reference, SQLite/provider and writable-property copy-back cases; this migration branch now triggers the existing cross-platform FullTest as its automatic CI gate. The first matrix attempt stopped before ByRef because the API-surface audit required external `rg`; its file enumeration now uses `git ls-files` and passes locally, so the next push must re-run the full matrix.
 - [x] Extend the native class-method reference fixture with XPCsvDocument identity, shared row mutation, `ByRef` replacement, retained old aliases, and replacement persistence after a handled error. The focused AST compile/run passes with `AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK`; Language FullTest runs the fixture through `run-ast-cli.ps1`.
 - [ ] Continue this audit for other mutable native class-method families and database providers beyond SQLite; the Archive slice below is now covered.
 - [x] Extend the fixture with XPHttpRequest identity, method mutation, `ByRef` replacement, retained old aliases, and replacement persistence after a handled error. This test makes no network calls and passes with `AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK`.
