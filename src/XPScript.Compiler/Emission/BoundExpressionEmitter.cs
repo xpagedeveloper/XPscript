@@ -8,7 +8,13 @@ namespace XPScript.Compiler.Emission;
 public sealed class BoundExpressionEmitter
 {
     private readonly Dictionary<Symbol, (string Value, string Tag)> _aliases = [];
+    private readonly List<string> _byRefCallHelpers = [];
+    private static int _fallbackTemporary;
+    private Func<string> _temporary = () => "__xpsEmitFallback" + Interlocked.Increment(ref _fallbackTemporary);
+    internal IReadOnlyList<string> ByRefCallHelpers => _byRefCallHelpers;
+    internal void BeginMethodEmission() => _byRefCallHelpers.Clear();
     internal bool IsListAlias(Symbol symbol) => _aliases.ContainsKey(symbol);
+    internal void UseTemporaryProvider(Func<string> temporary) => _temporary = temporary;
 
     internal Action CaptureAliasScope(Action emit)
     {
@@ -301,6 +307,10 @@ public sealed class BoundExpressionEmitter
                 wrapperArguments.Insert(0, Emit(member.Receiver));
             return $"{BoundListCallLowering.Name(call)}({string.Join(", ", wrapperArguments)})";
         }
+        if (call.Function.NativeParameterTypes is null && call.Function.NativeTargetName is null &&
+            call.Arguments.Where((argument, index) => call.Function.ByRefParameters?[index] == true)
+                .Any(argument => argument is BoundConversionExpression))
+            return EmitByRefConversionCall(call);
         var tagArgument = call.Arguments.Count >= 1 ? call.Arguments[0] : null;
         if (tagArgument is BoundConversionExpression conversion) tagArgument = conversion.Expression;
         // IsElement inspects the tag, not the indexed value: reading a missing
@@ -372,6 +382,103 @@ public sealed class BoundExpressionEmitter
             functionName = "Program.AstCompatibilityHelpers." + functionName;
         return $"{(call.Function.NativeTargetName ?? (call.Target is null ? call.Function.EmittedMemberName ?? functionName : Emit(call.Target)))}({string.Join(", ", arguments)})";
     }
+
+    private string EmitByRefConversionCall(BoundCallExpression call)
+    {
+        var helperName = _temporary();
+        var helperParameters = new List<string>();
+        var callArguments = new List<string>();
+        var initializers = new List<string>();
+        var copyBack = new List<string>();
+        var rewritten = new BoundExpression[call.Arguments.Count];
+        var aliases = new Dictionary<Symbol, (string Name, string Type)>(ReferenceEqualityComparer.Instance);
+        var target = call.Target;
+        if (target is BoundMemberAccessExpression member &&
+            member.Receiver is not BoundNameExpression { Symbol: TypeSymbol } &&
+            member.Receiver is not BoundNameExpression { Symbol: VariableSymbol { Name: "Me" or "Parent" } })
+        {
+            var receiver = _temporary();
+            var receiverType = BoundMethodEmitter.CSharpType(member.Receiver.SemanticType);
+            helperParameters.Add($"{receiverType} {receiver}");
+            callArguments.Add(Emit(member.Receiver));
+            var symbol = new LocalSymbol(receiver, member.Receiver.Type, member.Receiver.SemanticType);
+            target = new BoundMemberAccessExpression(new BoundNameExpression(symbol), member.Name, member.Type,
+                member.SemanticType, member.IsFieldStorage, member.AssignmentKind);
+        }
+
+        for (var i = 0; i < call.Arguments.Count; i++)
+        {
+            var argument = call.Arguments[i];
+            var byRef = call.Function.ByRefParameters?[i] == true;
+            var semanticType = call.Function.SemanticParameterTypes?[i] ?? XpTypeSymbol.FromClr(call.Function.ParameterTypes[i]);
+            var type = BoundMethodEmitter.CSharpType(semanticType);
+            if (byRef && argument is BoundConversionExpression { Expression: BoundNameExpression source })
+            {
+                if (aliases.TryGetValue(source.Symbol, out var prior))
+                {
+                    if (!string.Equals(prior.Type, NormalizeStorageType(type), StringComparison.Ordinal))
+                        throw new NotSupportedException("One ByRef location cannot be converted to two different parameter storage types.");
+                    var alias = _temporary();
+                    helperParameters.Add($"ref {BoundMethodEmitter.CSharpType(source.SemanticType)} {alias}");
+                    callArguments.Add("ref " + Emit(source));
+                    rewritten[i] = new BoundNameExpression(new LocalSymbol(prior.Name, call.Function.ParameterTypes[i], semanticType));
+                    continue;
+                }
+                var storageType = BoundMethodEmitter.CSharpType(source.SemanticType);
+                var storage = _temporary();
+                var value = _temporary();
+                var temporary = _temporary();
+                helperParameters.Add($"ref {storageType} {storage}");
+                helperParameters.Add($"{type} {value}");
+                callArguments.Add("ref " + Emit(source));
+                callArguments.Add(Emit(argument));
+                initializers.Add($"{type} {temporary} = {value};");
+                aliases.Add(source.Symbol, (temporary, NormalizeStorageType(type)));
+                copyBack.Add($"{storage} = {temporary};");
+                rewritten[i] = new BoundNameExpression(new LocalSymbol(temporary, call.Function.ParameterTypes[i], semanticType));
+                continue;
+            }
+
+            var name = _temporary();
+            if (byRef)
+            {
+                if (argument is BoundNameExpression { SemanticType.IsVariant: true } aliasSource &&
+                    aliases.TryGetValue(aliasSource.Symbol, out var prior))
+                {
+                    if (!string.Equals(prior.Type, NormalizeStorageType(type), StringComparison.Ordinal))
+                        throw new NotSupportedException("One ByRef location cannot use incompatible parameter storage types.");
+                    helperParameters.Add($"ref {BoundMethodEmitter.CSharpType(aliasSource.SemanticType)} {name}");
+                    callArguments.Add("ref " + Emit(aliasSource));
+                    rewritten[i] = new BoundNameExpression(new LocalSymbol(prior.Name, call.Function.ParameterTypes[i], semanticType));
+                    continue;
+                }
+                var location = argument is BoundIndexExpression { Expression.SemanticType.IsArray: true } index
+                    ? EmitIndexedReference(index)
+                    : Emit(argument);
+                helperParameters.Add($"ref {type} {name}");
+                callArguments.Add("ref " + location);
+                if (argument is BoundNameExpression { SemanticType.IsVariant: true } directAlias)
+                    aliases.Add(directAlias.Symbol, (name, NormalizeStorageType(type)));
+            }
+            else
+            {
+                helperParameters.Add($"{type} {name}");
+                callArguments.Add(Emit(argument));
+            }
+            rewritten[i] = new BoundNameExpression(new ParameterSymbol(name, call.Function.ParameterTypes[i], byRef, semanticType));
+        }
+
+        var invocation = EmitCall(new BoundCallExpression(target, call.Function, rewritten));
+        var body = new System.Text.StringBuilder("{ ").AppendJoin(' ', initializers).Append(" try { ");
+        if (call.Function.ReturnType == typeof(void)) body.Append(invocation).Append(';');
+        else body.Append("return ").Append(invocation).Append(';');
+        body.Append(" } finally { ").AppendJoin(' ', copyBack).Append(" } }");
+        var returnType = BoundMethodEmitter.CSharpType(call.Function.SemanticReturnType ?? XpTypeSymbol.FromClr(call.Function.ReturnType));
+        _byRefCallHelpers.Add($"{returnType} {helperName}({string.Join(", ", helperParameters)}) {body}");
+        return $"{helperName}({string.Join(", ", callArguments)})";
+    }
+
+    private static string NormalizeStorageType(string type) => type == "dynamic" ? "object" : type;
 
     private string EmitBinary(BoundBinaryExpression binary) => binary.OperatorKind == SyntaxKind.CaretToken
         ? $"System.Math.Pow({Emit(binary.Left)}, {Emit(binary.Right)})"

@@ -22,7 +22,9 @@ internal sealed class BoundErrorFlowEmitter
 
     private BoundEmissionResult Build(IReadOnlyList<BoundStatement> statements, string? source, string? path)
     {
+        _expressions.BeginMethodEmission();
         _output = new BoundEmissionContext(statements, source, path);
+        _expressions.UseTemporaryProvider(_output.Temporary);
         _pc = _output.Temporary(); _next = _output.Temporary(); _mode = _output.Temporary();
         _handler = _output.Temporary(); _active = _output.Temporary(); _fault = _output.Temporary(); _after = _output.Temporary();
         var entry = Sequence(statements, -1, -1);
@@ -59,6 +61,8 @@ internal sealed class BoundErrorFlowEmitter
         _output.Write($"if ({_mode} == 1) {_pc} = {_next};", 2);
         _output.Write($"else {{ {_fault} = {_pc}; {_after} = {_next}; {_active} = true; {_pc} = {_handler}; }}", 2);
         _output.Write("}", 1); _output.Write("}", 0);
+        foreach (var helper in _expressions.ByRefCallHelpers)
+            _output.Write(helper, 0);
         return _output.Finish();
     }
 

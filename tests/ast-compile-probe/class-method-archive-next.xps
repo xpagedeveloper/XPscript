@@ -13,10 +13,79 @@ Class ArchiveMethods
         Call Replace(value)
         Error 4296, "archive replacement must survive failure"
     End Sub
+    Public Sub ReplaceEntry(ByRef value As ArchiveEntry)
+        Dim replacement As New Archive()
+        Call replacement.Create("zip")
+        Call replacement.AddText("replacement-entry.txt", "replacement entry")
+        Set value = replacement.GetEntry("replacement-entry.txt")
+    End Sub
+    Public Function ReplaceEntryAndReturnName(ByRef value As ArchiveEntry) As String
+        Call ReplaceEntry(value)
+        ReplaceEntryAndReturnName = value.Name
+    End Function
+    Public Sub ReplaceEntryAndFail(ByRef value As ArchiveEntry)
+        Call ReplaceEntry(value)
+        Error 4310, "archive entry replacement must survive failure"
+    End Sub
+    Public Sub ClearFirstWhenAliased(ByRef first As ArchiveEntry, ByRef second As ArchiveEntry)
+        Set first = Nothing
+        If Not (second Is Nothing) Then Error 4321, "duplicate ByRef arguments lost their alias"
+    End Sub
+    Public Sub ClearArchiveWhenAliased(ByRef first As Archive, ByRef second As Variant)
+        Set first = Nothing
+        If Not (second Is Nothing) Then Error 4323, "Variant and Archive ByRef arguments lost their alias"
+    End Sub
     Public Function Entry(ByVal value As ArchiveEntry) As ArchiveEntry
         Set Entry = value
     End Function
 End Class
+Sub SwapArchiveEntries(ByRef current As ArchiveEntry, ByRef replacement As ArchiveEntry)
+    Set current = replacement
+    Set replacement = Nothing
+End Sub
+Sub VerifyArchiveEntryByRef(methods As ArchiveMethods)
+    Dim archive As New Archive()
+    Call archive.Create("zip")
+    Call archive.AddText("original-entry.txt", "original entry")
+    Dim original As ArchiveEntry
+    Dim current As ArchiveEntry
+    Set original = archive.GetEntry("original-entry.txt")
+    Set current = original
+    If methods.ReplaceEntryAndReturnName(current) <> "replacement-entry.txt" Then Error 4325
+    If current Is original Then Error 4311
+    If current.Name <> "replacement-entry.txt" Then Error 4312
+    If original.Name <> "original-entry.txt" Then Error 4313
+
+    Dim replacementArchive As New Archive()
+    Call replacementArchive.Create("zip")
+    Call replacementArchive.AddText("swapped-entry.txt", "swapped entry")
+    Dim replacement As ArchiveEntry
+    Set replacement = replacementArchive.GetEntry("swapped-entry.txt")
+    Call SwapArchiveEntries(current, replacement)
+    If current.Name <> "swapped-entry.txt" Or Not (replacement Is Nothing) Then Error 4319
+    If original.Name <> "original-entry.txt" Then Error 4320
+
+    Dim duplicate As ArchiveEntry
+    Set duplicate = original
+    Call methods.ClearFirstWhenAliased(duplicate, duplicate)
+    If Not (duplicate Is Nothing) Then Error 4322
+
+    Dim duplicateArchive As Archive
+    Set duplicateArchive = archive
+    Call methods.ClearArchiveWhenAliased(duplicateArchive, duplicateArchive)
+    If Not (duplicateArchive Is Nothing) Then Error 4324
+
+    Set current = original
+    On Error GoTo ExpectedArchiveEntryFailure
+    Call methods.ReplaceEntryAndFail(current)
+    Error 4314, "expected archive entry replacement error missing"
+    Exit Sub
+ExpectedArchiveEntryFailure:
+    If Err <> 4310 Then Error 4315
+    If current Is original Then Error 4316
+    If current.Name <> "replacement-entry.txt" Then Error 4317
+    If original.Name <> "original-entry.txt" Then Error 4318
+End Sub
 Sub Main()
     Dim methods As New ArchiveMethods
     Dim value As New Archive()
@@ -28,6 +97,7 @@ Sub Main()
     Dim entryValue As ArchiveEntry
     Set entryValue = value.GetEntry("shared.txt")
     If Not (methods.Entry(entryValue) Is entryValue) Then Error 4295
+    Call VerifyArchiveEntryByRef(methods)
     Dim original As Archive
     Dim current As Archive
     Set original = value

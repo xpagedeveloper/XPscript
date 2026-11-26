@@ -199,7 +199,7 @@ Optional ByRef concrete user-class parameters preserve typed `Nothing` defaults 
 
 Ordinary class methods now have ByRef typed List alias and whole-list replacement coverage through `class-method-list-byref-next.xps`; element mutation and replacement are copied back to the caller.
 
-For native class-method ByRef calls, a Variant-backed caller slot may be passed directly when its CLR storage type exactly matches the parameter representation. `Archive` uses this path because archive implementations are dynamically selected and the generated method parameter is `object`; replacement updates the caller's slot, including when the callee then raises an error. Other representation-changing conversions still require dedicated temporary/copy-back lowering. `class-method-archive-next.xps` covers mutation, identity, replacement, and error persistence.
+For AST procedure and class-method calls, a named Variant-backed caller slot passed ByRef to an XPscript parameter is converted through a typed temporary and copied back in `finally`. This supports `Archive` and `ArchiveEntry` despite their different generated CLR parameter representations; duplicate arguments share one temporary, and replacement reaches the caller on return or error. `class-method-archive-next.xps` covers identity, mutation, replacement, duplicate aliases, and error persistence.
 
 Optional List class-method parameters preserve omitted `Nothing` and supplied-list mutation; `class-method-optional-list-next.xps` covers both calls.
 

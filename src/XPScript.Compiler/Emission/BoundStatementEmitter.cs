@@ -14,10 +14,12 @@ public sealed class BoundStatementEmitter
 
     public string Emit(IReadOnlyList<BoundStatement> statements)
     {
+        _expressions.BeginMethodEmission();
         if (ContainsErrorFlow(statements))
             return new BoundErrorFlowEmitter(ImageScopeEnabled).Emit(statements) + EmitGoSubHelpersCode(statements);
         _flatControlFlow = Collect(statements).Any();
         var output = new BoundEmissionContext(statements);
+        _expressions.UseTemporaryProvider(output.Temporary);
         if (_flatControlFlow)
         {
             foreach (var declaration in BoundStatementTraversal.Descendants(statements)
@@ -34,15 +36,19 @@ public sealed class BoundStatementEmitter
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
         EmitGoSubHelpers(output, statements);
+        foreach (var helper in _expressions.ByRefCallHelpers)
+            output.Write(helper, 0);
         return output.Finish().Code;
     }
 
     public BoundEmissionResult EmitWithSourceMap(IReadOnlyList<BoundStatement> statements, string source, string sourcePath)
     {
+        _expressions.BeginMethodEmission();
         _flatControlFlow = Collect(statements).Any();
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         var output = new BoundEmissionContext(statements, source, sourcePath);
+        _expressions.UseTemporaryProvider(output.Temporary);
         if (ContainsErrorFlow(statements))
         {
             var errorFlow = new BoundErrorFlowEmitter(ImageScopeEnabled).EmitMapped(statements, source, sourcePath);
@@ -50,6 +56,8 @@ public sealed class BoundStatementEmitter
         }
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
+        foreach (var helper in _expressions.ByRefCallHelpers)
+            output.Write(helper, 0);
         return output.Finish();
     }
 
