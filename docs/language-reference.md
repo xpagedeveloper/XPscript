@@ -53,6 +53,8 @@ Integer size literals may use the case-insensitive suffixes `kb`, `mb`, and `gb`
 | `ByRef` | `ByRef name As Type` | parameter name/type. | Passes the parameter by reference. | [functions.xps](../samples/functions.xps) |
 | `ByVal` | `ByVal name As Type` | parameter name/type. | Passes the parameter by value/copy semantics. | [byval-copy-semantics.xps](../samples/byval-copy-semantics.xps) |
 | `Optional` | `Optional name As Type = value` | parameter and default value. | Declares an optional procedure parameter. | [functions.xps](../samples/functions.xps) |
+
+Procedure parameters default to `ByRef`. A writable argument aliases its caller storage. An expression argument is evaluated into temporary parameter storage, so assignments to that parameter do not copy back to the expression. Use `ByVal` when value passing is intended. The executable [default-ByRef expression regression](../samples/function-not-byref-regression.xps) covers function calls with literal and array-expression arguments.
 | line continuation `_` | `expression _` | trailing underscore on a continued physical line. | Continues supported expressions, argument lists and declarations. | [statement-layout-audit.xps](../samples/statement-layout-audit.xps) |
 
 ## Control flow and errors

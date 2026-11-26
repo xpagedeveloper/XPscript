@@ -9,6 +9,8 @@ public sealed class DeclarationParser
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
     private readonly bool _classMemberContext;
     private readonly bool _classHasBase;
+    private int _headerBodyStartOffset;
+    private int _headerBodyStartLineIndex = 1;
 
     public DeclarationParser(string text, int baseOffset = 0, bool classMemberContext = false, bool classHasBase = false)
     {
@@ -96,9 +98,7 @@ public sealed class DeclarationParser
         if (lines.Count == 0)
             throw new InvalidOperationException("Declaration source is empty.");
 
-        var headerLexer = new Lexer(lines[0].Text, _baseOffset + lines[0].Start);
-        var header = headerLexer.Lex().Where(t => t.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken).ToArray();
-        AddLexerDiagnostics(headerLexer.Diagnostics);
+        var header = ReadLogicalHeader(lines);
         var position = 0;
 
         SyntaxToken? visibility = null;
@@ -136,7 +136,7 @@ public sealed class DeclarationParser
         }
         var members = new List<SyntaxNode>();
 
-        for (var i = 1; i < lines.Count; i++)
+        for (var i = _headerBodyStartLineIndex; i < lines.Count; i++)
         {
             var line = lines[i];
             if (string.IsNullOrWhiteSpace(line.Text))
@@ -268,9 +268,7 @@ public sealed class DeclarationParser
 
     private PropertyDeclarationSyntax ParseProperty(IReadOnlyList<SourceLine> lines)
     {
-        var lexer = new Lexer(lines[0].Text, _baseOffset + lines[0].Start);
-        var header = lexer.Lex().Where(t => t.Kind is not SyntaxKind.NewLineToken and not SyntaxKind.EndOfFileToken).ToArray();
-        AddLexerDiagnostics(lexer.Diagnostics);
+        var header = ReadLogicalHeader(lines);
         var position = 0;
         SyntaxToken? visibility = null;
         if (Peek(header, position).Kind is SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword)
@@ -433,7 +431,7 @@ public sealed class DeclarationParser
 
     private (List<StatementSyntax> Statements, SyntaxToken EndKeyword, SyntaxToken EndTarget) ParseBody(IReadOnlyList<SourceLine> lines, SyntaxKind targetKind, string targetName)
     {
-        for (var i = 1; i < lines.Count; i++)
+        for (var i = _headerBodyStartLineIndex; i < lines.Count; i++)
         {
             var line = lines[i];
             if (string.IsNullOrWhiteSpace(line.Text))
@@ -446,11 +444,7 @@ public sealed class DeclarationParser
             if (tokens.Length < 2 || tokens[0].Kind != SyntaxKind.EndKeyword || tokens[1].Kind != targetKind)
                 continue;
 
-            var bodyStart = lines[0].Start + lines[0].Text.Length;
-            if (bodyStart < _text.Length && _text[bodyStart] == '\r')
-                bodyStart++;
-            if (bodyStart < _text.Length && _text[bodyStart] == '\n')
-                bodyStart++;
+            var bodyStart = _headerBodyStartOffset;
 
             var bodyLength = Math.Max(0, line.Start - bodyStart);
             var bodyText = _text.Substring(bodyStart, bodyLength);
@@ -464,11 +458,7 @@ public sealed class DeclarationParser
         var end = _baseOffset + _text.Length;
         _diagnostics.Add(new SyntaxDiagnostic("XPS1012", $"Expected 'End {targetName}' to close declaration.", new TextSpan(end, 0)));
 
-        var bodyStartAtEof = lines[0].Start + lines[0].Text.Length;
-        if (bodyStartAtEof < _text.Length && _text[bodyStartAtEof] == '\r')
-            bodyStartAtEof++;
-        if (bodyStartAtEof < _text.Length && _text[bodyStartAtEof] == '\n')
-            bodyStartAtEof++;
+        var bodyStartAtEof = _headerBodyStartOffset;
         var bodyParser = new StatementParser(_text.Substring(bodyStartAtEof), _baseOffset + bodyStartAtEof);
         var bodyStatements = bodyParser.ParseStatements().ToList();
         _diagnostics.AddRange(bodyParser.Diagnostics);
@@ -477,6 +467,32 @@ public sealed class DeclarationParser
         return (bodyStatements,
             new SyntaxToken(SyntaxKind.EndKeyword, string.Empty, null, new TextSpan(end, 0)),
             new SyntaxToken(targetKind, string.Empty, null, new TextSpan(end, 0)));
+    }
+
+    private SyntaxToken[] ReadLogicalHeader(IReadOnlyList<SourceLine> lines)
+    {
+        var lexer = new Lexer(_text, _baseOffset);
+        var tokens = new List<SyntaxToken>();
+        while (true)
+        {
+            var token = lexer.NextToken();
+            if (token.Kind == SyntaxKind.NewLineToken)
+            {
+                _headerBodyStartOffset = token.Span.End - _baseOffset;
+                _headerBodyStartLineIndex = Enumerable.Range(0, lines.Count)
+                    .FirstOrDefault(index => lines[index].Start >= _headerBodyStartOffset, lines.Count);
+                break;
+            }
+            if (token.Kind == SyntaxKind.EndOfFileToken)
+            {
+                _headerBodyStartOffset = _text.Length;
+                _headerBodyStartLineIndex = lines.Count;
+                break;
+            }
+            tokens.Add(token);
+        }
+        AddLexerDiagnostics(lexer.Diagnostics);
+        return tokens.ToArray();
     }
 
     private void ValidateClassReferenceContext(string bodyText, int bodyOffset)

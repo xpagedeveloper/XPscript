@@ -417,8 +417,8 @@ public static class AstCompiler
                         var qualifiedMethodName = $"{classDeclaration.Identifier.Text}.{method.Identifier.Text}";
                         var alias = AstClassMethodSupport.MethodAlias(fieldsByClass[classDeclaration.Identifier.Text], method.Identifier.Text);
                         symbols.Declare(new FunctionSymbol(qualifiedMethodName, typeof(void), parameterTypes.Select(type => type.RuntimeType).ToArray(), null, parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray())
-                        { EmittedMemberName = alias });
-                        DeclareOptionalSignatures(symbols, qualifiedMethodName, typeof(void), method.Parameters, alias);
+                        { EmittedMemberName = alias, IsUserDefined = true });
+                        DeclareOptionalSignatures(symbols, qualifiedMethodName, typeof(void), method.Parameters, alias, isUserDefined: true);
                     }
                 foreach (var method in current.Members.OfType<FunctionDeclarationSyntax>())
                 {
@@ -433,8 +433,8 @@ public static class AstCompiler
                         ? XpTypeSymbol.User(returnName) : XpTypeSymbol.FromClr(returnType);
                     var alias = AstClassMethodSupport.MethodAlias(fieldsByClass[classDeclaration.Identifier.Text], method.Identifier.Text);
                     symbols.Declare(new FunctionSymbol(qualifiedMethodName, returnType, parameterTypes.Select(type => type.RuntimeType).ToArray(), semanticReturnType, parameterTypes, method.Parameters.Select(parameter => parameter.IsByRef).ToArray())
-                    { EmittedMemberName = alias });
-                    DeclareOptionalSignatures(symbols, qualifiedMethodName, returnType, method.Parameters, alias);
+                    { EmittedMemberName = alias, IsUserDefined = true });
+                    DeclareOptionalSignatures(symbols, qualifiedMethodName, returnType, method.Parameters, alias, isUserDefined: true);
                 }
             }
         }
@@ -454,16 +454,18 @@ public static class AstCompiler
         {
             var parameterTypes = procedure.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
             var types = parameterTypes.Select(type => type.RuntimeType).ToArray();
-            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types, null, parameterTypes, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
-            DeclareOptionalSignatures(symbols, procedure.Identifier.Text, typeof(void), procedure.Parameters);
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, typeof(void), types, null, parameterTypes, procedure.Parameters.Select(p => p.IsByRef).ToArray())
+            { IsUserDefined = true });
+            DeclareOptionalSignatures(symbols, procedure.Identifier.Text, typeof(void), procedure.Parameters, isUserDefined: true);
         }
         foreach (var procedure in unit.Declarations.OfType<FunctionDeclarationSyntax>())
         {
             var parameterTypes = procedure.Parameters.Select(parameter => ResolveParameterType(parameter, symbols)).ToArray();
             var types = parameterTypes.Select(type => type.RuntimeType).ToArray();
             var resultType = ResolveRuntimeType(procedure.ReturnType?.Identifier.Text);
-            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types, AstClassMethodSupport.DeclaredType(procedure.ReturnType, symbols), parameterTypes, procedure.Parameters.Select(p => p.IsByRef).ToArray()));
-            DeclareOptionalSignatures(symbols, procedure.Identifier.Text, resultType, procedure.Parameters);
+            symbols.Declare(new FunctionSymbol(procedure.Identifier.Text, resultType, types, AstClassMethodSupport.DeclaredType(procedure.ReturnType, symbols), parameterTypes, procedure.Parameters.Select(p => p.IsByRef).ToArray())
+            { IsUserDefined = true });
+            DeclareOptionalSignatures(symbols, procedure.Identifier.Text, resultType, procedure.Parameters, isUserDefined: true);
         }
         var enumNames = Regex.Matches(fullSource, @"(?ims)^\s*Enum\s+(?<name>[A-Za-z_]\w*)\s*(?<body>.*?)^\s*End\s+Enum\b")
             .Cast<Match>().ToArray();
@@ -2025,7 +2027,8 @@ internal static class Program
     internal static IReadOnlyList<BoundStatement> BindProcedure(IReadOnlyList<StatementSyntax> procedureStatements, SymbolTable scope,
         IReadOnlyList<ParameterSymbol> parameters, XpTypeSymbol? returnType, string? functionName, LocalSymbol? result,
         string identity, string sourcePath, string transformedSource, string fullSource, bool allowDynamicConversions = true,
-        IReadOnlyList<string>? dependencies = null, string? semanticContext = null)
+        IReadOnlyList<string>? dependencies = null, string? semanticContext = null,
+        BoundExpression? implicitReceiver = null)
     {
             var signature = string.Join(";", parameters.Select(parameter =>
                 $"{parameter.Name}:{parameter.Type.FullName}:{parameter.SemanticType?.Name}:{parameter.IsByRef}"))
@@ -2086,7 +2089,7 @@ internal static class Program
                 if (!helperSyntax.ContainsKey(transfer.Target.Text))
                     throw MappedDiagnosticFromTransformed(transfer.Span, sourcePath, transformedSource, fullSource, $"Unknown GoSub label '{transfer.Target.Text}'.");
             var binder = new StatementBinder(scope, returnType, returnType is not null, true, functionName, result, identity,
-                allowDynamicConversions: allowDynamicConversions);
+                allowDynamicConversions: allowDynamicConversions, implicitReceiver: implicitReceiver);
             var bound = mainSyntax.Select(binder.Bind).OfType<BoundStatement>().ToList();
             if (binder.Diagnostics.Count > 0)
                 throw SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, transformedSource, fullSource);
@@ -2120,7 +2123,7 @@ internal static class Program
                     throw MappedDiagnosticFromTransformed(syntax[0].Span, sourcePath, transformedSource, fullSource,
                         $"Recursive GoSub helper cycle involving '{name}' is not supported.");
                 var helperBinder = new StatementBinder(scope, returnType, returnType is not null, true, functionName, result, identity,
-                    allowDynamicConversions: allowDynamicConversions, allowGoSubReturn: true);
+                    allowDynamicConversions: allowDynamicConversions, allowGoSubReturn: true, implicitReceiver: implicitReceiver);
                 var helperBound = syntax.Select(helperBinder.Bind).OfType<BoundStatement>().ToArray();
                 if (helperBinder.Diagnostics.Count > 0)
                     throw SyntaxDiagnosticException(helperBinder.Diagnostics[0], sourcePath, transformedSource, fullSource);
@@ -2214,7 +2217,8 @@ internal static class Program
         symbols.Declare(function);
     }
 
-    private static void DeclareOptionalSignatures(SymbolTable symbols, string name, Type returnType, IReadOnlyList<ParameterSyntax> parameters, string? emittedMemberName = null)
+    private static void DeclareOptionalSignatures(SymbolTable symbols, string name, Type returnType, IReadOnlyList<ParameterSyntax> parameters,
+        string? emittedMemberName = null, bool isUserDefined = false)
     {
         // Only a trailing Optional suffix can be omitted by a shorter call.
         // Explicit empty argument slots require separate call-syntax lowering.
@@ -2228,7 +2232,7 @@ internal static class Program
                 continue;
             symbols.Declare(new FunctionSymbol(name, returnType,
                 shortenedTypes.Select(type => type.RuntimeType).ToArray(), null, shortenedTypes, shortenedModes)
-                { IsOptionalForwarding = true, EmittedMemberName = emittedMemberName });
+                { IsOptionalForwarding = true, EmittedMemberName = emittedMemberName, IsUserDefined = isUserDefined });
         }
     }
 

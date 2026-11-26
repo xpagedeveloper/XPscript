@@ -287,6 +287,9 @@ public sealed class BoundExpressionEmitter
                 nativeArguments = nativeArguments.Prepend(Emit(extension.Receiver));
             return $"{(call.Function.NativeTargetName ?? Emit(call.Target!))}({string.Join(", ", nativeArguments)})";
         }
+        if (call.Function.IsUserDefined && call.Arguments.Where((argument, index) => call.Function.ByRefParameters?[index] == true)
+            .Any(argument => argument is not BoundNameExpression))
+            return EmitByRefAccessorCall(call);
         if (call.Arguments.Where((argument, index) => call.Function.ByRefParameters?[index] == true)
             .Any(argument => argument is BoundIndexedPropertyExpression or BoundMemberAccessExpression { IsWritableAccessor: true }))
             return EmitByRefAccessorCall(call);
@@ -395,15 +398,27 @@ public sealed class BoundExpressionEmitter
         var aliases = new Dictionary<Symbol, (string Name, string Type)>(ReferenceEqualityComparer.Instance);
         var accessorAliases = new Dictionary<string, (string Name, string Type)>(StringComparer.Ordinal);
         var target = call.Target;
+        string? targetParameter = null;
+        string? targetArgument = null;
         if (target is BoundMemberAccessExpression member &&
-            member.Receiver is not BoundNameExpression { Symbol: TypeSymbol } &&
-            member.Receiver is not BoundNameExpression { Symbol: VariableSymbol { Name: "Me" or "Parent" } })
+            member.Receiver is BoundNameExpression { Symbol: ParameterSymbol { IsByRef: true } } byRefReceiver &&
+            !byRefReceiver.SemanticType.RuntimeType.IsValueType)
         {
-            var receiver = _temporary();
-            setup.Add($"var {receiver} = {Emit(member.Receiver)};");
-            var symbol = new LocalSymbol(receiver, member.Receiver.Type, member.Receiver.SemanticType);
+            targetParameter = _temporary();
+            targetArgument = Emit(member.Receiver);
+            var symbol = new LocalSymbol(targetParameter, member.Receiver.Type, member.Receiver.SemanticType);
             target = new BoundMemberAccessExpression(new BoundNameExpression(symbol), member.Name, member.Type,
                 member.SemanticType, member.IsFieldStorage, member.AssignmentKind);
+        }
+        else if (target is BoundMemberAccessExpression memberTarget &&
+                 memberTarget.Receiver is not BoundNameExpression { Symbol: TypeSymbol } &&
+                 memberTarget.Receiver is not BoundNameExpression { Symbol: VariableSymbol { Name: "Me" or "Parent" } })
+        {
+            var receiver = _temporary();
+            setup.Add($"var {receiver} = {Emit(memberTarget.Receiver)};");
+            var symbol = new LocalSymbol(receiver, memberTarget.Receiver.Type, memberTarget.Receiver.SemanticType);
+            target = new BoundMemberAccessExpression(new BoundNameExpression(symbol), memberTarget.Name, memberTarget.Type,
+                memberTarget.SemanticType, memberTarget.IsFieldStorage, memberTarget.AssignmentKind);
         }
 
         for (var i = 0; i < call.Arguments.Count; i++)
@@ -541,6 +556,14 @@ public sealed class BoundExpressionEmitter
                 continue;
             }
 
+            if (!IsWritableByRefArgument(argument))
+            {
+                var value = _temporary();
+                setup.Add($"{type} {value} = {Emit(argument)};");
+                rewritten[i] = new BoundNameExpression(new ParameterSymbol(value, call.Function.ParameterTypes[i], true, semanticType));
+                continue;
+            }
+
             var location = argument is BoundIndexExpression { Expression.SemanticType.IsArray: true } arrayElement
                 ? EmitIndexedReference(arrayElement)
                 : Emit(argument);
@@ -562,11 +585,30 @@ public sealed class BoundExpressionEmitter
                 .Append("; } finally { ").AppendJoin(' ', copyBack).Append(" }");
         }
         body.Append(" }");
+        if (targetParameter is not null)
+        {
+            var targetType = BoundMethodEmitter.CSharpType(((BoundMemberAccessExpression)call.Target!).Receiver.SemanticType);
+            var delegateType = call.Function.ReturnType == typeof(void)
+                ? $"System.Action<{targetType}>"
+                : $"System.Func<{targetType}, {BoundMethodEmitter.CSharpType(call.Function.SemanticReturnType ?? XpTypeSymbol.FromClr(call.Function.ReturnType))}>";
+            return $"(({delegateType})(({targetParameter}) => {body}))({targetArgument})";
+        }
         if (call.Function.ReturnType == typeof(void))
             return $"((System.Action)(() => {body}))()";
         var returnType = BoundMethodEmitter.CSharpType(call.Function.SemanticReturnType ?? XpTypeSymbol.FromClr(call.Function.ReturnType));
         return $"((System.Func<{returnType}>)(() => {body}))()";
     }
+
+    private static bool IsWritableByRefArgument(BoundExpression argument) => argument switch
+    {
+        BoundNameExpression { Symbol: VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol } => true,
+        BoundMemberAccessExpression { IsFieldStorage: true } => true,
+        BoundIndexExpression { Expression.SemanticType.IsArray: true } => true,
+        BoundIndexExpression { Expression.SemanticType.IsList: true } => true,
+        BoundMemberAccessExpression { IsWritableAccessor: true } => true,
+        BoundIndexedPropertyExpression { Property.CanWrite: true, Property.SetterName: not null } => true,
+        _ => false
+    };
 
     private static string? StablePropertyKey(BoundMemberAccessExpression property)
     {

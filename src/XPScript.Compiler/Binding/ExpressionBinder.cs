@@ -489,6 +489,14 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return Error(syntax, CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.FromBytes requires bytes and an optional encoding argument.");
             var memberKey = receiver.SemanticType.Name + "." + name;
             var memberSymbols = _symbols.LookupMembers(receiver.SemanticType, name);
+            if (memberSymbols.Count == 0 && _symbols.TryLookup(memberKey, out var qualifiedMember))
+                memberSymbols = [qualifiedMember];
+            // XPscript uses parentheses for both calls and indexed access. When
+            // the member is a scalar property, bind it as the argument value;
+            // otherwise a read-only Property Get such as box.Value is mistaken
+            // for a zero-argument member call and loses its accessor metadata.
+            if (syntax.Arguments.Count == 0 && memberSymbols.OfType<PropertySymbol>().LastOrDefault() is { } scalarProperty)
+                return BindProperty(syntax, receiver, scalarProperty);
             if (memberSymbols.Count == 0 && _allowDynamicMembers && receiver.SemanticType.IsVariant)
             {
                 var arguments = syntax.Arguments.Select(Bind).ToArray();
@@ -660,6 +668,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 indexedProperty.Property.CanRead && indexedProperty.Property.CanWrite &&
                 indexedProperty.Property.SetterName is not null)
                 continue;
+            if (function.IsUserDefined && !IsWritableByRefArgument(arguments[i]) &&
+                !IsTemporaryByRefArgument(arguments[i]))
+                return false;
             if (arguments[i] is not BoundNameExpression name ||
                 name.Symbol is not (VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol))
                 return false;
@@ -672,6 +683,29 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
 
         return true;
     }
+
+    private static bool IsWritableByRefArgument(BoundExpression argument) => argument switch
+    {
+        BoundNameExpression { Symbol: VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol } => true,
+        BoundMemberAccessExpression { IsFieldStorage: true } => true,
+        BoundIndexExpression { Expression.SemanticType.IsArray: true } => true,
+        BoundIndexExpression { Expression.SemanticType.IsList: true } => true,
+        BoundMemberAccessExpression { IsWritableAccessor: true } => true,
+        BoundIndexedPropertyExpression { Property.CanWrite: true, Property.SetterName: not null } => true,
+        _ => false
+    };
+
+    private static bool IsTemporaryByRefArgument(BoundExpression argument) => argument switch
+    {
+        BoundLiteralExpression => true,
+        BoundCallExpression => true,
+        BoundBinaryExpression => true,
+        BoundUnaryExpression => true,
+        BoundConversionExpression conversion => IsTemporaryByRefArgument(conversion.Expression),
+        BoundNewExpression => true,
+        BoundNameExpression { Symbol: ConstantSymbol } => true,
+        _ => false
+    };
 
     private bool ParametersMatch(FunctionSymbol function, IReadOnlyList<BoundExpression> arguments)
     {

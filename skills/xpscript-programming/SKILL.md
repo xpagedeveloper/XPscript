@@ -55,6 +55,8 @@ End Sub
 
 Use `Sub ... End Sub` for procedures without a result and `Function ... End Function` for value-returning procedures.
 
+Procedure parameters default to `ByRef`. Passing writable storage aliases the caller's value; passing an expression uses temporary storage and does not copy changes back. Declare `ByVal` when the procedure should receive a value copy. See `docs/language-reference.md` and `samples/function-not-byref-regression.xps`.
+
 Functions return values by assigning to the function name:
 
 Use `Static name As Type` inside a procedure when a local must retain its value across calls. Experimental `ast-compile` supports scalar storage, initializer-free arrays, Lists, Variant, Object and user-class references. `Static item As Object` starts as Nothing; use `Set item = New Object()` to create it once and retain it across calls. Strings begin empty and numeric/Boolean values begin at zero/false. Scalar explicit initializers are supported as an AST extension; complete initializer semantics remain pending. See `docs/ast-csharp-emitter.md`. This concerns procedure locals; classes and class members remain instance-based.

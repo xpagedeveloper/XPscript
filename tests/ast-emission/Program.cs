@@ -31,8 +31,8 @@ var uiFieldLocal = new BoundNameExpression(new LocalSymbol("field", typeof(objec
 var requiredProperty = new BoundMemberAccessExpression(uiFieldLocal, "Required", typeof(bool), XpTypeSymbol.FromClr(typeof(bool)), true);
 var requiredCode = new BoundMethodEmitter().Emit("SetRequired", typeof(void), [new BoundAssignmentStatement(requiredProperty,
     new BoundLiteralExpression(true, typeof(bool)), true)]);
-if (!requiredCode.Contains("field.Required = true", StringComparison.Ordinal))
-    throw new Exception("UIFormField.Required AST property assignment was not preserved.");
+if (!requiredCode.Contains("field.Required = (bool)(true)", StringComparison.Ordinal))
+    throw new Exception($"UIFormField.Required AST property assignment was not preserved: {requiredCode}");
 var addButtonCallback = new BoundMemberAccessExpression(uiFormLocal, "AddButtonCallback", typeof(object), XpTypeSymbol.User("UIFormButton"));
 var addButtonCallbackCall = new BoundCallExpression(addButtonCallback,
     new FunctionSymbol("AddButtonCallback", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.User("UIFormButton"),
@@ -159,6 +159,20 @@ Equal("return 1L;\n", statements.Emit([new BoundReturnStatement(new BoundLiteral
 Equal("while (!(true))\n{\n}\n", statements.Emit([new BoundDoStatement(new BoundLiteralExpression(true, typeof(bool)), SyntaxKind.UntilKeyword, false, [])]));
 var widened = new BoundConversionExpression(new BoundLiteralExpression(7L, typeof(long)), XpTypeSymbol.FromClr(typeof(double)), new Conversion(ConversionKind.NumericWidening));
 Equal("((double)(7L))", expressions.Emit(widened));
+var byRefReceiver = new ParameterSymbol("receiver", typeof(object), true, XpTypeSymbol.User("Receiver"));
+var byRefAccessor = new BoundMemberAccessExpression(
+    new BoundNameExpression(new LocalSymbol("box", typeof(object), XpTypeSymbol.User("Box"))),
+    "Value", typeof(long), XpTypeSymbol.FromClr(typeof(long)), isWritableAccessor: true);
+var byRefReceiverCall = new BoundCallExpression(
+    new BoundMemberAccessExpression(new BoundNameExpression(byRefReceiver), "Update", typeof(void), XpTypeSymbol.User("Receiver")),
+    new FunctionSymbol("Update", typeof(void), [typeof(long)], XpTypeSymbol.FromClr(typeof(void)),
+        [XpTypeSymbol.FromClr(typeof(long))], [true]) { IsUserDefined = true },
+    [byRefAccessor]);
+var byRefReceiverCode = expressions.Emit(byRefReceiverCall);
+if (byRefReceiverCode.Contains("() =>", StringComparison.Ordinal) ||
+    !byRefReceiverCode.Contains("System.Action<XpReceiver>", StringComparison.Ordinal) ||
+    !byRefReceiverCode.EndsWith(")(receiver)", StringComparison.Ordinal))
+    throw new Exception($"ByRef accessor lowering captured its ByRef receiver instead of passing it to the wrapper: {byRefReceiverCode}");
 var variant = new BoundNameExpression(new VariableSymbol("value", typeof(object), XpTypeSymbol.Variant));
 var dynamicBooleanStore = statements.Emit([new BoundAssignmentStatement(
     new BoundMemberAccessExpression(variant, "Enabled", typeof(object), XpTypeSymbol.Variant),

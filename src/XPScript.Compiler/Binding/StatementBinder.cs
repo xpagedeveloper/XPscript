@@ -5,7 +5,7 @@ namespace XPScript.Compiler.Binding;
 public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? returnType = null, bool allowsReturnValue = false,
     bool allowDynamicMembers = false, string? functionName = null, LocalSymbol? functionResult = null,
     string? procedureIdentity = null, int forAllDepth = 0, bool allowDynamicConversions = true,
-    bool allowGoSubReturn = false)
+    bool allowGoSubReturn = false, BoundExpression? implicitReceiver = null)
 {
     private readonly SymbolTable _symbols = symbols ?? new SymbolTable();
     private readonly XpTypeSymbol? _returnType = returnType;
@@ -15,7 +15,7 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
     private readonly bool _allowGoSubReturn = allowGoSubReturn;
     private readonly List<SyntaxDiagnostic> _diagnostics = [];
     private readonly int _forAllDepth = forAllDepth;
-    private BoundExpression? _withReceiver;
+    private BoundExpression? _withReceiver = implicitReceiver;
     public IReadOnlyList<SyntaxDiagnostic> Diagnostics => _diagnostics;
 
     public BoundStatement? Bind(StatementSyntax syntax)
@@ -161,6 +161,14 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
 
     private BoundStatement? BindDim(DimStatementSyntax syntax)
     {
+        if (functionName is not null && syntax.IdentifierToken.Text.Equals(functionName, StringComparison.OrdinalIgnoreCase))
+        {
+            _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.FunctionResultNameConflict,
+                $"Local variable '{syntax.IdentifierToken.Text}' conflicts with the function result name. Assign to '{functionName}' to return a value, or use a different local variable name.",
+                syntax.IdentifierToken.Span));
+            return null;
+        }
+
         var (type, semanticType) = ResolveDimType(syntax.TypeNameToken?.Text, syntax.IsArray, syntax.ArrayLength, syntax.IsList, syntax.ArrayRank);
         if (syntax.IsArray && (syntax.ArrayLength is not null || syntax.ArrayBounds.Count > 0 || syntax.ArrayLowerBound != 0 || syntax.ArrayRank > 1))
             type = typeof(Array);
