@@ -315,7 +315,7 @@ public static class XPScriptCompilerCommandLine
             var compiler = new CompilerDriver();
             var mode = $"single-file={singleFile.ToString().ToLowerInvariant()}, runtime={selfContained.ToString().ToLowerInvariant()}";
             var result = await WaitWithProgressAsync(
-                compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier),
+                compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier, embedAssets),
                 timer,
                 $"Compiling {sourceName} [{runtimeIdentifier}, {mode}]").ConfigureAwait(false);
             if (result.Success && !effectiveEmbedAssets && usesUiFormAssets)

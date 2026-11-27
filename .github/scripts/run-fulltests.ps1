@@ -445,7 +445,8 @@ if (Should-Run 'platform') {
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release','-p:BuildProjectReferences=false','-p:UseSharedCompilation=false') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $archiveFixtureRoot = (Resolve-Path './out/archive-security-fixtures').Path
-  foreach ($sample in @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-security-fixtures','archive-case-sensitivity-regression')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
+  foreach ($sample in @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-case-sensitivity-regression')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
+  Run-Xps ./demo/archive/archive-security-fixtures.xps archive-security-fixtures @((Join-Path $archiveFixtureRoot 'duplicate-names.zip'),$archiveFixtureRoot) | Out-Null
   $astArchiveOutput = './out/fulltest/archive-memory-ast'
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./demo/archive/archive-memory.xps','-o',$astArchiveOutput) $compileTimeoutMilliseconds 'AST Archive memory compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @((Join-Path $astArchiveOutput 'Generated.dll')) $runtimeTimeoutMilliseconds 'AST Archive memory runtime'; if ($r.ExitCode -ne 0 -or $r.Output -notmatch 'Format: ZIP' -or $r.Output -notmatch 'Files: 2' -or $r.Output -notmatch 'hello from memory') { throw 'AST Archive memory regression did not complete.' }

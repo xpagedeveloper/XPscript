@@ -43,7 +43,10 @@ public sealed class CompilerDriver
     public async Task<CompileResult> CompileWithResultAsync(string sourcePath, string outputPath, bool selfContained) =>
         await CompileWithResultAsync(sourcePath, outputPath, selfContained, CurrentRuntimeIdentifier());
 
-    public async Task<CompileResult> CompileWithResultAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
+    public async Task<CompileResult> CompileWithResultAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier) =>
+        await CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier, embedAssets: false);
+
+    public async Task<CompileResult> CompileWithResultAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier, bool embedAssets)
     {
         string source = "";
         try
@@ -56,7 +59,7 @@ public sealed class CompilerDriver
 
             EnsureSourceSize(sourcePath);
             source = await File.ReadAllTextAsync(sourcePath);
-            await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
+            await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier, embedAssets);
             return CompileResult.Ok(outputPath).WithContext(sourcePath, runtimeIdentifier);
         }
         catch (CompilerException ex)
@@ -188,7 +191,10 @@ public sealed class CompilerDriver
     public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained) =>
         await CompileAsync(sourcePath, outputPath, selfContained, CurrentRuntimeIdentifier());
 
-    public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
+    public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier) =>
+        await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier, embedAssets: false);
+
+    public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier, bool embedAssets)
     {
         var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? Environment.CurrentDirectory;
         using var outputLock = CompilerDirectoryLock.Acquire(outputDirectory);
@@ -215,11 +221,12 @@ public sealed class CompilerDriver
         {
             if (Directory.Exists(astWorkspace)) Directory.Delete(astWorkspace, recursive: true);
         }
+        using (UIFormAssetCompileContext.Push(embedAssets))
+            generatedSource = UIFormAppAssets.InstallEmbeddedAssets(generatedSource, sourcePath);
         // Native database providers expose the shared attachment collection
         // surface even when the source does not call Attachments directly.
-        // Keep the legacy compiler's generated source self-contained just as
-        // the AST path is; otherwise a database-only legacy build references
-        // XPScriptAttachmentCollectionV3 without emitting its runtime.
+        // Keep generated database-only applications self-contained or they
+        // reference XPScriptAttachmentCollectionV3 without emitting its runtime.
         generatedSource = AstCompiler.EnsureAttachmentRuntime(generatedSource);
 
         var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
