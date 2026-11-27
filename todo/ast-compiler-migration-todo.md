@@ -1303,7 +1303,8 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   enum value named `new` needed C# keyword escaping in AST output, and the safe
   AI-tool fixture registered a callback context but declared no context
   parameter. Both are fixed and pass focused local compilation/runtime checks.
-  The Windows Language section exceeded the aggregate job's 20-minute timeout
-  while still making progress; its timeout is raised to 45 minutes to match the
-  actual suite duration. Aggregate CI confirmation is still pending.
+  The aggregate Windows Language job and the broader Linux/macOS FullTest jobs
+  exceeded their 20-minute limits while still running test cases. All three
+  aggregate job limits are now raised to 45 minutes. Aggregate CI confirmation
+  is still pending.
 

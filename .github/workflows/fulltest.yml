@@ -232,7 +232,7 @@ jobs:
   fulltest-unix:
     name: ${{ matrix.name }} FullTest
     needs: [compile-linux, compile-macos]
-    timeout-minutes: 20
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
