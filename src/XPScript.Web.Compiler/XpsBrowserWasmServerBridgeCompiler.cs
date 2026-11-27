@@ -66,7 +66,8 @@ internal static class XpsBrowserWasmServerBridgeCompiler
         var targetFramework = SelectedTargetFramework();
         var source = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var compilerIdentity = typeof(XpsBrowserWasmServerBridgeCompiler).Assembly.ManifestModule.ModuleVersionId.ToString("N");
-        var sourceHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity + "\0" + BridgeCompilerVersion + "\0" + targetFramework)));
+        var assetFingerprint = UIFormAppAssets.ComputeFingerprint(sourcePath);
+        var sourceHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(source + "\0" + compilerIdentity + "\0" + BridgeCompilerVersion + "\0" + targetFramework + "\0" + assetFingerprint)));
         var serverSideOptions = BrowserWasmServerSideMetadata.ReadAnnotatedProcedureOptions(source);
         var annotatedProcedures = BrowserWasmServerSideMetadata.ReadAnnotatedProcedures(source);
         var normalizedSource = NormalizeVariantSetAssignments(parsed.Source);
@@ -168,6 +169,7 @@ internal static class XpsBrowserWasmServerBridgeCompiler
             await File.WriteAllTextAsync(Path.Combine(appRoot, "index.html"), BuildIndexHtml(sourcePath), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "main.js"), BrowserRuntimeConstant("MainJs"), cancellationToken).ConfigureAwait(false);
             await File.WriteAllTextAsync(Path.Combine(appRoot, "xpscript-browser.js"), browserModule, cancellationToken).ConfigureAwait(false);
+            if (UIFormAppAssets.UsesUIForm(sourcePath)) UIFormAppAssets.CopyAssetsToDirectory(sourcePath, appRoot);
 
             var serverSource = EnsureEntryPoint(normalizedSource, parsed.Routes);
             foreach (var procedure in plan.Procedures.Values)

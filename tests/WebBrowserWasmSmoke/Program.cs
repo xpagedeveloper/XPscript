@@ -633,9 +633,10 @@ End Sub
         throw new Exception("Browser WASM bootstrap does not anchor relative assets to its owning .xps route.");
 
     var browserModule = await File.ReadAllTextAsync(Path.Combine(frameworkRoot, "xpscript-browser.js"));
-    if (!File.Exists(Path.Combine(frameworkRoot, "assets", "test-application-icon.ico")) ||
-        !browserModule.Contains("link.href=icon", StringComparison.Ordinal))
-        throw new Exception("Browser-WASM Application.Icon is not bundled and assigned as the tab favicon.");
+    if (!File.Exists(Path.Combine(frameworkRoot, "assets", "test-application-icon.ico")))
+        throw new Exception("Browser-WASM Application.Icon asset was not copied into the published app bundle.");
+    if (!browserModule.Contains("link.href=icon", StringComparison.Ordinal))
+        throw new Exception("Browser-WASM favicon module does not assign the configured Application.Icon.");
     if (!browserModule.Contains("url !== '__xpscript_bridge' && !url.startsWith('__xpscript_bridge/')", StringComparison.Ordinal) ||
         !browserModule.Contains("xhr.open(safeMethod, url, false)", StringComparison.Ordinal))
         throw new Exception("Browser-WASM server bridge no longer enforces a same-origin relative bridge URL.");
