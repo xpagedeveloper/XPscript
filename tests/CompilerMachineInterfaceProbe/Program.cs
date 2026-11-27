@@ -195,6 +195,11 @@ foreach (var fixture in goldenFixtures)
         ? await firstDriver.ValidateWithResultAsync(fixturePath)
         : await firstDriver.ValidateWithResultAsync(fixturePath, fixture.Target);
     var diagnostic = first.Errors.FirstOrDefault(d => d.DiagnosticCode == fixture.DiagnosticCode);
+    if (diagnostic is null && fixture.Target == "browser-wasm" && IsMissingWasmWorkload(first))
+    {
+        Console.WriteLine("MACHINE_INTERFACE_WASM_GOLDEN_SKIPPED=WORKLOAD_UNAVAILABLE");
+        continue;
+    }
     Require(diagnostic is not null,
         $"golden fixture {fixture.File} expected {fixture.DiagnosticCode}; actual: {string.Join(", ", first.Errors.Select(d => (d.DiagnosticCode ?? "<none>") + " [" + d.Description + "]"))}");
     Require(diagnostic.Category == fixture.Category, $"golden fixture {fixture.File} category");
@@ -433,31 +438,38 @@ Require(nativeByRefDiagnostic.Category == "interop", "native ByRef category");
 Require(nativeByRefDiagnostic.File == "native-byref-error.xps", "native ByRef source file");
 
 var browserTargetCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "browser-wasm-target-ai-error.xps"), "browser-wasm");
-var browserTargetDiagnostic = browserTargetCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
-Require(browserTargetDiagnostic is not null, "Browser WASM target diagnostic");
-Require(browserTargetDiagnostic.Category == "target", "Browser WASM target category");
-Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "XPAi") == true, "Browser WASM target symbol");
-Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, "Browser WASM active target");
-Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == "server target") == true, "Browser WASM allowed targets");
+if (IsMissingWasmWorkload(browserTargetCase))
+{
+    Console.WriteLine("MACHINE_INTERFACE_WASM_TARGETS_SKIPPED=WORKLOAD_UNAVAILABLE");
+}
+else
+{
+    var browserTargetDiagnostic = browserTargetCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
+    Require(browserTargetDiagnostic is not null, "Browser WASM target diagnostic");
+    Require(browserTargetDiagnostic.Category == "target", "Browser WASM target category");
+    Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "XPAi") == true, "Browser WASM target symbol");
+    Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, "Browser WASM active target");
+    Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == "server target") == true, "Browser WASM allowed targets");
 
-var browserTargetRestrictions = new (string Source, string Symbol, string AllowedTargets)[]
-{
-    ("Dim db As XPDBSQLite", "XPDBSQLite", "server or desktop target"),
-    ("Dim db As XPDbMsSql", "XPDbMsSql", "server or desktop target"),
-    ("Dim sheet As XPSpreadsheet", "XPSpreadsheet", "server or desktop target"),
-    ("Dim tools As NetworkTools", "NetworkTools", "server or desktop target")
-};
-var browserTargetRestrictionPath = Path.Combine(outputRoot, "browser-target-restriction.xps");
-foreach (var restriction in browserTargetRestrictions)
-{
-    await File.WriteAllTextAsync(browserTargetRestrictionPath, restriction.Source);
-    var result = await driver.ValidateWithResultAsync(browserTargetRestrictionPath, "browser-wasm");
-    var diagnostic = result.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
-    Require(diagnostic is not null, $"Browser WASM {restriction.Symbol} target diagnostic");
-    Require(diagnostic.Category == "target", $"Browser WASM {restriction.Symbol} target category: {diagnostic.Category} {diagnostic.Description}");
-    Require(diagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == restriction.Symbol) == true, $"Browser WASM {restriction.Symbol} target symbol");
-    Require(diagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, $"Browser WASM {restriction.Symbol} active target");
-    Require(diagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == restriction.AllowedTargets) == true, $"Browser WASM {restriction.Symbol} allowed targets");
+    var browserTargetRestrictions = new (string Source, string Symbol, string AllowedTargets)[]
+    {
+        ("Dim db As XPDBSQLite", "XPDBSQLite", "server or desktop target"),
+        ("Dim db As XPDbMsSql", "XPDbMsSql", "server or desktop target"),
+        ("Dim sheet As XPSpreadsheet", "XPSpreadsheet", "server or desktop target"),
+        ("Dim tools As NetworkTools", "NetworkTools", "server or desktop target")
+    };
+    var browserTargetRestrictionPath = Path.Combine(outputRoot, "browser-target-restriction.xps");
+    foreach (var restriction in browserTargetRestrictions)
+    {
+        await File.WriteAllTextAsync(browserTargetRestrictionPath, restriction.Source);
+        var result = await driver.ValidateWithResultAsync(browserTargetRestrictionPath, "browser-wasm");
+        var diagnostic = result.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
+        Require(diagnostic is not null, $"Browser WASM {restriction.Symbol} target diagnostic");
+        Require(diagnostic.Category == "target", $"Browser WASM {restriction.Symbol} target category: {diagnostic.Category} {diagnostic.Description}");
+        Require(diagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == restriction.Symbol) == true, $"Browser WASM {restriction.Symbol} target symbol");
+        Require(diagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, $"Browser WASM {restriction.Symbol} active target");
+        Require(diagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == restriction.AllowedTargets) == true, $"Browser WASM {restriction.Symbol} allowed targets");
+    }
 }
 
 var browserArchivePath = Path.Combine(outputRoot, "browser-archive-memory.xps");
@@ -850,5 +862,10 @@ static void Require([DoesNotReturnIf(false)] bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
 }
+
+static bool IsMissingWasmWorkload(CompileResult result) => result.Errors.Any(diagnostic =>
+    diagnostic.DiagnosticCode == "XPS9001" &&
+    diagnostic.Description.Contains("wasm-tools", StringComparison.OrdinalIgnoreCase) &&
+    diagnostic.Description.Contains("not installed", StringComparison.OrdinalIgnoreCase));
 
 internal sealed record Case(string Source, string DiagnosticCode, string Category);

@@ -1236,5 +1236,12 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   generated-source paths, and native XML constructor diagnostics carry their
   source line. This is Windows evidence; native Linux/macOS FullTest execution,
   remaining legacy-path justification, and manual platform gates remain open.
+- [x] Keep the machine-interface diagnostic probe portable to Linux runners
+  without the optional `wasm-tools` workload. The focused regression run on
+  commit `597b366f` exposed that workload prerequisite masking the expected
+  browser-target diagnostic. The probe now skips only WASM-specific golden
+  target assertions when the compiler reports the missing workload; with the
+  workload installed, the full WASM target assertions still execute. Local
+  `CompilerMachineInterfaceProbe` passed on Windows with `wasm-tools` present.
 - [ ] Run native Linux/macOS and local Android/WASM interaction gates with legacy disabled.
 
