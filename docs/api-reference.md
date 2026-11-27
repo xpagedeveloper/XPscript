@@ -56,7 +56,7 @@ Stdout and stderr are drained concurrently to avoid pipe-buffer deadlocks. `Shel
 - [Supabase HTTP database](#supabase-http-database)
 - [Domino REST database](#domino-rest-database)
 - [XPAi](#xpai)
-- [XPAITool](#aitool)
+- [XPAITool](#xpaitool)
 - [UIForm](#uiform)
 - [UIListView](#uilistview)
 - [REST routes and binding](#rest-routes-and-binding)
