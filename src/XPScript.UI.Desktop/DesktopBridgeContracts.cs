@@ -163,7 +163,6 @@ public static class XpsUIDesktopRuntimeBridge
         var request = JsonSerializer.Deserialize<DesktopFormRequest>(json, JsonOptions)
             ?? throw new InvalidOperationException("Desktop UIForm request is empty.");
 
-        ApplyTheme(request.Theme);
         DesktopAccessibilityHost.ConfigureDefaultButtons(request.InstanceId, request.ShowDefaultButtons);
 
         var fields = request.Fields.Select(field => field.Type switch
@@ -219,7 +218,7 @@ public static class XpsUIDesktopRuntimeBridge
         return "<html><body style=\"margin:0;display:flex;align-items:center;justify-content:center;background:transparent\"><div id=\"carousel\" style=\"width:100%;height:100%;text-align:center\">" + sources + "<button onclick=\"move(-1)\">‹</button><button onclick=\"move(1)\">›</button></div><script>let i=" + field.CarouselIndex + ", slides=[...document.querySelectorAll('.slide')], loop=" + loop + ";function move(d){let n=i+d;if(n<0)n=loop?slides.length-1:0;if(n>=slides.length)n=loop?0:slides.length-1;slides[i].style.display='none';i=n;slides[i].style.display='block'}let ms=" + interval + ";if(ms>0)setInterval(()=>move(1),ms);</script></body></html>";
     }
 
-    private static void ApplyTheme(string theme)
+    internal static void ApplyTheme(string theme)
     {
         if (!IsSupportedPlatform()) return;
 

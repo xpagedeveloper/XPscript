@@ -128,6 +128,15 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
+  Write-Host 'BEGIN AST DefType syntax diagnostics'
+  $invalidDefType = Invoke-Bounded 'dotnet' @($compilerDll, 'ast-compile', './samples/core-invalid-deftype-range-error.xps', '-o', './out/fulltest/core-invalid-deftype-range-error', '--runtime=false', '--debug') $compileTimeoutMilliseconds 'AST invalid DefType range'
+  if ($invalidDefType.TimedOut -or $invalidDefType.ExitCode -eq 0 -or
+      $invalidDefType.Output -notmatch 'XPS1012' -or
+      $invalidDefType.Output -notmatch 'core-invalid-deftype-range-error\.xps:1:' -or
+      $invalidDefType.Output -notmatch 'A-1') {
+    throw "Invalid DefType range did not produce the expected AST syntax diagnostic.`n$($invalidDefType.Output)"
+  }
+  Write-Host 'END AST DefType syntax diagnostics'
   $jsonParseScope = Invoke-Bounded 'dotnet' @($compilerDll,'ast-run','./tests/ast-compile-probe/jsonparse-member-scope.xps','--no-daemon','--debug') $compileTimeoutMilliseconds 'AST JsonParse member scope'
   if ($jsonParseScope.ExitCode -ne 0 -or $jsonParseScope.Output -notmatch '(?m)^JSONPARSE_MEMBER_SCOPE_OK\r?$') { throw "JsonParse member scope regression: $($jsonParseScope.Output)" }
   $functionNotByRef = Run-Xps ./samples/function-not-byref-regression.xps function-not-byref-regression

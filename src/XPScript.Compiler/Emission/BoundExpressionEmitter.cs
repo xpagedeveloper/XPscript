@@ -777,7 +777,9 @@ public sealed class BoundExpressionEmitter
             : (binary.Right.SemanticType.IsNothing || binary.Right.SemanticType.IsNull || binary.Right.SemanticType.IsEmpty)
                 ? $"LSObjectIdentityRuntime.IsNothing({Emit(binary.Left)})"
                 : $"object.ReferenceEquals({Emit(binary.Left)}, {Emit(binary.Right)})"
-        : binary.Type == typeof(object)
+        : binary.Type == typeof(object) ||
+          (binary.OperatorKind is SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken &&
+           (binary.Left.Type == typeof(object) || binary.Right.Type == typeof(object)))
         ? $"((dynamic)({Emit(binary.Left)}) {EmitBinaryOperator(binary.OperatorKind, binary.Type)} (dynamic)({Emit(binary.Right)}))"
         : binary.OperatorKind == SyntaxKind.PlusToken && binary.Type == typeof(string)
         ? $"(Convert.ToString({Emit(binary.Left)}) + Convert.ToString({Emit(binary.Right)}))"

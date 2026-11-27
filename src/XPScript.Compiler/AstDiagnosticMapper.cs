@@ -10,6 +10,17 @@ internal static class AstDiagnosticMapper
         var start = SourceTextMap.GetPosition(source, diagnostic.Span.Start);
         var end = SourceTextMap.GetPosition(source, diagnostic.Span.End);
         var sourceLine = GetLine(source, diagnostic.Span.Start);
+        var properties = diagnostic.Properties?.ToList();
+        if (diagnostic.Code == "XPS1006" && properties is null)
+        {
+            properties =
+            [
+                new() { Name = "foundToken", Value = "end-of-file" },
+                new() { Name = "expectedConstruct", Value = "\"" }
+            ];
+            start = start with { Column = end.Column };
+            end = start with { Column = start.Column + 1 };
+        }
 
         return new CompileDiagnostic
         {
@@ -21,7 +32,9 @@ internal static class AstDiagnosticMapper
             Description = diagnostic.Message,
             DiagnosticCode = diagnostic.Code,
             Severity = "error",
-            Category = diagnostic.Code.StartsWith("XPS2", StringComparison.Ordinal) ? "semantic" : "syntax",
+            Category = CompilerDiagnosticCatalog.Find(diagnostic.Code)?.Category
+                ?? (diagnostic.Code.StartsWith("XPS2", StringComparison.Ordinal) ? "semantic" : "syntax"),
+            Properties = properties,
             SourceCode = sourceLine
         };
     }

@@ -330,7 +330,12 @@ internal sealed class UIFormAccessibilityPostProcessor
     {
         var rendererEnd = generated.IndexOf("        return html.ToString();", rendererStart, StringComparison.Ordinal);
         if (rendererEnd < 0) rendererEnd = generated.Length;
+        // The original renderer used __xps_uiform_submit. The current renderer
+        // emits the selected action as __xps_uiform_result; accessibility
+        // messages still need to be inserted before that submit control.
         var markerIndex = generated.IndexOf("__xps_uiform_submit", rendererStart, StringComparison.Ordinal);
+        if (markerIndex < 0)
+            markerIndex = generated.IndexOf("__xps_uiform_result", rendererStart, StringComparison.Ordinal);
         if (markerIndex < 0 || markerIndex >= rendererEnd) return -1;
         var lineStart = generated.LastIndexOf('\n', Math.Max(rendererStart, markerIndex - 1));
         lineStart = lineStart < rendererStart ? rendererStart : lineStart + 1;

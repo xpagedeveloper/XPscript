@@ -165,7 +165,8 @@ public sealed class StatementBinder(SymbolTable? symbols = null, XpTypeSymbol? r
         {
             _diagnostics.Add(new SyntaxDiagnostic(CompilerDiagnosticCodes.FunctionResultNameConflict,
                 $"Local variable '{syntax.IdentifierToken.Text}' conflicts with the function result name. Assign to '{functionName}' to return a value, or use a different local variable name.",
-                syntax.IdentifierToken.Span));
+                syntax.IdentifierToken.Span,
+                [new() { Name = "symbol", Value = syntax.IdentifierToken.Text }]));
             return null;
         }
 

@@ -20,7 +20,7 @@ internal sealed class ArchiveObjectPreprocessor
         "Name", "FullName", "Extension", "Size", "CompressedSize", "CompressionRatio", "Created", "Modified", "IsEncrypted", "CRC"
     ];
 
-    public string Transform(string source, string sourceName = "input.xps")
+    public string Transform(string source, string sourceName = "input.xps", bool preserveTypes = false)
     {
         var codeOnly = PreprocessorFeatureGate.CodeOnly(source);
         if (!PreprocessorFeatureGate.ContainsTypeReference(codeOnly, "Archive", "ArchiveEntry")) return source;
@@ -43,7 +43,7 @@ internal sealed class ArchiveObjectPreprocessor
             {
                 var name = dimNew.Groups[1].Value;
                 archiveVariables.Add(name);
-                output.Add(indent + $"Dim {name} As Variant");
+                output.Add(indent + $"Dim {name} As {(preserveTypes ? "Archive" : "Variant")}");
                 var args = dimNew.Groups[2].Value.Trim();
                 output.Add(indent + $"{name} = {CreateArchiveExpression(args, sourceName, lineIndex + 1, raw)}");
                 continue;

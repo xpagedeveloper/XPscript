@@ -56,9 +56,11 @@ public static class AstCompiler
 
     /// <summary>Emits validated C# through AST for hosts that own backend packaging.</summary>
     public static Task<string> GenerateSourceAsync(string sourcePath, string outputDirectory,
-        string? runtimeIdentifier = null, CancellationToken cancellationToken = default)
-        => CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, null,
-            ApplicationSecurityMode.Off, false, null, null, false, cancellationToken, emitSourceOnly: true);
+        string? runtimeIdentifier = null, CancellationToken cancellationToken = default, bool allowDynamicMembers = true)
+        => GenerateSourceWithMappedDiagnosticsAsync(sourcePath, outputDirectory, runtimeIdentifier, cancellationToken,
+            () => CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, null,
+                ApplicationSecurityMode.Off, false, null, null, false, cancellationToken,
+                emitSourceOnly: true, allowDynamicMembers: allowDynamicMembers));
 
     public static Task<string> GenerateRestrictedSourceAsync(string source, string sourcePath,
         string outputDirectory, string runtimeIdentifier, IReadOnlyList<string> sourceRoots,
@@ -79,8 +81,19 @@ public static class AstCompiler
         string? runtimeIdentifier,
         Func<string, string>? generatedSourceTransform,
         CancellationToken cancellationToken = default)
-        => CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, generatedSourceTransform,
-            ApplicationSecurityMode.Off, false, null, null, false, cancellationToken);
+        => GenerateSourceWithMappedDiagnosticsAsync(sourcePath, outputDirectory, runtimeIdentifier, cancellationToken,
+            () => CompileAsync(sourcePath, outputDirectory, runtimeIdentifier, generatedSourceTransform,
+                ApplicationSecurityMode.Off, false, null, null, false, cancellationToken));
+
+    private static async Task<string> GenerateSourceWithMappedDiagnosticsAsync(string sourcePath, string outputDirectory,
+        string? runtimeIdentifier, CancellationToken cancellationToken, Func<Task<string>> generate)
+    {
+        try { return await generate().ConfigureAwait(false); }
+        catch (CompilerException ex)
+        {
+            throw await RemapIncludeDiagnosticsAsync(ex, sourcePath, cancellationToken).ConfigureAwait(false);
+        }
+    }
 
     public static async Task<string> CompileAsync(string sourcePath, string outputDirectory, string? runtimeIdentifier,
         ApplicationSecurityMode securityMode = ApplicationSecurityMode.Off, bool restricted = false,
@@ -95,32 +108,50 @@ public static class AstCompiler
         }
         catch (CompilerException ex)
         {
-            // The AST binder reports expanded-source coordinates. Recover the
-            // physical Include location at the public boundary as well as in the
-            // early preprocessor validators, which keeps CLI diagnostics stable
-            // for errors raised later during binding/emission.
-            var rootSource = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
-            var includeResult = new IncludeSourcePreprocessor().Transform(rootSource, sourcePath);
-            var remapped = SourceMapDiagnostics.Remap(ex.Message, sourcePath, includeResult.Map);
-            var mappedDiagnostics = ex.GeneratedDiagnostics.Select(diagnostic =>
-            {
-                if (diagnostic.Line <= 0 || diagnostic.Line > includeResult.Map.Count) return diagnostic;
-                var location = includeResult.Map.Resolve(diagnostic.Line, sourcePath);
-                if (location.IncludeTrace is not { Count: > 0 }) return diagnostic;
-                diagnostic.File = Path.GetFileName(location.SourcePath);
-                diagnostic.Line = location.Line;
-                return diagnostic;
-            }).ToArray();
-            if (string.Equals(remapped, ex.Message, StringComparison.Ordinal) && mappedDiagnostics.SequenceEqual(ex.GeneratedDiagnostics)) throw;
-            throw new CompilerException(remapped, ex.DiagnosticCode, ex.Category, mappedDiagnostics);
+            throw await RemapIncludeDiagnosticsAsync(ex, sourcePath, cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private static async Task<CompilerException> RemapIncludeDiagnosticsAsync(
+        CompilerException exception, string sourcePath, CancellationToken cancellationToken)
+    {
+        // The AST binder reports expanded-source coordinates. Recover physical
+        // Include locations for every public AST entry point, including source
+        // generation used by CLI validation and MCP.
+        var rootSource = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        var includeResult = new IncludeSourcePreprocessor().Transform(rootSource, sourcePath);
+        var remapped = SourceMapDiagnostics.Remap(exception.Message, sourcePath, includeResult.Map);
+        var mappedDiagnostics = exception.GeneratedDiagnostics.Select(diagnostic =>
+        {
+            if (diagnostic.Line <= 0 || diagnostic.Line > includeResult.Map.Count) return diagnostic;
+            var location = includeResult.Map.Resolve(diagnostic.Line, sourcePath);
+            if (location.IncludeTrace is not { Count: > 0 }) return diagnostic;
+            var sourceLine = CompilerDiagnosticRedaction.MaskStringLiterals(location.SourceText).TrimEnd();
+            diagnostic.File = Path.GetFileName(location.SourcePath);
+            diagnostic.Line = location.Line;
+            if (diagnostic.EndLine > 0) diagnostic.EndLine = location.Line;
+            diagnostic.SourceCode = sourceLine;
+            diagnostic.MarkedCode = sourceLine + Environment.NewLine +
+                new string(' ', Math.Max(0, diagnostic.Position - 1)) + "^";
+            diagnostic.IncludeTrace = location.IncludeTrace.Select(frame => new CompileIncludeFrame
+            {
+                File = Path.GetFileName(frame.SourcePath),
+                Line = frame.Line,
+                IncludedFile = Path.GetFileName(frame.IncludedPath)
+            }).ToList();
+            return diagnostic;
+        }).ToArray();
+        if (string.Equals(remapped, exception.Message, StringComparison.Ordinal) && mappedDiagnostics.SequenceEqual(exception.GeneratedDiagnostics))
+            return exception;
+        return new CompilerException(remapped, exception.DiagnosticCode, exception.Category, mappedDiagnostics);
     }
 
     private static async Task<string> CompileAsync(string sourcePath, string outputDirectory, string? runtimeIdentifier,
         Func<string, string>? generatedSourceTransform,
         ApplicationSecurityMode securityMode, bool restricted,
         IReadOnlyList<string>? sourceRoots, IReadOnlyList<string>? sourcePreprocessors,
-        bool embedAssets, CancellationToken cancellationToken, bool emitSourceOnly = false, string? sourceOverride = null)
+        bool embedAssets, CancellationToken cancellationToken, bool emitSourceOnly = false, string? sourceOverride = null,
+        bool allowDynamicMembers = true)
     {
         var phaseTiming = new AstPhaseTiming();
         if (runtimeIdentifier is not null)
@@ -136,6 +167,17 @@ public static class AstCompiler
         var includeResult = new IncludeSourcePreprocessor().Transform(source, sourcePath);
         source = includeResult.Source;
         phaseTiming.Mark("preprocessing");
+        source = new MultilineStringPreprocessor().Transform(source, sourcePath);
+        source = new SourceLineContinuationPreprocessor().Transform(source, sourcePath);
+        source = new EscapedQuotePreprocessor().Transform(source);
+        if (Regex.IsMatch(source, @"(?im)^\s*Dim\s+[^'\r\n]*(?:,\s*(?:,|$))"))
+            _ = new GeneralSyntaxPreprocessor().Transform(source);
+        if (Regex.IsMatch(source, @"(?im)^\s*.*\b(?:Dim|Static|Sub|Function|Class|Type|Enum|Property)\b.*(?:\b__\w+|\bApplication\b|\bBody\b)"))
+            _ = new ReservedIdentifierPreprocessor().Transform(source, sourcePath);
+        if (Regex.IsMatch(source, @"(?im)^\s*(?:(?:Public|Private)\s+)?Type\s+[A-Za-z_]\w*\s*$"))
+            source = new TypeDeclarationPreprocessor().Transform(source, sourcePath);
+        new DateComparisonValidator().Validate(source, sourcePath);
+        new DefTypeValidator().Validate(source, sourcePath);
         var cachedArtifact = PersistentAstCompilationCache.TryGet(outputDirectory, sourcePath, source, includeResult,
             runtimeIdentifier, securityMode, restricted, sourceRoots, sourcePreprocessors, embedAssets, emitSourceOnly,
             generatedSourceTransform is not null);
@@ -151,6 +193,8 @@ public static class AstCompiler
             // Keep declaration-level overload diagnostics identical to the
             // legacy path before AST binding emits generated C#.
             new ClassOverloadValidator().Validate(source, sourcePath);
+            if (!Regex.IsMatch(source, @"(?im)^\s*(?:(?:Public|Private)\s+)?Class\b"))
+                new SourceTypeValidator().Validate(source, sourcePath, includeResult.Map, validateAssignments: false);
         }
         catch (CompilerException ex)
         {
@@ -203,12 +247,41 @@ public static class AstCompiler
         // preserves that language syntax instead of exposing ColonToken errors.
         source = new StatementSeparatorPreprocessor().Transform(source, sourcePath);
         if (usesArchive)
-            source = new ArchiveObjectPreprocessor().Transform(source, sourcePath);
+            source = new ArchiveObjectPreprocessor().Transform(source, sourcePath, preserveTypes: true);
         var usesNetworkTools = Regex.IsMatch(source,
             @"(?i)\bNetwork(?:Tools|PingResult|TraceHop|DnsResult|PortResult|UdpResult|HttpResult|TlsResult|InterfaceInfo|EndpointInfo|HostResult|SubnetInfo|TlsVersionResult|CertificateResult|HttpHeadersResult|HttpSecurityHeadersResult|RedirectResult|BannerResult|PortExposureInfo)\b");
         if (usesNetworkTools)
             source = new NetworkToolsObjectPreprocessor().Transform(source);
         var fullSource = source;
+        var repeatedParameterMode = Regex.Match(fullSource,
+            @"(?im)\b(?:Sub|Function|Property\s+(?:Get|Let|Set))\s+[^\r\n(]+\([^\r\n]*\bBy(?:Val|Ref)\s+By(?:Val|Ref)\b[^\r\n]*\)");
+        if (repeatedParameterMode.Success)
+        {
+            var declarationText = repeatedParameterMode.Value;
+            var parameter = Regex.Match(declarationText, @"\b(?<parameter>By(?:Val|Ref)\s+By(?:Val|Ref)\s+[^,)]*)", RegexOptions.IgnoreCase);
+            if (parameter.Success)
+            {
+                var lineStart = fullSource.LastIndexOf('\n', Math.Max(0, repeatedParameterMode.Index - 1)) + 1;
+                var lineEnd = fullSource.IndexOf('\n', repeatedParameterMode.Index);
+                if (lineEnd < 0) lineEnd = fullSource.Length;
+                var sourceLine = fullSource[lineStart..lineEnd].TrimEnd('\r');
+                var diagnostic = new CompileDiagnostic
+                {
+                    File = Path.GetFileName(sourcePath),
+                    Line = SourceTextMap.GetPosition(fullSource, repeatedParameterMode.Index).Line,
+                    Position = parameter.Index + 1,
+                    EndLine = SourceTextMap.GetPosition(fullSource, repeatedParameterMode.Index).Line,
+                    EndColumn = parameter.Index + parameter.Length + 1,
+                    Description = "Unsupported parameter declaration: " + parameter.Groups["parameter"].Value,
+                    DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax,
+                    Severity = "error",
+                    Category = "syntax",
+                    Properties = [new() { Name = "foundToken", Value = parameter.Groups["parameter"].Value }, new() { Name = "expectedConstruct", Value = "parameter declaration" }],
+                    SourceCode = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine)
+                };
+                throw new CompilerException(diagnostic.Description, diagnostic.DiagnosticCode, diagnostic.Category, [diagnostic]);
+            }
+        }
         var removedSaxCode = AstObjectSupportRegistry.RemoveStringsAndComments(fullSource);
         if (Regex.IsMatch(removedSaxCode, @"(?i)\b(?:NotesSAXParser|NotesSAXAttributeList|NotesSAXException)\b"))
             RejectUnsupported(sourcePath, removedSaxCode,
@@ -234,6 +307,16 @@ public static class AstCompiler
         }
         ValidateAstAiCallbacks(fullSource);
         var runtimeFeatures = RuntimeFeatures.Detect(fullSource);
+        if (usesNetworkTools)
+            runtimeFeatures = runtimeFeatures with { NetworkTools = true };
+        var activeTarget = runtimeIdentifier ?? CompilerDriver.CurrentRuntimeIdentifier();
+        var targetRestriction = runtimeFeatures.UnavailableFor(activeTarget).FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(targetRestriction.Symbol))
+            throw TargetUnavailable(targetRestriction.Symbol, activeTarget, targetRestriction.AllowedTargets, targetRestriction.Detail);
+        if (Regex.IsMatch(fullSource, @"(?i)\bNew\s+XPXml(?:Document|Element)\b"))
+            _ = new NativeXmlPreprocessor().Transform(fullSource);
+        if (Regex.IsMatch(fullSource, @"(?i)\bNew\s+(?:XPHttpClient|XPHttpRequest|XPJsonDocument|XPJsonObject|XPJsonArray|XPJsonElement|XPJsonSchema|XPHttpDbSupabase|XPDbSupabase|XPHttpDbDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAITool)\b"))
+            _ = new NativeHttpJsonPreprocessor().Transform(fullSource, sourcePath);
         var usesAi = runtimeFeatures.Ai;
         // Detect direct source references to the schema types and validation API.
         var usesJsonSchemaRuntime = Regex.IsMatch(source + Environment.NewLine + fullSource, @"(?i)\b(?:XPJsonSchema|XPJsonValidationResult|XPScriptJsonSchema|XPScriptJsonValidationResult|HasValidationSchema|SetValidationSchema|ValidateData|IsDataValid)\b") ||
@@ -655,11 +738,12 @@ public static class AstCompiler
         symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("Join", typeof(string), [typeof(object), typeof(object)], XpTypeSymbol.FromClr(typeof(string)), [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("CDate", typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
-        foreach (var builtin in new[] { "Base64Decode", "Base64Encode", "CByte", "CCur", "CSng", "CVar", "DataType", "DateAdd", "DateDiff", "Day", "FromBase64", "InstrB", "IsArray", "IsDate", "IsElement", "IsObject", "IsScalar", "LeftB", "ListTag", "LSet", "Month", "RegexValidate", "RightB", "RSet", "Space", "String", "StrLeft", "StrLeftBack", "StrReverse", "StrRight", "StrRightBack", "StrToken", "TimeNumber", "ToBase64", "UrlDecode", "UrlEncode", "MD5", "SHA1", "SHA256", "SHA384", "SHA512", "HMACSHA256", "HMACSHA384", "HMACSHA512" })
+        foreach (var builtin in new[] { "Base64Decode", "Base64Encode", "CByte", "CCur", "CSng", "CVar", "DataType", "DateAdd", "DateDiff", "Day", "FromBase64", "InstrB", "IsArray", "IsDate", "IsObject", "IsScalar", "LeftB", "ListTag", "LSet", "Month", "RegexValidate", "RightB", "RSet", "Space", "String", "StrLeft", "StrLeftBack", "StrReverse", "StrRight", "StrRightBack", "StrToken", "TimeNumber", "ToBase64", "UrlDecode", "UrlEncode", "MD5", "SHA1", "SHA256", "SHA384", "SHA512", "HMACSHA256", "HMACSHA384", "HMACSHA512" })
             symbols.Declare(new FunctionSymbol(builtin, typeof(object), [typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant]));
         // These predicates are Boolean-valued even though the compatibility
         // runtime exposes most legacy built-ins through Variant carriers.
         symbols.Declare(new FunctionSymbol("IsEmpty", typeof(bool), [typeof(object)], XpTypeSymbol.FromClr(typeof(bool)), [XpTypeSymbol.Variant]));
+        symbols.Declare(new FunctionSymbol("IsElement", typeof(bool), [typeof(object)], XpTypeSymbol.FromClr(typeof(bool)), [XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("String", typeof(object), [typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateAdd", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
         symbols.Declare(new FunctionSymbol("DateDiff", typeof(object), [typeof(object), typeof(object), typeof(object)], XpTypeSymbol.Variant, [XpTypeSymbol.Variant, XpTypeSymbol.Variant, XpTypeSymbol.Variant]));
@@ -853,7 +937,8 @@ public static class AstCompiler
                 semanticReturnType, procedureFunction?.Identifier.Text, result,
                 (procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text).ToUpperInvariant() +
                 "(" + string.Join(",", parameters.Select(parameter => (parameter.IsByRef ? "ref:" : "value:") + parameter.Type.FullName + ":" + parameter.SemanticType?.Name)) + ")",
-                sourcePath, source, fullSource, dependencies: includeResult.Dependencies, semanticContext: semanticContext);
+                sourcePath, source, fullSource, allowDynamicConversions: allowDynamicMembers,
+                dependencies: includeResult.Dependencies, semanticContext: semanticContext);
             var name = procedureSub?.Identifier.Text ?? procedureFunction!.Identifier.Text;
             // Roslyn's console entry point is case-sensitive; XPscript is not.
             if (name.Equals("Main", StringComparison.OrdinalIgnoreCase) && parameters.Length == 0)
@@ -2088,11 +2173,11 @@ internal static class Program
             foreach (var transfer in FlattenStatements(mainSyntax).OfType<GoToStatementSyntax>().Where(item => item.IsGoSub))
                 if (!helperSyntax.ContainsKey(transfer.Target.Text))
                     throw MappedDiagnosticFromTransformed(transfer.Span, sourcePath, transformedSource, fullSource, $"Unknown GoSub label '{transfer.Target.Text}'.");
-            var binder = new StatementBinder(scope, returnType, returnType is not null, true, functionName, result, identity,
+            var binder = new StatementBinder(scope, returnType, returnType is not null, allowDynamicConversions, functionName, result, identity,
                 allowDynamicConversions: allowDynamicConversions, implicitReceiver: implicitReceiver);
             var bound = mainSyntax.Select(binder.Bind).OfType<BoundStatement>().ToList();
             if (binder.Diagnostics.Count > 0)
-                throw SyntaxDiagnosticException(binder.Diagnostics[0], sourcePath, transformedSource, fullSource);
+                throw SyntaxDiagnosticsException(binder.Diagnostics, sourcePath, transformedSource, fullSource);
             var boundHelpers = new Dictionary<string, IReadOnlyList<BoundStatement>>(StringComparer.OrdinalIgnoreCase);
             var bindingHelpers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             IReadOnlyList<BoundStatement> InlineErrorHandlers(IReadOnlyList<BoundStatement> statements)
@@ -2122,11 +2207,11 @@ internal static class Program
                 if (!bindingHelpers.Add(name))
                     throw MappedDiagnosticFromTransformed(syntax[0].Span, sourcePath, transformedSource, fullSource,
                         $"Recursive GoSub helper cycle involving '{name}' is not supported.");
-                var helperBinder = new StatementBinder(scope, returnType, returnType is not null, true, functionName, result, identity,
+                var helperBinder = new StatementBinder(scope, returnType, returnType is not null, allowDynamicConversions, functionName, result, identity,
                     allowDynamicConversions: allowDynamicConversions, allowGoSubReturn: true, implicitReceiver: implicitReceiver);
                 var helperBound = syntax.Select(helperBinder.Bind).OfType<BoundStatement>().ToArray();
                 if (helperBinder.Diagnostics.Count > 0)
-                    throw SyntaxDiagnosticException(helperBinder.Diagnostics[0], sourcePath, transformedSource, fullSource);
+                    throw SyntaxDiagnosticsException(helperBinder.Diagnostics, sourcePath, transformedSource, fullSource);
                 foreach (var call in BoundStatementTraversal.Descendants(helperBound).OfType<BoundGoSubStatement>())
                     call.Body = BindGoSubHelper(call.Target);
                 helperBound = InlineErrorHandlers(helperBound).ToArray();
@@ -2309,18 +2394,57 @@ internal static class Program
         => SyntaxDiagnosticException(diagnostic, sourcePath, source, source);
 
     internal static CompilerException SyntaxDiagnosticException(SyntaxDiagnostic diagnostic, string sourcePath, string transformedSource, string fullSource)
+        => SyntaxDiagnosticsException([diagnostic], sourcePath, transformedSource, fullSource);
+
+    private static CompilerException SyntaxDiagnosticsException(IReadOnlyList<SyntaxDiagnostic> diagnostics, string sourcePath, string transformedSource, string fullSource)
     {
+        var diagnostic = diagnostics[0];
         var span = MapTransformedSpan(diagnostic.Span, transformedSource, fullSource);
         var start = SourceTextMap.GetPosition(fullSource, span.Start);
         var end = SourceTextMap.GetPosition(fullSource, span.End);
+        var diagnosticProperties = diagnostic.Properties?.ToList();
+        if (diagnostic.Code == "XPS1006" && diagnosticProperties is null)
+        {
+            diagnosticProperties = [new() { Name = "foundToken", Value = "end-of-file" }, new() { Name = "expectedConstruct", Value = "\"" }];
+            start = start with { Column = end.Column };
+            end = start with { Column = start.Column + 1 };
+        }
         var mapped = new CompileDiagnostic
         {
             File = Path.GetFileName(sourcePath), Line = start.Line, Position = start.Column,
             EndLine = end.Line, EndColumn = end.Column, Description = diagnostic.Message,
             DiagnosticCode = diagnostic.Code, Severity = "error",
-            Category = diagnostic.Code.StartsWith("XPS2", StringComparison.Ordinal) ? "semantic" : "syntax"
+            Category = CompilerDiagnosticCatalog.Find(diagnostic.Code)?.Category
+                ?? (diagnostic.Code.StartsWith("XPS2", StringComparison.Ordinal) ? "semantic" : "syntax"),
+            Properties = diagnosticProperties,
+            SourceCode = CompilerDiagnosticRedaction.MaskStringLiterals(GetSourceLine(fullSource, span.Start)),
+            MarkedCode = CompilerDiagnosticRedaction.MaskStringLiterals(GetSourceLine(fullSource, span.Start)) + Environment.NewLine +
+                new string(' ', Math.Max(0, start.Column - 1)) + "^"
         };
-        return new CompilerException(diagnostic.Message, diagnostic.Code, mapped.Category, [mapped]);
+        var mappedDiagnostics = diagnostics.Select(item =>
+        {
+            var itemSpan = MapTransformedSpan(item.Span, transformedSource, fullSource);
+            var itemStart = SourceTextMap.GetPosition(fullSource, itemSpan.Start);
+            var itemEnd = SourceTextMap.GetPosition(fullSource, itemSpan.End);
+            var itemProperties = item.Properties?.ToList();
+            if (item.Code == "XPS1006" && itemProperties is null)
+            {
+                itemProperties = [new() { Name = "foundToken", Value = "end-of-file" }, new() { Name = "expectedConstruct", Value = "\"" }];
+                itemEnd = itemStart with { Column = itemStart.Column + 1 };
+            }
+            var sourceLine = CompilerDiagnosticRedaction.MaskStringLiterals(GetSourceLine(fullSource, itemSpan.Start));
+            return new CompileDiagnostic
+            {
+                File = Path.GetFileName(sourcePath), Line = itemStart.Line, Position = itemStart.Column,
+                EndLine = itemEnd.Line, EndColumn = itemEnd.Column, Description = item.Message,
+                DiagnosticCode = item.Code, Severity = "error",
+                Category = CompilerDiagnosticCatalog.Find(item.Code)?.Category
+                    ?? (item.Code.StartsWith("XPS2", StringComparison.Ordinal) ? "semantic" : "syntax"),
+                Properties = itemProperties, SourceCode = sourceLine,
+                MarkedCode = sourceLine + Environment.NewLine + new string(' ', Math.Max(0, itemStart.Column - 1)) + "^"
+            };
+        }).ToArray();
+        return new CompilerException(diagnostic.Message, diagnostic.Code, mapped.Category, mappedDiagnostics);
     }
 
     internal static CompilerException MappedDiagnostic(TextSpan span, string sourcePath, string source, string message,
@@ -2426,6 +2550,24 @@ internal static class Program
         throw new CompilerException(message, CompilerDiagnosticCodes.TargetApiUnavailable, "platform", [diagnostic]);
     }
 
+    private static CompilerException TargetUnavailable(string symbol, string target, string allowedTargets, string? detail)
+    {
+        var message = $"'{symbol}' is not available for target '{target}'." + (string.IsNullOrWhiteSpace(detail) ? "" : " " + detail);
+        var diagnostic = new CompileDiagnostic
+        {
+            Description = message,
+            DiagnosticCode = CompilerDiagnosticCodes.TargetApiUnavailable,
+            Category = "target",
+            Properties =
+            [
+                new() { Name = "symbol", Value = symbol },
+                new() { Name = "target", Value = target },
+                new() { Name = "allowedTargets", Value = allowedTargets }
+            ]
+        };
+        return new CompilerException(message, CompilerDiagnosticCodes.TargetApiUnavailable, "target", [diagnostic]);
+    }
+
     internal static Type ResolveRuntimeType(string? name) => name?.Trim().ToUpperInvariant() switch
     {
         "BOOLEAN" => typeof(bool), "BYTE" => typeof(byte), "STRING" => typeof(string), "INTEGER" or "LONG" => typeof(long),
@@ -2445,6 +2587,16 @@ internal static class Program
         "object" when !type.Equals("Variant", StringComparison.OrdinalIgnoreCase) => "object",
         var value => value
     };
+
+    private static string GetSourceLine(string source, int offset)
+    {
+        offset = Math.Clamp(offset, 0, source.Length);
+        var start = offset;
+        while (start > 0 && source[start - 1] is not '\r' and not '\n') start--;
+        var end = offset;
+        while (end < source.Length && source[end] is not '\r' and not '\n') end++;
+        return source[start..end];
+    }
 
     private static string NativeConversion(string type, string value) => type.Trim().ToUpperInvariant() switch
     {

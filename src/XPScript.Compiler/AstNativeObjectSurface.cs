@@ -71,7 +71,7 @@ internal static class AstNativeObjectSurface
 
     internal static IEnumerable<CompilerSymbolDefinition> Catalog(string[] names, IEnumerable<Member> members, Func<string, string> languageType) =>
         names.Select(name => new CompilerSymbolDefinition(name, "class", name, [], null, [], "api." + name))
-        .Concat(members.GroupBy(m => m.Owner.Length == 0 ? m.Name : m.Owner + "." + m.Name).Select(group =>
+        .Concat(members.GroupBy(m => m.Owner.Length == 0 ? m.Name : languageType(m.Owner) + "." + m.Name).Select(group =>
         {
             var member = group.Last();
             var signature = string.Join("; ", group.Select(m => group.Key + (m.IsProperty ? "" : "(" + string.Join(", ",

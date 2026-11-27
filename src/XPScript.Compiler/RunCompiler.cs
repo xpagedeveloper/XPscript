@@ -338,6 +338,9 @@ internal static class RunCompiler
             var sdkDirectory = Path.Combine(dotnetRoot, "sdk", selectedSdk.ToString());
             psi.Environment["MSBuildSDKsPath"] = Path.Combine(sdkDirectory, "Sdks");
             psi.Environment["MSBUILD_EXE_PATH"] = Path.Combine(sdkDirectory, OperatingSystem.IsWindows() ? "MSBuild.exe" : "MSBuild");
+            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_SDKS_DIR"] = sdkDirectory;
+            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_SDKS_VER"] = selectedSdk.ToString();
+            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR"] = dotnetRoot;
         }
         const string extensionsPrefix = "-p:MSBuildProjectExtensionsPath=";
         var extensions = psi.ArgumentList.FirstOrDefault(argument => argument.StartsWith(extensionsPrefix, StringComparison.Ordinal));

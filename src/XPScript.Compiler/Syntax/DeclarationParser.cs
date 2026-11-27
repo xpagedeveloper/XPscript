@@ -456,7 +456,11 @@ public sealed class DeclarationParser
         }
 
         var end = _baseOffset + _text.Length;
-        _diagnostics.Add(new SyntaxDiagnostic("XPS1012", $"Expected 'End {targetName}' to close declaration.", new TextSpan(end, 0)));
+        var header = lines.FirstOrDefault()?.Text ?? string.Empty;
+        _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Missing procedure terminator.",
+            new TextSpan(_baseOffset, header.Length),
+            [new() { Name = "foundToken", Value = "end-of-file" },
+             new() { Name = "expectedConstruct", Value = targetName is "Sub" or "Function" ? "End Sub or End Function" : "End " + targetName }]));
 
         var bodyStartAtEof = _headerBodyStartOffset;
         var bodyParser = new StatementParser(_text.Substring(bodyStartAtEof), _baseOffset + bodyStartAtEof);

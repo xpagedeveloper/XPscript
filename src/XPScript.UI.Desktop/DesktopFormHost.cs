@@ -28,6 +28,7 @@ public static class DesktopFormHost
     public static string ShowDialog(string requestJson, Func<string, string, string>? eventCallback)
     {
         var request = XpsUIDesktopRuntimeBridge.ParseRequest(requestJson);
+        XpsUIDesktopRuntimeBridge.ApplyTheme(request.Theme);
         if (!XpsUIDesktopRuntimeBridge.IsSupportedPlatform())
             throw new PlatformNotSupportedException("XPScript desktop UIForm is supported on Windows, Linux and macOS.");
 

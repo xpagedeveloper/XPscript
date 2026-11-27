@@ -127,6 +127,25 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"'{typeName}' requires {required} constructor arguments.");
             return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User(typeName));
         }
+        if (typeName.Equals("XPDBSQLite", StringComparison.OrdinalIgnoreCase))
+        {
+            if (syntax.Arguments.Count != 1)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "'XPDBSQLite' requires a database path argument.");
+            return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User("XPDBSQLite"));
+        }
+        if (typeName.Equals("XPDbSupabase", StringComparison.OrdinalIgnoreCase) || typeName.Equals("XPSupabaseDB", StringComparison.OrdinalIgnoreCase))
+        {
+            if (syntax.Arguments.Count is < 1 or > 2)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, "'XPDbSupabase' requires a connection string or REST base URL and API key.");
+            return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User("XPDbSupabase"));
+        }
+        if (typeName.Equals("XPJSONObject", StringComparison.OrdinalIgnoreCase) || typeName.Equals("XPJSONArray", StringComparison.OrdinalIgnoreCase) || typeName.Equals("XPJSONElement", StringComparison.OrdinalIgnoreCase))
+        {
+            var maxArguments = typeName.Equals("XPJSONElement", StringComparison.OrdinalIgnoreCase) ? 2 : 0;
+            if (syntax.Arguments.Count > maxArguments)
+                return Error(syntax, CompilerDiagnosticCodes.NoMatchingOverload, $"No matching constructor for '{typeName}'.");
+            return new BoundNewExpression(typeof(object), syntax.Arguments.Select(Bind).ToArray(), XpTypeSymbol.User(typeName));
+        }
         if (typeName.Equals("XPDbMsSql", StringComparison.OrdinalIgnoreCase) || typeName.Equals("XPDBMsSQL", StringComparison.OrdinalIgnoreCase))
         {
             if (syntax.Arguments.Count != 1)
@@ -324,7 +343,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             return new BoundIndexExpression(expression, index, csvElement.RuntimeType, csvElement);
         if (expression.SemanticType is { IsList: true, ElementType: { } element })
             return new BoundIndexExpression(expression, index, element.RuntimeType, element);
-        if (_allowDynamicMembers && expression.SemanticType.IsVariant)
+        if (expression.SemanticType.IsVariant)
             return new BoundIndexExpression(expression, index, typeof(object), XpTypeSymbol.Variant);
         if (index.Type != typeof(long))
             return Error(syntax.Index, CompilerDiagnosticCodes.ArgumentTypeMismatch, "Array index must be an integer.");
@@ -375,6 +394,20 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             var element = list.SemanticType!.ElementType!;
             return new BoundIndexExpression(new BoundNameExpression(list), Bind(syntax.Elements[0]), element.RuntimeType, element);
         }
+        if (syntax.Elements.Count == 1 && _symbols.TryLookup(syntax.ArrayIdentifier.Text, out symbol) &&
+            symbol is VariableSymbol or LocalSymbol or ParameterSymbol or FieldSymbol)
+        {
+            var array = new BoundNameExpression(symbol);
+            if (array.SemanticType.IsArray && array.SemanticType.ElementType is { } element)
+                return new BoundIndexExpression(array, Bind(syntax.Elements[0]), element.RuntimeType, element);
+            if (array.SemanticType.IsVariant)
+                return new BoundIndexExpression(array, Bind(syntax.Elements[0]), typeof(object), XpTypeSymbol.Variant);
+        }
+        if (syntax.Elements.Count == 1 && implicitReceiver is not null &&
+            _symbols.TryLookupMember(implicitReceiver.SemanticType, syntax.ArrayIdentifier.Text, out var field) &&
+            field is PropertySymbol { SemanticType.IsArray: true, SemanticType.ElementType: { } fieldElement } arrayField)
+            return new BoundIndexExpression(BindProperty(syntax, implicitReceiver, arrayField), Bind(syntax.Elements[0]),
+                fieldElement.RuntimeType, fieldElement);
         if (syntax.ArrayIdentifier.Text.Equals("Array", StringComparison.OrdinalIgnoreCase))
         {
             var arrayArguments = syntax.Elements.Select(Bind).ToArray();
@@ -439,7 +472,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
                 return BindIndexedProperty(syntax, new BoundNameExpression(me), indexed);
             if (name.Equals("CsvSave", StringComparison.OrdinalIgnoreCase) || name.Equals("CsvWriteFile", StringComparison.OrdinalIgnoreCase))
                 return Error(nameSyntax.IdentifierToken, CompilerDiagnosticCodes.RemovedNativeApi,
-                    "CSV file output is available only through XPCsvDocument.Save or XPCsvDocument.SaveFile.");
+                    "CSV file output is available only through XPCsvDocument.Save or XPCsvDocument.SaveFile.",
+                    [new() { Name = "symbol", Value = "CsvSave/CsvWriteFile" },
+                     new() { Name = "expectedConstruct", Value = "XPCsvDocument.Save or XPCsvDocument.SaveFile" }]);
             if (_symbols.TryLookup(name, out var collectionSymbol) && collectionSymbol is LocalSymbol or ParameterSymbol &&
                 new BoundNameExpression(collectionSymbol).SemanticType.IsList && syntax.Arguments.Count != 1)
                 return Error(syntax, CompilerDiagnosticCodes.ArgumentCountMismatch, "List access requires exactly one tag.");
@@ -453,7 +488,7 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             if (_symbols.TryLookup(name, out var indexedSymbol) &&
                 (((indexedSymbol is LocalSymbol local) &&
                   (local.Type.IsArray || local.SemanticType?.IsArray == true || local.IsDynamicArray || local.ArrayRank > 1)) ||
-                 indexedSymbol is ParameterSymbol { SemanticType.IsArray: true }) && syntax.Arguments.Count > 0)
+                 indexedSymbol is ParameterSymbol { SemanticType.IsArray: true } or FieldSymbol { SemanticType.IsArray: true }) && syntax.Arguments.Count > 0)
             {
                 var array = new BoundNameExpression(indexedSymbol);
                 var indices = syntax.Arguments.Select(Bind).ToArray();
@@ -464,6 +499,12 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             }
             if (_symbols.TryLookup(name, out indexedSymbol) && indexedSymbol is LocalSymbol arrayLocal && arrayLocal.Type.IsArray && syntax.Arguments.Count == 0)
                 return new BoundNameExpression(arrayLocal);
+            if (_symbols.TryLookup(name, out indexedSymbol) && indexedSymbol is LocalSymbol or ParameterSymbol or FieldSymbol &&
+                new BoundNameExpression(indexedSymbol).SemanticType.IsVariant && syntax.Arguments.Count == 1)
+            {
+                var receiver = new BoundNameExpression(indexedSymbol);
+                return new BoundIndexExpression(receiver, Bind(syntax.Arguments[0]), typeof(object), XpTypeSymbol.Variant);
+            }
             if (_allowDynamicMembers && _symbols.TryLookup(name, out var dynamicSymbol) && dynamicSymbol is LocalSymbol dynamicLocal && dynamicLocal.Type == typeof(object) && dynamicLocal.SemanticType?.IsVariant == true && syntax.Arguments.Count == 1)
             {
                 var index = Bind(syntax.Arguments[0]);
@@ -481,12 +522,15 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             if (receiver.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) && name.Equals("WriteFile", StringComparison.OrdinalIgnoreCase))
                 return Error(memberName, CompilerDiagnosticCodes.RemovedNativeApi, "XPCsvDocument.WriteFile was removed. Use Save or SaveFile.");
             if (receiver.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) && name.Equals("Load", StringComparison.OrdinalIgnoreCase) && syntax.Arguments.Count is < 1 or > 4)
-                return Error(syntax, CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.Load requires path and optional encoding, delimiter, and hasHeaders arguments.");
+                return Error(syntax, CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.Load requires path and optional encoding, delimiter, and hasHeaders arguments.",
+                    NativeArgumentProperties("XPCsvDocument.Load", "1..4", syntax.Arguments.Count));
             if (receiver.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) &&
                 (name.Equals("Save", StringComparison.OrdinalIgnoreCase) || name.Equals("SaveFile", StringComparison.OrdinalIgnoreCase)) && syntax.Arguments.Count is < 1 or > 2)
-                return Error(syntax, CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.Save requires path and optional encoding arguments.");
+                return Error(syntax, CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.Save requires path and optional encoding arguments.",
+                    NativeArgumentProperties("XPCsvDocument.Save", "1..2", syntax.Arguments.Count));
             if (receiver.SemanticType.Name.Equals("XPCsvDocument", StringComparison.OrdinalIgnoreCase) && name.Equals("FromBytes", StringComparison.OrdinalIgnoreCase) && syntax.Arguments.Count is < 1 or > 2)
-                return Error(syntax, CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.FromBytes requires bytes and an optional encoding argument.");
+                return Error(syntax, CompilerDiagnosticCodes.InvalidNativeArgumentList, "XPCsvDocument.FromBytes requires bytes and an optional encoding argument.",
+                    NativeArgumentProperties("XPCsvDocument.FromBytes", "1..2", syntax.Arguments.Count));
             var memberKey = receiver.SemanticType.Name + "." + name;
             var memberSymbols = _symbols.LookupMembers(receiver.SemanticType, name);
             if (memberSymbols.Count == 0 && _symbols.TryLookup(memberKey, out var qualifiedMember))
@@ -864,6 +908,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
             return new BoundBinaryExpression(left, op, right, typeof(bool));
         if (_allowDynamicMembers && op == SyntaxKind.PlusToken && (left.Type == typeof(string) || right.Type == typeof(string)))
             return new BoundBinaryExpression(left, op, right, typeof(string));
+        if (op is SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken or SyntaxKind.LessToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterToken or SyntaxKind.GreaterOrEqualsToken &&
+            (left.Type == typeof(long) || left.Type == typeof(double)) && (right.Type == typeof(long) || right.Type == typeof(double)))
+            return new BoundBinaryExpression(left, op, right, typeof(bool));
         if (op is SyntaxKind.LessToken or SyntaxKind.LessOrEqualsToken or SyntaxKind.GreaterToken or SyntaxKind.GreaterOrEqualsToken &&
             left.Type == right.Type && (left.Type == typeof(long) || left.Type == typeof(double)))
             return new BoundBinaryExpression(left, op, right, typeof(bool));
@@ -871,8 +918,9 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
         // Keep mixed typed operands dynamic so native values (for example JSON
         // element metadata) can be compared with string/number literals without
         // forcing an invalid CLR operator during generated-code compilation.
-        if (_allowDynamicMembers && op is SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken && left.Type != right.Type)
-            return new BoundBinaryExpression(left, op, right, typeof(object));
+        if (op is SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken && left.Type != right.Type &&
+            (_allowDynamicMembers || left.SemanticType.IsVariant || right.SemanticType.IsVariant))
+            return new BoundBinaryExpression(left, op, right, typeof(bool));
         if (op is SyntaxKind.EqualsToken or SyntaxKind.LessGreaterToken && left.Type == right.Type)
             return new BoundBinaryExpression(left, op, right, typeof(bool));
         if (op == SyntaxKind.IsKeyword && (left.Type == typeof(object) || right.Type == typeof(object)))
@@ -891,12 +939,59 @@ public sealed class ExpressionBinder(SymbolTable? symbols = null, bool allowDyna
     private BoundExpression Error(SyntaxNode syntax, string code, string message) =>
         Error(syntax.Span, code, message);
 
+    private BoundExpression Error(SyntaxNode syntax, string code, string message, IReadOnlyList<CompileDiagnosticProperty> properties)
+    {
+        _diagnostics.Add(new SyntaxDiagnostic(code, message, syntax.Span, properties));
+        return new BoundLiteralExpression(null, typeof(object));
+    }
+
+    private BoundExpression Error(SyntaxToken token, string code, string message, IReadOnlyList<CompileDiagnosticProperty> properties)
+    {
+        _diagnostics.Add(new SyntaxDiagnostic(code, message, token.Span, properties));
+        return new BoundLiteralExpression(null, typeof(object));
+    }
+
+    private static IReadOnlyList<CompileDiagnosticProperty> NativeArgumentProperties(string symbol, string expected, int actual) =>
+    [
+        new() { Name = "symbol", Value = symbol },
+        new() { Name = "expectedArgumentCount", Value = expected },
+        new() { Name = "actualArgumentCount", Value = actual.ToString(System.Globalization.CultureInfo.InvariantCulture) },
+        new() { Name = "expectedConstruct", Value = "valid native argument list" }
+    ];
+
     private BoundExpression Error(SyntaxToken token, string code, string message) =>
         Error(token.Span, code, message);
 
     private BoundExpression Error(TextSpan span, string code, string message)
     {
-        _diagnostics.Add(new SyntaxDiagnostic(code, message, span));
+        IReadOnlyList<CompileDiagnosticProperty>? properties = null;
+        if (code == CompilerDiagnosticCodes.UnknownSymbol)
+        {
+            var start = message.IndexOf('\'');
+            var end = start < 0 ? -1 : message.IndexOf('\'', start + 1);
+            if (start >= 0 && end > start + 1)
+                properties = [new() { Name = "symbol", Value = message[(start + 1)..end] }];
+        }
+        else if (code == CompilerDiagnosticCodes.UnknownMember)
+        {
+            var quoted = new List<string>();
+            var index = 0;
+            while ((index = message.IndexOf('\'', index)) >= 0)
+            {
+                var end = message.IndexOf('\'', index + 1);
+                if (end < 0) break;
+                quoted.Add(message[(index + 1)..end]);
+                index = end + 1;
+            }
+            if (quoted.Count > 0)
+                properties =
+                [
+                    new() { Name = "member", Value = quoted[0] },
+                    new() { Name = "symbol", Value = quoted[0] },
+                    .. quoted.Skip(1).Select(value => new CompileDiagnosticProperty { Name = "receiverType", Value = value })
+                ];
+        }
+        _diagnostics.Add(new SyntaxDiagnostic(code, message, span, properties));
         return new BoundLiteralExpression(null, typeof(object));
     }
 }

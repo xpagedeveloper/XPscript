@@ -7,7 +7,7 @@ internal sealed class EscapedQuotePreprocessor
     private static readonly HashSet<string> SafeFollowingKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
         "Then", "Else", "ElseIf", "And", "Or", "Xor", "Like", "To", "Step", "For", "As", "Alias",
-        "WindowsLib", "WindowsAlias", "LinuxLib", "LinuxAlias", "MacOSLib", "MacOSAlias"
+        "WindowsLib", "WindowsAlias", "LinuxLib", "LinuxAlias", "MacOSLib", "MacOSAlias", "Unicode"
     };
 
     public string Transform(string source)

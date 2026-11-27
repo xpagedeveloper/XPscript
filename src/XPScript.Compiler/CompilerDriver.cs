@@ -152,7 +152,7 @@ public sealed class CompilerDriver
             string generatedSource;
             try
             {
-                generatedSource = await AstCompiler.GenerateSourceAsync(sourcePath, astWorkspace, rid);
+                generatedSource = await AstCompiler.GenerateSourceAsync(sourcePath, astWorkspace, rid, allowDynamicMembers: false);
             }
             finally
             {

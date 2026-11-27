@@ -35,8 +35,8 @@ Class Zero
 End Class
 Class Names
     Public Value As Long
-    Public Sub New(Optional ByRef __xpsOptional0 As Long = 3, Optional ByRef P0 As Long = Mutate(__xpsOptional0), Optional ByVal __xpsOptional0__value As Long = 1)
-        Value = __xpsOptional0 + P0
+    Public Sub New(Optional ByRef optionalZero As Long = 3, Optional ByRef P0 As Long = Mutate(optionalZero), Optional ByVal optionalValue As Long = 1)
+        Value = optionalZero + P0
     End Sub
 End Class
 Function Mutate(ByRef value As Long) As Long

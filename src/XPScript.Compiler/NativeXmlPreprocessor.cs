@@ -14,8 +14,10 @@ internal sealed class NativeXmlPreprocessor
         var output = new List<string>(lines.Length + 8);
         var nativeVariables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var raw in lines)
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
+            var raw = lines[lineIndex];
+            var sourceLineNumber = lineIndex + 1;
             var indent = raw[..(raw.Length - raw.TrimStart().Length)];
             var line = raw.Trim();
 
@@ -26,7 +28,7 @@ internal sealed class NativeXmlPreprocessor
                 var type = dimNew.Groups[2].Value;
                 nativeVariables.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
-                output.Add(indent + $"{name} = {CreateExpression(type, dimNew.Groups[3].Value, raw)}");
+                output.Add(indent + $"{name} = {CreateExpression(type, dimNew.Groups[3].Value, raw, sourceLineNumber)}");
                 continue;
             }
 
@@ -60,6 +62,7 @@ internal sealed class NativeXmlPreprocessor
         string diagnosticCode,
         string message,
         string sourceLine,
+        int sourceLineNumber,
         params (string Name, string Value)[] properties)
     {
         var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
@@ -67,7 +70,9 @@ internal sealed class NativeXmlPreprocessor
         var diagnostic = new CompileDiagnostic
         {
             File = Path.GetFileName(ExpandedSourceContext.Current?.SourcePath ?? "script.xps"),
+            Line = sourceLineNumber,
             Position = position,
+            EndLine = sourceLineNumber,
             EndColumn = position + 3,
             Description = message,
             DiagnosticCode = diagnosticCode,
@@ -83,16 +88,16 @@ internal sealed class NativeXmlPreprocessor
         return new CompilerException(message, diagnosticCode, "syntax", [diagnostic]);
     }
 
-    private static string CreateExpression(string type, string rawArguments, string sourceLine)
+    private static string CreateExpression(string type, string rawArguments, string sourceLine, int sourceLineNumber)
     {
         var args = rawArguments.Trim();
         if (type.Equals("XPXmlDocument", StringComparison.OrdinalIgnoreCase))
             return string.IsNullOrWhiteSpace(args) ? "XPScriptNativeXml.CreateDocument()" : $"XPScriptNativeXml.Parse({args})";
         if (type.Equals("XPXmlElement", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(args)) throw NativeConstructorDiagnostic(CompilerDiagnosticCodes.MissingConstructorArgument, "XPXmlElement requires an element name argument.", sourceLine, ("symbol", "XPXmlElement"), ("symbolKind", "type"), ("expectedArgument", "element name"));
+            if (string.IsNullOrWhiteSpace(args)) throw NativeConstructorDiagnostic(CompilerDiagnosticCodes.MissingConstructorArgument, "XPXmlElement requires an element name argument.", sourceLine, sourceLineNumber, ("symbol", "XPXmlElement"), ("symbolKind", "type"), ("expectedArgument", "element name"));
             return $"XPScriptNativeXml.CreateElement({args})";
         }
-        throw NativeConstructorDiagnostic(CompilerDiagnosticCodes.InvalidNativeConstructor, "Only XPXmlDocument and XPXmlElement can be created with New.", sourceLine, ("symbol", type), ("symbolKind", "type"), ("expectedConstruct", "New XPXmlDocument or New XPXmlElement"));
+        throw NativeConstructorDiagnostic(CompilerDiagnosticCodes.InvalidNativeConstructor, "Only XPXmlDocument and XPXmlElement can be created with New.", sourceLine, sourceLineNumber, ("symbol", type), ("symbolKind", "type"), ("expectedConstruct", "New XPXmlDocument or New XPXmlElement"));
     }
 }

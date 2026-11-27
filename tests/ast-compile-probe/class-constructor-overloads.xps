@@ -67,9 +67,9 @@ Function MakeRecord(Optional ByVal ignored As Boolean = False) As Variant
 End Function
 Class HeapChoice
     Public Value As Long
-    Public Sub New(Optional ByRef __xpsTag As Long = 0)
-        __xpsTag = __xpsTag + 1
-        Value = __xpsTag
+    Public Sub New(Optional ByRef tagValue As Long = 0)
+        tagValue = tagValue + 1
+        Value = tagValue
     End Sub
     Public Sub New(ByVal text As String)
         Value = 99

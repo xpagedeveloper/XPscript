@@ -35,8 +35,8 @@ Class Zero
 End Class
 Class Names
     Public Value As Long
-    Public Sub New(Optional ByVal P0 As Long = 7, Optional ByVal __xpsOptional1 As Long = P0 + 1)
-        Value = __xpsOptional1
+    Public Sub New(Optional ByVal P0 As Long = 7, Optional ByVal optionalValue As Long = P0 + 1)
+        Value = optionalValue
     End Sub
 End Class
 Function NextValue(ByVal seed As Long) As Long

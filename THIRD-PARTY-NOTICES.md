@@ -60,6 +60,7 @@ The MIT license text is available at [opensource.org/licenses/MIT](https://opens
 
 ### Apache License 2.0
 
+- `XamlMcp.Avalonia` (`1.0.0-preview.3`) is an in-process Avalonia inspection tool distributed under the Apache License 2.0. It is used only by desktop smoke-test projects and is not included in compiler-generated applications.
 - `Xamarin.AndroidX.Camera.Camera2`, `Xamarin.AndroidX.Camera.Core`, `Xamarin.AndroidX.Camera.View`, `Xamarin.AndroidX.Lifecycle.LiveData.Core`, `Xamarin.AndroidX.Media3.ExoPlayer`, and `Xamarin.AndroidX.Media3.Ui` are AndroidX binding packages distributed under the Apache License 2.0. Release packages must preserve their NuGet-generated license and notice files.
 
 - `Magick.NET-Q16-AnyCPU` — [Magick.NET](https://github.com/dlemstra/Magick.NET) (`14.17.1`) is the XPImage runtime backend and is distributed under the Apache License 2.0. Magick.NET packages include the ImageMagick native runtime used for image decoding, encoding, metadata, drawing and image processing. Applications that use XPImage include the applicable Magick.NET/ImageMagick package license and notice material in the compiler-generated `Third-party-license.txt`.

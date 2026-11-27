@@ -52,6 +52,28 @@ public sealed class StatementParser
 
     private StatementSyntax ParseCurrentStatement()
     {
+        if (Current.Kind == SyntaxKind.EndKeyword && PeekKind(1) == SyntaxKind.SelectKeyword)
+        {
+            var end = NextToken();
+            var select = NextToken();
+            var span = TextSpan.FromBounds(end.Span.Start, select.Span.End);
+            _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Unexpected End Select.", span,
+                [new() { Name = "foundToken", Value = "End Select" },
+                 new() { Name = "expectedConstruct", Value = "Select Case statement" }]));
+            return new ExpressionStatementSyntax(new NameExpressionSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, "EndSelect", null, span)));
+        }
+        if (Current.Kind == SyntaxKind.EndKeyword && PeekKind(1) == SyntaxKind.IdentifierToken &&
+            _tokens[Math.Min(_position + 1, _tokens.Length - 1)].Text.Equals("With", StringComparison.OrdinalIgnoreCase))
+        {
+            var end = NextToken();
+            var with = NextToken();
+            var span = TextSpan.FromBounds(end.Span.Start, with.Span.End);
+            _diagnostics.Add(new SyntaxDiagnostic("XPS1012", "Unexpected End With.", span,
+                [new() { Name = "foundToken", Value = "End With" },
+                 new() { Name = "expectedConstruct", Value = "With statement" }]));
+            return new ExpressionStatementSyntax(new NameExpressionSyntax(new SyntaxToken(SyntaxKind.IdentifierToken, "EndWith", null, span)));
+        }
+
         if (IsIdentifier("Const"))
         {
             var start = Current.Span.Start;
@@ -1327,8 +1349,15 @@ public sealed class StatementParser
         return new CallStatementSyntax(callKeyword, expression);
     }
 
-    private StatementSyntax ParseExpressionStatement() =>
-        new ExpressionStatementSyntax(ParseExpressionUntilLineEnd());
+    private StatementSyntax ParseExpressionStatement()
+    {
+        var expression = ParseExpressionUntilLineEnd();
+        if (expression is NameExpressionSyntax name)
+            _diagnostics.Add(new SyntaxDiagnostic("XPS1012", $"Unsupported statement: {name.IdentifierToken.Text}.", name.Span,
+                [new() { Name = "foundToken", Value = name.IdentifierToken.Text },
+                 new() { Name = "expectedConstruct", Value = "supported XPScript statement" }]));
+        return new ExpressionStatementSyntax(expression);
+    }
 
     private StatementSyntax ParseInlineStatement(int end)
     {

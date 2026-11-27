@@ -46,8 +46,8 @@ Class TextRecord
 End Class
 Class Names
     Public Value As Long
-    Public Sub New(ByRef P0 As Long, Optional ByVal __xpsOptional1 As Long = P0 + 1)
-        P0 = P0 + __xpsOptional1
+    Public Sub New(ByRef P0 As Long, Optional ByVal optionalValue As Long = P0 + 1)
+        P0 = P0 + optionalValue
         Value = P0
     End Sub
 End Class

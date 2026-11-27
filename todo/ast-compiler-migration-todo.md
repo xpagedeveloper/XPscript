@@ -1222,5 +1222,19 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   Windows verification passed for AST CLI shard 1, the focused default CLI
   fixtures, constructor/destructor, XML, Application, HTTP/TLS, spreadsheet,
   and the full MCP protocol probe.
+- [x] Close the 2026-11-27 Windows language/MCP checkpoint after the final
+  compatibility fixes. `run-fulltests.ps1 -Suite language` passed end-to-end,
+  including all six AST CLI shards, the compatibility/diagnostic corpus,
+  ByRef cross-platform fixture, binding/emission probes, and AST compilation
+  target checks for Windows/Linux/macOS. `CompilerMachineInterfaceProbe` and
+  `CompilerMcpProtocolProbe` also passed on Windows. MCP coverage verifies
+  `Application.Args` as a read-only Variant array, command-line argument access,
+  and the highest zero-based index via `UBound(Application.Args)`; indexed
+  local Variant values, `IsElement` Boolean typing, and mixed Variant
+  comparisons also retain their expected AST binding behavior. Include
+  diagnostics now map back to the physical included file in compile and
+  generated-source paths, and native XML constructor diagnostics carry their
+  source line. This is Windows evidence; native Linux/macOS FullTest execution,
+  remaining legacy-path justification, and manual platform gates remain open.
 - [ ] Run native Linux/macOS and local Android/WASM interaction gates with legacy disabled.
 

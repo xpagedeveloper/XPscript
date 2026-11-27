@@ -31,6 +31,7 @@ internal static class CompilerDiagnosticParser
                 pos = mapped.Position;
             }
             var code = DiagnosticSourceLine(sourcePath, source, diagnosticSource, line);
+            var sourceLength = code.Length;
             var classification = CompilerDiagnosticClassifier.ClassifyUpstream(upstreamCode, mapped is not null || CompilerDiagnosticClassifier.IsSourceMappedPath(diagnosticSource));
             if (classification.DiagnosticCode is CompilerDiagnosticCodes.UnknownSymbol or CompilerDiagnosticCodes.UnknownMember)
                 code = RecoverDiagnosticSourceLine(sourcePath, source, diagnosticSource, code, description, upstreamCode);
@@ -39,6 +40,8 @@ internal static class CompilerDiagnosticParser
                 File = DiagnosticFileName(diagnosticSource),
                 Line = line,
                 Position = pos,
+                EndLine = line,
+                EndColumn = sourceLength > 0 ? sourceLength + 1 : pos + 1,
                 Description = Humanize(description),
                 SourceCode = code,
                 MarkedCode = Mark(code, pos),
