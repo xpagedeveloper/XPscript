@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using XPScript.Compiler.Binding;
@@ -289,7 +290,7 @@ var listEventOutput = Path.Combine(Path.GetTempPath(), "xpscript-ui-list-event-"
 Directory.CreateDirectory(listEventOutput);
 try
 {
-    await XPScript.Compiler.AstCompiler.CompileAsync(listEventFixture, listEventOutput, "win-x64");
+    await XPScript.Compiler.AstCompiler.CompileAsync(listEventFixture, listEventOutput, RuntimeInformation.RuntimeIdentifier);
     var listAssembly = Assembly.LoadFile(Path.Combine(listEventOutput, "Generated.dll"));
     var listProgram = listAssembly.GetType("Program") ?? throw new InvalidOperationException("UIListView AST Program type missing.");
     listProgram.GetMethod("Main")!.Invoke(null, null);
