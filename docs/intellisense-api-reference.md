@@ -66,6 +66,14 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `NotesSession.SetEnvironmentVar` | `session.SetEnvironmentVar(name, value [, system])` | `name`, `value`, optional `system`. | Creates or updates a Notes/Domino environment variable. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
 | `NotesSession.EffectiveUserName` | `session.EffectiveUserName` | none | Returns the effective native Notes user name. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
 | `NotesSession.UserNameObject` | `session.UserNameObject` | none | Returns a `NotesName` wrapper for the active user name. Recycle the returned object when finished. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
+| `NotesSession.ConvertMIME` | `session.ConvertMIME = value` | `value`: Boolean. | Controls conversion of MIME parts to rich text for Notes documents opened afterward. Defaults to `True`. | [notes-richtext-mime-surface.xps](../samples/notes-richtext-mime-surface.xps) |
+
+## Application runtime additions
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `Application.NewLine` | `Application.NewLine` | none | Returns the platform's line ending. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `Application.Executable.Comments` | `Application.Executable.Comments = value` | `value`: comments text. | Sets generated executable metadata comments. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
 
 ## Notes MIME
 

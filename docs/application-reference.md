@@ -70,6 +70,7 @@ These properties are writable. Their values are stored in the application state 
 | `Application.Executable.Company` | `Application.Executable.Company = value` | `value`: company name. | Sets the generated executable/assembly company metadata. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
 | `Application.Executable.Version` | `Application.Executable.Version = value` | `value`: version string. | Sets version metadata used for the generated assembly and file version. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
 | `Application.Executable.Copyright` | `Application.Executable.Copyright = value` | `value`: copyright text. | Sets the generated executable/assembly copyright metadata. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
+| `Application.Executable.Comments` | `Application.Executable.Comments = value` | `value`: comments text. | Sets the generated executable/assembly comments metadata. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
 
 Generated applications receive fixed compiler identification metadata. Assembly metadata contains `XPScriptCompiler = XPScript`, `XPScriptWebsite = https://xpagedeveloper.com` and `Compiled With = XPScript - XPageDeveloper.com`. If `Application.Executable.FileDescription` is not set, the file description defaults to `Application compiled with XPScript`.
 
