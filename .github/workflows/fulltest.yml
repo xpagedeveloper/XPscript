@@ -506,7 +506,7 @@ jobs:
           dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-assets-regression.xps -o ./out/uiform-assets-embedded --runtime=false --embed-assets
           rm -rf ./out/assets
           ./out/uiform-assets-embedded | grep -q UIFORM_ASSETS_OK
-          test "$(cat ./out/assets/embed-test.txt)" = "embedded-asset-payload"
+          test "$(cat ./out/uiform-assets-embedded/assets/embed-test.txt)" = "embedded-asset-payload"
       - name: Install browser WASM workload
         run: dotnet workload install wasm-tools
       - name: Verify browser WASM multi-window UIForm

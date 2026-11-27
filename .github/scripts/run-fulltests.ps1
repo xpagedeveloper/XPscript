@@ -418,15 +418,15 @@ if (Should-Run 'platform') {
   if ((Get-Content -Raw (Join-Path $rollbackTarget 'b-existing.txt')) -ne 'original') { throw 'Failed Archive extraction did not restore an overwritten file.' }
   if (-not (Test-Path (Join-Path $rollbackTarget 'z-blocked.txt') -PathType Container)) { throw 'Failed Archive extraction changed the blocking destination directory.' }
   # Practical large-file Archive regression: round-trip a 16 MiB file and verify it byte-for-byte.
-  $largeSource = './out/fulltest/archive-large-source.bin'
-  $largeExtract = './out/fulltest/archive-large-extract'
+  $largeSource = [System.IO.Path]::GetFullPath('./out/fulltest/archive-large-source.bin')
+  $largeExtract = [System.IO.Path]::GetFullPath('./out/fulltest/archive-large-extract')
   Remove-Item -Recurse -Force $largeExtract -ErrorAction SilentlyContinue
   $largeBytes = New-Object byte[] (16MB)
   for ($i = 0; $i -lt $largeBytes.Length; $i += 4096) { $largeBytes[$i] = [byte](($i / 4096) % 251) }
   [System.IO.File]::WriteAllBytes($largeSource, $largeBytes)
   $largeHashBefore = (Get-FileHash $largeSource -Algorithm SHA256).Hash
   Compile-Xps ./demo/archive/archive-large-file-regression.xps archive-large-file-regression
-  $largeRun = Run-Xps ./demo/archive/archive-large-file-regression.xps archive-large-file-regression @('../../out/fulltest/archive-large-source.bin','../../out/fulltest/archive-large-extract')
+  $largeRun = Run-Xps ./demo/archive/archive-large-file-regression.xps archive-large-file-regression @($largeSource,$largeExtract)
   if ($largeRun.Output -notmatch 'ARCHIVE_LARGE_FILE=OK') { throw 'Archive large-file regression did not complete.' }
   $largeHashAfter = (Get-FileHash (Join-Path $largeExtract 'large.bin') -Algorithm SHA256).Hash
   if ($largeHashAfter -ne $largeHashBefore) { throw 'Archive large-file round-trip changed file contents.' }

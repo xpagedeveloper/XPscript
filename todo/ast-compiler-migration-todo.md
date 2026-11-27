@@ -1292,4 +1292,13 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   invoking that disabled path. AST emission currently does not include the
   debugger runtime/source-line instrumentation, so this remains an explicit
   compatibility gap to cover in Language FullTest.
+- [ ] Close the remaining aggregate FullTest harness failures from commit
+  `497645ad`. Platform FullTest, XPImage FullTest and Language FullTest passed.
+  The aggregate Linux compile lane still checks embedded assets under the
+  external-asset output path; update its assertion to the executable-adjacent
+  materialization directory documented for `--embed-assets`. Windows Platform
+  FullTest's large-file archive regression passes relative paths that resolve
+  differently from the generated application's working directory; use absolute
+  fixture paths. These two corrections are prepared locally; verify them in the
+  next FullTest run.
 
