@@ -1292,22 +1292,16 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   invoking that disabled path. AST emission currently does not include the
   debugger runtime/source-line instrumentation, so this remains an explicit
   compatibility gap to cover in Language FullTest.
-- [ ] Close aggregate FullTest failures from `87adfa2a`. The Windows large-file
-  archive regression now passes absolute fixture paths, and the Platform
-  FullTest, XPImage FullTest, Language FullTest, and Linux/macOS ByRef workflow
-  are green. The Linux embedded-assets assertion now checks `./out/assets`, the
-  directory beside the executable where `AppContext.BaseDirectory` materializes
-  assets. That test exposed that the default compiler command did not carry
-  `--embed-assets` through `CompilerDriver`'s AST source-generation route; the
-  option now reaches the final generated-source packaging step. A local
-  Linux-target managed build materialized the embedded file beside its output
-  after the source copy was moved away. The aggregate Windows run also exposed
-  a stale machine-interface probe: browser-WASM target snippets need a
-  `Sub Main`, and the probe must not mark the supported in-memory
-  `XPSpreadsheet` API as unavailable. Its probe passes locally. The same
-  aggregate Windows run found the duplicate-name archive fixture used a
-  working-directory-relative paths; the sample now receives the generated ZIP
-  path and fixture root through `Application.Args`, and the FullTest runner
-  passes both absolute paths. The focused local run passes; these fixes still
-  need aggregate FullTest confirmation in CI.
+- [ ] Close aggregate FullTest failures from `c9d09d87`. The Linux
+  embedded-assets assertion now checks `./out/assets`, and the default compiler
+  route carries `--embed-assets` through AST source generation; a local
+  Linux-target managed build materialized the embedded asset beside its output.
+  The browser-WASM machine-interface probe has a `Sub Main` and no longer marks
+  in-memory `XPSpreadsheet` as unsupported. The duplicate-name archive fixture
+  receives its ZIP path and root through `Application.Args`; its focused local
+  run passes. The next aggregate run exposed two more stale cases: an OpenAPI
+  enum value named `new` needed C# keyword escaping in AST output, and the safe
+  AI-tool fixture registered a callback context but declared no context
+  parameter. Both are fixed and pass focused local compilation/runtime checks.
+  Aggregate CI confirmation is still pending.
 

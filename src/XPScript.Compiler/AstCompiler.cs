@@ -1005,7 +1005,7 @@ public static class AstCompiler
                 .Select(member => (member.Name, member.Value)))
             .GroupBy(member => member.Name, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
-            .Select(member => $"    public static dynamic {member.Name} = {member.Value};"));
+            .Select(member => $"    public static dynamic {EscapeCSharpIdentifier(member.Name)} = {member.Value};"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine,
             enumNames.Select(enumMatch => $"    public static Xp{enumMatch.Groups["name"].Value} {enumMatch.Groups["name"].Value} = new Xp{enumMatch.Groups["name"].Value}();"));
         moduleFields += Environment.NewLine + string.Join(Environment.NewLine, moduleArrayDeclarations
@@ -1105,7 +1105,7 @@ public static class AstCompiler
             .Cast<Match>().Select(match =>
             {
                     var values = EnumMembers(match.Groups["body"].Value)
-                    .Select(value => $"public Xp{match.Groups["name"].Value} {value.Name} => new({value.Value});");
+                    .Select(value => $"public Xp{match.Groups["name"].Value} {EscapeCSharpIdentifier(value.Name)} => new({value.Value});");
                 return $"public sealed class Xp{match.Groups["name"].Value} {{ public long Value {{ get; }} public Xp{match.Groups["name"].Value}() {{ }} private Xp{match.Groups["name"].Value}(long value) => Value = value; public static implicit operator Xp{match.Groups["name"].Value}(int value) => new(value); public static implicit operator Xp{match.Groups["name"].Value}(long value) => new(value); {string.Join(" ", values)} public override string ToString() => Value.ToString(System.Globalization.CultureInfo.InvariantCulture); }}";
             }));
         var nativeCode = nativeDeclarations.Count == 0 ? string.Empty : "internal static class XPNativeDeclarations {" + Environment.NewLine + string.Join(Environment.NewLine, nativeDeclarations.Select(native =>
@@ -2618,6 +2618,11 @@ internal static class Program
         }
         return value;
     }
+
+    private static string EscapeCSharpIdentifier(string identifier) =>
+        Microsoft.CodeAnalysis.CSharp.SyntaxFacts.GetKeywordKind(identifier) == Microsoft.CodeAnalysis.CSharp.SyntaxKind.None
+            ? identifier
+            : "@" + identifier;
 
     private static IReadOnlyList<(string Name, long Value)> EnumMembers(string body)
     {

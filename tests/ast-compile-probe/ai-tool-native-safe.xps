@@ -14,5 +14,5 @@ Sub Main()
     Print "AI_TOOL_AST_SAFE_OK"
 End Sub
 
-Sub HandleTool(ByVal toolCall As XPAIToolCall)
+Sub HandleTool(ByVal toolCall As XPAIToolCall, ByVal context As Variant)
 End Sub
