@@ -138,7 +138,7 @@ if (!desktopDialogHostSource.Contains("SizeToContent = SizeToContent.Height", St
 var androidHostSource = File.ReadAllText(Path.Combine("src", "XPScript.Compiler", "AndroidUIHostSource.cs"));
 var browserHostSource = File.ReadAllText(Path.Combine("src", "XPScript.UI.Browser", "BrowserFormHost.cs"));
 var webToastSource = File.ReadAllText(Path.Combine("src", "XPScript.Web.Runtime", "XpsUIWebRuntimeBridge.cs"));
-if (!androidHostSource.Contains("Panel.SetZIndex(toast, Interlocked.Increment(ref _toastSequence))", StringComparison.Ordinal) ||
+if (!androidHostSource.Contains("toast.ZIndex = Interlocked.Increment(ref _toastSequence)", StringComparison.Ordinal) ||
     !androidHostSource.Contains("region.Children.Insert(0, toast)", StringComparison.Ordinal) ||
     !androidHostSource.Contains("region.Children.Add(toast)", StringComparison.Ordinal) ||
     !browserHostSource.Contains("PrependChild(region, toast)", StringComparison.Ordinal) ||

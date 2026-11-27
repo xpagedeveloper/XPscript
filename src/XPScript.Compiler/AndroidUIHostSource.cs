@@ -202,7 +202,7 @@ public sealed class MainView : UserControl
         if (!_toastRegions.TryGetValue(position, out var region)) region = _toastRegions["top-right"];
         // New items stay at the selected edge: top regions prepend, while
         // bottom anchored regions append so older items move upward.
-        Panel.SetZIndex(toast, Interlocked.Increment(ref _toastSequence));
+        toast.ZIndex = Interlocked.Increment(ref _toastSequence);
         region.Spacing = -10;
         if (position.StartsWith("bottom", StringComparison.OrdinalIgnoreCase)) region.Children.Add(toast);
         else region.Children.Insert(0, toast);

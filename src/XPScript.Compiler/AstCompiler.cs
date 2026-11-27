@@ -1912,7 +1912,7 @@ internal static class Program
             // below without applying the desktop rendering pipeline.
             if (isAndroidTarget)
                 generated = UIExtensionDesktopPostProcessor.InstallModalBridge(generated) + Environment.NewLine + UIExtensionDesktopRuntimeSource.Code;
-            else if (!singleVisibleFormMode)
+            else if (!singleVisibleFormMode && generatedSourceTransform is null)
                 generated = UIExtensionDesktopPostProcessor.InstallModalBridge(generated);
             generated = new UIFormActionModelPostProcessor().Transform(generated);
             generated = new UIFormLayoutReactivePostProcessor().TransformModelOnly(generated);

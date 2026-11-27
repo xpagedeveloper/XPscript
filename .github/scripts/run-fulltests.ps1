@@ -373,8 +373,9 @@ if (Should-Run 'platform') {
   # Focused first regression: keep the most recently failing corrupt ZIP behavior at the front of the platform suite.
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive corrupt stream fixture first'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   Compile-Xps ./demo/archive/archive-corrupt-stream-regression.xps archive-corrupt-stream-regression
-  Expect-XpsFailure archive-corrupt-stream-regression @('../../out/archive-security-fixtures/corrupt-stream.zip') 'corrupt compressed stream focused regression'
-  Expect-XpsFailure archive-corrupt-stream-regression @('../../out/archive-security-fixtures/incorrect-size-metadata.zip') 'incorrect archive size metadata focused regression'
+  $archiveFixtureRoot = (Resolve-Path './out/archive-security-fixtures').Path
+  Expect-XpsFailure archive-corrupt-stream-regression @((Join-Path $archiveFixtureRoot 'corrupt-stream.zip')) 'corrupt compressed stream focused regression'
+  Expect-XpsFailure archive-corrupt-stream-regression @((Join-Path $archiveFixtureRoot 'incorrect-size-metadata.zip')) 'incorrect archive size metadata focused regression'
   # Focused replacement-failure regression: a failed save must leave the original ZIP byte-for-byte unchanged.
   if ($IsWindows) {
     $replacementPath = './out/fulltest/archive-replacement-failure.zip'
@@ -443,6 +444,7 @@ if (Should-Run 'platform') {
   # assemblies that can already be loaded by compiler services on Windows.
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveCapabilityProbe/ArchiveCapabilityProbe.csproj','-c','Release','-p:BuildProjectReferences=false','-p:UseSharedCompilation=false') $compileTimeoutMilliseconds 'Archive compiler probes'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @('run','--project','./tests/ArchiveSecurityFixtures/ArchiveSecurityFixtures.csproj','-c','Release','--','./out/archive-security-fixtures') $compileTimeoutMilliseconds 'Archive security fixtures'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
+  $archiveFixtureRoot = (Resolve-Path './out/archive-security-fixtures').Path
   foreach ($sample in @('archive-zip','archive-memory','archive-iterator','archive-edge-cases','archive-security-fixtures','archive-case-sensitivity-regression')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
   $astArchiveOutput = './out/fulltest/archive-memory-ast'
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./demo/archive/archive-memory.xps','-o',$astArchiveOutput) $compileTimeoutMilliseconds 'AST Archive memory compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
@@ -451,23 +453,23 @@ if (Should-Run 'platform') {
   $r = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./demo/archive/archive-extended-memory.xps','-o',$astExtendedArchiveOutput) $compileTimeoutMilliseconds 'AST extended Archive memory compile'; if ($r.ExitCode -ne 0) { exit $r.ExitCode }
   $r = Invoke-Bounded 'dotnet' @((Join-Path $astExtendedArchiveOutput 'Generated.dll')) $runtimeTimeoutMilliseconds 'AST extended Archive memory runtime'; if ($r.ExitCode -ne 0 -or $r.Output -notmatch 'ARCHIVE_EXTENDED_MEMORY_OK') { throw 'AST extended Archive memory regression did not complete.' }
   Compile-Xps ./demo/archive/archive-security-reject-zip.xps archive-security-reject-zip
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/traversal.zip','10000','2147483647','1000') 'path traversal'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/absolute-unix.zip','10000','2147483647','1000') 'absolute Unix path'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/absolute-windows.zip','10000','2147483647','1000') 'absolute Windows path'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/unc.zip','10000','2147483647','1000') 'UNC path'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/mixed-separator-traversal.zip','10000','2147483647','1000') 'mixed separator traversal'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/corrupt-stream.zip','10000','2147483647','1000','read') 'corrupt compressed stream'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/incorrect-size-metadata.zip','10000','2147483647','1000','read') 'incorrect archive size metadata'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/malformed.zip','10000','2147483647','1000') 'malformed archive'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/symlink-entry.zip','10000','2147483647','1000') 'symbolic link entry'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/max-entries.zip','2','2147483647','1000') 'MaxEntries'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/max-size.zip','10000','100','1000') 'MaxExtractSize'
-  Expect-XpsFailure archive-security-reject-zip @('../../out/archive-security-fixtures/compression-ratio.zip','10000','2147483647','10') 'MaxCompressionRatio'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'traversal.zip'),'10000','2147483647','1000') 'path traversal'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'absolute-unix.zip'),'10000','2147483647','1000') 'absolute Unix path'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'absolute-windows.zip'),'10000','2147483647','1000') 'absolute Windows path'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'unc.zip'),'10000','2147483647','1000') 'UNC path'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'mixed-separator-traversal.zip'),'10000','2147483647','1000') 'mixed separator traversal'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'corrupt-stream.zip'),'10000','2147483647','1000','read') 'corrupt compressed stream'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'incorrect-size-metadata.zip'),'10000','2147483647','1000','read') 'incorrect archive size metadata'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'malformed.zip'),'10000','2147483647','1000') 'malformed archive'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'symlink-entry.zip'),'10000','2147483647','1000') 'symbolic link entry'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'max-entries.zip'),'2','2147483647','1000') 'MaxEntries'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'max-size.zip'),'10000','100','1000') 'MaxExtractSize'
+  Expect-XpsFailure archive-security-reject-zip @((Join-Path $archiveFixtureRoot 'compression-ratio.zip'),'10000','2147483647','10') 'MaxCompressionRatio'
   Compile-Xps ./demo/archive/archive-security-reject-extended.xps archive-security-reject-extended
-  Expect-XpsFailure archive-security-reject-extended @('../../out/archive-security-fixtures/traversal.tar') 'extended TAR path traversal'
-  Expect-XpsFailure archive-security-reject-extended @('../../out/archive-security-fixtures/absolute.tar') 'extended TAR absolute path'
-  Expect-XpsFailure archive-security-reject-extended @('../../out/archive-security-fixtures/symlink-entry.tar') 'extended TAR symbolic link entry'
-  if (Test-Path './out/archive-security-fixtures/extraction-symlink-ready.txt') { Compile-Xps ./demo/archive/archive-security-reject-extract.xps archive-security-reject-extract; Expect-XpsFailure archive-security-reject-extract @() 'destination symbolic link extraction'; if (Test-Path './out/archive-security-fixtures/outside/escape.txt') { throw 'Archive extraction escaped through destination symbolic link' } }
+  Expect-XpsFailure archive-security-reject-extended @((Join-Path $archiveFixtureRoot 'traversal.tar')) 'extended TAR path traversal'
+  Expect-XpsFailure archive-security-reject-extended @((Join-Path $archiveFixtureRoot 'absolute.tar')) 'extended TAR absolute path'
+  Expect-XpsFailure archive-security-reject-extended @((Join-Path $archiveFixtureRoot 'symlink-entry.tar')) 'extended TAR symbolic link entry'
+  if (Test-Path './out/archive-security-fixtures/extraction-symlink-ready.txt') { Compile-Xps ./demo/archive/archive-security-reject-extract.xps archive-security-reject-extract; Expect-XpsFailure archive-security-reject-extract @((Join-Path $archiveFixtureRoot 'extraction-symlink.zip'),(Join-Path $archiveFixtureRoot 'extract-root')) 'destination symbolic link extraction'; if (Test-Path './out/archive-security-fixtures/outside/escape.txt') { throw 'Archive extraction escaped through destination symbolic link' } }
   foreach ($sample in @('archive-extended-memory','archive-extended-memory-write','archive-gzip','archive-rebuild','archive-targzip','archive-compressed-tar','archive-format-detection')) { Run-Xps "./demo/archive/$sample.xps" $sample | Out-Null }
   Run-Xps ./samples/application-runtime.xps application-runtime @('fulltest') | Out-Null
   foreach ($sample in @('networktools-native-local-smoke','networktools-phase2-local-smoke')) { Run-Xps "./samples/$sample.xps" $sample | Out-Null }

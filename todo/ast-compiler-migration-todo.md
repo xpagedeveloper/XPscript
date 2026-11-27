@@ -1273,8 +1273,23 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   the .NET 10 Android workload but relied on an environment variable that
   `ast-compile` did not use when choosing a framework; each Android compilation
   now explicitly selects .NET 10.
+- [ ] Close the follow-up regressions from commit `7c634a4b`. Platform FullTest
+  exposed that the desktop modal bridge must only be installed for direct
+  desktop AST generation; transformed Kestrel output must retain its web form
+  submission path. The condition is narrowed and the isolated local Kestrel
+  smoke passes (`WEB-UIFORM-KESTREL=OK`). Android compilation also exposed that
+  `Panel.SetZIndex` is unavailable in the Android UI framework; switch toast
+  ordering to the control's `ZIndex` property and update its source contract.
+  Re-run the focused Android compiler probe/build and verify both fixes in CI.
 - [ ] Verify Android compilation in GitHub Actions. The local machine has the
   Android workload but lacks Android SDK Platform 36, so no local APK build was
   attempted beyond the prerequisite diagnostic.
 - [ ] Push these fixes and wait for Platform, XPImage and FullTest workflows.
+- [ ] Port debugger instrumentation through AST before claiming debugger
+  runtime parity. `DebuggerCoreProbe` contained generated-C# expectations that
+  only exercised `XPScriptTranspiler`; the legacy path now correctly rejects
+  compilation. The probe now keeps debugger-core and source-map checks without
+  invoking that disabled path. AST emission currently does not include the
+  debugger runtime/source-line instrumentation, so this remains an explicit
+  compatibility gap to cover in Language FullTest.
 

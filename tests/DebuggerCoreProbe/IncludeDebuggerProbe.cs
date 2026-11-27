@@ -102,13 +102,9 @@ End Function
                 }
             }
 
-            var generated = new XPScriptTranspiler().Transpile(rootSource.Replace("Include \"lib/helper.xps\"", string.Empty, StringComparison.Ordinal), rootPath, CompilerDriver.CurrentRuntimeIdentifier());
-            if (!generated.Contains("\"into\" => true", StringComparison.Ordinal))
-                throw new Exception("Debugger Step Into no longer stops at the next XPscript statement.");
-            if (!generated.Contains("\"over\" => depth <= _stepDepth", StringComparison.Ordinal))
-                throw new Exception("Debugger Step Over no longer skips deeper include/function frames.");
-            if (!generated.Contains("\"out\" => depth < _stepDepth", StringComparison.Ordinal))
-                throw new Exception("Debugger Step Out no longer waits for the caller frame.");
+            var validation = new CompilerDriver().ValidateWithResultAsync(rootPath).GetAwaiter().GetResult();
+            if (!validation.Success)
+                throw new Exception("AST include validation failed: " + string.Join(" || ", validation.Errors.Select(d => d.Description)));
         }
         finally
         {

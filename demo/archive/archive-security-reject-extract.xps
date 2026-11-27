@@ -1,7 +1,9 @@
 Option Declare
 
 Sub Main()
-    Dim archive As New Archive("../../out/archive-security-fixtures/extraction-symlink.zip")
-    archive.ExtractAll("../../out/archive-security-fixtures/extract-root")
+    If Application.ArgCount < 2 Then Error 5, "Archive extraction regression requires archive and destination paths"
+
+    Dim archive As New Archive(Application.Args(0))
+    archive.ExtractAll(Application.Args(1))
     Print "ARCHIVE_SECURITY_REJECT_EXTRACT_UNEXPECTED_SUCCESS"
 End Sub
