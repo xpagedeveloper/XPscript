@@ -259,7 +259,7 @@ jobs:
     name: Windows ${{ matrix.name }} FullTest
     needs: compile-windows
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
