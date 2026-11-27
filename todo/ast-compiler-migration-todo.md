@@ -1245,3 +1245,36 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   `CompilerMachineInterfaceProbe` passed on Windows with `wasm-tools` present.
 - [ ] Run native Linux/macOS and local Android/WASM interaction gates with legacy disabled.
 
+## CI follow-up — 2026-11-27
+
+- [x] Investigate the remaining failures on commit `56bc05b9`. The WASM ServerSide
+  Archive fixture used the already documented `Archive.SendToBrowser` API, but
+  AST binding had no signature for it. Added the AST native method mapping and
+  routed it through the existing in-memory archive factory; the fixture is part
+  of `WebBrowserWasmSmoke` and the Platform/XPImage FullTests.
+- [x] Fix AST desktop `UIForm.ShowDialog` emission: the desktop target was left
+  with the compatibility adapter that always reports unavailable. Install the
+  existing modal bridge on desktop AST output and exercise it in the headless
+  generated-form regression.
+- [x] Restore the documented in-memory XPSpreadsheet API on browser-WASM. The
+  blanket target restriction contradicted `docs/xpspreadsheet.md`; the existing
+  browser regression now reaches `ToBytes`/`FromBytes` and still asserts that
+  filesystem operations return their documented runtime error.
+- [x] Remove stale desktop “AST and legacy parity” CI assertions. Legacy
+  compilation is intentionally disabled; the permanent desktop checks now run
+  and assert the AST runtime markers only. Updated the dispatch-only Linux
+  desktop UI workflow to the same AST smoke contract.
+- [x] Verify locally: compiler Release build and `DesktopUIFormLifecycleSmoke
+  --headless-ast-generated` passed; `WebBrowserWasmSmoke` passed with
+  `WASM_ARCHIVE_DOWNLOAD=passed`; `WebBrowserWasmBrowserSmoke` passed its
+  browser-side spreadsheet byte roundtrip, filesystem restriction, UIForm,
+  toast and button checks.
+- [x] Fix Android CI's generated-project SDK mismatch. The workflow installed
+  the .NET 10 Android workload but relied on an environment variable that
+  `ast-compile` did not use when choosing a framework; each Android compilation
+  now explicitly selects .NET 10.
+- [ ] Verify Android compilation in GitHub Actions. The local machine has the
+  Android workload but lacks Android SDK Platform 36, so no local APK build was
+  attempted beyond the prerequisite diagnostic.
+- [ ] Push these fixes and wait for Platform, XPImage and FullTest workflows.
+

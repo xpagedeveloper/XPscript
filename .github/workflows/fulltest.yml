@@ -134,13 +134,13 @@ jobs:
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/xpai-structured-output.xps -o ./out/xpai-structured --runtime=false
       - name: Compile UIForm application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./samples/uiform-remote-search.xps -o ./out/uiform --runtime=false
-      - name: Run desktop UI AST and legacy runtime parity (macOS)
-        run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
-      - name: Verify desktop UI AST and legacy marker parity (macOS)
+      - name: Run desktop UI AST runtime smoke (macOS)
+        run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release -- --ast-only
+      - name: Verify desktop UI AST runtime markers (macOS)
         shell: bash
         run: |
           set -euo pipefail
-          output="$(dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build 2>&1)"
+          output="$(dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only 2>&1)"
           printf '%s\n' "$output"
           python3 - "$output" <<'PY'
           import sys
@@ -148,14 +148,11 @@ jobs:
           markers = [
               'DESKTOP_PARITY_AST_RUNTIME_START',
               'DESKTOP_PARITY_AST_RUNTIME_OK',
-              'DESKTOP_PARITY_LEGACY_RUNTIME_START',
-              'DESKTOP_PARITY_LEGACY_RUNTIME_OK',
-              'DESKTOP_RUNTIME_LAUNCH_PARITY_OK',
           ]
           positions = [text.find(marker) for marker in markers]
           if any(position < 0 for position in positions) or positions != sorted(positions):
               raise SystemExit(f'Unexpected marker order: {positions}')
-          print('DESKTOP_UIFORM_AST_LEGACY_MARKER_PARITY_OK')
+          print('DESKTOP_UIFORM_AST_RUNTIME_MARKERS_OK')
           PY
       - name: Compile web application
         run: dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ./demo/webiis/main.xps --target webiis --runtime=false --output ./out/web
@@ -178,25 +175,22 @@ jobs:
       - name: Run desktop UI smoke test
         shell: pwsh
         run: dotnet run --project ./tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release
-      - name: Run desktop UI AST and legacy runtime parity
+      - name: Run desktop UI AST runtime smoke
         shell: pwsh
-        run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
-      - name: Verify desktop UI AST and legacy marker parity
+        run: dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release -- --ast-only
+      - name: Verify desktop UI AST runtime markers
         shell: pwsh
         run: |
-          $output = dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build 2>&1
+          $output = dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only 2>&1
           if ($LASTEXITCODE -ne 0) { throw "Desktop parity probe failed: $($output -join [Environment]::NewLine)" }
           $text = $output -join [Environment]::NewLine
           $markers = @(
             'DESKTOP_PARITY_AST_RUNTIME_START',
-            'DESKTOP_PARITY_AST_RUNTIME_OK',
-            'DESKTOP_PARITY_LEGACY_RUNTIME_START',
-            'DESKTOP_PARITY_LEGACY_RUNTIME_OK',
-            'DESKTOP_RUNTIME_LAUNCH_PARITY_OK'
+            'DESKTOP_PARITY_AST_RUNTIME_OK'
           )
           $positions = $markers | ForEach-Object { $position = $text.IndexOf($_); if ($position -lt 0) { throw "Missing marker: $_" }; $position }
           if (($positions | Sort-Object) -join ',' -ne ($positions -join ',')) { throw "Unexpected marker order: $($positions -join ',')" }
-          Write-Host 'DESKTOP_UIFORM_AST_LEGACY_MARKER_PARITY_OK'
+          Write-Host 'DESKTOP_UIFORM_AST_RUNTIME_MARKERS_OK'
 
   compile-macos:
     name: Compile macOS
@@ -523,26 +517,23 @@ jobs:
       - name: Verify desktop UIForm custom dialog results
         shell: bash
         run: timeout --kill-after=5s 30s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uiform-custom-result
-      - name: Verify desktop UIForm AST and legacy marker parity
+      - name: Verify desktop UIForm AST runtime markers
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p ./out
-          timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build 2>&1 | tee ./out/uiform-parity-fulltest.log
+          timeout --kill-after=5s 180s xvfb-run -a dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only 2>&1 | tee ./out/uiform-parity-fulltest.log
           python3 - <<'PY'
           from pathlib import Path
           lines = Path('./out/uiform-parity-fulltest.log').read_text().splitlines()
           expected = [
               'DESKTOP_PARITY_AST_RUNTIME_START',
               'DESKTOP_PARITY_AST_RUNTIME_OK',
-              'DESKTOP_PARITY_LEGACY_RUNTIME_START',
-              'DESKTOP_PARITY_LEGACY_RUNTIME_OK',
-              'DESKTOP_RUNTIME_LAUNCH_PARITY_OK',
           ]
           positions = [lines.index(item) for item in expected]
           if positions != sorted(positions):
               raise SystemExit(f'Unexpected marker order: {positions}')
-          print('DESKTOP_UIFORM_AST_LEGACY_MARKER_PARITY_OK')
+          print('DESKTOP_UIFORM_AST_RUNTIME_MARKERS_OK')
           PY
       - name: Generate OpenAPI API consumer for compile test
         run: dotnet run --project ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true -- openapi client generate ./tests/OpenApiGeneratorSmoke/client-ci.yaml -o ./out/generated-openapi-client.xps

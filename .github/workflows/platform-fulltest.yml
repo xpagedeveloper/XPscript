@@ -31,6 +31,13 @@ jobs:
           dotnet run --project tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release
           if ($LASTEXITCODE -ne 0) { throw 'Desktop modal dialog host contract failed.' }
           Write-Host 'END DESKTOP_DIALOG_MODAL_CONTRACT'
+      - name: Run AST-generated modal UIForm through the desktop host
+        shell: pwsh
+        run: |
+          Write-Host 'BEGIN AST_DESKTOP_MODAL_UIFORM'
+          dotnet run --project tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release -- --headless-ast-generated
+          if ($LASTEXITCODE -ne 0) { throw 'AST-generated desktop modal UIForm failed.' }
+          Write-Host 'END AST_DESKTOP_MODAL_UIFORM'
 
   web-hosting:
     name: Web and REST hosting (${{ matrix.os }})
@@ -216,11 +223,11 @@ jobs:
           export XPSCRIPT_TARGET_FRAMEWORK=net10.0
           dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
           dotnet run --project tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-debug-print.xps --output "$RUNNER_TEMP/ast-android-arm64" --runtime=false --platform android-arm64 --debug
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-debug-print.xps --output "$RUNNER_TEMP/ast-android-arm64" --runtime=false --platform android-arm64 --target-framework 10 --debug
           test -f "$RUNNER_TEMP/ast-android-arm64/Generated.dll"
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-uiform-controls-api.xps --output "$RUNNER_TEMP/ast-android-x64-controls" --runtime=false --platform android-x64 --debug
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-uiform-controls-api.xps --output "$RUNNER_TEMP/ast-android-x64-controls" --runtime=false --platform android-x64 --target-framework 10 --debug
           test -f "$RUNNER_TEMP/ast-android-x64-controls/Generated.dll"
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/ui-toast-notifications.xps --output "$RUNNER_TEMP/ast-android-x64-toasts" --runtime=false --platform android-x64 --debug
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/ui-toast-notifications.xps --output "$RUNNER_TEMP/ast-android-x64-toasts" --runtime=false --platform android-x64 --target-framework 10 --debug
           test -f "$RUNNER_TEMP/ast-android-x64-toasts/Generated.dll"
           echo 'AST_ANDROID_X64_CONTROLS_BUILD=OK'
           echo 'AST_ANDROID_TARGET_BUILD=OK'
@@ -229,6 +236,6 @@ jobs:
         shell: bash
         run: |
           echo 'AST_ANDROID_MODAL=begin'
-          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-uiform-modal-regression.xps --output "$RUNNER_TEMP/ast-android-modal" --runtime=false --platform android-x64 --debug
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-uiform-modal-regression.xps --output "$RUNNER_TEMP/ast-android-modal" --runtime=false --platform android-x64 --target-framework 10 --debug
           test -n "$(find "$RUNNER_TEMP/ast-android-modal" -name '*-Signed.apk' -print -quit)"
           echo 'AST_ANDROID_MODAL=passed'

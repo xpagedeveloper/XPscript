@@ -29,7 +29,6 @@ public readonly record struct RuntimeFeatures(
         if (Ai) yield return ("XPAi", "server target", "Keep AI credentials and requests on the server.");
         if (Sqlite) yield return ("XPDBSQLite", "server or desktop target", null);
         if (MsSql) yield return ("XPDbMsSql", "server or desktop target", null);
-        if (Spreadsheet) yield return ("XPSpreadsheet", "server or desktop target", null);
         if (NetworkTools) yield return ("NetworkTools", "server or desktop target", "Browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
     }
 

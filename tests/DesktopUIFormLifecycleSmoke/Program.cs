@@ -408,7 +408,7 @@ async Task RunHeadlessAstGeneratedProbe()
     var root = Path.Combine(Path.GetTempPath(), "xpscript-headless-ast-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(root);
     var sourcePath = Path.Combine(root, "headless-ast.xps");
-    await File.WriteAllTextAsync(sourcePath, "Option Declare\n\nSub Main()\n    Dim form As New UIForm(\"AST headless\", 480, 320, True)\n    Call form.AddTextField(\"name\", \"Name\")\n    Call form.AddButton(\"close\", \"Close AST form\", \"CloseForm\")\n    Call form.Show(False)\nEnd Sub\n\nSub CloseForm()\nEnd Sub\n");
+    await File.WriteAllTextAsync(sourcePath, "Option Declare\n\nSub Main()\n    Dim form As New UIForm(\"AST headless\", 480, 320, True)\n    Call form.AddTextField(\"name\", \"Name\")\n    Call form.AddButton(\"close\", \"Close AST form\", \"CloseForm\")\n    Call form.ShowDialog()\nEnd Sub\n\nSub CloseForm(evt As Variant)\n    Call evt.Form.Close()\nEnd Sub\n");
     var compilerPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll"));
     var output = Path.Combine(root, "ast");
     var compiler = Process.Start(new ProcessStartInfo("dotnet")
@@ -428,23 +428,25 @@ async Task RunHeadlessAstGeneratedProbe()
     var assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(Path.Combine(output, "Generated.dll"));
     var entryPoint = assembly.GetType("Program", throwOnError: true)!.GetMethod("Main", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)
         ?? throw new InvalidOperationException("AST generated Program.Main was not found.");
+    var getDialogWindow = typeof(DesktopFormHost).GetMethod("GetWindowForTests", BindingFlags.NonPublic | BindingFlags.Static)
+        ?? throw new InvalidOperationException("Desktop modal test window accessor was not found.");
     var entryTask = Task.Run(() => entryPoint.Invoke(null, entryPoint.GetParameters().Length == 0 ? null : new object?[] { Array.Empty<string>() }));
     Window? window = null;
     for (var attempt = 0; attempt < 100 && window is null; attempt++)
     {
         await Task.Delay(50);
-        window = DesktopFormLifecycleHost.GetAnyWindowForTests();
+        window = getDialogWindow.Invoke(null, null) as Window;
     }
     if (window is null)
     {
         DesktopApplicationHost.SetProcessKeepAlive(false);
-        throw new InvalidOperationException("AST generated headless window was not created.");
+        throw new InvalidOperationException("AST generated headless window was not created. " + entryTask.Exception);
     }
     Console.WriteLine("HEADLESS_AST_GENERATED_WINDOW_OK");
     var astWindowVisibleAfterClick = Dispatcher.UIThread.Invoke(() =>
     {
         var text = window.GetVisualDescendants().OfType<TextBox>().Single();
-        var close = window.GetVisualDescendants().OfType<Button>().Single(button => button.Content?.ToString() == "Close");
+        var close = window.GetVisualDescendants().OfType<Button>().Single(button => button.Content?.ToString() == "Close AST form");
         text.Focus();
         window.KeyTextInput("Alice");
         if (!string.Equals(text.Text, "Alice", StringComparison.Ordinal))

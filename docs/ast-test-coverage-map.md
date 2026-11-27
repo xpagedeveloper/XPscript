@@ -17,4 +17,10 @@ The AST compiler is the production path for normal CLI and MCP compilation. The 
 - Investigate XPImage end-to-end runtime behavior and lifecycle parity beyond dependency selection and current platform-specific coverage.
 - Remove or explicitly justify each remaining legacy parser/transpiler route only after the relevant compatibility evidence is green.
 
+## Platform FullTest coverage
+
+- Browser-WASM `WebBrowserWasmBrowserSmoke` exercises the documented in-memory XPSpreadsheet byte roundtrip, verifies file-path operations are rejected at runtime, and checks UIForm/toast/button interaction in Chromium.
+- Browser-WASM `WebBrowserWasmSmoke` exercises `[ServerSide]` Archive creation and download through the WASM bridge.
+- Desktop `DesktopUIFormLifecycleSmoke --headless-ast-generated` exercises AST-generated blocking `UIForm.ShowDialog` through the desktop host. Platform FullTest runs this probe on Windows and Linux.
+
 Use `todo/ast-compiler-migration-todo.md` as the authoritative migration gate and status ledger. A feature is complete only when its focused probe, permanent FullTest coverage and legacy-parity evidence all pass.
