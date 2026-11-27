@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using System.Runtime.InteropServices;
 
 var repo = Path.GetFullPath(args.Length > 0 ? args[0] : ".");
 var probeRoot = Path.Combine(repo, "out", "mcp-probe-" + Guid.NewGuid().ToString("N"));
@@ -767,6 +768,23 @@ if (resumeValidation.GetProperty("result").GetProperty("structuredContent").GetP
 var resumeRuntimeSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests", "ast-compile-probe", "resume-runtime.xps"));
 var resumeRuntimeValidation = await CallAsync(new {jsonrpc="2.0",id=37_1,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source=resumeRuntimeSource,filename="resume-runtime.xps"}}});
 if (resumeRuntimeValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("result").GetString() != "ok") throw new Exception("AST MCP rejected executable Resume fixture.");
+var resumeRuntimeOutput = Path.Combine(probeRoot, "resume-runtime-mcp");
+var resumeRuntimeCompile = await CallAsync(new {jsonrpc="2.0",id="resume-runtime-compile",method="tools/call",@params=new{name="xpscript_compile",arguments=new{source=resumeRuntimeSource,filename="resume-runtime.xps",outputDirectory=resumeRuntimeOutput,runtimeIdentifier=RuntimeInformation.RuntimeIdentifier,debug=true,securityMode="warn"}}});
+var resumeRuntimeCompileResult = resumeRuntimeCompile.GetProperty("result").GetProperty("structuredContent");
+if (resumeRuntimeCompileResult.GetProperty("result").GetString() != "ok" || resumeRuntimeCompileResult.GetProperty("compiler").GetString() != "ast" || !resumeRuntimeCompileResult.TryGetProperty("output", out var resumeRuntimeArtifact) || !File.Exists(resumeRuntimeArtifact.GetString()))
+    throw new Exception("MCP did not compile the executable Resume fixture through the production AST path: " + resumeRuntimeCompile);
+var resumeRuntimeProcessInfo = new ProcessStartInfo("dotnet") { RedirectStandardOutput=true, RedirectStandardError=true, UseShellExecute=false, WorkingDirectory=repo };
+resumeRuntimeProcessInfo.ArgumentList.Add(resumeRuntimeArtifact.GetString()!);
+using var resumeRuntimeProcess = Process.Start(resumeRuntimeProcessInfo) ?? throw new Exception("Could not start MCP Resume artifact.");
+var resumeRuntimeStdout = resumeRuntimeProcess.StandardOutput.ReadToEndAsync();
+var resumeRuntimeStderr = resumeRuntimeProcess.StandardError.ReadToEndAsync();
+try { await resumeRuntimeProcess.WaitForExitAsync().WaitAsync(TimeSpan.FromMinutes(3)); }
+catch (TimeoutException) { resumeRuntimeProcess.Kill(entireProcessTree:true); throw new Exception("MCP Resume artifact timed out after three minutes."); }
+var resumeRuntimeActual = await resumeRuntimeStdout;
+var resumeRuntimeErrorText = await resumeRuntimeStderr;
+var resumeRuntimeExpected = string.Join(Environment.NewLine, new[] { "AUTOMATIC_NEXT_OK", "RETRY_OK", "7001", "inner failure", "NEXT_OK", "LABEL_OK" }) + Environment.NewLine;
+if (resumeRuntimeProcess.ExitCode != 0 || resumeRuntimeActual != resumeRuntimeExpected)
+    throw new Exception($"MCP Resume runtime differed from the CLI fixture. Exit={resumeRuntimeProcess.ExitCode}; stdout={resumeRuntimeActual}; stderr={resumeRuntimeErrorText}");
 var resumeUnknownValidation = await CallAsync(new {jsonrpc="2.0",id=37_2,method="tools/call",@params=new{name="xpscript_ast_validate",arguments=new{source="Sub Main()\n    On Error GoTo missing\nEnd Sub",filename="resume-unknown-label.xps"}}});
 var resumeUnknownError = resumeUnknownValidation.GetProperty("result").GetProperty("structuredContent").GetProperty("errors")[0];
 if (resumeUnknownError.GetProperty("line").GetInt32() != 2 || !resumeUnknownError.GetProperty("description").GetString()!.Contains("Unknown label 'missing'")) throw new Exception("MCP lost unknown error-handler label diagnostics.");
