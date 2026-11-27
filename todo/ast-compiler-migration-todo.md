@@ -1292,13 +1292,14 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   invoking that disabled path. AST emission currently does not include the
   debugger runtime/source-line instrumentation, so this remains an explicit
   compatibility gap to cover in Language FullTest.
-- [ ] Close the remaining aggregate FullTest harness failures from commit
-  `497645ad`. Platform FullTest, XPImage FullTest and Language FullTest passed.
-  The aggregate Linux compile lane still checks embedded assets under the
-  external-asset output path; update its assertion to the executable-adjacent
-  materialization directory documented for `--embed-assets`. Windows Platform
-  FullTest's large-file archive regression passes relative paths that resolve
-  differently from the generated application's working directory; use absolute
-  fixture paths. These two corrections are prepared locally; verify them in the
-  next FullTest run.
+- [ ] Close aggregate FullTest failures from `87adfa2a`. The Windows large-file
+  archive regression now passes absolute fixture paths, and the Platform
+  FullTest, XPImage FullTest, Language FullTest, and Linux/macOS ByRef workflow
+  are green. The Linux embedded-assets assertion was accidentally pointed
+  inside the executable; restore its check under `./out/assets`, the directory
+  beside the executable where `AppContext.BaseDirectory` materializes assets.
+  The aggregate Windows run also exposed a stale machine-interface probe:
+  browser-WASM target snippets need a `Sub Main`, and the probe must not mark
+  the supported in-memory `XPSpreadsheet` API as unavailable. Both corrections
+  are local now; rerun the aggregate FullTest to verify them in CI.
 

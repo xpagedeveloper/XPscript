@@ -455,13 +455,12 @@ else
     {
         ("Dim db As XPDBSQLite", "XPDBSQLite", "server or desktop target"),
         ("Dim db As XPDbMsSql", "XPDbMsSql", "server or desktop target"),
-        ("Dim sheet As XPSpreadsheet", "XPSpreadsheet", "server or desktop target"),
         ("Dim tools As NetworkTools", "NetworkTools", "server or desktop target")
     };
     var browserTargetRestrictionPath = Path.Combine(outputRoot, "browser-target-restriction.xps");
     foreach (var restriction in browserTargetRestrictions)
     {
-        await File.WriteAllTextAsync(browserTargetRestrictionPath, restriction.Source);
+        await File.WriteAllTextAsync(browserTargetRestrictionPath, $"Sub Main()\n{restriction.Source}\nEnd Sub");
         var result = await driver.ValidateWithResultAsync(browserTargetRestrictionPath, "browser-wasm");
         var diagnostic = result.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
         Require(diagnostic is not null, $"Browser WASM {restriction.Symbol} target diagnostic");
