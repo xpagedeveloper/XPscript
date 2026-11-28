@@ -141,7 +141,7 @@ internal static class AstClassMethodSupport
     internal static string? MethodAlias(HashSet<string> fields, string name) =>
         fields.Contains(name) ? "__xps_method_" + name.ToUpperInvariant() : null;
 
-    internal static string Emit(ClassDeclarationSyntax declaration, SymbolTable globals, string sourcePath, string source,
+    internal static string Emit(ClassDeclarationSyntax declaration, SymbolTable globals, string sourcePath, string source, SourceMap sourceMap,
         HashSet<string> inheritedFamilyFieldNames,
         IReadOnlyDictionary<string, ClassDeclarationSyntax> classes)
     {
@@ -324,7 +324,8 @@ internal static class AstClassMethodSupport
                 implicitReceiver: new BoundNameExpression(new VariableSymbol("Me", typeof(object), XpTypeSymbol.User(declaration.Identifier.Text))));
             var emittedName = constructor is not null ? "__xps_constructor_body" + AstClassConstructorSupport.Suffix(declaration, constructor) : isDestructor ? "__xps_destructor_body" : property is null ? MethodAlias(inheritedFamilyFieldNames, name) ?? name : "__xps_property_" + (property.IsGetter ? "get_" : "let_") + name;
             string body;
-            try { body = new BoundMethodEmitter().Emit(emittedName, returnType, parameters, bound, false, source, sourcePath, semanticResult); }
+            try { body = new BoundMethodEmitter().EmitWithSourceTracking(emittedName, returnType, parameters, bound,
+                false, source, sourcePath, sourceMap, semanticResult); }
             catch (BoundEmissionException ex) { throw AstCompiler.MappedDiagnostic(ex.Span ?? member.Span, sourcePath, source, ex.Message); }
             foreach (var staticDeclaration in BoundStatementTraversal.Descendants(bound).OfType<BoundVariableDeclarationStatement>()
                          .Where(item => item.Local.StaticStorageName is not null))

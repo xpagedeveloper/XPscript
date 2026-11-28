@@ -16,6 +16,18 @@ public sealed class BoundMethodEmitter
 
     public string Emit(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundStatement> statements, bool isStatic,
         string? source = null, string? sourcePath = null, XpTypeSymbol? semanticReturnType = null, bool cloneImageParameters = true)
+        => EmitCore(methodName, returnType, parameters, statements, isStatic, source, sourcePath, null, semanticReturnType,
+            cloneImageParameters, trackSourceLines: false);
+
+    internal string EmitWithSourceTracking(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters,
+        IReadOnlyList<BoundStatement> statements, bool isStatic, string source, string sourcePath, SourceMap sourceMap,
+        XpTypeSymbol? semanticReturnType = null, bool cloneImageParameters = true)
+        => EmitCore(methodName, returnType, parameters, statements, isStatic, source, sourcePath, sourceMap,
+            semanticReturnType, cloneImageParameters, trackSourceLines: true);
+
+    private string EmitCore(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters,
+        IReadOnlyList<BoundStatement> statements, bool isStatic, string? source, string? sourcePath, SourceMap? sourceMap,
+        XpTypeSymbol? semanticReturnType, bool cloneImageParameters, bool trackSourceLines)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
         ArgumentNullException.ThrowIfNull(returnType);
@@ -33,8 +45,9 @@ public sealed class BoundMethodEmitter
                 .Any(a => AstImageSupport.IsImageStorage(a.Target));
         try
         {
-            body = source is not null && sourcePath is not null && BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement)
-                ? _statements.EmitWithSourceMap(statements, source, sourcePath).Code
+            body = source is not null && sourcePath is not null &&
+                (trackSourceLines || BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
+                ? _statements.EmitWithSourceMap(statements, source, sourcePath, sourceMap, trackSourceLines).Code
                 : _statements.Emit(statements);
         }
         catch (NotSupportedException ex)

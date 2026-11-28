@@ -5,13 +5,20 @@ using SymbolDisplay = Microsoft.CodeAnalysis.CSharp.SymbolDisplay;
 
 namespace XPScript.Compiler.Emission;
 
-internal sealed class BoundEmissionContext(IReadOnlyList<BoundStatement> statements, string? source = null, string? sourcePath = null)
+internal sealed class BoundEmissionContext(
+    IReadOnlyList<BoundStatement> statements,
+    string? source = null,
+    string? sourcePath = null,
+    SourceMap? sourceMap = null,
+    bool trackSourceLines = false)
 {
     private readonly StringBuilder _output = new();
     private readonly List<GeneratedSourceMapping> _mappings = [];
     private readonly HashSet<string> _names = statements.SelectMany(Names).ToHashSet(StringComparer.OrdinalIgnoreCase);
     private int _nextTemporary;
     private int _line = 1;
+
+    public bool TrackSourceLines { get; } = trackSourceLines;
 
     public IReadOnlyList<BoundStatement> Statements { get; } = BoundStatementTraversal.Descendants(statements)
         .OfType<BoundStatement>()
@@ -36,9 +43,11 @@ internal sealed class BoundEmissionContext(IReadOnlyList<BoundStatement> stateme
         if (source is not null && sourcePath is not null && span is { } location)
         {
             var position = SourceTextMap.GetPosition(source, location.Start);
-            _output.Append("#line ").Append(position.Line).Append(' ').Append(SymbolDisplay.FormatLiteral(sourcePath, true)).Append('\n');
+            var mapped = sourceMap?.Resolve(position.Line, sourcePath)
+                ?? new SourceMap.Location(sourcePath, position.Line, string.Empty);
+            _output.Append("#line ").Append(mapped.Line).Append(' ').Append(SymbolDisplay.FormatLiteral(mapped.SourcePath, true)).Append('\n');
             _line++;
-            _mappings.Add(new GeneratedSourceMapping(_line, sourcePath, location, position));
+            _mappings.Add(new GeneratedSourceMapping(_line, mapped.SourcePath, location, new SourcePosition(mapped.Line, position.Column)));
         }
         else if (source is not null)
         {
@@ -47,6 +56,25 @@ internal sealed class BoundEmissionContext(IReadOnlyList<BoundStatement> stateme
         }
         _output.Append(' ', indent * 4).Append(text).Append('\n');
         _line++;
+    }
+
+    public void MarkSourceLine(TextSpan? span)
+    {
+        if (!TrackSourceLines || source is null || sourcePath is null || span is not { } location) return;
+        var position = SourceTextMap.GetPosition(source, location.Start);
+        var mapped = sourceMap?.Resolve(position.Line, sourcePath)
+            ?? new SourceMap.Location(sourcePath, position.Line, string.Empty);
+        var sourceId = SourceLineMarkerPreprocessor.SafeSourceId(mapped.SourcePath, sourcePath);
+        _output.Append("#line ").Append(mapped.Line).Append(' ').Append(SymbolDisplay.FormatLiteral(mapped.SourcePath, true)).Append('\n');
+        _line++;
+        _output.Append("XPSourceLineRuntime.Set(")
+            .Append(mapped.Line)
+            .Append(", ")
+            .Append(SymbolDisplay.FormatLiteral(sourceId, true))
+            .Append(");\n");
+        _line++;
+        _mappings.Add(new GeneratedSourceMapping(_line - 1, mapped.SourcePath, location,
+            new SourcePosition(mapped.Line, position.Column)));
     }
 
     public BoundEmissionResult Finish()

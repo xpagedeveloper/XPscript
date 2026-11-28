@@ -128,6 +128,12 @@ Write-Host "FULLTEST_SUITE=$Suite"
 
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
+  Write-Host 'BEGIN AST debugger source map, breakpoints, stepping and value history'
+  $astDebugger = Invoke-Bounded 'dotnet' @('run','--project','./tests/DebuggerCoreProbe/DebuggerCoreProbe.csproj','-c','Release','--no-restore') 300000 'AST debugger runtime regression'
+  if ($astDebugger.ExitCode -ne 0 -or $astDebugger.Output -notmatch 'DebuggerCoreProbe passed\.') {
+    throw "AST debugger runtime regression failed.`n$($astDebugger.Output)"
+  }
+  Write-Host 'END AST debugger source map, breakpoints, stepping and value history'
   Write-Host 'BEGIN AST DefType syntax diagnostics'
   $invalidDefType = Invoke-Bounded 'dotnet' @($compilerDll, 'ast-compile', './samples/core-invalid-deftype-range-error.xps', '-o', './out/fulltest/core-invalid-deftype-range-error', '--runtime=false', '--debug') $compileTimeoutMilliseconds 'AST invalid DefType range'
   if ($invalidDefType.TimedOut -or $invalidDefType.ExitCode -eq 0 -or

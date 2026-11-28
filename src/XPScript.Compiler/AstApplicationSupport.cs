@@ -95,7 +95,6 @@ internal static class AstApplicationSupport
         if (Uses(source, "Application.Log") || Uses(source, "Application.Audit")) code += ApplicationLogRuntimeSource.Code;
         if (Uses(source, "Application.Debug")) code += ApplicationDebugRuntimeSource.Code;
         if (Uses(source, "Application.SystemLog")) code += Classes.Single(c => c.Identifier.ValueText == "XPScriptApplicationSystemLogRuntime").ToFullString();
-        if (Uses(source, "Application.IsDebugging")) code += SourceLineRuntimeSource.Code;
         return code;
     }
     internal static string BuildMarkers(string source, string path) => string.Join(Environment.NewLine, source.Replace("\r\n", "\n").Split('\n')

@@ -19,6 +19,14 @@ public sealed class BoundCompilationUnitEmitter
 
     /// <summary>Allows target hosts to supply runtime support around the same bound procedures.</summary>
     public string EmitMembers(IReadOnlyList<BoundMethodDefinition> methods, string? source = null, string? sourcePath = null)
+        => EmitMembersCore(methods, source, sourcePath, null, trackSourceLines: false);
+
+    internal string EmitMembersWithSourceTracking(IReadOnlyList<BoundMethodDefinition> methods, string source, string sourcePath,
+        SourceMap sourceMap)
+        => EmitMembersCore(methods, source, sourcePath, sourceMap, trackSourceLines: true);
+
+    private string EmitMembersCore(IReadOnlyList<BoundMethodDefinition> methods, string? source, string? sourcePath,
+        SourceMap? sourceMap, bool trackSourceLines)
     {
         ArgumentNullException.ThrowIfNull(methods);
         methods = methods.Where(method => !method.IsOptionalForwarding ||
@@ -53,9 +61,12 @@ public sealed class BoundCompilationUnitEmitter
         var emitter = new BoundMethodEmitter();
         foreach (var method in methods)
         {
-            var key = BoundEmissionCache.CreateKey(method, sourcePath);
-            output.Append(BoundEmissionCache.Emit(key, () =>
-                emitter.Emit(method.Name, method.ReturnType, method.Parameters, method.Statements, true, source, sourcePath, method.SemanticReturnType)));
+            var key = BoundEmissionCache.CreateKey(method, sourcePath, sourceMap?.CacheIdentity, trackSourceLines);
+            output.Append(BoundEmissionCache.Emit(key, () => trackSourceLines
+                ? emitter.EmitWithSourceTracking(method.Name, method.ReturnType, method.Parameters, method.Statements,
+                    true, source!, sourcePath!, sourceMap!, method.SemanticReturnType)
+                : emitter.Emit(method.Name, method.ReturnType, method.Parameters, method.Statements,
+                    true, source, sourcePath, method.SemanticReturnType)));
         }
         return output.ToString();
     }

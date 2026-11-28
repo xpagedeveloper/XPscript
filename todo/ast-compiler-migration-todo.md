@@ -1323,13 +1323,11 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   Android workload but lacks Android SDK Platform 36, so no local APK build was
   attempted beyond the prerequisite diagnostic.
 - [ ] Push these fixes and wait for Platform, XPImage and FullTest workflows.
-- [ ] Port debugger instrumentation through AST before claiming debugger
-  runtime parity. `DebuggerCoreProbe` contained generated-C# expectations that
-  only exercised `XPScriptTranspiler`; the legacy path now correctly rejects
-  compilation. The probe now keeps debugger-core and source-map checks without
-  invoking that disabled path. AST emission currently does not include the
-  debugger runtime/source-line instrumentation, so this remains an explicit
-  compatibility gap to cover in Language FullTest.
+- [x] Port debugger instrumentation through AST before claiming debugger
+  runtime parity. The AST `DebuggerCoreProbe` now verifies source lines,
+  breakpoints, stepping, variable history and runtime error locations through
+  a generated application; its old postprocessor-only assertions were replaced
+  with AST-generated-source checks. The probe runs in Language FullTest.
 - [ ] Close aggregate FullTest failures from `c9d09d87`. The Linux
   embedded-assets assertion now checks `./out/assets`, and the default compiler
   route carries `--embed-assets` through AST source generation; a local
@@ -1378,7 +1376,15 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   `JsonErrorInstrumentationProbe`, `StateScopeObjectProbe`); retain only
   compatibility helpers that are exercised by a permanent regression suite and
   whose legacy-only purpose is documented.
-- [ ] Port debugger source-line instrumentation to AST-generated output.
-  Preserve source mapping, breakpoints, stepping and runtime error locations;
-  add focused `DebuggerCoreProbe` regressions and run them in Language FullTest.
+- [x] Port debugger instrumentation to AST-generated output. Bound statements
+  now emit physical `#line` mappings and source-line runtime markers for the
+  root file and `Include` files. The AST output contains the debugger runtime
+  and reports completion from generated entry points. Simple variable
+  declarations, direct assignments, and `For`/`ForAll` iteration values feed
+  debugger value history; member and indexed mutations remain excluded, as in
+  the existing compatibility behavior. `DebuggerCoreProbe` now launches a
+  generated AST app and checks entry, an included-file breakpoint, stepping,
+  value history (including an error-flow procedure and range loop), completion,
+  and the runtime error's included-file line. The probe is run early in
+  Language FullTest with a bounded timeout.
 

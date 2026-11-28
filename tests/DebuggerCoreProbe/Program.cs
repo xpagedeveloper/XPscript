@@ -1,4 +1,3 @@
-using System.Reflection;
 using XPScript.Compiler;
 using XPScript.Compiler.Debugger;
 
@@ -31,59 +30,5 @@ session.UpdateFrame(
 if (session.GetStackTrace().Count != 1) throw new Exception("Stack frame was not recorded.");
 if (session.GetVariables(1).Count != 1) throw new Exception("Frame variables were not recorded.");
 
-VerifyComplexObjectsAreNotAutoTracked();
+await AstDebuggerProbe.VerifyAsync();
 Console.WriteLine("DebuggerCoreProbe passed.");
-
-static void VerifyComplexObjectsAreNotAutoTracked()
-{
-    var compilerAssembly = typeof(XPScriptTranspiler).Assembly;
-    var processorType = compilerAssembly.GetType("XPScript.Compiler.CompilerSourceLineDirectivePostProcessor", throwOnError: true)!;
-    var processor = Activator.CreateInstance(processorType, nonPublic: true)!;
-    var transform = processorType.GetMethod("Transform", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-        ?? throw new Exception("Debugger source-line postprocessor Transform method was not found.");
-
-    var sourceName = Convert.ToHexString(System.Text.Encoding.UTF8.GetBytes("sample.xps"));
-    var input = $$"""
-internal static class Script
-{
-    public static void Main()
-    {
-        XPSourceLineRuntime.__XPSOURCE_10_{{sourceName}}();
-        LSArrayRuntime.Set(values, ComputeValue(), NextIndex());
-        XPSourceLineRuntime.__XPSOURCE_11_{{sourceName}}();
-        box.Value = ComputeValue();
-        XPSourceLineRuntime.__XPSOURCE_12_{{sourceName}}();
-        parameter.Value = ComputeValue();
-        XPSourceLineRuntime.__XPSOURCE_13_{{sourceName}}();
-        Use(LSByRefRuntime.Create(() => (object?)(answer), __lsv => answer = XPScriptRuntime.CInt(__lsv)));
-    }
-}
-internal static class LSControlRuntime
-{
-}
-""";
-
-    var transformed = (string)(transform.Invoke(processor, [input])
-        ?? throw new Exception("Debugger source-line postprocessor returned null."));
-
-    if (transformed.Contains("XPScriptDebugArrayMutationRuntime", StringComparison.Ordinal))
-        throw new Exception("Internal array mutations must not be exposed as debugger variables.");
-    if (transformed.Contains("XPScriptDebugByRefMutationRuntime", StringComparison.Ordinal))
-        throw new Exception("Internal ByRef wrappers must not be exposed as debugger variables.");
-    if (transformed.Contains("TrackValue(\"box.Value\"", StringComparison.Ordinal))
-        throw new Exception("Object member/property writes must not be auto-inspected by the debugger.");
-    if (Count(transformed, "NextIndex()") != 1)
-        throw new Exception("Debugger postprocessing changed array index evaluation.");
-}
-
-static int Count(string text, string value)
-{
-    var count = 0;
-    var offset = 0;
-    while ((offset = text.IndexOf(value, offset, StringComparison.Ordinal)) >= 0)
-    {
-        count++;
-        offset += value.Length;
-    }
-    return count;
-}

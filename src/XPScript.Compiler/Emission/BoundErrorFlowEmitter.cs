@@ -17,13 +17,15 @@ internal sealed class BoundErrorFlowEmitter
     private string _pc = "", _next = "", _mode = "", _handler = "", _active = "", _fault = "", _after = "";
 
     public string Emit(IReadOnlyList<BoundStatement> statements) => Build(statements, null, null).Code;
-    public BoundEmissionResult EmitMapped(IReadOnlyList<BoundStatement> statements, string source, string path)
-        => Build(statements, source, path);
+    public BoundEmissionResult EmitMapped(IReadOnlyList<BoundStatement> statements, string source, string path,
+        SourceMap? sourceMap = null, bool trackSourceLines = false)
+        => Build(statements, source, path, sourceMap, trackSourceLines);
 
-    private BoundEmissionResult Build(IReadOnlyList<BoundStatement> statements, string? source, string? path)
+    private BoundEmissionResult Build(IReadOnlyList<BoundStatement> statements, string? source, string? path,
+        SourceMap? sourceMap = null, bool trackSourceLines = false)
     {
         _expressions.BeginMethodEmission();
-        _output = new BoundEmissionContext(statements, source, path);
+        _output = new BoundEmissionContext(statements, source, path, sourceMap, trackSourceLines);
         _expressions.UseTemporaryProvider(_output.Temporary);
         _pc = _output.Temporary(); _next = _output.Temporary(); _mode = _output.Temporary();
         _handler = _output.Temporary(); _active = _output.Temporary(); _fault = _output.Temporary(); _after = _output.Temporary();
@@ -44,10 +46,13 @@ internal sealed class BoundErrorFlowEmitter
         _output.Write("{", 0);
         _output.Write("try", 1); _output.Write("{", 1);
         _output.Write($"switch ({_pc})", 2); _output.Write("{", 2);
+        var markedSourceSpans = new HashSet<(int Start, int Length)>();
         for (var id = 0; id < _instructions.Count; id++)
         {
             var instruction = _instructions[id];
             _output.Write($"case {id}:", 3, instruction.Source.Span); _output.Write("{", 3);
+            if (instruction.Source.Span is { } span && markedSourceSpans.Add((span.Start, span.Length)))
+                _output.MarkSourceLine(span);
             _output.Write($"{_next} = {instruction.Next};", 4, instruction.Source.Span);
             instruction.Write(4);
             _output.Write($"{_pc} = {_next};", 4); _output.Write("break;", 4); _output.Write("}", 3);
@@ -198,13 +203,15 @@ internal sealed class BoundErrorFlowEmitter
                     if (statement is BoundVariableDeclarationStatement declaration && declaration.Local.StaticStorageName is null)
                     {
                         var temporaryOutput = new BoundEmissionContext([statement]);
-                        new BoundStatementEmitter(_expressions) { ImageScopeEnabled = _imageScope }.EmitAtomic(temporaryOutput, statement, 0);
+                        new BoundStatementEmitter(_expressions) { ImageScopeEnabled = _imageScope }.EmitAtomic(temporaryOutput, statement, 0, markSourceLine: false);
                         var code = temporaryOutput.Finish().Code;
                         var start = code.IndexOf(declaration.Local.Name + " = ", StringComparison.Ordinal);
                         foreach (var line in code[start..].TrimEnd().Split('\n'))
                             Write(line, indent, statement);
+                        if (_output.TrackSourceLines && !declaration.Local.Name.StartsWith("__", StringComparison.Ordinal))
+                            Write($"XPScriptDebugRuntime.TrackValue({Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(declaration.Local.Name, true)}, {declaration.Local.Name});", indent, statement);
                     }
-                    else new BoundStatementEmitter(_expressions) { ImageScopeEnabled = _imageScope }.EmitAtomic(_output, statement, indent);
+                    else new BoundStatementEmitter(_expressions) { ImageScopeEnabled = _imageScope }.EmitAtomic(_output, statement, indent, markSourceLine: false);
                 });
         }
     }

@@ -888,7 +888,7 @@ public static class AstCompiler
         // members so constructors and accessors are not emitted twice.
         var emittedClassMembers = classes.Values.ToDictionary(
             classDeclaration => classDeclaration.Identifier.Text,
-            classDeclaration => AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource, fieldsByClass[classDeclaration.Identifier.Text], classes),
+            classDeclaration => AstClassMethodSupport.Emit(classDeclaration, symbols, sourcePath, fullSource, includeResult.Map, fieldsByClass[classDeclaration.Identifier.Text], classes),
             StringComparer.OrdinalIgnoreCase);
         // Bind every procedure in its own scope; declarations are registered
         // before bodies so forward calls and recursion see real signatures.
@@ -989,7 +989,7 @@ public static class AstCompiler
         string body;
         try
         {
-            body = new BoundCompilationUnitEmitter().EmitMembers(methods, source, sourcePath);
+            body = new BoundCompilationUnitEmitter().EmitMembersWithSourceTracking(methods, source, sourcePath, includeResult.Map);
         }
         catch (BoundEmissionException ex)
         {
@@ -1020,19 +1020,20 @@ public static class AstCompiler
             """;
         var applicationMain = methods.Any(m => m.Name == "__xps_application_main" && m.Parameters.Count == 0 && m.ReturnType == typeof(void))
             ? "__xps_application_main();" : "";
+        var applicationMainWithCompletion = "try { " + applicationMain + " } finally { XPScriptDebugRuntime.Complete(); }";
         var entryPoint = usesMacDesktopUi
-            ? "public static void Main() { if (OperatingSystem.IsMacOS()) { var host = Type.GetType(\"XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop\", throwOnError: true)!; host.GetMethod(\"RunMacOS\")!.Invoke(null, new object[] { (Action)__xps_ui_main }); } else __xps_ui_main(); }"
+            ? "public static void Main() { try { if (OperatingSystem.IsMacOS()) { var host = Type.GetType(\"XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop\", throwOnError: true)!; host.GetMethod(\"RunMacOS\")!.Invoke(null, new object[] { (Action)__xps_ui_main }); } else __xps_ui_main(); } finally { XPScriptDebugRuntime.Complete(); } }"
             : usesApplication
             ? "public static void Main(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
-                (reportsConsoleErrors ? "try { " + applicationMain + " } " + consoleErrorHandler : applicationMain) + " }"
+                (reportsConsoleErrors ? "try { " + applicationMainWithCompletion + " } " + consoleErrorHandler : applicationMainWithCompletion) + " }"
             : guardPlainMain
-            ? "public static void Main() { try { __xps_console_main(); } " + consoleErrorHandler + " }"
+            ? "public static void Main() { try { try { __xps_console_main(); } finally { XPScriptDebugRuntime.Complete(); } } " + consoleErrorHandler + " }"
             : methodName.Equals("Main", StringComparison.OrdinalIgnoreCase) ? string.Empty : "    public static void Main() { }\n";
         var androidEntryPoint = runtimeIdentifier is "android-arm64" or "android-x64"
             ? usesApplication
                 ? "public static void __xps_android_entry(string[] args) { XPScriptRuntime.SetArgs(args); XPScriptApplicationRuntime.SetArgs(args); " +
-                    applicationMain + " }"
-                : $"public static void __xps_android_entry(string[] args) {{ XPScriptRuntime.SetArgs(args); {methodName}(); }}"
+                    applicationMainWithCompletion + " }"
+                : $"public static void __xps_android_entry(string[] args) {{ XPScriptRuntime.SetArgs(args); try {{ {methodName}(); }} finally {{ XPScriptDebugRuntime.Complete(); }} }}"
             : string.Empty;
         var optionCompareNoCase = Regex.IsMatch(fullSource, @"(?im)^\s*Option\s+Compare\s+NoCase\s*$");
         var finalizerTestMode = string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_AST_FINALIZER_TEST"), "1", StringComparison.Ordinal);
@@ -2015,6 +2016,8 @@ internal static class Program
             generated = generated.Replace("typeof(Script)", "typeof(Program)", StringComparison.Ordinal);
         if (runtimeFeatures.Ui && !generated.Contains("internal static class XPScriptUIDesktopAdapter", StringComparison.Ordinal))
             generated += Environment.NewLine + UIExtensionAstCompatibilitySource.Code;
+        if (!generated.Contains("internal static class XPScriptDebugRuntime", StringComparison.Ordinal))
+            generated += Environment.NewLine + SourceLineRuntimeSource.Code;
         AstRuntimeDependencyGuard.Validate(generated, sourcePath);
         var applicationMarkers = AstApplicationSupport.BuildMarkers(fullSource, sourcePath);
         if (emitSourceOnly)

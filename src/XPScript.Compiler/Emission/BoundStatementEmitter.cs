@@ -42,17 +42,34 @@ public sealed class BoundStatementEmitter
     }
 
     public BoundEmissionResult EmitWithSourceMap(IReadOnlyList<BoundStatement> statements, string source, string sourcePath)
+        => EmitWithSourceMap(statements, source, sourcePath, null, trackSourceLines: false);
+
+    internal BoundEmissionResult EmitWithSourceMap(IReadOnlyList<BoundStatement> statements, string source, string sourcePath,
+        SourceMap? sourceMap, bool trackSourceLines)
     {
         _expressions.BeginMethodEmission();
         _flatControlFlow = Collect(statements).Any();
         ArgumentNullException.ThrowIfNull(source);
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
-        var output = new BoundEmissionContext(statements, source, sourcePath);
+        var output = new BoundEmissionContext(statements, source, sourcePath, sourceMap, trackSourceLines);
         _expressions.UseTemporaryProvider(output.Temporary);
         if (ContainsErrorFlow(statements))
         {
-            var errorFlow = new BoundErrorFlowEmitter(ImageScopeEnabled).EmitMapped(statements, source, sourcePath);
+            var errorFlow = new BoundErrorFlowEmitter(ImageScopeEnabled).EmitMapped(statements, source, sourcePath, sourceMap, trackSourceLines);
             return new BoundEmissionResult(errorFlow.Code + EmitGoSubHelpersCode(statements), errorFlow.SourceMappings);
+        }
+        if (_flatControlFlow)
+        {
+            foreach (var declaration in BoundStatementTraversal.Descendants(statements)
+                         .OfType<BoundVariableDeclarationStatement>()
+                         .Where(item => item.Initializer is null && item.Local.StaticStorageName is null))
+            {
+                var type = CSharpType(declaration.Local.Type);
+                if (declaration.Local.Type.IsArray || declaration.Local.Type == typeof(Array))
+                    type = "System.Array";
+                type = BoundMethodEmitter.SemanticStorageType(declaration.Local, type);
+                output.Write($"{type} {declaration.Local.Name} = default({type});", 0, declaration.Span);
+            }
         }
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
@@ -61,13 +78,17 @@ public sealed class BoundStatementEmitter
         return output.Finish();
     }
 
-    private void EmitStatement(BoundEmissionContext output, BoundStatement statement, int indent)
+    private void EmitStatement(BoundEmissionContext output, BoundStatement statement, int indent, bool markSourceLine = true)
     {
+        if (markSourceLine) output.MarkSourceLine(statement.Span);
         void Line(string text) => output.Write(text, indent, statement.Span);
         // XPscript labels have procedure scope. Keep continuation labels outside
         // C# blocks so GoTo can target labels in any branch of this procedure.
         if (_flatControlFlow && EmitFlatControlFlow(output, statement, indent))
+        {
+            EmitTrackedValue(output, statement, indent, Line);
             return;
+        }
         switch (statement)
         {
             case BoundLabelStatement label:
@@ -370,6 +391,7 @@ public sealed class BoundStatementEmitter
                 var conversion = @for.Variable.Type == typeof(long) ? "CLng" : @for.Variable.Type == typeof(double) ? "CDbl"
                     : throw new NotSupportedException("For variable requires a bound numeric type.");
                 output.Write($"{_expressions.Emit(@for.Variable)} = XPScriptRuntime.{conversion}({iterator});", indent + 1, @for.Variable.Span);
+                WriteTrackedName(output, @for.Variable.Symbol.Name, _expressions.Emit(@for.Variable), indent + 1, @for.Variable.Span);
                 foreach (var child in @for.Statements)
                     EmitStatement(output, child, indent + 1);
                 output.Write("}", indent);
@@ -394,6 +416,8 @@ public sealed class BoundStatementEmitter
                 output.Write(forAll.Variable.Symbol is VariableSymbol { IsForAllAlias: true }
                     ? $"var {variable} = {itemValue};"
                     : $"{variable} = {itemValue};", indent + 1, forAll.Variable.Span);
+                if (forAll.Variable.Symbol is not VariableSymbol { IsForAllAlias: true })
+                    WriteTrackedName(output, forAll.Variable.Symbol.Name, variable, indent + 1, forAll.Variable.Span);
                 foreach (var child in forAll.Statements)
                     EmitStatement(output, child, indent + 1);
                 output.Write("}", indent);
@@ -432,10 +456,33 @@ public sealed class BoundStatementEmitter
             default:
                 throw new NotSupportedException($"Statement emission is not implemented for {statement.Kind}.");
         }
+        EmitTrackedValue(output, statement, indent, Line);
     }
 
-    internal void EmitAtomic(BoundEmissionContext output, BoundStatement statement, int indent)
-        => EmitStatement(output, statement, indent);
+    private void EmitTrackedValue(BoundEmissionContext output, BoundStatement statement, int indent, Action<string> writeLine)
+    {
+        if (!output.TrackSourceLines) return;
+
+        if (statement is BoundAssignmentStatement { Target: BoundNameExpression name } &&
+            !name.Symbol.Name.StartsWith("__", StringComparison.Ordinal))
+        {
+            writeLine($"XPScriptDebugRuntime.TrackValue({Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(name.Symbol.Name, true)}, {_expressions.Emit(name)});");
+        }
+        else if (statement is BoundVariableDeclarationStatement { Initializer: not null } declaration &&
+            !declaration.Local.Name.StartsWith("__", StringComparison.Ordinal))
+        {
+            writeLine($"XPScriptDebugRuntime.TrackValue({Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(declaration.Local.Name, true)}, {_expressions.Emit(new BoundNameExpression(declaration.Local))});");
+        }
+    }
+
+    private static void WriteTrackedName(BoundEmissionContext output, string name, string value, int indent, TextSpan? span)
+    {
+        if (output.TrackSourceLines && !name.StartsWith("__", StringComparison.Ordinal))
+            output.Write($"XPScriptDebugRuntime.TrackValue({Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(name, true)}, {value});", indent, span);
+    }
+
+    internal void EmitAtomic(BoundEmissionContext output, BoundStatement statement, int indent, bool markSourceLine = true)
+        => EmitStatement(output, statement, indent, markSourceLine);
 
     private static string Label(string name) => "__xps_label_" + name.ToUpperInvariant();
     private static string GoSubMethod(string name) => "__xps_gosub_" + new string(name.Select(ch => char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_').ToArray());
@@ -520,6 +567,7 @@ public sealed class BoundStatementEmitter
     private bool EmitFlatControlFlow(BoundEmissionContext output, BoundStatement statement, int indent)
     {
         void Line(string text, TextSpan? span = null) => output.Write(text, indent, span ?? statement.Span);
+        void Track(string name, string value, TextSpan? span = null) => WriteTrackedName(output, name, value, indent, span ?? statement.Span);
         void Body(IEnumerable<BoundStatement> body)
         {
             foreach (var child in body) EmitStatement(output, child, indent);
@@ -554,6 +602,7 @@ public sealed class BoundStatementEmitter
                 Line($"if ({rangeIndex} >= {range}.Length) goto {rangeDone};");
                 Line($"{rangeValue} = {range}[{rangeIndex}++];");
                 Line($"{_expressions.Emit(value.Variable)} = XPScriptRuntime.CLng({rangeValue});");
+                Track(value.Variable.Symbol.Name, _expressions.Emit(value.Variable), value.Variable.Span);
                 Body(value.Statements);
                 Line($"goto {rangeStart};");
                 Line($"{rangeDone}:;");
@@ -581,6 +630,7 @@ public sealed class BoundStatementEmitter
                 {
                     var converted = _expressions.IterationValue(value.Variable, itemValue);
                     Line($"{_expressions.Emit(value.Variable)} = {converted};");
+                    Track(value.Variable.Symbol.Name, _expressions.Emit(value.Variable), value.Variable.Span);
                     Body(value.Statements);
                 }
                 Line($"goto {itemStart};");

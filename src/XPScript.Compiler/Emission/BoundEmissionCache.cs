@@ -48,12 +48,12 @@ public static class BoundEmissionCache
         return created;
     }
 
-    public static string CreateKey(BoundMethodDefinition method, string? sourcePath)
+    public static string CreateKey(BoundMethodDefinition method, string? sourcePath, string? sourceMapIdentity = null, bool trackSourceLines = false)
     {
         var statementIdentity = method.Statements.Count == 0 ? 0 : RuntimeHelpers.GetHashCode(method.Statements[0]);
         var parameters = string.Join(";", method.Parameters.Select(parameter =>
             $"{parameter.Name}:{parameter.Type.FullName}:{parameter.SemanticType?.Name}:{parameter.IsByRef}"));
-        return $"{sourcePath}|{method.Name}|{method.ReturnType.FullName}|{method.SemanticReturnType?.Name}|{parameters}|{statementIdentity}";
+        return $"{sourcePath}|{method.Name}|{method.ReturnType.FullName}|{method.SemanticReturnType?.Name}|{parameters}|{statementIdentity}|{sourceMapIdentity}|{trackSourceLines}";
     }
 
     public static void Clear()
