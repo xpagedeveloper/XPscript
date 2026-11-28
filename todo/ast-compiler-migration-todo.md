@@ -1364,15 +1364,20 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   compilation still succeeds through AST; the test is now part of Platform
   FullTest. The focused local smoke passed with `WEB-COMPILER-SMOKE=OK`.
 - [x] Classify direct calls to the legacy transpiler entry points. No production
-  callers remain after removing the web fallback. The remaining direct calls in
-  `CompileFolderProbe`, `PreprocessorPipelineProbe`,
-  `JsonErrorInstrumentationProbe` and `StateScopeObjectProbe` are test-only and
-  are not currently invoked by a workflow. `tests/ast-lexer` separately uses a
-  narrow expression transformation helper as a legacy comparison oracle.
+  callers remain after removing the web fallback. `tests/ast-lexer` separately
+  uses a narrow expression transformation helper as a legacy comparison oracle.
+- [x] Retire the unsupported `[Compile:folder]` feature. Multi-file source is
+  composed with `Include`; the compile-folder module dispatcher depended on a
+  legacy-only route and was not part of the supported language contract. The
+  AST pipeline now reports a direct migration hint for the old directive, and
+  Language FullTest checks that diagnostic. The stale `CompileFolderProbe` and
+  its platform-workflow entry were removed. `Include` expansion remains the
+  supported multi-file path and is covered by the existing AST CLI shard.
 - [ ] Port the useful assertions from those unreferenced probes to AST coverage
-  or remove the stale probes; retain only compatibility helpers that are
-  exercised by a permanent regression suite and whose legacy-only purpose is
-  documented.
+  or remove the stale probes (`PreprocessorPipelineProbe`,
+  `JsonErrorInstrumentationProbe`, `StateScopeObjectProbe`); retain only
+  compatibility helpers that are exercised by a permanent regression suite and
+  whose legacy-only purpose is documented.
 - [ ] Port debugger source-line instrumentation to AST-generated output.
   Preserve source mapping, breakpoints, stepping and runtime error locations;
   add focused `DebuggerCoreProbe` regressions and run them in Language FullTest.

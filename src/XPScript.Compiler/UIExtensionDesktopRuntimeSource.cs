@@ -236,7 +236,7 @@ internal static class XPScriptUIDesktopAdapter
         if (string.IsNullOrWhiteSpace(target)) throw new XPScriptRuntimeException(5, "UIForm navigation target is empty.");
         var scriptType = Type.GetType("Script", throwOnError: false);
         var method = scriptType?.GetMethod("XpsCompilerGeneratedNavigationDispatch", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase)
-            ?? throw new XPScriptRuntimeException(5, "Navigation requires the target to be part of a [Compile:folder] desktop application.");
+            ?? throw new XPScriptRuntimeException(5, "UIForm navigation target is not available in this compiled application.");
         try { method.Invoke(null, [target]); }
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "Navigation failed: " + ex.InnerException.Message); }
     }

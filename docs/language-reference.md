@@ -7,6 +7,7 @@ Every row has a command title, syntax, parameter description, short behavior des
 ## Quick navigation
 
 - [Declarations and procedures](#declarations-and-procedures)
+- [Source files](#source-files)
 - [Control flow and errors](#control-flow-and-errors)
 - [Operators](#operators)
 - [Arrays and lists](#arrays-and-lists)
@@ -29,6 +30,10 @@ Runtime function names are not globally reserved identifiers. An unqualified cal
 A field and a method may share a name in a class. With a declared class receiver, `item.JsonParse` accesses the field and `item.JsonParse(...)` calls the method. Inside that function, assignment to the bare function name still sets its return value. Use `Me.JsonParse` to access the field there.
 
 This distinction also applies to properties, methods, parameters, locals, enum members, and symbols in different classes: sharing a spelling with a runtime API does not by itself reserve that spelling. Only actual syntax keywords and compiler/runtime names with a real declaration-scope collision are restricted.
+
+## Source files
+
+Use `Include "relative/path.xps"` on its own line to combine another XPscript source file with the current source. Paths are relative to the file containing the directive; included files can include other files, and a file is expanded only once per compilation. `[Compile:folder]` is not supported; use `Include` to compose a multi-file program.
 
 ## Numeric literals
 

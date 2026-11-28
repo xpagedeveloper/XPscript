@@ -61,6 +61,11 @@ $parser = @(dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'parse
 if ($LASTEXITCODE -ne 2 -or ($parser -join "`n") -notmatch 'Expected CloseParenToken') { throw 'Shard 6 parser diagnostic regression failed.' }
 $included = @(dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'include-parser-span-error-next.xps') -o (Join-Path $output 'include') 2>&1)
 if ($LASTEXITCODE -ne 2 -or ($included -join "`n") -notmatch 'helper\.xps:2:') { throw 'Shard 6 source mapping regression failed.' }
+$compileFolder = @(dotnet $context.Compiler ast-compile (Join-Path $PSScriptRoot 'compile-folder-directive.xps') -o (Join-Path $output 'compile-folder') 2>&1)
+if ($LASTEXITCODE -ne 2 -or ($compileFolder -join "`n") -notmatch 'Compile:folder.*not supported.*Use Include') {
+    throw 'Shard 6 must reject Compile:folder and direct multi-file programs to Include.'
+}
+Write-Host 'AST_COMPILE_FOLDER_RETIRED_USE_INCLUDE_OK'
 
 Write-AstCliCheckpoint 'shard-6-final-cli'
 $cliOutput = Join-Path $output 'cli-main'
