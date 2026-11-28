@@ -961,13 +961,51 @@ The first AST proof of concept is complete when:
 ## Definition of done for full migration
 
 - [ ] All supported XPscript syntax is represented by the XPscript syntax tree.
+  - [ ] Build a coverage inventory from the language reference and executable
+    samples. Map every supported syntax form to its lexer/parser, binder,
+    emitter/runtime implementation, and a permanent regression fixture. Record
+    documented forms that are unsupported and AST extensions that intentionally
+    differ from the published compiler.
+  - [ ] Close each uncovered syntax/runtime entry with an executable fixture in
+    the appropriate FullTest. Run the relevant suite on each supported OS or
+    target; keep environment-dependent cases explicitly identified rather than
+    counting compilation alone as runtime coverage.
 - [x] Parsing no longer depends on line-by-line regex/string transformation in the opt-in AST path; lexer and declaration/statement parsers consume tokens.
 - [x] Semantic analysis operates on XPscript syntax/bound nodes in the opt-in AST path.
 - [x] C# generation operates from the bound representation in the opt-in AST path; legacy transpiler migration remains open.
 - [ ] Roslyn is used as the C#/.NET backend, not as the primary XPscript parser/type checker.
 - [ ] Existing supported runtime behavior passes compatibility tests.
-- [ ] Normal compiler and machine/MCP interfaces use the same AST/binder implementation and report consistent diagnostics.
-- [ ] Legacy parser/transpiler implementation is removed or reduced to explicitly justified compatibility code.
+  - [ ] For each inventory entry, compare observable runtime results and
+    normalized diagnostics through the normal CLI and MCP interfaces. Use the
+    published 0.9.3 behavior where it is available; document intentional AST
+    capability extensions separately instead of treating them as parity.
+  - [ ] Add or update executable samples and permanent FullTest assertions for
+    every discrepancy found. The audit closes only when all inventory entries
+    have evidence or a documented, accepted exclusion.
+- [ ] Normal compiler and machine/MCP interfaces use the same AST/binder
+  implementation and report consistent diagnostics.
+  - [ ] Exercise the same valid and invalid sources through CLI and MCP, and
+    compare success, generated/runtime behavior, diagnostic codes, source paths,
+    lines, and columns. Keep these comparisons in `CompilerMcpProtocolProbe`
+    and the Language FullTest.
+  - [ ] Audit differences in command-line arguments, target selection, and
+    runtime execution separately from parser/binder parity; document any
+    interface-specific behavior that is intentional.
+- [ ] Legacy parser/transpiler implementation is removed or reduced to
+  explicitly justified compatibility code.
+  - [ ] Inventory remaining calls into legacy parser/transpiler code and classify
+    each as a production route, explicit compatibility command, test-only
+    comparison, or unused code. Verify the default CLI and MCP paths cannot
+    silently fall back to legacy compilation.
+  - [ ] For each production route, either port its behavior to AST and remove
+    the legacy route, or document why it must remain, who uses it, and the test
+    that protects that contract. Remove unused legacy code and stale tests only
+    after equivalent AST FullTest coverage is green.
+  - [ ] Port debugger source-line instrumentation to AST-generated output.
+    Preserve source mapping, breakpoints, stepping, and runtime error locations;
+    add focused `DebuggerCoreProbe` regressions and run them in Language
+    FullTest. Until this passes, debugger runtime parity is an explicit open
+    compatibility gap.
 - [x] Compiler architecture and extension guidance are documented in `docs/ast-compiler-extension-guide.md`.
 - [ ] Update the compiler/package version to `0.9.4 Beta` only after all AST migration gates above pass and published `0.9.3 Beta` compatibility verification is recorded.
 
