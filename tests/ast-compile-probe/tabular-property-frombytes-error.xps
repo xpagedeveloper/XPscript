@@ -1,0 +1,8 @@
+Class Store
+    Public Property Get Item As XPCsvDocument
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    Call store.Item.FromBytes(Array(97))
+End Sub

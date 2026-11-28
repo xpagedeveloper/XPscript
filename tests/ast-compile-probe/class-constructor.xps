@@ -1,0 +1,72 @@
+Public trace As String
+Class record
+    Private stored As Long
+    Public Label As String
+    Public Amount As Double
+    Public Sub New(ByVal value As Long, ByVal label As String, ByVal amount As Double)
+        stored = value + 1
+        Me.Label = label
+        Me.Amount = amount
+        value = 90
+        Call Touch()
+        trace = trace & "C"
+        Exit Sub
+        Error 6, "constructor Exit Sub failed"
+    End Sub
+    Private Sub Touch()
+        stored = stored + 1
+    End Sub
+    Public Property Get Value As Long
+        Value = stored
+    End Property
+End Class
+Class DefaultRecord
+    Public Value As Long
+    Public Sub New()
+        Value = 8
+    End Sub
+End Class
+Class ChildRecord Extend DefaultRecord
+End Class
+Class ProtectedRecord
+    Public Value As Long
+    Public Sub New(ByVal seed As Long)
+        On Error Resume Next
+        Error 3820, "handled constructor failure"
+        On Error GoTo 0
+        Value = seed
+    End Sub
+End Class
+Function NextValue() As Long
+    trace = trace & "V"
+    NextValue = 5
+End Function
+Function NextLabel() As String
+    trace = trace & "L"
+    NextLabel = "second"
+End Function
+Function NextAmount() As Long
+    trace = trace & "A"
+    NextAmount = 7
+End Function
+Function Compute(Optional ByVal start As Long = 5, Optional ByVal value As Variant = New record(start, "optional", 3)) As Long
+    Dim typed As record = value
+    Compute = typed.Value
+End Function
+Sub Main()
+    Dim seed As Long = 3
+    Dim first As New rEcOrD(seed, "first", 2)
+    If first.Value <> 5 Or first.Label <> "first" Or first.Amount <> 2 Or seed <> 3 Then Error 6, "constructor body or ByVal seed"
+    trace = ""
+    Dim second As record
+    If Not (second Is Nothing) Then Error 6, "plain Dim must not construct an instance"
+    Set second = New RECORD(NextValue(), NextLabel(), NextAmount())
+    If trace <> "VLAC" Or second.Value <> 7 Or second.Amount <> 7 Then Error 6, "constructor argument order or conversion"
+    If first.Value <> 5 Or first.Label <> "first" Then Error 6, "constructor state crossed instances"
+    If Compute() <> 7 Then Error 6, "constructor metadata lost during Optional rewriting"
+    Dim child As New ChildRecord
+    If child.Value <> 8 Then Error 6, "implicit parameterless base construction"
+    Dim handled As New ProtectedRecord(9)
+    If handled.Value <> 9 Then Error 6, "protected constructor body"
+    Print "CLASS_CONSTRUCTOR_OK"
+End Sub

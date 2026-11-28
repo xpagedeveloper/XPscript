@@ -17,6 +17,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
     private readonly object _backgroundGate = new();
     private readonly HashSet<Task> _backgroundPrecompileTasks = [];
     private readonly HashSet<string> _activatedPrecompileSources;
+    private readonly CancellationTokenSource _backgroundPrecompileCancellation = new();
     private bool _disposing;
 
     public XpsWebDispatcher(
@@ -62,6 +63,11 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
                 scriptPath = explicitMatch.ScriptPath;
                 requestedRoute = explicitMatch.ProcedureName;
                 context.SetRouteValues(explicitMatch.RouteValues);
+                if (!explicitMatch.MethodAllowed && !context.Request.Method.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase))
+                {
+                    WriteTerminalResponse(context.Response, 405, "Method Not Allowed", context.Request.Method);
+                    return;
+                }
             }
             else
             {
@@ -145,6 +151,24 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
         {
             throw;
         }
+        catch (XpsRestBindingException ex)
+        {
+            WriteDebugException(context, ex, scriptPath, requestedRoute);
+            if (!context.Response.Completed)
+            {
+                XpsWebResponseRestExtensions.BadRequest(context.Response, ex.Message);
+                context.Response.Complete();
+            }
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            WriteDebugException(context, ex, scriptPath, requestedRoute);
+            if (!context.Response.Completed)
+            {
+                XpsWebResponseRestExtensions.BadRequest(context.Response, "Request body contains invalid JSON.");
+                context.Response.Complete();
+            }
+        }
         catch (Exception ex)
         {
             WriteDebugException(context, ex, scriptPath, requestedRoute);
@@ -152,6 +176,31 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             if (!context.Response.Completed)
                 WriteTerminalResponse(context.Response, 500, "Internal Server Error", context.Request.Method);
         }
+    }
+
+    public async Task<int> PrecompileAllAsync(CancellationToken cancellationToken = default)
+    {
+        var sources = Directory.EnumerateFiles(_resolver.Root, "*.xps", SearchOption.AllDirectories)
+            .OrderBy(path => path, _pathComparer)
+            .ToArray();
+        var failures = 0;
+        foreach (var source in sources)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                WriteConsole($"Precompiling: {ToWebPath(source)}");
+                await using var lease = await _cache.AcquireAsync(source, _resolver.Root, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                failures++;
+                XpsWebConsoleErrorFallback.Write(ex, ToWebPath(source), "precompile-all");
+            }
+        }
+
+        Console.WriteLine($"Precompiled {sources.Length - failures}/{sources.Length} .xps file(s).");
+        return failures == 0 ? 0 : 1;
     }
 
     private void WriteDebugException(XpsWebContext context, Exception exception, string? scriptPath, string? requestedRoute)
@@ -233,16 +282,18 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             {
                 try
                 {
+                    var cancellationToken = _backgroundPrecompileCancellation.Token;
                     if (activateDeclaredTargets)
-                        await PrecompileOneHopAsync(fullSourcePath, precompileTargets, CancellationToken.None).ConfigureAwait(false);
+                        await PrecompileOneHopAsync(fullSourcePath, precompileTargets, cancellationToken).ConfigureAwait(false);
 
                     await XpsWebLinkedPrecompiler.PrecompileResponseLinksAsync(
                         response,
                         _resolver,
                         fullSourcePath,
                         PrecompileTargetOnlyAsync,
-                        CancellationToken.None).ConfigureAwait(false);
+                        cancellationToken).ConfigureAwait(false);
                 }
+                catch (OperationCanceledException) when (_backgroundPrecompileCancellation.IsCancellationRequested) { }
                 catch (Exception ex)
                 {
                     XpsWebConsoleErrorFallback.Write(ex, ToWebPath(fullSourcePath), "background-precompile");
@@ -502,6 +553,8 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
             pending = _backgroundPrecompileTasks.ToArray();
         }
 
+        _backgroundPrecompileCancellation.Cancel();
+
         if (pending.Length > 0)
         {
             try { await Task.WhenAll(pending).ConfigureAwait(false); }
@@ -510,5 +563,7 @@ public sealed class XpsWebDispatcher : IXpsWebRequestHandler, IXpsWebMetricsProv
 
         if (_ownsCache)
             await _cache.DisposeAsync().ConfigureAwait(false);
+
+        _backgroundPrecompileCancellation.Dispose();
     }
 }

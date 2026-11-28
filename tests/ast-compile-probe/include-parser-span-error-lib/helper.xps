@@ -1,0 +1,3 @@
+Sub IncludedParserFailure()
+    Open "missing" For Input As #
+End Sub

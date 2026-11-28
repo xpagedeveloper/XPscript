@@ -11,7 +11,7 @@ internal sealed class SourceTypeValidator
     private static readonly HashSet<string> NumericTypes = new(StringComparer.OrdinalIgnoreCase)
     { "Byte", "Integer", "Long", "Single", "Double", "Currency" };
 
-    public void Validate(string source, string sourceName, SourceMap? sourceMap = null)
+    public void Validate(string source, string sourceName, SourceMap? sourceMap = null, bool validateAssignments = true)
     {
         var previousMap = CurrentSourceMap.Value;
         CurrentSourceMap.Value = sourceMap;
@@ -51,14 +51,15 @@ internal sealed class SourceTypeValidator
             }
             if (!inProcedure) continue;
 
-            var dim = Regex.Match(line, @"^(?:Dim|Static)\s+([A-Za-z_]\w*)\s*(\(.*\))?\s+As\s+([A-Za-z_]\w*)", RegexOptions.IgnoreCase);
+            var dim = Regex.Match(line, @"^(?:Dim|Static)\s+([A-Za-z_]\w*)\s*(\(.*\))?\s+As\s+(?:New\s+)?([A-Za-z_]\w*)", RegexOptions.IgnoreCase);
             if (dim.Success)
             {
                 variables[dim.Groups[1].Value] = (NormalizeType(dim.Groups[3].Value), dim.Groups[2].Success);
                 continue;
             }
 
-            ValidateAssignment(sourceName, i + 1, original, line, variables, diagnostics, sourceMap);
+            if (validateAssignments)
+                ValidateAssignment(sourceName, i + 1, original, line, variables, diagnostics, sourceMap);
 
             foreach (var procedure in procedures.Values)
             {
@@ -216,7 +217,7 @@ internal sealed class SourceTypeValidator
             if (string.IsNullOrWhiteSpace(raw)) continue;
             var p = Regex.Match(
                 raw.Trim(),
-                @"^(?<mods>(?:(?:Optional|ByVal|ByRef)\s+)*)?(?<name>[A-Za-z_]\w*)\s*(?:(?<array>\(\))|(?<list>List))?\s*(?:As\s+(?<type>[A-Za-z_]\w*))?(?:\s*=\s*.+)?$",
+                @"^(?<mods>(?:(?:Optional|ByVal|ByRef)\s+)*)?(?<name>[A-Za-z_]\w*)\s*(?:(?<array>\((?:\s*,\s*)*\))|(?<list>List))?\s*(?:As\s+(?<type>[A-Za-z_]\w*))?(?:\s*=\s*.+)?$",
                 RegexOptions.IgnoreCase);
             if (!p.Success) continue;
 

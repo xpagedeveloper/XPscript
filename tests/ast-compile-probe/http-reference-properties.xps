@@ -1,0 +1,186 @@
+Class HttpStore
+    Private backingClient As XPHttpClient
+    Public Property Get Client As XPHttpClient
+        Set Client = backingClient
+    End Property
+    Public Property Set Client(ByRef incoming As XPHttpClient)
+        Set backingClient = incoming
+        Set incoming = Nothing
+    End Property
+    Private backingRequest As XPHttpRequest
+    Public Property Get RequestValue As XPHttpRequest
+        Set RequestValue = backingRequest
+    End Property
+    Public Property Set RequestValue(ByRef incoming As XPHttpRequest)
+        Set backingRequest = incoming
+        Set incoming = Nothing
+    End Property
+    Private backingResponse As XPHttpResponse
+    Public Property Get ResponseValue(Optional ByRef index As Long = 2) As XPHttpResponse
+        index = index + 1
+        Set ResponseValue = backingResponse
+    End Property
+    Public Property Set ResponseValue(Optional ByRef index As Long = 2, ByRef incoming As XPHttpResponse)
+        index = index + 1
+        Set backingResponse = incoming
+        Set incoming = Nothing
+    End Property
+    Private backingPart As XPHttpPart
+    Public Property Get PartValue As XPHttpPart
+        Set PartValue = backingPart
+    End Property
+    Public Property Set PartValue(ByRef incoming As XPHttpPart)
+        Set backingPart = incoming
+        Set incoming = Nothing
+    End Property
+    Private backingFile As XPHttpFile
+    Public Property Get FileValue As XPHttpFile
+        Set FileValue = backingFile
+    End Property
+    Public Property Set FileValue(ByRef incoming As XPHttpFile)
+        Set backingFile = incoming
+        Set incoming = Nothing
+    End Property
+    Private backingParts As XPHttpPartCollection
+    Public Property Get PartsValue As XPHttpPartCollection
+        Set PartsValue = backingParts
+    End Property
+    Public Property Set PartsValue(ByRef incoming As XPHttpPartCollection)
+        Set backingParts = incoming
+        Set incoming = Nothing
+    End Property
+    Private backingFiles As XPHttpFileCollection
+    Public Property Get FilesValue As XPHttpFileCollection
+        Set FilesValue = backingFiles
+    End Property
+    Public Property Set FilesValue(ByRef incoming As XPHttpFileCollection)
+        Set backingFiles = incoming
+        Set incoming = Nothing
+    End Property
+    Public Property Get Unassigned As XPHttpResponse
+    End Property
+    Public Property Set Failing(ByRef index As Long, ByVal incoming As XPHttpRequest)
+        Set backingRequest = incoming
+        index = index + 1
+        Error 3601, "HTTP setter failed"
+    End Property
+End Class
+Sub Main()
+    Dim store As New HttpStore
+    Dim other As New HttpStore
+    Dim client As New XPHttpClient
+    Dim request As New XPHttpRequest
+    Dim response As XPHttpResponse
+    Dim index As Long = 3
+    Dim failure As Long
+    If store.Client Is Nothing And store.Unassigned Is Nothing Then
+    Else
+        Error 6, "HTTP defaults"
+    End If
+    Set store.Client = client
+    Set store.RequestValue = request
+    If client Is Nothing Or request Is Nothing Then Error 6, "HTTP setter snapshot"
+    If store.Client Is client And store.RequestValue Is request Then
+    Else
+        Error 6, "HTTP identity"
+    End If
+    If store.Client.CertificateValidation <> "Strict" Or store.Client.AllowPrivateNetwork Then Error 6, "HTTP defaults changed"
+    Set response = Nothing
+    On Error Resume Next
+    Set response = store.Client.Get(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/get")
+    failure = Err
+    On Error GoTo 0
+    If failure <> 5 Or Not (response Is Nothing) Then Error 6, "accessor bypassed private network guard"
+    store.Client.AllowPrivateNetwork = True
+    store.Client.Timeout = 0.25
+    If client.Timeout <> 0.25 Then Error 6, "HTTP shared fractional timeout"
+    store.Client.Timeout = 5
+    store.RequestValue.Method = "POST"
+    store.RequestValue.Url = Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/post"
+    store.RequestValue.Body = "shared"
+    Call store.RequestValue.SetHeader("X-XPScript-Test", "accessor")
+    Set response = store.Client.Send(store.RequestValue)
+    Set store.ResponseValue(index) = response
+    If index <> 4 Or response Is Nothing Then Error 6, "response setter alias or snapshot"
+    If store.ResponseValue(index) Is response Then
+    Else
+        Error 6, "response identity"
+    End If
+    If index <> 5 Or store.ResponseValue().Body <> "POST|accessor|shared" Then Error 6, "typed response getter"
+    Set response = store.Client.Get(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/multipart")
+    Set store.ResponseValue() = response
+    Set store.PartsValue = response.Parts
+    Set store.FilesValue = response.Files
+    Set store.PartValue = response.GetPart(0)
+    Dim dynamicFile As Variant = response.GetFile(0)
+    Dim file As XPHttpFile = dynamicFile
+    Set store.FileValue = file
+    If store.PartsValue Is response.Parts And store.FilesValue Is response.Files Then
+    Else
+        Error 6, "HTTP collections identity"
+    End If
+    If store.PartValue Is response.GetPart(0) And store.FileValue Is file Then
+    Else
+        Error 6, "HTTP item identity"
+    End If
+    If store.PartsValue.Count <> 2 Or store.FilesValue.Count <> 1 Then Error 6, "multipart collections"
+    If store.PartValue.Body <> "shared" Or store.FileValue.FileName <> "report.txt" Then Error 6, "multipart typed items"
+    If store.FilesValue.Get(0).Body <> "file-body" Then Error 6, "multipart file body"
+    With store
+        Set .cLiEnT = client
+    End With
+    Dim replacement As New XPHttpRequest
+    On Error Resume Next
+    Set store.Failing(index) = replacement
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3601 Or index <> 6 Then Error 6, "HTTP exceptional alias"
+    If store.RequestValue Is replacement Then
+    Else
+        Error 6, "HTTP exceptional reference"
+    End If
+    Set response = Nothing
+    On Error Resume Next
+    Set response = store.Client.Get(Environ("XPSCRIPT_HTTP_TEST_TLS"))
+    failure = Err
+    On Error GoTo 0
+    If failure <> 1201 Or Not (response Is Nothing) Then Error 6, "accessor bypassed Strict TLS"
+    store.Client.CertificateValidation = "AllowSelfSigned"
+    Set response = store.Client.Get(Environ("XPSCRIPT_HTTP_TEST_TLS"))
+    If response.StatusCode <> 200 Then Error 6, "accessor TLS opt-in"
+    Set response = Nothing
+    On Error Resume Next
+    Set response = store.Client.Get(Environ("XPSCRIPT_HTTP_TEST_MISMATCH"))
+    failure = Err
+    On Error GoTo 0
+    If failure <> 1201 Or Not (response Is Nothing) Then Error 6, "accessor bypassed hostname validation"
+    Set response = Nothing
+    On Error Resume Next
+    Set response = store.Client.Get(Environ("XPSCRIPT_HTTP_TEST_EXPIRED"))
+    failure = Err
+    On Error GoTo 0
+    If failure <> 1201 Or Not (response Is Nothing) Then Error 6, "accessor bypassed expiry validation"
+    Call store.Client.Dispose()
+    Set response = Nothing
+    On Error Resume Next
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_HTTP"))
+    failure = Err
+    On Error GoTo 0
+    If failure <> 5 Or Not (response Is Nothing) Then Error 6, "disposed accessor alias remains usable"
+    If other.Client Is Nothing And other.ResponseValue() Is Nothing Then
+    Else
+        Error 6, "HTTP instance storage"
+    End If
+    Set store.Client = Nothing
+    Set store.RequestValue = Nothing
+    Set store.ResponseValue() = Nothing
+    Set store.PartValue = Nothing
+    Set store.FileValue = Nothing
+    Set store.PartsValue = Nothing
+    Set store.FilesValue = Nothing
+    If store.Client Is Nothing And store.ResponseValue() Is Nothing Then
+    Else
+        Error 6, "clear HTTP references"
+    End If
+    Print "HTTP_REFERENCE_PROPERTIES_OK"
+End Sub

@@ -1,0 +1,5 @@
+Sub Main()
+    Dim matrix(1, 1) As Long
+    matrix(0, 0) = 7
+    Print matrix(0, 0)
+End Sub

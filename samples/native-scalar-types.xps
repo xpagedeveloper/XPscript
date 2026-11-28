@@ -1,0 +1,13 @@
+Declare Function NativeString Lib "native-null-abi" () As String
+Declare Function NativeInteger Lib "native-null-abi" (ByVal value As Integer) As Integer
+Declare Function NativeLong Lib "native-null-abi" (ByVal value As Long) As Long
+Declare Function NativeDouble Lib "native-null-abi" (ByVal value As Double) As Double
+Declare Function NativeSingle Lib "native-null-abi" (ByVal value As Single) As Single
+Declare Function NativeBoolean Lib "native-null-abi" (ByVal value As Boolean) As Boolean
+Declare Function NativeByte Lib "native-null-abi" (ByVal value As Byte) As Byte
+Declare Function NativeCurrency Lib "native-null-abi" (ByVal value As Currency) As Currency
+Declare Function NativeDate Lib "native-null-abi" (ByVal value As Date) As Date
+
+Sub Main()
+    Print "NATIVE-SCALAR-TYPES-COMPILE-OK"
+End Sub

@@ -1,0 +1,12 @@
+Class Root
+End Class
+Class Leaf
+End Class
+Class Store
+    Public Property Set Current(ByVal incoming As Root)
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    Set store.Current = New Leaf()
+End Sub

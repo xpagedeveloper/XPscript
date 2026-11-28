@@ -1,0 +1,3 @@
+Sub Main()
+    Print Error$ + MissingAfterError
+End Sub

@@ -1,0 +1,6 @@
+Class ArrayOwner
+    Sub New(ByVal values() List As Long)
+    End Sub
+End Class
+Sub Main()
+End Sub

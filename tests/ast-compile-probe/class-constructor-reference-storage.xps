@@ -1,0 +1,58 @@
+Public shared As Box
+Class Box
+    Public Value As Long
+End Class
+Class Replace
+    Public Stored As Box
+    Public Sub New(ByRef left As Box, ByRef right As Box, Optional ByVal fail As Boolean = False)
+        Set left = New Box()
+        left.Value = 7
+        If Not (left Is right) Then Error 4120, "detached alias"
+        right.Value = right.Value + 1
+        Set Stored = left
+        If fail Then Error 4121, "failed after replacing input"
+    End Sub
+End Class
+Function StaticValue() As Variant
+    Static values(0) As Box
+    If values(0) Is Nothing Then
+        Set values(0) = New Box()
+    End If
+    values(0).Value = values(0).Value + 1
+    StaticValue = values(0)
+End Function
+Sub Main()
+    Dim values(2 To 3) As bOx
+    Dim first As New Replace(values(2), values(2))
+    If values(2).Value <> 8 Or Not (first.Stored Is values(2)) Then Error 4122, "array slot"
+    Dim grid(1 To 2, 3 To 4) As Box
+    Dim second As New Replace(grid(1, 3), grid(1, 3))
+    If grid(1, 3).Value <> 8 Then Error 4123, "multidimensional slot"
+    Dim dynamicValues() As Box
+    ReDim dynamicValues(1)
+    Dim resized As New Replace(dynamicValues(0), dynamicValues(0))
+    If dynamicValues(0).Value <> 8 Then Error 4129, "dynamic element type"
+    Dim saved As Variant = StaticValue()
+    Dim again As Variant = StaticValue()
+    Dim staticBox As Box = saved
+    If Not (saved Is again) Or staticBox.Value <> 2 Then Error 4140, "Static element storage"
+    Dim tagged List As Box
+    Set tagged("a") = New Box()
+    Dim listed As New Replace(tagged("a"), tagged("a"))
+    If tagged("a").Value <> 8 Then Error 4124, "List slot"
+    ForAll entry In tagged
+        Dim aliased As New Replace(entry, tagged(ListTag(entry)))
+        If Not (aliased.Stored Is entry) Then Error 4125, "ForAll cell"
+    End ForAll
+    Dim globalValue As New Replace(shared, shared)
+    If Not (shared Is globalValue.Stored) Then Error 4126, "module slot"
+    Dim original As Replace = first
+    Dim failure As Long
+    On Error Resume Next
+    Set first = New Replace(values(2), values(2), True)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4121 Or Not (first Is original) Then Error 4127, "failed result"
+    If values(2).Value <> 8 Or values(2) Is original.Stored Then Error 4128, "lost exceptional replacement"
+    Print "REFERENCE_STORAGE_CONSTRUCTORS_OK"
+End Sub

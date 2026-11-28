@@ -1,0 +1,19 @@
+Sub Main()
+    Dim db As New XPDBSQLite(":memory:")
+    Dim values As New XPJsonObject
+    Dim rows As XPJsonArray
+    Dim row As XPJsonObject
+    Call db.Execute("CREATE TABLE items (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+    Call values.Set("id", 1)
+    Call values.Set("name", "before")
+    Call db.Execute("INSERT INTO items(id, name) VALUES ($id, $name)", values)
+    Set rows = db.QueryArray("SELECT * FROM items")
+    If rows.Count <> 1 Then Error 7110, "QueryArray result count"
+    Set row = db.GetRow("items", "id", 1)
+    Call row.Set("name", "after")
+    If db.SaveRow("items", "id", row) <> 1 Then Error 7111, "SaveRow affected rows"
+    Set row = db.GetRow("items", "id", 1)
+    If CStr(row.Get("name")) <> "after" Then Error 7112, "SaveRow value"
+    Call db.Dispose()
+    Print "DATABASE_UI_DATA_SOURCE_OK"
+End Sub

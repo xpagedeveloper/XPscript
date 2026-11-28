@@ -30,7 +30,7 @@ internal sealed class ApplicationObjectPreprocessor
 
     public string Transform(string source)
     {
-        if (!PreprocessorFeatureGate.ContainsAny(source, FeatureMarkers)) return source;
+        if (!PreprocessorFeatureGate.ContainsAny(source, FeatureMarkers) && !PreprocessorFeatureGate.ContainsTypeReference(source, "Application")) return source;
 
         RejectWrites(source);
 
@@ -66,6 +66,8 @@ internal sealed class ApplicationObjectPreprocessor
         source = Regex.Replace(source, @"\bApplication\.State\b", "XPScriptApplicationRuntime.State", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bProcess\.State\b", "XPScriptProcessRuntime.State", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bSession\.State\b", "XPScriptSessionRuntime.State", RegexOptions.IgnoreCase);
+        foreach (var member in new[] { "Start", "Add", "Set", "Get", "Exists", "Remove", "Unset", "Clear", "Authenticate", "SignOut", "RotateId", "RegenerateId", "Abandon", "Destroy", "SetRole", "GetRoles", "HasRole", "RemoveRole", "HasRule", "Id", "Count", "Keys", "IsAuthenticated", "UserId", "UserName" })
+            source = Regex.Replace(source, $@"\bSession\.{member}\b", "XPScriptSessionRuntime." + member, RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bRequest\.State\b", "XPScriptRequestRuntime.State", RegexOptions.IgnoreCase);
 
         source = Regex.Replace(
@@ -83,6 +85,7 @@ internal sealed class ApplicationObjectPreprocessor
         source = Regex.Replace(source, @"\bApplication\.Args\b", "XPScriptApplicationRuntime.Args()", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.ArgCount\b", "XPScriptApplicationRuntime.ArgCount", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.CommandLine\b", "XPScriptApplicationRuntime.CommandLine", RegexOptions.IgnoreCase);
+        source = Regex.Replace(source, @"\bApplication\.NewLine\b", "XPScriptApplicationRuntime.NewLine", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.ExecutablePath\b", "XPScriptApplicationRuntime.ExecutablePath", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.ExecutableFileName\b", "XPScriptApplicationRuntime.ExecutableFileName", RegexOptions.IgnoreCase);
         source = Regex.Replace(source, @"\bApplication\.ExecutableDirectory\b", "XPScriptApplicationRuntime.ExecutableDirectory", RegexOptions.IgnoreCase);
@@ -178,13 +181,30 @@ internal sealed class ApplicationObjectPreprocessor
     private static void RejectWrites(string source)
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var sourceLine = 0;
         for (var i = 0; i < lines.Length; i++)
         {
             var line = StripComment(lines[i]);
+            var marker = Regex.Match(line, @"__XPSOURCE_(\d+)_", RegexOptions.IgnoreCase);
+            if (marker.Success) sourceLine = int.Parse(marker.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+            if (Regex.IsMatch(line, @"\bNew\s+Application\b", RegexOptions.IgnoreCase))
+                throw ApplicationDiagnostic(CompilerDiagnosticCodes.InvalidNativeConstructor, "Application is runtime state and cannot be created with New.", sourceLine == 0 ? i + 1 : sourceLine, lines[i]);
             if (Regex.IsMatch(line, @"\bApplication\.Args\s*\([^)]*\)\s*=", RegexOptions.IgnoreCase) ||
-                Regex.IsMatch(line, @"\bApplication\.(?:Args|ArgCount|CommandLine|ExecutablePath|ExecutableFileName|ExecutableDirectory|TempPath|TempFolder|Path|FileName|IsDebugging)\s*=", RegexOptions.IgnoreCase))
-                throw new CompilerException($"input.xps({i + 1},1): Application is read-only runtime state.");
+                Regex.IsMatch(line, @"\bApplication\.(?:Args|ArgCount|CommandLine|NewLine|ExecutablePath|ExecutableFileName|ExecutableDirectory|TempPath|TempFolder|Path|FileName|IsDebugging)\s*=", RegexOptions.IgnoreCase))
+                throw ApplicationDiagnostic(CompilerDiagnosticCodes.TypeMismatch, "Application is read-only runtime state.", sourceLine == 0 ? i + 1 : sourceLine, lines[i]);
         }
+    }
+
+    private static CompilerException ApplicationDiagnostic(string code, string message, int line, string source)
+    {
+        var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(source);
+        var position = Math.Max(1, source.IndexOf("Application", StringComparison.OrdinalIgnoreCase) + 1);
+        return new CompilerException(message, code, "syntax", [new CompileDiagnostic
+        {
+            File = Path.GetFileName(ExpandedSourceContext.Current?.SourcePath ?? "input.xps"), Line = line, Position = position,
+            EndLine = line, EndColumn = position + 11, Description = message, DiagnosticCode = code, Category = "syntax",
+            SourceCode = safeSource, MarkedCode = safeSource + Environment.NewLine + new string(' ', position - 1) + "^"
+        }]);
     }
 
     private static string StripComment(string line)

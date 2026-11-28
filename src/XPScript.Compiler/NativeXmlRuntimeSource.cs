@@ -13,6 +13,8 @@ internal static class XPScriptNativeXml
 
     public static XPScriptXmlDocument Parse(object? value)
     {
+        if (value is byte[] || value is IXPScriptArrayStorage || value is System.Array)
+            return ParseBytes(LSArrayRuntime.ByteVector(value) ?? []);
         var text = XPScriptRuntime.CStr(value);
         if (System.Text.Encoding.UTF8.GetByteCount(text) > MaxParseBytes)
             throw new XPScriptRuntimeException(5, "XML input exceeds the 8 MiB parse limit.");
@@ -43,6 +45,37 @@ internal static class XPScriptNativeXml
         }
     }
 
+    private static XPScriptXmlDocument ParseBytes(byte[] bytes)
+    {
+        if (bytes.Length > MaxParseBytes)
+            throw new XPScriptRuntimeException(5, "XML input exceeds the 8 MiB parse limit.");
+
+        try
+        {
+            var settings = new System.Xml.XmlReaderSettings
+            {
+                DtdProcessing = System.Xml.DtdProcessing.Prohibit,
+                XmlResolver = null,
+                IgnoreComments = false,
+                IgnoreWhitespace = false
+            };
+            using var stream = new System.IO.MemoryStream(bytes, writable: false);
+            using var reader = System.Xml.XmlReader.Create(stream, settings);
+            var document = System.Xml.Linq.XDocument.Load(
+                reader,
+                System.Xml.Linq.LoadOptions.PreserveWhitespace | System.Xml.Linq.LoadOptions.SetLineInfo);
+            return new XPScriptXmlDocument(document);
+        }
+        catch (XPScriptRuntimeException)
+        {
+            throw;
+        }
+        catch (System.Xml.XmlException)
+        {
+            throw new XPScriptRuntimeException(5, "Invalid XML input.");
+        }
+    }
+
     public static string Stringify(object? value)
     {
         return value switch
@@ -57,8 +90,31 @@ internal static class XPScriptNativeXml
         };
     }
 
+    public static byte[] Encode(string text, object? encoding, object? includeBom)
+    {
+        var name = XPScriptRuntime.CStr(encoding).Trim().ToLowerInvariant().Replace('_', '-');
+        var bom = XPScriptRuntime.CBool(includeBom);
+        System.Text.Encoding selected = name switch
+        {
+            "utf-8" or "utf8" => new System.Text.UTF8Encoding(bom),
+            "utf-16" or "utf16" or "utf-16le" => new System.Text.UnicodeEncoding(false, bom),
+            "utf-16be" or "utf16be" => new System.Text.UnicodeEncoding(true, bom),
+            _ => throw new XPScriptRuntimeException(5, "Unsupported XML encoding. Use utf-8, utf-16 or utf-16be.")
+        };
+        var body = selected.GetBytes(text);
+        if (!bom) return body;
+        var preamble = selected.GetPreamble();
+        var result = new byte[preamble.Length + body.Length];
+        System.Buffer.BlockCopy(preamble, 0, result, 0, preamble.Length);
+        System.Buffer.BlockCopy(body, 0, result, preamble.Length, body.Length);
+        return result;
+    }
+
     public static string Escape(object? value)
         => new System.Xml.Linq.XText(XPScriptRuntime.CStr(value)).ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
+
+    internal static XPScriptXmlElement RequireElement(object? value) => value as XPScriptXmlElement
+        ?? throw new XPScriptRuntimeException(13, "XML operation requires an element node.");
 
     internal static string RequireName(object? value)
     {
@@ -496,6 +552,7 @@ internal sealed class XPScriptXmlAttributeCollection : System.Collections.IEnume
     public int Count => _items.Count;
     public XPScriptXmlAttribute? First => _items.Count == 0 ? null : new XPScriptXmlAttribute(_items[0]);
     public XPScriptXmlAttribute? Last => _items.Count == 0 ? null : new XPScriptXmlAttribute(_items[^1]);
+    public XPScriptXmlAttribute this[object? indexOrName] => Get(indexOrName);
 
     public XPScriptXmlAttribute Get(object? indexOrName)
     {
@@ -652,6 +709,12 @@ internal sealed class XPScriptXmlDocument
         using (var writer = System.Xml.XmlWriter.Create(stream, settings)) Document.Save(writer);
         return System.Text.Encoding.UTF8.GetString(stream.ToArray());
     }
+
+    public byte[] ToBytes(object? encoding, object? includeBom)
+        => XPScriptNativeXml.Encode(Stringify(), encoding, includeBom);
+
+    public byte[] ToBytes(object? encoding) => ToBytes(encoding, false);
+    public byte[] ToBytes() => ToBytes("utf-8", false);
 }
 
 internal sealed class XPScriptXmlNodeCollection : System.Collections.IEnumerable
@@ -662,6 +725,7 @@ internal sealed class XPScriptXmlNodeCollection : System.Collections.IEnumerable
     public int Count => _items.Count;
     public XPScriptXmlNode? First => _items.Count == 0 ? null : _items[0];
     public XPScriptXmlNode? Last => _items.Count == 0 ? null : _items[^1];
+    public XPScriptXmlNode? this[object? index] => Get(index);
 
     public XPScriptXmlNode? Get(object? indexValue)
     {
@@ -697,6 +761,7 @@ internal sealed class XPScriptXmlValidationErrorCollection : System.Collections.
         if (index < 0 || index >= _items.Count) throw new XPScriptRuntimeException(9, "XML validation error index out of range.");
         return _items[index];
     }
+    public XPScriptXmlValidationError this[object? index] => Get(index);
     public System.Collections.IEnumerator GetEnumerator() => _items.GetEnumerator();
 }
 

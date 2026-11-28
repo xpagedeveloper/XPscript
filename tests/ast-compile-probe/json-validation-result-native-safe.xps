@@ -1,0 +1,20 @@
+Option Declare
+
+Sub Main()
+    Dim schema As New XPJsonSchema
+    schema.Set("type", "string")
+    Dim result As XPJsonValidationResult
+    Set result = schema.Validate(123)
+    If result.Valid Then Error 1201, "Expected validation failure"
+    If result.IsValid Then Error 1202, "Expected invalid result"
+    If result.ErrorCount < 1 Then Error 1203, "Expected validation errors"
+    If result.Errors.Count < 1 Then Error 1204, "Expected error array"
+    If result.FailedPaths.Count < 1 Then Error 1205, "Expected failed paths"
+    Dim firstError As XPJsonObject
+    Set firstError = result.GetError(0)
+    If firstError Is Nothing Then Error 1206, "Expected first error object"
+    Dim jsonResult As XPJsonDocument
+    Set jsonResult = result.Json
+    If jsonResult Is Nothing Then Error 1207, "Expected JSON result"
+    Print "JSON_VALIDATION_RESULT_AST_SAFE_OK"
+End Sub

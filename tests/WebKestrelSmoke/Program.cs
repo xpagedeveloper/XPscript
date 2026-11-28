@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
+using XPScript.Web.Compiler;
 using XPScript.Web.Kestrel;
 using XPScript.Web.Runtime;
 
@@ -333,11 +334,12 @@ try
                 throw new Exception($"Chunked in-memory body limit expected 413 or a transport-level connection rejection, got {(int)response.StatusCode}.");
             _ = ReadRequestId(response);
         }
-        catch (HttpRequestException ex) when (IsPrematureResponseEnd(ex))
+        catch (HttpRequestException ex) when (IsPrematureResponseEnd(ex) || IsConnectionAbort(ex))
         {
             // Kestrel may terminate the HTTP/1.1 connection while rejecting an oversized
-            // chunked body. That is a valid fail-closed outcome: the application handler
-            // never receives the oversized request.
+            // chunked body. Depending on the platform, the client reports this as a
+            // premature response or a connection reset. Both are valid fail-closed
+            // outcomes: the application handler never receives the oversized request.
         }
     }
 
@@ -712,6 +714,45 @@ try
         }
     }
 
+    var hotSourcePath = Path.Combine(root, "hot-reload.xps");
+    await File.WriteAllTextAsync(hotSourcePath, """
+[Anonymous]
+[Get]
+Sub Index()
+    Response.Write("KESTREL-FIRST")
+End Sub
+""");
+    await using (var hotCache = new XpsWebCompilationCache(new XpsWebCompiler(), new XpsWebCompilationCacheOptions
+    {
+        ConfigurationIdentity = "kestrel-hot-reload-smoke-v1",
+        PersistentCacheDirectory = Path.Combine(root, ".cache")
+    }))
+    await using (var hotDispatcher = new XpsWebDispatcher(root, hotCache))
+    {
+        var hotOptions = new XpsKestrelOptions { Port = 0, EnableStaticFiles = false };
+        var hotServerInfo = new XpsServerInfo("kestrel-hot-reload", root, XpsWebHostingMode.Kestrel, DateTimeOffset.UtcNow, "test");
+        await using var hotApp = XpsKestrelAdapter.Build(hotOptions, hotServerInfo, hotDispatcher);
+        await hotApp.StartAsync();
+        var hotAddress = hotApp.Urls.Single(url => url.StartsWith("http://", StringComparison.Ordinal));
+        using var hotClient = new HttpClient { BaseAddress = new Uri(hotAddress) };
+        var firstHotResponse = await hotClient.GetStringAsync("/hot-reload");
+        if (!firstHotResponse.Contains("KESTREL-FIRST", StringComparison.Ordinal))
+            throw new Exception("Kestrel initial hot-source response was not returned.");
+
+        await File.WriteAllTextAsync(hotSourcePath, """
+[Anonymous]
+[Get]
+Sub Index()
+    Response.Write("KESTREL-CHANGED")
+End Sub
+""");
+        var changedHotResponse = await hotClient.GetStringAsync("/hot-reload");
+        if (!changedHotResponse.Contains("KESTREL-CHANGED", StringComparison.Ordinal) ||
+            changedHotResponse.Contains("KESTREL-FIRST", StringComparison.Ordinal))
+            throw new Exception("Kestrel source changes were not recognized between requests.");
+        await hotApp.StopAsync();
+    }
+
     await app.StopAsync();
     stopped = true;
     if (telemetry.Snapshot().Status != XpsWebHealthStatus.Stopping)
@@ -947,10 +988,21 @@ static async Task AssertRequestHeadersTimeoutAsync(Uri baseAddress)
     await Task.Delay(TimeSpan.FromSeconds(2));
     var buffer = new byte[1024];
     using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-    var read = await stream.ReadAsync(buffer, timeout.Token);
-    var text = Encoding.ASCII.GetString(buffer, 0, read);
-    if (!text.Contains("408", StringComparison.Ordinal) && read != 0)
-        throw new Exception($"Request headers timeout expected connection close or 408, got: {text}");
+    try
+    {
+        var read = await stream.ReadAsync(buffer, timeout.Token);
+        var text = Encoding.ASCII.GetString(buffer, 0, read);
+        if (!text.Contains("408", StringComparison.Ordinal) && read != 0)
+            throw new Exception($"Request headers timeout expected connection close or 408, got: {text}");
+    }
+    catch (IOException ex) when (IsConnectionAbort(ex))
+    {
+        // Windows may surface Kestrel's timeout close as an aborted/reset stream.
+    }
+    catch (SocketException ex) when (IsConnectionAbort(ex))
+    {
+        // A transport-level reset is also a valid timeout enforcement result.
+    }
 }
 
 static async Task AssertKeepAliveTimeoutAsync(string root, TimeSpan keepAliveTimeout)

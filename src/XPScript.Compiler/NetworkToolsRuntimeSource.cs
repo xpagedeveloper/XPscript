@@ -250,24 +250,45 @@ internal sealed class XPScriptNetworkTools
 
     public LSArray GetTcpConnections()
     {
-        var properties = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
-        return PackObjects(properties.GetActiveTcpConnections().Select(x => (object?)new XPScriptNetworkEndpointInfo(
-            "TCP", x.LocalEndPoint.Address.ToString(), x.LocalEndPoint.Port,
-            x.RemoteEndPoint.Address.ToString(), x.RemoteEndPoint.Port, x.State.ToString())));
+        try
+        {
+            var properties = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
+            return PackObjects(properties.GetActiveTcpConnections().Select(x => (object?)new XPScriptNetworkEndpointInfo(
+                "TCP", x.LocalEndPoint.Address.ToString(), x.LocalEndPoint.Port,
+                x.RemoteEndPoint.Address.ToString(), x.RemoteEndPoint.Port, x.State.ToString())));
+        }
+        catch (System.Net.NetworkInformation.NetworkInformationException)
+        {
+            return PackObjects(Array.Empty<object?>());
+        }
     }
 
     public LSArray GetTcpListeners()
     {
-        var properties = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
-        return PackObjects(properties.GetActiveTcpListeners().Select(x => (object?)new XPScriptNetworkEndpointInfo(
-            "TCP", x.Address.ToString(), x.Port, "", 0, "Listen")));
+        try
+        {
+            var properties = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
+            return PackObjects(properties.GetActiveTcpListeners().Select(x => (object?)new XPScriptNetworkEndpointInfo(
+                "TCP", x.Address.ToString(), x.Port, "", 0, "Listen")));
+        }
+        catch (System.Net.NetworkInformation.NetworkInformationException)
+        {
+            return PackObjects(Array.Empty<object?>());
+        }
     }
 
     public LSArray GetUdpListeners()
     {
-        var properties = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
-        return PackObjects(properties.GetActiveUdpListeners().Select(x => (object?)new XPScriptNetworkEndpointInfo(
-            "UDP", x.Address.ToString(), x.Port, "", 0, "Listen")));
+        try
+        {
+            var properties = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties();
+            return PackObjects(properties.GetActiveUdpListeners().Select(x => (object?)new XPScriptNetworkEndpointInfo(
+                "UDP", x.Address.ToString(), x.Port, "", 0, "Listen")));
+        }
+        catch (System.Net.NetworkInformation.NetworkInformationException)
+        {
+            return PackObjects(Array.Empty<object?>());
+        }
     }
 
     private static XPScriptNetworkInterfaceInfo CreateInterface(System.Net.NetworkInformation.NetworkInterface item)

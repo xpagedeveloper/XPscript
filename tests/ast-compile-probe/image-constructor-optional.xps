@@ -1,0 +1,93 @@
+Public observedLocal As Variant
+Public observedField As Variant
+Public escaped As Variant
+Public trace As String
+Public destructorCalls As Long
+Public failDefaults As Boolean
+Class Root
+    Private picture As XPImage
+    Public Property Get Width As Long
+        If Not (picture Is Nothing) Then
+            Width = picture.Width
+        End If
+    End Property
+    Public Sub New(Optional ByVal mode As Long = DefaultMode(0))
+        escaped = Me
+        trace = trace & "R"
+        Dim local As New XPImage(4, 3)
+        Set picture = local
+        observedField = picture
+    End Sub
+    Public Sub Delete()
+        destructorCalls = destructorCalls + 1
+    End Sub
+End Class
+Class Child Extend Root
+    Public Sub New(Optional ByVal mode As Long = DefaultMode(0))
+        Call Parent.New(DefaultMode(mode))
+        trace = trace & "C"
+        If mode = 2 Then Error 3842, "child failed"
+    End Sub
+End Class
+Class Automatic Extend Root
+End Class
+Function DefaultMode(ByVal mode As Long) As Long
+    trace = trace & "D"
+    Dim local As New XPImage(3, 2)
+    observedLocal = local
+    If mode = 1 Or failDefaults Then Error 3841, "default failed"
+    DefaultMode = mode
+End Function
+Sub AssertExpired(ByVal value As Variant)
+    Dim image As XPImage = value
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = image.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 6, "default image scope leaked"
+End Sub
+Sub Main()
+    Dim item As New Child
+    Dim original As Child = item
+    If trace <> "DDRC" Or item.Width <> 4 Then Error 6, "optional constructor/default execution"
+    Call AssertExpired(observedLocal)
+    Dim failure As Long
+    escaped = Nothing
+    trace = ""
+    failDefaults = True
+    On Error Resume Next
+    Set item = New Child
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3841 Or trace <> "D" Or Not (escaped Is Nothing) Or Not (item Is original) Then Error 6, "default failure reached body or replaced old target"
+    Call AssertExpired(observedLocal)
+    Dim automatic As Automatic
+    trace = ""
+    On Error Resume Next
+    Set automatic = New Automatic
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3841 Or trace <> "D" Or Not (automatic Is Nothing) Or Not (escaped Is Nothing) Then Error 6, "implicit Optional base default failure"
+    Call AssertExpired(observedLocal)
+    failDefaults = False
+    trace = ""
+    On Error Resume Next
+    Set item = New Child(2)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3842 Or trace <> "DRC" Or Not (item Is original) Then Error 6, "optional child failure"
+    Dim failed As Child = escaped
+    If failed.Width <> 0 Or destructorCalls <> 0 Then Error 6, "ancestor cleanup or unwanted Delete"
+    Call AssertExpired(observedField)
+    Call AssertExpired(observedLocal)
+    trace = ""
+    Set automatic = New Automatic
+    If trace <> "DR" Or automatic.Width <> 4 Then Error 6, "implicit base Optional default"
+    Call AssertExpired(observedLocal)
+    Delete automatic
+    Delete item
+    If destructorCalls <> 2 Then Error 6, "explicit cleanup after success"
+    Print "IMAGE_OPTIONAL_CONSTRUCTORS_OK"
+End Sub

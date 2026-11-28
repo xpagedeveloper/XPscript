@@ -1,0 +1,20 @@
+Private moduleIndex As Long
+Class Counter
+    Public Property Get Item(ByRef index As Long) As Long
+        index = index + 1
+        Item = index
+    End Property
+    Public Property Let Item(ByRef index As Long, ByVal incoming As Long)
+        index = index + incoming
+    End Property
+End Class
+Sub Main()
+    Dim counter As New Counter
+    Dim result As Long
+    moduleIndex = 1
+    result = counter.Item(moduleIndex)
+    If result <> 2 Or moduleIndex <> 2 Then Error 6, "module getter"
+    counter.Item(moduleIndex) = 3
+    If moduleIndex <> 5 Then Error 6, "module setter"
+    Print "INDEXED_BYREF_MODULE_SIMPLE_OK"
+End Sub

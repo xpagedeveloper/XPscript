@@ -90,6 +90,17 @@ internal sealed class XPScriptNotesDXLImporter : XPScriptNotesObject
         set { EnsureAlive(); Session.Api.SetDxlImporterWordProperty(_handle, 9, value); }
     }
 
+    public void Import(object? filePathValue, object? databaseValue)
+    {
+        if (databaseValue is ILSObjectReference reference)
+            databaseValue = reference.IsNothing ? null : reference.ObjectValue;
+        if (databaseValue is null || ReferenceEquals(databaseValue, XPScriptNotes.NothingValue))
+            throw new XPScriptRuntimeException(91, "NotesDXLImporter.Import requires a NotesDatabase.");
+        if (databaseValue is not XPScriptNotesDatabase database)
+            throw new XPScriptRuntimeException(13, "NotesDXLImporter.Import requires a NotesDatabase.");
+        Import(filePathValue, database);
+    }
+
     public void Import(object? filePathValue, XPScriptNotesDatabase database)
     {
         EnsureAlive();
@@ -258,7 +269,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
 
     private void ExportDatabaseDesignToFolders(XPScriptNotesDatabase database, string rootPath)
     {
-        var fullRootPath = System.IO.Path.GetFullPath(rootPath);
+        var fullRootPath = System.IO.Path.GetFullPath(rootPath, Session.Api.ApplicationDirectory);
         System.IO.Directory.CreateDirectory(fullRootPath);
         var temporaryPath = System.IO.Path.Combine(
             fullRootPath,
@@ -289,7 +300,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
             return;
         }
 
-        var fullTargetPath = System.IO.Path.GetFullPath(targetPath);
+        var fullTargetPath = System.IO.Path.GetFullPath(targetPath, Session.Api.ApplicationDirectory);
         var targetDirectory = System.IO.Path.GetDirectoryName(fullTargetPath) ?? System.IO.Directory.GetCurrentDirectory();
         System.IO.Directory.CreateDirectory(targetDirectory);
         var temporaryPath = System.IO.Path.Combine(
@@ -484,7 +495,7 @@ internal sealed class XPScriptNotesDXLExporter : XPScriptNotesObject
                 }
 
                 if (fileTimes.Length > 1 && fileTimes[1].HasValue)
-                    System.IO.File.SetLastWriteTimeUtc(filePath, fileTimes[1].Value);
+                    System.IO.File.SetLastWriteTimeUtc(filePath, fileTimes[1].GetValueOrDefault());
             }
         }
     }

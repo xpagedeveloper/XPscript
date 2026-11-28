@@ -140,6 +140,17 @@ public sealed class XpsWebRouteMetadataParser
                     continue;
                 }
 
+                // [ServerSide] belongs to the browser-WASM compiler metadata,
+                // not to the HTTP route policy. Preserve it for the
+                // BrowserWasmServerSideMetadata pass instead of reporting it
+                // as an unsupported web route attribute and stripping it.
+                if (attribute.Equals("ServerSide", StringComparison.OrdinalIgnoreCase) ||
+                    attribute.StartsWith("ServerSide(", StringComparison.OrdinalIgnoreCase))
+                {
+                    output.AppendLine(raw);
+                    continue;
+                }
+
                 if (attribute.StartsWith("RoutePrefix:", StringComparison.OrdinalIgnoreCase))
                 {
                     if (currentClass is not null) throw new XpsWebRouteMetadataException("RoutePrefix cannot be declared inside a Class.");

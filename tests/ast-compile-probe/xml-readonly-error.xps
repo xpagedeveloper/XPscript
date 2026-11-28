@@ -1,0 +1,4 @@
+Sub Main()
+    Dim document As New XPXmlDocument
+    document.HasRoot = True
+End Sub

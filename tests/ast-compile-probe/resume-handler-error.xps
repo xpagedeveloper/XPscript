@@ -1,0 +1,17 @@
+Sub Worker()
+    On Error GoTo handler
+    Error 7000, "first"
+    Exit Sub
+handler:
+    Error 7001, "handler failure"
+End Sub
+
+Sub Main()
+    On Error GoTo outerHandler
+    Call Worker()
+    Print "PROPAGATION_OK"
+    Exit Sub
+outerHandler:
+    Print Err
+    Resume Next
+End Sub

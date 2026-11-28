@@ -1,0 +1,11 @@
+Sub Accumulate()
+    Static values() As Long
+    ReDim Preserve values(1)
+    values(0) = values(0) + 1
+    Print values(0)
+End Sub
+
+Sub Main()
+    Accumulate()
+    Accumulate()
+End Sub

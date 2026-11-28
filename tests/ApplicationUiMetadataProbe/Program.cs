@@ -23,16 +23,10 @@ End Sub
 """;
     File.WriteAllText(sourcePath, source);
 
-    var generated = new XPScriptTranspiler().Transpile(source, sourcePath, CompilerDriver.CurrentRuntimeIdentifier());
-    Require(generated.Contains("__xps_application_title", StringComparison.Ordinal), "Application.Title was not mapped to application state");
-    Require(generated.Contains("__xps_application_icon", StringComparison.Ordinal), "Application.Icon was not mapped to application state");
-    Require(generated.Contains("__xps_application_width", StringComparison.Ordinal), "Application.Width was not mapped to application state");
-    Require(generated.Contains("__xps_application_height", StringComparison.Ordinal), "Application.Height was not mapped to application state");
-    Require(generated.Contains("applicationTitle = XPScriptRuntime.CStr", StringComparison.Ordinal), "application title was not added to UI bridge metadata");
-    Require(generated.Contains("applicationIcon = XPScriptRuntime.CStr", StringComparison.Ordinal), "application icon was not added to UI bridge metadata");
-    Require(generated.Contains("ReadApplicationDimension(\"__xps_application_width\"", StringComparison.Ordinal), "application default width was not added to desktop UI metadata");
-    Require(generated.Contains("ReadApplicationDimension(\"__xps_application_height\"", StringComparison.Ordinal), "application default height was not added to desktop UI metadata");
-    Require(generated.Contains("XPScriptApplicationMetadataRuntime.WrapWebHtml", StringComparison.Ordinal), "web application title/favicon metadata was not installed");
+    var generated = await AstCompiler.GenerateSourceAsync(
+        sourcePath, Path.Combine(root, "generated"), CompilerDriver.CurrentRuntimeIdentifier());
+    Require(generated.Contains("__XPSCRIPT_APPLICATION_ICON_BUILD__=", StringComparison.Ordinal),
+        "Application.Icon was not passed through the AST build metadata pipeline");
 
     var missingIconPath = Path.Combine(root, "missing-icon.xps");
     File.WriteAllText(missingIconPath, """
@@ -41,12 +35,11 @@ Sub Main()
 End Sub
 """);
     await RequireThrowsAsync<CompilerException>(
-        () => new CompilerDriver().CompileAsync(
+        () => AstCompiler.CompileAsync(
             missingIconPath,
-            Path.Combine(root, OperatingSystem.IsWindows() ? "missing-icon.exe" : "missing-icon"),
-            selfContained: false,
-            runtimeIdentifier: CompilerDriver.CurrentRuntimeIdentifier()),
-        "Application.Icon file was not found");
+            Path.Combine(root, "missing-icon-output"),
+            CompilerDriver.CurrentRuntimeIdentifier()),
+        "Application.Executable.Icon file was not found");
 
     var emptyIconPath = Path.Combine(root, "empty-icon.xps");
     File.WriteAllText(emptyIconPath, """
@@ -55,18 +48,19 @@ Sub Main()
     Print Application.Icon
 End Sub
 """);
-    var emptyGenerated = new XPScriptTranspiler().Transpile(File.ReadAllText(emptyIconPath), emptyIconPath, CompilerDriver.CurrentRuntimeIdentifier());
-    Require(emptyGenerated.Contains("__xps_application_icon", StringComparison.Ordinal), "empty Application.Icon did not compile to application state");
+    var emptyGenerated = await AstCompiler.GenerateSourceAsync(
+        emptyIconPath, Path.Combine(root, "empty-generated"), CompilerDriver.CurrentRuntimeIdentifier());
+    Require(!string.IsNullOrWhiteSpace(emptyGenerated), "empty Application.Icon did not emit AST source");
 
     if (OperatingSystem.IsWindows())
     {
-        var output = Path.Combine(root, "probe.exe");
-        await new CompilerDriver().CompileAsync(sourcePath, output, selfContained: false, runtimeIdentifier: CompilerDriver.CurrentRuntimeIdentifier());
-        Require(File.Exists(output), "Windows executable was not produced with Application.Icon configured");
+        var output = Path.Combine(root, "probe-output");
+        var assemblyPath = await AstCompiler.CompileAsync(sourcePath, output, CompilerDriver.CurrentRuntimeIdentifier());
+        Require(File.Exists(assemblyPath), "Windows executable was not produced with Application.Icon configured");
 
-        var emptyOutput = Path.Combine(root, "empty.exe");
-        await new CompilerDriver().CompileAsync(emptyIconPath, emptyOutput, selfContained: false, runtimeIdentifier: CompilerDriver.CurrentRuntimeIdentifier());
-        Require(File.Exists(emptyOutput), "Windows executable was not produced with an empty Application.Icon");
+        var emptyOutput = Path.Combine(root, "empty-output");
+        var emptyAssemblyPath = await AstCompiler.CompileAsync(emptyIconPath, emptyOutput, CompilerDriver.CurrentRuntimeIdentifier());
+        Require(File.Exists(emptyAssemblyPath), "Windows executable was not produced with an empty Application.Icon");
     }
 
     Console.WriteLine("APPLICATION-UI-METADATA=OK");

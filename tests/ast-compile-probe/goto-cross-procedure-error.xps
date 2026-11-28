@@ -1,0 +1,8 @@
+Sub Other()
+outside:
+    Print "wrong"
+End Sub
+
+Sub Main()
+    GoTo outside
+End Sub

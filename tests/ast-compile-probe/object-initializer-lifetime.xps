@@ -1,0 +1,13 @@
+Sub CompareInitializedLifetime()
+    Dim fresh As Object = New Object()
+    Static retained As Object = New Object()
+    Print fresh Is Nothing
+    Print retained Is Nothing
+    Set fresh = Nothing
+    Set retained = Nothing
+End Sub
+
+Sub Main()
+    Call CompareInitializedLifetime()
+    Call CompareInitializedLifetime()
+End Sub

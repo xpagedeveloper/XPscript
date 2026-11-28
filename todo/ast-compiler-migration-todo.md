@@ -1,0 +1,1478 @@
+# XPscript AST Compiler Migration TODO
+
+## Goal
+
+Investigate and incrementally introduce a real XPscript compiler front-end based on tokens, a syntax tree, semantic binding and structured code generation.
+
+The migration must preserve existing XPscript behavior and runtime compatibility. Do not replace the current compiler in one large change.
+
+Target architecture:
+
+```text
+XPscript source
+  -> source preprocessing
+  -> lexer
+  -> tokens
+  -> parser
+  -> XPscript syntax tree (AST)
+  -> semantic analysis / binder
+  -> bound tree
+  -> diagnostics
+  -> C# emitter
+  -> Roslyn
+  -> .NET output
+```
+
+The existing runtime libraries, packaging, source mapping, web/desktop/mobile targets and Roslyn backend should be reused where practical.
+
+Release gate: when the AST compiler becomes the supported production compilation path and the migration definition of done is satisfied, release the compiler as `0.9.4 Beta`. Keep published `0.9.3 Beta` binaries unchanged for compatibility verification until that gate is reached.
+
+## Current architecture investigation
+
+- [x] Document the complete current compiler pipeline from source input to generated assembly in `docs/ast-pipeline.md`.
+- [x] Map all source preprocessors that run before `AdvancedXPScriptTranspiler` in `docs/ast-preprocessor-inventory.md`.
+- [x] Inventory parsing responsibilities currently implemented by `AdvancedXPScriptTranspiler` in `docs/ast-parser-responsibility-map.md`.
+- [x] Inventory regex-based syntax recognition and string rewriting in the compiler in `docs/ast-regex-rewrite-inventory.md`.
+- [x] Identify places where parsing, semantic analysis and C# emission are currently mixed in `docs/ast-phase-boundaries.md`.
+- [x] Identify syntax validation currently delegated to generated C# / Roslyn in `docs/ast-roslyn-validation-boundary.md`.
+- [x] Identify type and symbol validation currently delegated to generated C# / Roslyn in `docs/ast-symbol-validation-boundary.md`.
+- [x] Map existing source-map behavior and requirements in `docs/ast-source-mapping.md`.
+- [x] Map compiler diagnostics and machine/MCP diagnostic contracts in `docs/ast-diagnostic-contract.md`.
+- [x] Inventory compiler tests by language feature and compiler phase in `docs/ast-test-coverage-map.md`.
+- [x] Document syntax that is intentionally compatible with LotusScript/VB-like semantics in `docs/ast-language-compatibility-rules.md`.
+- [x] Produce a migration-risk list before replacing any production parsing path in `docs/ast-migration-risk-list.md`.
+
+## Migration rules
+
+- [x] Prevent generated-project builds from repeatedly invoking the Windows Installer for `Microsoft.NET.Workloads.10.0.400`. `CompilerBuildEnvironment.Configure()` keeps temporary build directories isolated while desktop publishes reuse a compiler-version-specific shared profile/cache and are serialized during workload initialization. Verified with clean desktop publish builds on 2026-10-23; Android continues using its caller-selected workload/package cache.
+  - [x] Desktop generated publishes now reuse the compiler-version-specific persistent .NET profile; two independent AST desktop publish smokes passed without warnings or MSI initialization failures. Android publish keeps its caller-selected workload/package cache.
+- [x] Keep the current compiler operational while the AST implementation is introduced.
+- [x] Add focused tests before migrating each syntax feature.
+- [x] When a test fails, follow the repository test rule: create or move a small focused reproducer so it runs before the larger test.
+- [x] Never mark a syntax feature migrated until old and new paths have been compared against representative fixtures.
+- [x] Preserve the current public compiler diagnostic contract where compatibility is required. Focused AST CLI regressions retain stable parser, entry-point and Optional validation messages; binder and MCP probes retain stable codes, source locations and structured properties. Feature-specific diagnostic migration remains tracked by the later source-mapping items.
+- [x] Keep normal compiler and machine/MCP compiler behavior synchronized for the current diagnostic surface. The protocol probe compares normal/debug MCP identities with normal/debug CLI identities and rejects drift; broader migrated-feature exposure remains tracked separately.
+- [x] CLI compilation and MCP/AI machine compilation consume the same production AST compiler entry point; normal CLI commands and source-oriented MCP tools use `AstCompiler`, so machine validation does not create a second language implementation.
+- [x] Every currently migrated AST syntax/semantic feature exposed through the machine interface is verified through both normal AST compilation and AST-MCP validation. The Static lifetime parity fixture is the first permanent paired regression; additional migrated features must extend the same pattern before being exposed.
+- [x] AST diagnostic changes are verified in both human-readable CLI output and the structured machine/MCP diagnostic contract. AST-MCP now preserves diagnostic code, source filename, positions, severity and category; the protocol probe covers both successful AST validation and a source-mapped AST error.
+- [x] Every AST diagnostic preserves the original XPscript source filename, mapped line/column and end span in structured MCP output and human-readable AST CLI output. The parser-error regression verifies the same source location contract in both surfaces.
+- [x] Unknown variables, functions, properties and methods are reported by the XPscript semantic binder before Roslyn when the symbol/type information is available. Focused binder coverage verifies XPS2008 unknown symbols and XPS2009 unknown members; the MCP protocol probe also passes.
+- [x] Diagnostic parity is a release gate across normal AST CLI compilation and AST-MCP validation. The permanent MCP protocol probe runs the same parser-error source through both surfaces and compares stable code, filename and source position.
+- [x] Diagnostic parity is verified with debug diagnostics disabled and enabled. AST CLI and AST-MCP preserve the same diagnostic code, source file, line, column and span; debug mode is allowed only to add implementation details.
+- [x] Do not remove legacy parsing code until its replacement has dedicated tests and integration coverage.
+- [x] Prefer small commits organized by compiler phase or language feature.
+
+## Phase 1: Syntax model
+
+- [x] Define a common `SyntaxNode` base abstraction.
+- [x] Define source spans on every syntax node. `SyntaxNode.Span` and `TextSpan` are source-derived across the syntax tree; focused AST tests cover tokens, expressions, statements, declarations and diagnostics.
+- [x] Define `CompilationUnitSyntax`; `DeclarationParser.ParseCompilationUnit` returns it with source-derived spans.
+- [x] Define declaration node hierarchy. All compilation-unit and class declarations derive from `DeclarationSyntax`.
+- [x] Define statement node hierarchy.
+- [x] Define expression node hierarchy.
+- [x] Define type syntax nodes; `TypeSyntax` preserves the declared type token and span.
+- [x] Define parameter syntax nodes; `ParameterSyntax` preserves Optional/ByRef/ByVal/default metadata. Call arguments are represented by expression lists with source spans.
+- [x] Decide how comments/trivia are represented. Apostrophe comments are skipped as trivia; line-ending tokens are retained for statement boundaries and source mapping, and apostrophes inside strings remain string content.
+- [x] Decide whether malformed/incomplete syntax is retained using missing tokens/error nodes.
+- [x] Add syntax-tree debug/dump output for tests and diagnostics.
+
+Initial expression nodes should cover at least:
+
+- [x] LiteralExpressionSyntax
+- [x] NameExpressionSyntax
+- [x] UnaryExpressionSyntax
+- [x] BinaryExpressionSyntax
+- [x] ParenthesizedExpressionSyntax
+- [x] CallExpressionSyntax
+- [x] MemberAccessExpressionSyntax
+- [x] IndexExpressionSyntax
+- [x] NewExpressionSyntax
+- [x] ArrayExpressionSyntax
+
+Initial statement nodes should cover at least:
+
+- [x] AssignmentStatementSyntax
+- [x] Expression/CallStatementSyntax
+- [x] DimStatementSyntax
+- [x] SetStatementSyntax
+- [x] IfStatementSyntax
+- [x] ForStatementSyntax
+- [x] ForAllStatementSyntax
+- [x] WhileStatementSyntax
+- [x] DoStatementSyntax
+- [x] SelectStatementSyntax
+- [x] Return/Exit statements
+
+Initial declaration nodes should cover at least:
+
+- [x] SubDeclarationSyntax; parsed and bound through the AST compile probe.
+- [x] FunctionDeclarationSyntax; parsed and bound through the AST compile probe.
+- [x] ClassDeclarationSyntax; parsed by `DeclarationParser` and covered by declaration/inheritance tests.
+- [x] FieldDeclarationSyntax; parsed as class members.
+- [x] PropertyDeclarationSyntax; parsed with accessor, parameters and body.
+- [x] Constructor/Destructor declarations; parsed as class members with bodies.
+
+## Phase 2: Lexer
+
+- [x] Define `SyntaxKind` / token kinds.
+- [x] Implement identifiers and keywords.
+- [x] Implement numeric literals.
+- [x] Implement string literals and XPscript escaping rules.
+- [x] Implement punctuation.
+- [x] Implement operators.
+- [x] Implement newline handling.
+- [x] Implement comments.
+- [x] Preserve exact source spans.
+- [x] Produce structured lexical diagnostics.
+- [x] Add focused lexer tests for every token family.
+- [x] Add malformed-token tests.
+- [x] Add regression fixtures for quotes and comments.
+
+## Phase 3: Expression parser first
+
+Expressions are the first migration target because the current transpiler performs substantial textual expression rewriting and expression precedence directly affects correctness.
+
+- [x] Implement precedence-based expression parsing.
+- [x] Define precedence and associativity for every XPscript operator.
+- [x] Implement unary `Not`, unary plus and unary minus, with LotusScript comparison precedence so `Not value Is Nothing` lowers as `Not (value Is Nothing)` and preserves object identity semantics. The `path-object-next.xps` regression covers this form.
+- [x] Implement arithmetic operators.
+- [x] Implement comparison operators.
+- [x] Implement boolean operators.
+- [x] Implement parentheses.
+- [x] Implement calls.
+- [x] Implement member access.
+- [x] Implement indexing.
+- [x] Implement array expressions.
+- [x] Implement `New`.
+- [x] Implement zero-argument runtime function syntax.
+- [x] Test nested calls and member access.
+- [x] Test mixed unary/binary precedence.
+- [x] Add focused regression for `If Not RunCommand(...) Then`.
+- [x] Add equivalent regression for `If RunCommand(...) = False Then`.
+- [x] Verify both produce the intended boolean semantics.
+- [x] Compare expression output against the legacy transpiler on existing fixtures.
+
+## Phase 4: Statement parser
+
+- [x] Parse variable declarations.
+- [x] Parse assignments and `Set`.
+- [x] Parse single-line and block `If`.
+- [x] Parse `ElseIf` and `Else`.
+- [x] Parse loops.
+- [x] Parse `Select Case`.
+- [x] Parse calls used as statements.
+- [x] Parse error-handling statements.
+- [x] Parse event-related statements.
+- [x] Parse file/runtime-specific statements that currently have compiler rewrites.
+- [x] Add recovery at statement boundaries so one syntax error does not destroy the remaining tree.
+- [x] Add focused tests per statement family.
+
+## Phase 5: Declarations and program structure
+
+- [x] Parse Subs and Functions.
+- [x] Parse parameters including ByRef/ByVal semantics.
+- [x] Parse return types.
+- [x] Parse Classes and inheritance syntax; `DeclarationParser` handles `Extend`, fields, properties and members, with inheritance contract regressions in Language FullTest.
+- [x] Parse fields.
+- [x] Parse properties.
+- [x] Parse constructors and destructors.
+- [x] Parse visibility modifiers.
+- [x] Parse application-level declarations. `DeclarationParser` retains top-level `Option`, `Const` and `Declare` lines as typed application declaration nodes; the `.wps` regression compiles and prints `42`.
+- [x] Parse target-specific entry points. AST compilation prefers `Sub Main`, otherwise selects the first `Sub`/`Function`; target route attributes are removed before parsing and the fallback entry point is covered by `target-entry-point.wps`.
+- [x] Validate block terminators structurally rather than with transpiler state. Statement parsers consume matching terminator tokens and diagnose incomplete blocks; the AST probe covers an unterminated `If` regression.
+
+### Custom class compatibility contract
+
+Use LotusScript custom-class behavior as the semantic reference where it fits XPscript. Do not introduce SSJS, Domino product-object, Notes API, LSX, JVM, XPages, or other host-specific semantics into the XPscript class model.
+
+XPscript intentionally differs from LotusScript in these syntax choices:
+- [x] Keep XPscript inheritance syntax as `Class Child Extend Parent`; do not restore LotusScript `Class Child As Parent`.
+- [x] Keep `Parent.member` as the XPscript syntax for direct base-class access; do not require LotusScript `BaseClass..member`.
+- [x] Keep the existing explicit `Sub Delete` / `Delete object` lifecycle model; do not add `Sub Terminate` or tie deletion to .NET GC/finalizer timing.
+
+Class declaration and scope:
+- [x] Restrict class declarations to module/application declaration scope; reject nested classes and classes declared inside procedures.
+- [x] Verify class default visibility is Private unless XPscript `Option Public` semantics explicitly change it.
+- [x] Verify member fields default to Private.
+- [x] Verify member Subs, Functions, and Properties default to Public.
+- [x] Reject `Static` class fields and member procedures unless XPscript deliberately defines a documented extension.
+- [x] Require one class field per declaration; do not silently accept comma-separated field declarations.
+- [x] Permit self-referential field types but do not allow field declarations to instantiate themselves with `New`.
+- [x] Define and test reserved-keyword rules for field names and keyword-named member procedures.
+
+Members and properties:
+- [x] Support fields, Subs, Functions, Properties, `Sub New`, and `Sub Delete` as class members.
+- [x] Keep constants out of class members unless XPscript deliberately defines a documented extension.
+- [x] Support read-only, write-only, and read/write properties.
+- [x] Support parameterized/indexed properties and require compatible Get/Let/Set index signatures for accessors sharing a property name.
+- [x] Preserve XPscript scalar `Property Let` versus object/reference `Property Set` assignment semantics.
+- [x] Enforce that a property name cannot conflict with a field/member variable name where the existing language contract forbids it.
+- [x] Verify property getter assignment to the property name produces the getter result, and setter access exposes the documented incoming value semantics.
+
+Inheritance and member access:
+- [x] Bind `Me.member` to the current class instance and validate it only where an instance context exists.
+- [x] Bind `Parent.member` to the direct base-class member and support base Subs, Functions, and Properties according to XPscript visibility rules.
+- [x] Define whether `Parent` may access Private base procedures/properties; test the chosen XPscript rule explicitly rather than inheriting backend C# behavior accidentally.
+- [x] Support overriding inherited methods/properties only with compatible signatures and produce XPscript diagnostics for incompatible overrides.
+- [x] Verify inherited constructor behavior and define explicit base-constructor invocation syntax/semantics for XPscript.
+- [x] Verify inherited destructor/delete ordering and ensure base cleanup occurs exactly once.
+
+Object lifecycle and references:
+- [x] Verify `New` invokes `Sub New` for each newly created XPscript object.
+- [x] Verify object references start as `Nothing` where required by XPscript semantics.
+- [x] Verify `Delete object` invokes `Sub Delete`, clears the deleted reference, and preserves the repository's defined alias/reference semantics.
+- [x] Verify `Set object = Nothing` remains reference clearing only and does not implicitly call `Sub Delete`.
+- [x] Add focused tests for constructor arguments, explicit deletion, aliases, inheritance, `Me`, `Parent`, and property access before marking class migration complete.
+
+Class-oriented language patterns:
+- [x] Verify fluent/chained method calls on class instances, including continued chains across XPscript line continuation.
+- [x] Treat singleton/lazy-instance patterns as ordinary XPscript module/application-level state plus class construction; do not add NotesSession-, JVM-, SSJS-, or Domino-specific singleton behavior.
+
+## Phase 6: Symbols and semantic binder
+
+- [x] Define symbol base model.
+- [x] Define variable/local symbols.
+- [x] Define parameter symbols.
+- [x] Define procedure symbols.
+- [x] Define class/type symbols.
+- [x] Define property/field symbols.
+- [x] Integrate compiler-owned runtime/public symbol catalog.
+- [x] Implement lexical scopes.
+- [x] Implement name lookup.
+- [x] Implement duplicate declaration diagnostics.
+- [x] Implement unknown symbol diagnostics.
+- [x] Implement member lookup.
+- [x] Implement overload/call binding where required.
+- [x] Implement ByRef/ByVal validation.
+- [x] Implement assignment compatibility.
+- [x] Implement return-type validation.
+
+## Phase 7: Bound tree and types
+
+Reverification on 2026-10-08: the five completed items at the end of this phase (Variant/dynamic, Object, Null/Empty, array/list typing and binder type diagnostics) passed `tests/ast-binding`; the lexer/compatibility and executable emission probes also passed. The binder probe is now included in the permanent Language FullTest runner, with completion markers required for all five areas. The complete Windows Language FullTest passed with this coverage enabled. This verifies the current AST semantic slice, not the still-pending production CLI/MCP integration.
+
+- [x] Define `BoundNode` hierarchy separate from syntax.
+- [x] Bind literals to XPscript types.
+- [x] Bind names to symbols.
+- [x] Bind unary operators.
+- [x] Bind binary operators.
+- [x] Bind calls.
+- [x] Bind member access.
+- [x] Bind assignments.
+- [x] Bind control flow.
+- [x] Define conversion rules.
+- [x] Define Variant/dynamic semantics explicitly.
+- [x] Define Object semantics explicitly.
+- [x] Define Null/Empty behavior needed by XPscript.
+- [x] Define array/list typing behavior.
+- [x] Move applicable type diagnostics from Roslyn-derived failures into XPscript semantic diagnostics.
+
+## Phase 8: C# emitter
+
+Latest verification: the RunCommand array-conversion snapshot needed the legacy comparison updated as well. Exact AST conversion assertions are retained, and executable emission coverage verifies both boolean forms with true and false results. The AST CLI fixture runs first in Language FullTest, followed by the lexer/compatibility probe.
+
+Next increment implemented: a console compilation-unit emitter for already-bound method definitions, with a two-Sub parse/bind/emit/compile/run regression. This is an internal emission boundary; full declaration, runtime and CLI/MCP integration remain open below.
+
+Reverification on 2026-10-08 of the five most recently completed implementation items before the Optional syntax increment: real procedure bodies/ByRef and structural function results passed the executable `tests/ast-compile-probe/run-ast-cli.ps1` regression; restricted dynamic call fallback, XPS2004 overload diagnostics and XPS2009 typed-receiver member diagnostics passed `tests/ast-binding`. The latter checks retain Variant calls and assert diagnostic source spans. Optional declaration syntax also passed `tests/ast-lexer`. These results cover the implemented experimental AST slice; shared machine integration and complete Optional semantics remain open.
+
+- [x] Verify the latest RunCommand conversion fix with exact emission and executable true/false coverage.
+- [x] Introduce a bound-method console compilation-unit emitter and execute a cross-procedure call regression.
+- [x] Add these probes to the existing Language FullTest runner and pass the complete Windows Language FullTest.
+- [x] Connect compilation-unit emission to the shared experimental CLI/machine compilation path with real procedure bodies and runtime integration. `AstCompiler` binds the parsed unit, emits real method bodies and produces executable `Generated.dll`; the AST CLI/MCP parity probes and `.wps` application-declaration fixture cover the path.
+
+- [x] Emit actual top-level Sub/Function bodies in the experimental CLI, with procedure-local scopes, forward calls and declared ByRef modes; remove fabricated reduced-arity procedure overloads.
+- [x] Expose the same experimental program compilation through the machine/MCP interface and verify paired diagnostics. `xpscript_ast_validate` calls `AstCompiler`, and `CompilerMcpProtocolProbe` compares CLI/MCP success and parser diagnostics.
+- [x] Model Optional defaults in syntax/binding/emission instead of generating no-op overloads. Defaults are retained in `ParameterSyntax`, bound in declaration scope and lowered to executable forwarding bodies with writable omitted ByRef storage.
+- [x] Preserve Optional flags, parameter modes and default-expression syntax with absolute spans; handle nested default-expression commas in declaration parsing.
+- [x] Validate Optional ordering, default types/expression rules and supplied/omitted arguments in the binder; lower omitted ByRef defaults through temporary locals. The AST CLI regressions cover invalid ordering/default types plus executable supplied and omitted argument paths.
+- [x] Execute omitted trailing Optional arguments through bound forwarding bodies and fresh writable storage; preserve supplied ByRef aliases and Function results, with repeat-call and generated-name collision regressions.
+- [x] Retain explicit empty argument slots as distinct syntax nodes with absolute spans; bind positional omissions only to declared Optional parameters and emit only the forwarding shapes actually used. Verify leading, middle, trailing and all-empty slots, required parameters following Optional parameters, supplied ByRef aliases and XPS2004 call spans against executable legacy/AST coverage and published main.
+- [x] Verify positional default-expression evaluation and side effects against published main. Named default evaluators run at omitted argument positions before later supplied arguments; forwarding parameters give omitted ByRef values fresh writable storage. The executable optional-default-order fixture covers earlier/later side effects, explicit suppression and nested defaults. Further declaration/default-name validation remains open; executable defaults are supported, so do not impose C# constant-only rules.
+- [x] Complete Optional declaration validation, default-name binding, overload conflicts and diagnostic source mapping; verify legacy and machine-interface parity before closing Optional migration. AST rejects invalid ordering/default declarations, binds earlier-parameter defaults, resolves overload precedence and preserves mapped diagnostics; the executable optional fixtures and MCP parity probe cover the migrated contract.
+- [x] Fix the legacy Optional/ByRef runtime comparison failure (`'long' does not contain a definition for 'Value'`): literal defaults receive fresh compatibility-reference storage, and the generic ByRef postprocessor preserves those wrappers instead of nesting them. The saved fixture verifies supplied aliases, repeated defaults, string and Boolean values in legacy and AST execution.
+- [x] Include the published main executable under `publish/xpscript/win-x64` in compatibility verification. The preserved main baseline reproduces the documented Optional/ByRef runtime failure; the corrected branch and AST path pass. Baseline SHA-256 and observed results are recorded in `docs/ast-published-main-verification.md`; subsequent migrated behavior is compared against this baseline and baseline defects are distinguished from migration regressions.
+- [x] Replace regex-based function-result rewriting with structural return-local lowering, preserving execution after result assignments; cover Exit Function, fall-through, recursion and generated-name collisions in the experimental CLI.
+- [x] Implement GoTo and labels with case-insensitive targets restricted to the same Sub or Function; reject cross-procedure targets and allow the same label name in separate procedures.
+- [x] Lower If/ElseIf/Else, While, Do and Select to flat conditional branches in procedures with GoTo, keeping labels in procedure scope. Permanent Language FullTest CLI fixtures cover nested transfers and Function/Sub scope.
+- [x] Migrate GoSub support through generated local helpers. GoSub remains supported for compatibility, while new code should prefer named Sub/Function calls.
+- [x] Complete nested For/ForAll GoTo, local initialization across jumps and source-mapped target diagnostics before closing GoTo migration. GoTo now requires source and target to be in the exact same For/ForAll scope; jumps into, out of, or between nested levels are rejected with source-mapped diagnostics. Same-scope loop jumps remain executable fixtures.
+- [x] Preserve scalar Static procedure-local storage without initializers instead of rewriting Static to Dim. Published main and corrected AST print 1 then 2 for repeated calls. Permanent Language FullTest coverage verifies procedure/overload isolation, defaults and ByRef mutation.
+- [x] Complete Static arrays, lists, objects and explicit initialization semantics. Static arrays with `ReDim`/`ReDim Preserve`, Static Lists, Static Objects, parameter-dependent first-reached initializers and explicit initializers are implemented. Static initialization is guarded by a per-storage lock/state: concurrent callers serialize and recursive initialization receives a deterministic diagnostic.
+  Static Object storage is now supported and starts as Nothing. `static-object.xps` verifies one creation across repeated calls; `New Object()` now emits ExpandoObject instead of the nonexistent XpObject. Full initializer semantics remain open.
+  Explicit Object initializers are verified by `object-initializer-lifetime.xps`: Dim reruns construction, while Static retains a cleared reference without rerunning construction. Static initializers execute once at the first reached declaration, with parameter/earlier-local dependencies supported. `static-initializer-scope.xps` verifies skipped declarations, one-time side effects and first-call values.
+  AST now supports initializer-free Static arrays, Lists, Variant storage and user-class instances through persistent generated fields. Scalar Static initializers are also supported as an AST capability extension and covered by `static-initializer-error.xps`; Linux static compiles that fixture but emits an empty line, so AST's printed `3` is an intentional semantic improvement. Published 0.9.3 rejects Static List syntax with XPS1012, so that part is also an AST capability extension rather than a legacy parity claim.
+- [x] Restore typed writable List aliases in AST ForAll using the shared List runtime/iterable contract. Published main and AST match the permanent ListTag, numeric/string assignment, nested-loop and snapshot regression; AST no longer enumerates KeyValuePair objects as values.
+- [x] Lower IsElement on declared keyed List access to ContainsTag without reading the element first. Present/missing tags match published main; the permanent AST regression also verifies one evaluation of a tag function with a side effect.
+- [x] Bind Erase on declared Lists to the existing runtime's Erase/Clear methods, without reading a removed/missing element. Permanent regression matches published main for single-tag removal, whole-list clearing and removals during snapshot iteration.
+- [x] Preserve one-dimensional zero-based array declaration lengths, string defaults and Erase for fixed CLR arrays. AST and published main now match the permanent array-storage regression. Nonzero lower bounds, multidimensional and dynamic array lifecycle semantics remain separate migration work.
+- [x] Preserve dynamic array type and allocation lifecycle through `ReDim`, `ReDim Preserve` and `Erase`. AST retains the CLR element type, deallocates dynamic arrays on `Erase`, and `UBound` after deallocation now raises the same allocation error as published main. Multidimensional and nonzero-bound arrays are covered by the shared runtime and focused regressions.
+- [x] Implement multidimensional array lifecycle. Fixed and dynamic CLR-backed arrays preserve rank, explicit lower/upper bounds, element type, reads, writes, `Erase`, `LBound` and `UBound` (including rank two and three); dynamic `ReDim`/`ReDim Preserve` now copies overlapping values through the shared runtime.
+  Fixed, dynamic and multidimensional lowering now share `IXPScriptArrayStorage`; CLR-backed arrays use the managed adapter and dynamic AST arrays use the same runtime contract.
+  - [x] Define one AST array storage abstraction for fixed, dynamic and multidimensional arrays.
+  - [x] Preserve array rank, lower/upper bounds and element type in syntax and bound symbols; fixed rank-two/rank-three runtime fixtures verify the lowering.
+  - [x] Emit fixed multidimensional and one-dimensional reads, writes and `Erase` through the shared array runtime.
+  - [x] Lower one-dimensional and multidimensional `ReDim`, `ReDim Preserve` and `Erase` through the shared runtime abstraction.
+- [x] Complete `Option Base` and lower-bound semantics. Fixed and dynamic one-dimensional and multidimensional arrays now honor `Option Base 1` and explicit lower bounds.
+  Remaining architecture work: extend lower-bound parity tests to additional legacy array forms as they migrate.
+  - [x] Apply `Option Base` to dynamic one-dimensional and multidimensional `ReDim` bounds without changing fixed-array behavior; permanent fixtures cover both.
+  - [x] Emit `LBound` and `UBound` for supported one-dimensional and multidimensional storage, including explicit dimensions and rank-two/rank-three arrays.
+- [x] Complete List ByRef aliases/copy-back, initialized declarations and parameters/returns. Sub and Function calls support matching typed List elements and ForAll aliases, including ordinary ByRef parameter forwarding. Named Function wrappers capture receiver/tag/value in argument order and copy back in finally. List parameters preserve element types and ByVal/ByRef reference behavior; Variant-returned Lists can initialize typed declarations. IsElement validates keyed access and checks dynamically supplied Lists without reading missing elements. Negative CLI/MCP fixtures preserve XPS2004/XPS2001 and source locations for incompatible parameter/initializer element types. Fixed/dynamic array Erase is covered separately.
+  Permanent CLI/MCP fixtures verify Function results, alias mutation, parameter replacement, reference initializers/returns, exceptional copy-back, tag evaluation once and invalid argument/element types. Typed List parameter overloads preserve separate Static storage identities.
+- [x] Implement Resume and On Error execution in the AST bound tree. Protected instruction graphs support automatic continuation, disabling, handlers, retry, next-statement and label transfers. Error normalization, Err and Error$ reuse the existing runtime. CLI fixtures verify retries, loops, List aliases and handler-error propagation; MCP validates the same sources and unknown handler-label diagnostics.
+  - [x] Add bound error-handler state for `On Error Resume Next`, `On Error GoTo 0` and handler labels. Runtime lowering now uses protected instruction graphs.
+  - [x] Lower protected statements with source-mapped `try/catch` and resume targets.
+    - [x] Assign stable IDs to bound statements for source mapping and future resume transfers.
+  - [x] Implement `Resume`, `Resume Next` and `Resume label` transfer semantics.
+  - [x] Model resume targets as typed bound state with optional label; runtime transfer uses the captured current/next instruction or label target.
+  - [x] Add CLI/MCP fixtures and compare against the legacy compiler. `samples/nested-resume-targets.xps` compiles normally and prints identical results in AST and legacy. The new combined retry/label fixture additionally exposes missing legacy `__ls_stmt_after_*` labels; AST execution is verified independently.
+- [x] Preserve implicit With/member statement semantics in the AST path. `With` establishes a lexical receiver scope, leading-dot member access binds to that receiver (including nested scopes), and CLI/MCP fixtures verify valid execution plus diagnostics for access outside a scope.
+- [x] Replace AST XPImage/Object substitutions with the existing image runtime implementation. XPImage now binds constructors, static loaders, read-only properties and overloaded instance methods to the shared runtime, without legacy fallback. Native API metadata and compiler/MCP documentation are derived from that runtime's public source in `AstImageSupport`; no second image implementation or package-copy path is introduced.
+  - [x] Add catalog-driven NuGet dependency builds for AST-generated runtime code, including Magick.NET references, SDK-selected native assets and exact direct/transitive third-party notices. The same path also handles SQLite and future catalog entries; package-free programs remain independent of addons. `GeneratedDependencyProbe` executes image/SQLite native code and checks notices on fresh/cached builds.
+  - [x] Verify native AST image creation, file/byte/base64 loading, encoding, editing, statistics/histogram, ByVal clone, ByRef replacement, Static retention, returned references and exception/early-exit cleanup. `xpimage-runtime.xps` and `xpimage-variant-return.xps` are executable Language FullTest fixtures; MCP verifies construction/member/property errors with source spans. `xpimage-parity.xps` compares real normal and AST compilation/execution.
+  - [x] Preserve hexadecimal color strings by removing the obsolete global hash-character deletion; validate `As New` declarations as their constructed type in the shared source validator. Stage relative source documents in the isolated publish workspace so normal image compilation retains source mapping instead of failing with missing-source diagnostics.
+- [x] Migrate native CSV documents, headers, rows and columns into AST using the existing CSV engine.
+  - [x] Import typed members, constructors, global CSV functions and indexes; preserve shared ByVal references, ByRef replacement, typed results, Static storage and typed ForAll iteration.
+  - [x] Preserve file encoding/BOM handling, JSON round trips and FromBytes reference replacement/evaluation order, including Call statements. Normal and AST compilation/execution agree on the existing native CSV sample and the dedicated file/reference parity fixture.
+  - [x] Include CSV runtime only on actual use; omit document/file runtime for CsvEscape-only programs and all CSV runtime for unused names in strings/comments. Pure CSV output has no unrelated addon dependencies. Spreadsheet interop now uses the shared native helper in AST (see spreadsheet migration below).
+  - [x] Add permanent CLI execution, MCP validation and source-mapped negative fixtures to the existing Language/Runtime test paths.
+- [x] Migrate XPSpreadsheet, XPWorksheet, XPCell and XPRange into AST using the existing package-free XLSX engine.
+  - [x] Bind typed members, overloads, constructors and read-only/private-setter properties; preserve initialized declarations, typed parameter/return values, ByVal sharing, ByRef replacement and Static references.
+  - [x] Lower CSV interoperability through existing helpers, including inferred Variant results and static FromWorksheet; include only the engines actually used, without extra NuGet addons or changes to notices.
+  - [x] Share native LSArray indexing/bounds and ForAll enumeration; verify Range.Values rather than substituting empty enumeration. Preserve script-relative XLSX paths and external-workbook/version guards.
+    - [x] Emit implicit ForAll aliases through both ordinary and protected/error-flow emitters; Spreadsheet `Range.Values` now compiles and executes without requiring a predeclared loop variable.
+  - [x] Compare seven existing demos through real normal/AST compilation and execution; verify byte/style/formula round trips, malformed/oversized ZIP inputs, external-file protection and mapped CLI/MCP negatives in permanent Language/Runtime coverage.
+  Verified on Linux on 2026-10-13: compiler Release build (0 errors), complete AST CLI compilation/execution probe, spreadsheet runtime/parity/safety probe, MCP protocol probe, binder, lexer, emission, compilation-unit and existing spreadsheet capability probes. Static FromWorksheet also has permanent normal/AST executable parity coverage.
+- [x] Migrate native XML document, node/element, attribute, collection and DTD-validation objects into AST using the existing secure runtime.
+  - [x] Share source-derived native metadata with CSV; preserve inheritance, optional arities, static/instance checks, read-only members and typed collection iteration/indexing.
+  - [x] Preserve shared ByVal references, ByRef replacement, typed results, element-to-node upcasts, Static storage and in-place LoadXml; XML node element operations are runtime-checked rather than unrestricted dynamic fallback.
+  - [x] Keep DTD/entity resolver restrictions and 8 MiB/1 MiB limits; include XML runtime only on use and only the escape method for escape-only programs, without external addons/notices.
+  - [x] Verify focused Parent/With regressions, native DOM/DTD samples, normal/AST output parity and source-mapped CLI/MCP diagnostics in permanent Language/Runtime tests. Qualified Parent members are not rewritten as class inheritance references; actual Parent/Me class references retain their contract.
+- [x] Apply production reserved-identifier validation in the AST path. Legacy and AST reject user identifiers beginning with compiler-owned `__xps`; the focused fixture verifies the diagnostic, source span and MCP rejection while valid lowering names remain covered by the CLI probe.
+- [x] Restrict dynamic call fallback to genuinely dynamic receivers; invalid calls to declared procedures must produce binder overload diagnostics.
+- [x] Reject unmatched declared overloads with XPS2004 even when dynamic member binding is enabled; regress arity, argument type, ByRef mode and source span while retaining Variant member calls.
+- [x] Restrict unresolved member fallback to Variant receivers rather than every object-backed user type; regress both properties and calls with XPS2009 and member source spans.
+- [x] Replace experimental runtime placeholders with existing runtime implementations before claiming sample compatibility. The independently tracked HTTP/TLS, image, UI/dialog, error/diagnostic, environment/system and database/runtime surfaces below have completed their bounded regressions; remaining unrelated migration items stay open.
+  - [x] Audit remaining HTTP/TLS placeholder paths not covered by the migrated `XPHttpClient`/`XPHttpRequest` surface; existing browser/UI and legacy-fallback routes are separate concerns. The Release compiler build passed with 0 warnings/errors, and `AstHttpRuntimeProbe` passed on Linux with local HTTP/TLS listeners, including `AST_HTTP_ACCESSORS_OK`, `AST_HTTP_TLS_RUNTIME_OK`, `AST_NOTES_HTTP_REQUEST_OK`, and the XPAI HTTP flow markers. No locale-sensitive HTTP formatting was exercised; locale verification was not applicable to this regression.
+  - [x] Audit remaining image placeholder paths outside the migrated native image surface; `XPImageRuntimeSource` and `AstImageSupport` provide the native implementation, while remaining browser/UI references are target integration rather than AST placeholders. `run-ast-image-get.ps1` passed on Linux under `en_US.UTF-8` and `sv_SE.UTF-8`, including image constructors, ownership/destructors, properties, byte interop and diagnostics. No locale-sensitive image formatting was exercised.
+  - [x] Audit remaining UI/dialog placeholder paths by bounded route, preserving Linux headless behavior and legacy fallback where required.
+    - [x] Migrate or verify shared `MsgBox`/`InputBox` behavior and its Linux headless contract. AST compile and execution passed on Linux under `en_US.UTF-8` and `sv_SE.UTF-8`; `MSGBOX_RUNTIME_OK` and `INPUTBOX_RUNTIME_OK` were verified. No locale-sensitive UI formatting was exercised.
+    - [x] Migrate or verify desktop `ShowDialog`/file-dialog backends and their unavailable-backend diagnostics. Linux requires an X11 display, so verification ran in the dedicated Windows GitHub Actions job. `Desktop UI dialog and form smoke (Windows)` and the Windows license/compile gate passed on 2026-10-31.
+    - [x] Migrate or verify UIForm desktop/web/Android target integrations independently. Desktop, web and Android verification is recorded in the platform-specific children below; the web adversarial build limitation remains explicitly documented.
+      - [x] Verify desktop UIForm integration and lifecycle through the Windows-only `DesktopUIFormBridgeSmoke` job; the Windows license/compile gate and desktop smoke passed on 2026-10-31.
+      - [x] Verify web/UIForm integration and server-side fallback boundaries. `WebUIFormKestrelSmoke` passed on Linux under `en_US.UTF-8` and `sv_SE.UTF-8` with `WEB-UIFORM-KESTREL=OK`; no locale-sensitive UI formatting was exercised. The additional adversarial build was not completed because the workspace exhausted disk while copying all RID assets.
+      - [x] Verify Android UIForm integration and generated-host behavior. The `Android AST target (ubuntu-latest)` Platform FullTest job completed successfully on 2026-10-31, including Android workload installation, `AndroidCompilerProbe`, generated-host metadata, ARM64/x64 configuration and AST Android target compilation.
+  - [x] Audit remaining error/diagnostic placeholder paths by bounded surface and add paired CLI/MCP source-mapped regressions.
+    - [x] Verify `Error`/`Error$`, `Erl` and `Stop` runtime compatibility surfaces. The shared AST runtime binding and `erl-physical-source-line.xps` source-mapped execution regression are already present and documented; no remaining placeholder was found in this surface.
+    - [x] Verify CLI/MCP diagnostic identity, source spans and parity for the remaining migrated surfaces. Focused `language-fulltest.yml` run `41196669095` passed CLI compatibility and MCP protocol/concurrency/AST compilation on Ubuntu and Windows; macOS was intentionally skipped. The long language corpus and bulk test-project restore were skipped only in this focused parity mode because they are independent of the CLI/MCP gate.
+  - [x] Audit remaining environment/system helper placeholders; migrate one helper family at a time and test locale-sensitive behavior with explicit .NET globalization settings. The covered helper families are AST-specific and passed the focused Ubuntu/Windows workflow; no locale-sensitive formatting is involved in these path/process contracts.
+    - [x] Verify process/environment identity helpers (`Platform`, `Command`, `Environ`, `GetTickCount`) against AST output. `runtime-globals-next.xps` now checks deterministic platform/command/environment/tick-count markers and passed in focused Language FullTest run `41201280931` on Ubuntu and Windows; macOS was skipped. These values are locale-independent; local Linux execution was unavailable because the sandbox blocks the .NET first-use `NuGet-Migrations` mutex.
+    - [x] Verify current-directory and filesystem-navigation helpers (`CurDir`, `ChDir`, `FileExists`, `DirExists`, `GetFileAttr`, `FileCopy`) through the existing AST CLI fixtures `runtime-globals-next.xps`, `chdir-next.xps`, `file-exists-aliases-next.xps`, `file-attributes-next.xps` and `file-copy-name-next.xps`; focused workflow `41201280931` passed on Ubuntu and Windows. Assertions are path/marker based and locale-independent.
+    - [x] Verify shell/process helpers (`Shell`, `ShellArgs`, `ShellExecute`) through the existing AST CLI and platform fixtures: process IDs, structured arguments, metacharacter safety, missing executables, timeout, stdout/stderr pressure and platform behavior. Focused workflow `41201280931` passed on Ubuntu and Windows; macOS was skipped.
+    - [x] Verify environment-backed application/temp/path helpers through AST fixtures: `application-native.xps` covers `Application.Path`/`ExecutablePath`, directory and temp-path aliases; `ast-run-navigation.xps` covers the generated navigation path; CLI compatibility covers source/temp-root handling. Focused workflow `41201280931` passed on Ubuntu and Windows; values and path assertions are locale-independent.
+    - [x] After the helper-family regressions pass, no confirmed placeholder implementation remained in the covered process, filesystem, shell or application-path surfaces. Linux locale-specific execution was unavailable locally because the sandbox blocks the .NET first-use mutex; the workflow assertions are explicitly locale-independent.
+  - [x] After all family-specific tasks are complete, remove this umbrella item and record the final compatibility/build evidence. The family regressions and focused AST CLI/MCP workflow gates passed on Ubuntu and Windows; platform-specific desktop and Android gates are recorded above, while macOS was intentionally skipped for the focused parity runs.
+  - [x] Removed the remaining direct sample-name database runtime fallbacks from AST generated dependency selection; SQLite and MSSQL activation now uses the central object-support detectors. Release compiler build and the full AST CLI probe passed on 2026-10-24.
+  - [x] Removed the final database type-name fallback checks (`XPScriptDbSqlite`, `XPScriptDbMsSql`, `XPDBSQLite`, `XPDbMsSql`); focused SQLite/MySQL/MSSQL/Supabase AST probes passed on 2026-10-24.
+  - [x] Explicitly remove the legacy Notes `CreateSAXParser`/`NotesSAXParser` surface; XML processing uses the native `XPXml` API instead.
+  - [x] Remove the legacy `NotesSAXParser`, `NotesSAXAttributeList` and `NotesSAXException` surface completely. XML processing uses the native `XPXml` API; the legacy SAX sample and runtime were removed, and AST users receive `XPS1012` for the removed types rather than a legacy fallback.
+  - [x] Verify the complete documented XPXML surface through AST execution: document/node/element/attribute creation and mutation, collection navigation, XPath, cloning/replacement/removal, DTD validation, serialization and unused-runtime guards pass in `run-ast-xml.ps1`. UTF-8 and UTF-16 BOM byte-array parsing pass with `XML_CHARSET_AST_OK`; `XPXmlDocument.ToBytes("utf-8", False/True)` now creates UTF-8 without/with BOM, and UTF-16 output is covered by the full-surface regression.
+  - [x] Replace the AST `GetObject` empty `ExpandoObject` placeholder with the existing Windows COM/moniker activation contract; the AST COM activation-error fixture passes.
+  - [x] Replace AST `Input$` empty-string helpers with `LSFileRuntime.Input`; `file-input-record-next.xps` is a permanent AST CLI regression.
+  - [x] Replace AST `Erase` and dialog helper placeholders with the shared List/array and UI-dialog runtimes; dialog binding remains lazy so non-UI programs do not acquire desktop dependencies.
+  - [x] Replace the AST console `ExpandoObject` fallback with a typed runtime console preserving `Write`, `WriteLine`, `ReadLine`, `Beep` and Android log routing; normal console output remains covered by the AST runtime sample.
+  - [x] Replace the standalone AST `RequestScope` `ExpandoObject` fallback with a typed case-insensitive request-state implementation exposing `Set`, `Add`, `Get`, `Exists`, `Remove` and `Clear`; web compilation strips the standalone carrier and continues using the existing per-request web runtime.
+  - [x] Bind the documented `Format`/`Format$`, `Error$`, `Erl` and `Stop` compatibility surfaces to the shared AST runtime; `erl-physical-source-line.xps` verifies AST error-line execution (`Erl=5`).
+  - [x] Replace AST `DateAdd`/`DateDiff` placeholders with the existing `XPScriptRuntime` implementations; `date-builtins-next.xps` verifies day and month intervals.
+  - [x] Bind AST `DatePart`, `Weekday`, `MonthName` and `WeekdayName` to existing `XPScriptRuntime` implementations; `date-parts-next.xps` verifies their migrated behavior.
+  - [x] Bind AST `DateValue`, `TimeValue` and three-argument `TimeNumber` to existing `XPScriptRuntime` implementations; `date-values-next.xps` verifies their migrated behavior.
+  - [x] Bind AST `Hour`, `Minute` and `Second` to existing `XPScriptRuntime` implementations; `time-parts-next.xps` verifies their migrated behavior.
+  - [x] Bind AST `ShellId`, `Shell` and `ShellArgs` to real cross-platform process startup and return child process identifiers, preserving empty-program/start-failure contracts; `shell-id-next.xps` and `shell-process-id-next.xps` verify the behavior.
+  - [x] Replace Application's NewLine-only ExpandoObject with typed native namespaces, shared argument/state runtime and conditional Debug/SystemLog/Registry/Crypto/Secrets/Log/Audit services. Preserve argument snapshots/bounds, metadata, readonly guards and ExitCode; use existing packaging for literal executable metadata. No extra NuGet dependency or permissive credential/host stub.
+  - [x] Add permanent normal/AST runtime parity, isolated registry/crypto/credential/host guards, debug/assembly-metadata/ExitCode tests and binder/MCP mapped diagnostics. Shared Linux user-registry storage respects absolute XDG_CONFIG_HOME with its existing default fallback. Native Variant snapshot writes reuse shared array/dynamic index storage.
+    Verified on Linux on 2026-10-13: Release build (0 errors), complete AST CLI compilation/execution probe, normal/AST Application runtime probe, complete MCP protocol and binder probes (including encrypted-secret facade target checks), lexer/emission/compilation-unit probes, and existing Application isolation/concurrency/debug probes. With Application is an explicitly tested AST extension; normal compilation still rejects that namespace-value form. Credentials are not read or written by the migration tests.
+  - [x] Migrate XPHttpClient/XPHttpRequest/XPHttpResponse and response part/file APIs to the existing native runtime. Source-derived metadata binds overloads, typed returns and read-only fields; JSON/authentication facades delegate to existing helpers. Remove HTTP sample-name substitution and the always-valid TLS placeholder; error capture uses the shared runtime exception contract.
+  - [x] Verify real normal/AST HTTP/TLS execution, Strict/self-signed certificate rejection (hostname/expiry), private-network blocking, header controls, redirect behavior, request/response limits, fractional timeout and disposal. Conditional inclusion omits unused HTTP/TLS without unrelated addons. Async/UIForm use whole-file legacy fallback; those language/UI migrations remain separate.
+  - [x] Add permanent Language/Runtime HTTP/TLS execution plus binder/MCP mapped diagnostics, including synchronized invalid native constructors.
+  - [x] Include the full shared `XPScriptRuntimeSource` and `TypeCoercionRuntimeSource` in AST output. Remove the nested scalar runtime substitute and JSON/array/HTTP rewrites targeting it. Scalar conversions, Null/Empty printing, type inspection, string helpers, environment lookup and numeric loop ranges use the shared runtime; CLI/MCP and normal compilation cover `shared-runtime.xps`. Target-specific UI and extended helpers remain separate migration work.
+  - [x] Replace AST JSON document/object/array/element placeholders with `NativeJsonRuntimeSource` and shared object-reference JSON converters. CLI execution and MCP cover parse/stringify, nested mutation, Unicode/null, invalid input/indexes, typed parameter/return and ByRef replacement, array iteration and source-mapped unknown members. JSON runtime code is no longer selected by sample variable names.
+    `json-runtime.xps` matches normal compilation output. Typed JSON Function return via Set is additionally supported by AST; legacy currently rejects that form, so `json-reference.xps` is an AST capability test rather than a full legacy-parity claim.
+  - [x] Migrate the AST AI surfaces through the native XPAI route. `AddFunction`, `AddParameter`, tool lookup/removal, request execution, provider success, tool-loop, timeout and SSE streaming are implemented by the native runtime/postprocessors and covered by permanent AST probes; no generated `XpAi`/`XpAiTool` metadata scaffold remains.
+    - [x] Remove the obsolete generated `XpAi`/`XpAiTool` metadata placeholders; AST XPAITool/XPAi declarations now resolve to the native `XPScriptAi`/`XPScriptAiTool` runtime emitted by the XPAI route. Function lookup/removal and request-execution coverage remain open under this parent item.
+    - [x] Add AST request-execution error coverage against a closed local endpoint; the native XPAi path returns a sanitized error without leaking the configured API key. Provider-success, tool-loop and local SSE streaming coverage are now covered by the AST HTTP runtime probe, including timeout behavior.
+    - [x] Map typed `XPAiResponse` locals to `XPScriptAiResponse` instead of generating the invalid user-class name `XpXPAiResponse`; the provider-success fixture now compiles with a typed response.
+    - [x] Expose `XPAIToolFunction` as a native AST type with metadata and parameter lifecycle methods; the lifecycle fixture now compiles and runs through registration, lookup and removal.
+    - [x] Expose the documented `XPAIToolCall` callback type and its tool/function/call/argument/session properties; the lifecycle callback now binds with a typed `XPAIToolCall` parameter.
+    - [x] Bind the remaining documented XPAITool function lookup, request-context and JSON metadata methods; the lifecycle fixture executes those native APIs.
+    - [x] Correct the `XPAi.NewRequest` catalog contract to the native parameterless reset method; the lifecycle fixture invokes it successfully.
+    - [x] Bind documented `XPAiResponse.HasJsonResult` and `ResultJson` properties supplied by the native prompt/schema postprocessor; the typed response fixture now compiles with the JSON-result contract.
+    - [x] Bind AST overloads for native `XPAi.Complete(messages, model)` and `XPAi.Stream(messages, callback, model)`; `xpai-overloads-next.xps` compiles both signatures against the native runtime.
+    - [x] Bind `XPAi.StreamCallback(callback, context)` so streaming callbacks can receive native callback context; the overload fixture compiles the two-parameter callback contract.
+  - [x] Investigate and migrate the AST `XpNotesHttp` compatibility scaffold through the native HTTP path; headers/proxy methods, `Get`/`Post`, mutation verbs, JSON responses, redirects and private-network policy are covered by the isolated and permanent local HTTP probe.
+    - [x] Initial migration probe found the existing `JsonHttpCompatibilityRuntimeSource` can replace the placeholder runtime; generated-type binding and the Notes HTTP compatibility surface compile and execute through the AST path, including a local `NotesHTTPRequest.Get` regression. Notes-specific JSON navigator/object/array/element types are out of scope; use the canonical `XPJsonDocument`, `XPJsonObject`, `XPJsonArray` and `XPJsonElement` APIs instead.
+    - [x] Bind NotesHTTPRequest construction, properties and header methods to the compatibility runtime; notes-http-native-next.xps verifies the local surface. Full request/response and json-http parity remain open.
+    - [x] Add the explicit `AllowPrivateNetwork` gate to `NotesHTTPRequest`; private/local targets are rejected by default and the HTTP runtime probe verifies both rejection and opt-in local execution.
+    - [x] Verify `NotesHTTPRequest` JSON response handling through the canonical `XPJson*` APIs against the permanent local HTTP probe.
+    - [x] Verify `NotesHTTPRequest.GetResponseHeaders` returns response metadata after a real request.
+    - [x] Verify `NotesHTTPRequest.MaxRedirects` blocks redirects by default and follows an explicit one-hop redirect.
+    - [x] Verify `NotesHTTPRequest.Put`, `Patch` and `DeleteResource` preserve HTTP verbs and request bodies through the AST runtime.
+    - [x] Resolve the canonical XP-prefixed name for the Notes HTTP compatibility type as `XPNotesHTTPRequest`; the AST preprocessor normalizes it to the existing compatibility runtime without colliding with native `XPHttpRequest`, with a permanent alias regression.
+  - [x] Bind AST `MsgBox` to the shared console/runtime return contract; `msgbox-next.xps` verifies the documented `1=OK` result while desktop UI postprocessing remains target-specific.
+  - [x] Investigate AST `ProcedureCounter`: it is not a documented built-in, but `samples/core-language.xps` defines it as a user `Static Function`; the fallback was removed after structural module-level Static Function binding was implemented and verified by `static-module-function-next.xps`.
+    - [x] Add module-level `Static Function` parsing and remove the generated `ProcedureCounter` fallback; `static-module-function-next.xps` verifies the real user function and persistent local state.
+  - [x] Replace the AST `AstOpen`/`AstClose`/`Loc` scaffold with the shared `LSFileRuntime`; `file-runtime-next.xps` verifies missing input-path errors and the initial output position.
+  - [x] Add AST `Get` lowering through `LSFileRuntime.GetValue`; `file-get-next.xps` verifies typed binary `Put`/`Get` string round-trip and file length.
+  - [x] Move the Archive ZIP/memory/edge-case construction and file-system runtime path into AST. The AST binder declares the generated native-static archive factories/iterators, includes the required file-system runtime, and preserves legacy ZIP parity; `archive-zip`, `archive-memory` and `archive-edge-cases` execute successfully through AST.
+  - [x] Complete Archive iterator/ForAll parity in AST. Archive `Entries`, `Files()` and `Folders()` ForAll loops now use the same snapshot enumerator as `GetFirstEntry`/`GetNextEntry`; `archive-iterator.xps` compiles and runs through AST with matching counts.
+  - [x] Add AST class-method support for `Archive` and `ArchiveEntry` through the existing source-derived native surface. `class-method-archive-next.xps` verifies Archive identity/shared mutation and ArchiveEntry identity; the constructor rewrite is word-bounded so a user class named `ArchiveMethods` cannot be mistaken for the Archive object. Cross-object JSON, XML, SQLite and Archive regressions passed after the shared type/emission changes.
+  - [x] Execute framework-dependent AST Archive regression outputs through `dotnet Generated.dll` in Platform FullTest. Verified on Windows 2026-10-25 through the permanent bounded runner: ZIP memory output retains `Format: ZIP`, `Files: 2` and `hello from memory`; extended memory prints `ARCHIVE_EXTENDED_MEMORY_OK`. The complete Platform FullTest subsequently passed with `PLATFORM_FULLTEST: passed` and `FULLTEST_SUITE_PASSED=platform`.
+  - [x] Make read-only BZip2 coverage mandatory without installing platform compression tools. Archive and Platform FullTest share an independently generated fixed BZip2 fixture and verify payload reading/extraction. Complete Archive suite passed on Windows 2026-10-25 with `ARCHIVE_READ_ONLY_FORMAT=OK` and `FULLTEST_SUITE_PASSED=archive`; no missing-bzip2 skip remains.
+  - [x] Run ArchiveCapabilityProbe against the compiler already built for FullTest, avoiding Windows DLL copy failures when compiler services hold those assemblies. Focused run passed with `ARCHIVE-CAPABILITY-PROBE=OK` on 2026-10-25; the complete Platform FullTest also passed after the rebuild correction.
+  - [x] Execute the eight Platform AST object fixtures through `dotnet Generated.dll`, removing invalid parenthesized PowerShell `if` invocation. The exact permanent test block passed on Windows 2026-10-25 (`AST_PLATFORM_OBJECT_BLOCK_OK`), including compile/runtime markers for NetworkTools, HTTP databases, MSSQL alias, AI tools, JSON validation results, shell results, Path and FileInfo. These are focused smoke checks, not a claim of complete per-member/parameter or cross-platform coverage.
+  - [x] Investigate and repair the legacy emitter failure for typed `NetworkTools` result locals in `networktools-native-local-smoke.xps`. The shared preprocessor now routes `New NetworkTools` through `XPScriptNetworkToolsFactory.Create()` for the legacy path; both legacy and AST compile and execute the local smoke fixture successfully.
+  - [x] Reject missing Archive fixtures in the shared permanent negative-test helper. Focused execution on 2026-10-25 rejected a nonexistent archive while accepting the intended corrupt-stream diagnostic (`ARCHIVE_NEGATIVE_FIXTURE_GUARD_OK`). Previously built lexer, binder and emitter probes passed, and the complete Platform FullTest passed afterward.
+  - [x] Bind AST `Print #` and `Line Input #` to `LSFileRuntime`; `file-text-next.xps` verifies text round-trip.
+  - [x] Add the shared `LSFileRuntime.InputChars` byte-count API and bind AST `Input$`; `file-input-chars-next.xps` verifies binary byte reads and Latin-1 decoding.
+  - [x] Bind AST `Seek` to `LSFileRuntime.SeekSet` so binary `Input$` can reposition an open handle.
+  - [x] Bind AST byte-range `Lock`/`Unlock` to `LSFileRuntime`; `file-lock-next.xps` verifies the interval and closed-handle error contract.
+  - [x] Bind AST `InputBox` overloads to the shared console input runtime; `inputbox-next.xps` verifies prompt input while desktop-specific dialog behavior remains target-specific.
+  - [x] Bind AST `ChDrive` to the shared platform-aware file runtime; `chdrive-next.xps` verifies the missing-drive error contract.
+  - [x] Bind AST `FileDateTime` to the shared file runtime with the same missing-file contract as `FileLen`; `file-date-time-next.xps` verifies the returned date/time value.
+  - [x] Bind AST `Dir` to the shared filesystem enumeration contract; `dir-next.xps` verifies wildcard matching and continuation with `Dir()`.
+  - [x] Bind AST `FileCopy` and `Name ... As ...` statements to file operations; `file-copy-name-next.xps` verifies copy and rename execution.
+  - [x] Preserve inline `If ... Then Kill ...` statements in the AST path; the full Notes Domino regression now compiles through AST after contextual local `parent` handling and inline `Kill` lowering were added.
+  - [x] Bind AST `ChDir` to the shared current-directory contract; `chdir-next.xps` verifies directory changes affect relative file lookup.
+  - [x] Bind AST `FileExists` and `DirExists` aliases to the same filesystem predicates as `IsFile` and `IsDir`; `file-exists-aliases-next.xps` verifies both documented aliases.
+    - [x] Remove the fixture's Windows-only C-drive assumption: Windows tests the current drive designator and Linux/macOS test their filesystem root. Windows AST execution passed on 2026-10-25; Linux/macOS execution remains verified by the permanent Language FullTest matrix when CI completes.
+  - [x] Bind the documented AST `Path` object surface; `path-object-next.xps` verifies construction and all documented path methods.
+  - [x] Bind the documented AST `FileInfo` metadata surface for files and directories; `file-info-next.xps` verifies metadata, flags and timestamps.
+- [x] Remove sample-specific identifiers and type coercions from binders/emission and runtime scaffolding. All listed fallback/coercion removals are complete; the full AST CLI compilation probe and Windows Platform FullTest passed without sample-name-driven binding failures.
+  - [x] Remove the unconditional `matrix` local-symbol scaffold; undeclared `matrix` now follows normal XPS2008 binding diagnostics.
+  - [x] Remove global `ForAll` alias scaffolding; undeclared array/string/dynamic aliases are now created in the loop body scope and existing aliases retain their normal symbol semantics.
+  - [x] Remove the broad assignment-line global-symbol fallback; undeclared assignment targets now follow normal binder diagnostics instead of becoming module globals.
+  - [x] Remove hard-coded `Person` class construction/emission; user classes now use the generic AST class lowering path.
+  - [x] Gate legacy `NotesHTTPRequest`/AI compatibility helper emission on actual source usage instead of emitting those helpers for every AST compilation.
+  - [x] Remove duplicate `Process`/`Session`/`Request` Expando globals; `AstApplicationSupport` already emits their native `.State` targets. Application runtime execution remains covered by its existing fixture.
+  - [x] Remove the unused global `Debugger` Expando fallback; AST debug statements use their dedicated lowering path.
+  - [x] Remove global `XPJson*` Expando fallbacks; JSON objects/documents/arrays are emitted through the native AST JSON runtime and semantic type mappings.
+  - [x] Remove the unused global `Response` Expando fallback; supported AST HTTP responses are typed native values and web callback compatibility remains a separate legacy route.
+  - [x] Remove global `Database`/`Document` Expando fallbacks; AST database/document surfaces use typed native objects or remain explicit legacy fallbacks.
+  - [x] Remove `UIForm`/`NotesSession` AST Expando fallbacks; `UIForm` remains an explicit legacy compatibility route while `NotesSession` uses its dedicated AST runtime route.
+  - [x] Remove remaining name-based AI scaffolding from bound emission: local names such as `ai` and `*Tool` no longer coerce untyped declarations; typed `XPAi`, `XPAITool` and `XPJsonArray` mappings remain semantic and focused AI/JSON regressions pass.
+  - [x] Remove the redundant source-name heuristic for `NotesHTTPRequest`; Notes HTTP emission now depends only on its bound semantic type, with the native Notes HTTP fixture compiling successfully.
+- [x] Investigate regex-based module-field generation for source `Const` declarations; module-level constants come from `ApplicationConstDeclarationSyntax`/module-scope extraction, while procedure-level constants are bound as local AST symbols. `module-const-syntax-next.xps` and `samples/const-statements.xps` verify both forms.
+    - [x] Accept procedure-level `Const` declarations in the AST syntax/binding path and add executable coverage using `samples/const-statements.xps`.
+    - [x] Replace procedure-level regex/value lowering with structural `ConstStatementSyntax`, `ConstantSymbol`, and literal binding; module constants remain fields and local constants no longer leak into module scope.
+  - [x] Investigate regex-based `BuildUnknown`/`BuildReady`/`BuildRunning`/`BuildDone` and `BuildState` globals; they are documented enum support, and AST binding plus qualified enum access preserve implicit sequencing. Regression coverage is complete.
+    - [x] Confirmed `BuildState` is documented enum support and fixed AST binding plus qualified enum access; generated enum members now preserve implicit sequencing after explicit values (`BuildRunning = BuildReady + 1`).
+  - [x] Investigate regex-based array module-field generation from `Dim name(...) As Type`; AST now registers module arrays with typed array semantic symbols and initializes managed carriers with source lower bounds. Full typed shared module-array storage is covered by the module-array regression.
+    - [x] Verify public/private module arrays, `ReDim Preserve`, indexing and source lower bounds through `samples/module-arrays.xps` in the AST CLI regression (`MODULEARRAY=50`, `MODULEBOUNDS=1:4`, `MODULEFIXED=two`).
+    - [x] Confirmed and regression-tested default-private module-level `Dim` arrays without `Public`/`Private`; `module-array-default-private-next.xps` verifies typed storage and indexing while preserving default-private semantics.
+  - [x] Investigate remaining unconditional `SEARCH_DEPTH`, `Command`, `Platform`, and `CurDir` generated globals; they are documented built-ins with runtime-backed values. Focused runtime-global and Notes-search regressions are complete; the broader Notes namespace remains separate.
+    - [x] Classified `Platform`, `Command`, and `CurDir` as documented built-ins; `runtime-globals-next.xps` verifies non-empty runtime-backed values. AST now exposes the authoritative Notes values `SEARCH_BREADTH = 1723` and `SEARCH_DEPTH = 1724`, verified by `notes-search-constants-next.xps`; full Notes namespace binding remains separate.
+- [x] Migrate class declarations, inheritance and object lifecycle into the AST bound tree. The supported class-method, property, constructor, destructor and native/reference families have bounded AST regressions and evidence recorded below.
+  - [x] Inventory and implement any remaining class declaration/inheritance syntax or binding gaps that are required by the supported XPscript contract.
+    - [x] Migrate XPImage parameters on ordinary procedures and class methods, replacing the current XPS3001 guard with an explicit lifetime/ownership contract and regressions. ByVal, ByRef, Optional omission, failure cleanup, CLI/MCP and Linux evidence are complete; the latest constructor parity matrix also passed the initialized-module replacement regression on Linux and Windows.
+      - [x] Define ByVal borrowing/cloning and caller-recycling behavior separately for ordinary procedures and class methods. The procedure and class-method fixture mutates each ByVal parameter and confirms the caller image remains `6x4`; Linux run `41351130586` passed on commit `78424b425`.
+      - [x] Define ByRef replacement/copy-back behavior, including failure persistence and caller-owned image cleanup. Successful procedure/class-method replacement and failure-clearing semantics are covered by the completed child regressions.
+        - [x] Verify successful ByRef replacement for ordinary procedures without transferring ownership of the caller's original XPImage. `initialized-module-xpimage-byref-next.xps` verifies the new `4x1` caller slot and that an alias to the replaced image is recycled; Linux run `41356648189` passed.
+          The earlier Linux runs `41352825070` and `41353815417` observed `ObjectDisposedException` on the caller image after replacement. The subsequent ownership/lowering fixes are covered by the passing `initialized-module-xpimage-byref-next.xps` regression in parity run `41539282484`; the stale blocker is closed.
+          - [x] Resolve the ownership contract first: a ByRef XPImage caller value is borrowed during the call; replacing the caller slot may recycle the previous value, while any object-owned snapshot must remain valid. This follows the existing constructor and property-setter ownership fixtures; aliases to a replaced caller value are not a preservation guarantee.
+        - [x] Verify successful ByRef replacement for class methods, including alias visibility and copy-back ordering. `xpimage-parameter-runtime-next.xps` verifies the new `7x3` slot and recycled prior alias; Linux run `41424339088` passed.
+        - [x] Verify failed procedure/method calls clear the caller target to `Nothing` and clean only newly owned images. `xpimage-parameter-runtime-next.xps` covers both ordinary procedure and class-method failures; Linux run `41464704973` passed with `XPIMAGE_BYREF_FAILURE_CLEAR_OK`.
+          - [x] Resolve failure semantics first: a failed XPImage initialization clears the target to `Nothing`, preventing a false-positive assignment; newly created owned images are cleaned without transferring ownership of unrelated caller images. This follows the requested constructor-failure contract and must be covered by the next regression.
+      - [x] Define Optional omission behavior and failure cleanup for XPImage procedure/method parameters.
+        - [x] Verify omitted Optional XPImage parameters arrive as `Nothing` in ordinary procedures and class methods. `xpimage-parameter-runtime-next.xps` covers both call forms; Linux run `41475005479` passed on commit `f651e7da6`.
+        - [x] Verify supplied Optional XPImage values follow the established ByVal clone/borrowed-input ownership contract. `xpimage-parameter-runtime-next.xps` verifies procedure and class-method mutation isolation; Linux run `41478591018` passed on commit `3352387d8`.
+        - [x] Verify Optional XPImage procedure/method failure clears the target and cleans newly owned temporaries. `xpimage-parameter-runtime-next.xps` covers explicit Optional `ByRef` failures for procedures and class methods; Linux run `41483785779` passed on commit `e1bbd5a36`.
+      - [x] Add focused CLI/MCP and Linux regressions for the supported XPImage procedure/method parameter matrix before removing XPS3001 guards.
+        - [x] Verify the CLI runner checks the complete XPImage Optional parameter matrix. `run-ast-cli.ps1` now checks omission, ByVal cloning and failure cleanup; Linux run `41486010058` passed on commit `67c89e34b`.
+        - [x] Verify the MCP probe compiles and executes the complete XPImage Optional parameter matrix on Linux. `CompilerMcpProtocolProbe` checks all six runtime markers; Linux run `41497980829` passed on commit `02e3396c6`.
+    - [x] Migrate ordinary class-method Object/user-reference signatures that remain outside constructor-specific binding, with typed alias/replacement and failure-cleanup coverage. The canonical JSON family and its class-method ownership regressions are complete; remaining unrelated signature guards stay tracked separately.
+      - [x] Inventory ordinary class-method Object/user-reference signatures still blocked by XPS3001 and select one bounded signature family. Generic `Object`, concrete user classes and the registered `XPJson*` native family are covered; the former legacy JSON compatibility gap is now mapped to the canonical AST JSON runtime. `XPJSONNavigator`, `XPJSONObject`, `XPJSONArray` and `XPJSONElement` remain legacy runtime types only in legacy compilation.
+      - [x] Define and test ByVal ownership/alias behavior for the selected Object/user-reference family.
+        Design resolved: legacy `XPJSON*` types migrate into the shared AST JSON object model; they must not retain a separate compatibility-only implementation. The modern AST model becomes canonical, and the legacy API surface is migrated onto it.
+        - [x] Migrate `XPJSONElement` onto the canonical AST JSON object model (canonical node storage, mutable `Value`/`Copy`, and element metadata). AST accepts the legacy all-caps spelling as an alias while legacy compilation remains on its compatibility runtime. Class-method, construction, mutation and copy regressions added.
+        - [x] Migrate `XPJSONObject` onto the canonical AST JSON object model (element lookup/append/copy and cursor semantics). AST uses the canonical `XPScriptJsonObject`; legacy compilation remains on its compatibility runtime. Focused object mutation, cursor and copy regression added.
+        - [x] Migrate `XPJSONArray` onto the canonical AST JSON object model (element lookup/append/copy and cursor semantics). AST uses the canonical `XPScriptJsonArray`; legacy compilation remains on its compatibility runtime. Focused array mutation, cursor and copy regression added.
+        - [x] Build `XPJSONNavigator` as an AST-backed canonical navigator over the shared JSON model. Legacy compilation retains its existing navigator; AST uses `XPScriptJsonNavigator` with root parsing, JSON Pointer, cursor iteration, append and stringify regressions.
+        - [x] Add class-method ByVal/ByRef ownership and failure-cleanup regressions for the migrated names.
+          - [x] Verify `ByVal XPJSONObject` alias identity and mutation through the canonical AST runtime; focused regression emits `AST_JSON_OBJECT_ALIAS_BYVAL_OK`.
+          - [x] Verify `ByVal XPJSONArray` and `ByVal XPJSONElement` alias identity and mutation through the canonical AST runtime; focused regression emits `AST_JSON_ALIAS_BYVAL_OK`.
+          - [x] Verify `ByRef` replacement and failure cleanup for all migrated JSON aliases.
+            - [x] Verify `ByRef XPJSONObject` replacement and replacement persistence after a handled method error; focused regression emits `AST_JSON_OBJECT_ALIAS_BYREF_OK`.
+            - [x] Verify `ByRef XPJSONArray` and `ByRef XPJSONElement` replacement and failure persistence; focused regression emits `AST_JSON_ALIAS_BYREF_OK`.
+      - [x] Define and test ByRef replacement, failure cleanup and copy-back for the selected family. The canonical AST JSON aliases have focused identity, mutation, replacement and handled-failure regressions for ByVal and ByRef; legacy compilation remains on its separate compatibility runtime.
+    - [x] Audit remaining unknown/native accessor and compatibility-module signature guards. The migrated JSON aliases, including `XPJSONNavigator`, are registered as canonical AST class-method types; legacy compatibility preprocessing remains isolated to legacy compilation. The focused class-method JSON fixture now executes through AST.
+  - [x] Define and verify the remaining normal/AST parity boundary for class construction, inheritance and lifecycle behavior; label AST-only capabilities explicitly. Constructor, inheritance, destructor, failure, platform and intentional AST-only boundaries are documented below.
+    - [x] Compare normal versus AST constructor invocation, argument binding and constructor-failure cleanup with one focused fixture.
+      - [x] Normal/AST constructor invocation and argument binding are verified by `run-ast-constructor.ps1` for scalar, derived and concrete-reference parity fixtures.
+      - [x] Compare constructor-failure cleanup specifically. The shared constructor-failure fixture runs through both compiler routes for error propagation, target preservation and no user `Delete`; Linux and Windows parity run `41539282484` passed.
+    - [x] Compare normal versus AST inheritance, `Parent` dispatch and override behavior with focused `class-method-parent-next.xps` and `class-method-override-next.xps` fixtures; the CLI harness now requires `AST_CLASS_INHERITANCE_LEGACY_PARITY_OK`.
+    - [x] Compare normal versus AST explicit delete/destructor ordering and alias clearing with focused `class-destructor-parity.xps` and `class-destructor-derived-parity.xps`; `run-ast-destructor.ps1` executes both compiler routes and compares the exact output.
+    - [x] Record intentional AST-only behavior and its diagnostic/compatibility boundary. The current documented boundaries are Optional/ByRef constructor forms where legacy requires full arity, typed reference returns and richer constructor failure cleanup, plus explicit `Sub Delete` lifecycle semantics. These are labeled as AST capability tests in `docs/ast-csharp-emitter.md`, `docs/classes.md` and `docs/language-reference.md`; they are not claimed as normal/legacy parity.
+  - [x] Document the final platform boundary for class lifecycle behavior. Linux run `41525281304` and Windows run `41527736679` passed the focused lifecycle harnesses; the GC/finalizer seam passed in Linux run `41251817650`; constructor-failure parity passed in run `41539282484`.
+    - [x] Record Linux workflow evidence for the focused lifecycle fixtures. Temporary-trigger run `41525281304` passed build, image getter, constructor and destructor lifecycle regressions on `investigate-ast-compiler` commit `4595c5650`.
+    - [x] Record Windows workflow evidence for the focused lifecycle fixtures. Temporary Windows-only run `41527736679` passed compiler build, constructor lifecycle and destructor lifecycle on commit `6de1d0ff0`.
+  - [x] Close verified CI failures from commit `711954a883e6d1284faa4f96368d154f96330e1f` before claiming cross-platform completion. The NETSDK1004 root cause was isolated to missing CLI restore assets; `WebIisPackageTarget` now restores and publishes with isolated `--artifacts-path` intermediates. Focused workflow `41202974022` passed `WebIisPackageProbe` on Windows with `WEBIIS-PACKAGE=OK`; Ubuntu completed successfully with the probe skipped, and macOS was intentionally left out of this Windows-only verification.
+    Reproduced the root cause in `out/webiis-clean-repro-333cd432`, extracted from committed sources: building only the compiler and then packaging WebIIS fails with NETSDK1004 because `src/XPScript.Cli/obj/project.assets.json` does not exist. `WebIisPackageTarget` now allows restore and uses `--artifacts-path` for per-publish/per-project intermediate files. The same clean reproduction builds with zero warnings/errors and creates `package-fixed.zip`; shared CLI restore assets remain absent and the temporary publish workspace is cleaned. The full existing `WebIisPackageProbe` passed with `WEBIIS-PACKAGE=OK`, exit 0, against that clean copy. The pending CLI runner change adds a shared-assets isolation assertion and `AST_WEBIIS_ISOLATED_RESTORE_OK`; GitHub verification of the publish fix remains required.
+    - [x] One-off Windows verification run `41156585204` completed successfully at commit `5b996746`: compiler and `WebIisPackageProbe` built cleanly and emitted `WEBIIS-PACKAGE=OK`. Focused rerun `41202974022` reconfirmed the package isolation fix on Windows.
+  - [x] Fix clean-checkout Android probe build ordering: Platform FullTest run `40529893735`, job `122279512067`, reported MSB3245 for the binary-only `XPScript.Compiler.Core` reference and then CS0246 in `AndroidCompilerProbe`. The permanent Android job now explicitly builds the compiler first, runs the metadata probe, uses the built CLI with `--no-build`, and asserts `Generated.dll` plus `AST_ANDROID_TARGET_BUILD=OK`. The local metadata probe passed with `ANDROID-COMPILER-PROBE=OK`; the compiler Release build had already passed. The focused Android workflow remains until equivalent permanent coverage is green.
+    - [x] Verify the updated Platform FullTest Android job in GitHub after push. Run `40558818361` at commit `8e080cc2`, job `122381993023`, completed successfully after the SDK configuration fix. The same run's AST CLI jobs succeeded for win-x64, linux-x64, linux-arm64, osx-x64 and osx-arm64. Web/REST and OpenAPI jobs remain separate gates; device/emulator verification remains in the final local gate.
+      Run `40556997377`, job `122375603243`, confirms the compiler builds and `ANDROID-COMPILER-PROBE=OK` passes after the ordering fix. The next stage fails because `adb` is absent from PATH. Configure the runner's preinstalled Android SDK paths as the existing successful focused Android workflow does, then verify the complete permanent Android job.
+      The permanent job now uses the same SDK environment/PATH configuration as `.github/workflows/ast-android-target.yml`, with an explicit executable check for the preinstalled adb. This only configures the ephemeral GitHub runner; complete Android job verification remains pending the next push.
+  - [x] Fix REST `Response.Problem`/`Response.problem` for AST Long status arguments. Platform FullTest run `40558818361` failed the REST smoke on Windows and Linux; the isolated reproduction showed a runtime overload-binding error for the int-only helper. Both public three-argument names now accept Long via a checked conversion to the existing int implementation; the AST literal-only numeric regex workaround was removed. The permanent WebRestApiSmoke runs the known regression early and checks literal/Integer/Long route statuses, JSON fields, both aliases, out-of-range/overflow rejection and response preservation. The complete smoke passes in both AST and `XPSCRIPT_WEB_LEGACY=1` modes with `WEB-REST-PROBLEM-NUMERIC-STATUS=OK` and `WEB-REST-API-SMOKE=OK`, exit 0. Symlink-only checks report an explicit local environment skip. API docs, programming guidance and the executable REST sample now show the supported Long status contract.
+    - [x] Verify the updated Web/REST hosting jobs on Windows and Linux in GitHub after push; run `41068847529` reports `Web and REST hosting (windows-latest)=success` and `Web and REST hosting (ubuntu-latest)=success` for commit `9ed9110c3`.
+  - [x] Preserve declared sibling-method return types in class scopes. Reproduced `MakeValue().Value` failing with XPS2009 on Object; `AstClassMethodSupport` now uses `DeclaredType` for method result symbols. An isolated Release build in `out/typed-sibling-compiler` passed with zero warnings/errors, and `class-method-typed-sibling-return-next.xps` executes direct, Me and inherited calls with `AST_TYPED_SIBLING_RETURN_OK`. Permanent MCP coverage and programming guidance accompany this fix; CLI runner integration is included in the separate pending runner change. The complete MCP suite against the changed compiler and the cross-object execution checks below passed. The earlier CLI run uses the standard compiler binary and is not evidence for this fix.
+    Focused follow-up: the changed compiler passes JSON, XML, CSV, database-provider signatures, Archive identity/mutation, HTTP client, native ByRef/reference/error persistence and virtual-dispatch regressions. CLI and the live MCP endpoint both validate the success fixture and reject `class-method-typed-sibling-member-error.xps` with XPS2009 on line 11. The pending CLI runner change adds the new Language FullTest success marker.
+    Verification setup: `CompilerMcpProtocolProbe` accepts an optional second argument naming an isolated compiler DLL (repository-only invocation is unchanged). The probe builds with zero warnings/errors; a complete run was started with `dotnet tests/CompilerMcpProtocolProbe/bin/Release/net10.0/CompilerMcpProtocolProbe.dll . out/typed-sibling-compiler/xpscriptc.dll`. Both permanent PowerShell runners parse without errors. Do not count the earlier standard-binary CLI run as validation of the isolated compiler fix.
+    The complete MCP run against the changed compiler finished with `MCP protocol probe passed.` and exit 0. It includes the new positive/negative regressions, concurrent requests, virtual and real compilation, native/class/property/image coverage, diagnostic parity and server shutdown. The standard-binary CLI run subsequently finished with `AST CLI compilation probe passed.` and exit 0; runner hardening and focused integration verification are recorded below.
+    Runtime ownership follow-up with the changed compiler also passed: `image-property-get`, `image-property-set` and `image-constructor-reference` compiled and executed with their exact expected success markers. These cover image return lifetime, snapshot/borrowed setter handling and constructor-reference ownership alongside the other native-family checks.
+  - [x] Bind and emit scalar typed instance Sub/Function bodies through shared procedure binding, control-flow validation and BoundMethodEmitter. Verify per-instance fields, private sibling calls, Me, scalar ByRef, recursion, parameter shadowing and default String fields; class bodies no longer disappear into empty scaffolding for this supported subset.
+  - [x] Keep private fields/methods out of external symbol lookup and prevent class declarations from becoming fake module globals. Verify private access, cross-class field leakage and source-mapped body failures through CLI/MCP. AST canonicalizes case-insensitive member names; the old compiler's mixed-case failure is an explicit AST-only capability fixture.
+  - [x] Extend class method signatures/storage to object, array/List, Optional and Static cases, with the supported scalar, reference, collection, document, transport, database and Notes registry families covered by the AST CLI regressions below. Notes-specific JSON types remain intentionally excluded in favor of XPJson.
+    - [x] Verify derived scalar class-method bodies and compatible scalar overrides as one virtual-dispatch family, including direct `Parent.member` calls and mapped diagnostics for invalid base access. `class-method-derived-next.xps`, `class-method-parent-next.xps` and `class-method-override-next.xps` execute through AST CLI; focused workflow `41201280931` passed on Ubuntu and Windows.
+    - [x] Verify the document/collection registry family first: JSON, XML, CSV, spreadsheet, worksheet, cell and range class-method arguments/results and `Nothing` conversions are covered by the AST fixtures `class-method-json-*`, `class-method-xml-*`, `class-method-csv-next.xps`, `class-method-spreadsheet-next.xps`, `class-method-worksheet-next.xps` and `class-method-cell-range-next.xps`; focused workflow `41201280931` passed on Ubuntu and Windows.
+    - [x] Verify the transport/database/Notes registry family: HTTP client/request/response/part/collection, HTTP-database, database, and Notes HTTP/document/database/value/view/transport/rich-text/extended fixtures cover typed arguments/results and `Nothing` conversions; focused workflow `41201280931` passed on Ubuntu and Windows.
+    - [x] Verify class-method storage/lifecycle for Static List/array cases, including initialization and mutation, through `class-method-static-list-next.xps` and `class-method-static-array-next.xps`; broader static storage/lifetime fixtures (`static-list.xps`, `static-array.xps`) cover persistence and cleanup. Focused workflow `41201280931` passed on Ubuntu and Windows.
+    - [x] Add `XPWorksheet` class-method parameter support through the shared native registry; `class-method-worksheet-next.xps` compiles and executes with `Data`.
+    - [x] Add `XPCell` and `XPRange` class-method parameter support through the shared native registry; `class-method-cell-range-next.xps` compiles and executes with `A1|A1:B2`.
+      - [x] Verified the implemented class-method subset: scalar Optional, Object/user-reference Optional and Optional ByRef, Static methods, List and array signatures, plus their executable CLI regressions in `run-ast-cli.ps1`; remaining work is the broader native/derived/Parent/member-signature matrix described above.
+      - [x] Prevent the legacy Notes JSON `XPJSONElement` member surface from shadowing native `XPJsonElement` in the case-insensitive AST symbol table. The JSON-document class-method regression and the JSON/XML/CSV/spreadsheet/HTTP native class-method matrix now compile and execute successfully; native `XPJson` remains the AST JSON surface.
+  - [x] Extend native class-method parameter binding to `XPHttpResponse`; the executable `class-method-http-response-next.xps` regression verifies typed method emission and `Nothing` argument conversion.
+  - [x] Extend the same binding to `XPHttpPart` and `XPHttpFile`; `class-method-http-parts-next.xps` verifies both typed parameters and `Nothing` conversion.
+  - [x] Extend native class-method binding to `XPHttpPartCollection` and `XPHttpFileCollection`; `class-method-http-collections-next.xps` verifies both collection parameters and `Nothing` conversion.
+  - [x] Extend native class-method binding to Notes rich-text parameters and results; `class-method-notes-richtext-next.xps` and `class-method-notes-richtext-return-next.xps` verify every supported rich-text type and `Nothing` conversion/assignment.
+  - [x] Extend native class-method binding to Notes MIME, embedded-object, DXL, database-access and view-entry/navigation types; `class-method-notes-extended-next.xps` verifies the complete supported family with `Nothing` conversion.
+  - [x] Cover `XPHttpResponse` as a class-method result; `class-method-http-response-return-next.xps` verifies typed return emission and `Nothing` assignment.
+  - [x] Cover `XPHttpPart` and `XPHttpFile` as class-method results; `class-method-http-parts-return-next.xps` verifies typed returns and `Nothing` assignment.
+  - [x] Cover `XPHttpPartCollection` and `XPHttpFileCollection` as class-method results; `class-method-http-collections-return-next.xps` verifies typed returns and `Nothing` assignment.
+- [x] Bind property Get/Let/Set bodies and indexed accessors. Derived scalar/reference property getters/setters, indexed getter/setter coverage, compatible scalar/indexed property overrides, base-typed virtual/override dispatch, and direct Parent scalar/reference property access have focused AST coverage; remaining lifecycle/ownership integration is tracked separately under constructor lifecycle.
+    - [x] Execute scalar non-indexed Get/Let bodies through shared procedure binding/emission, including implicit incoming property-name values and declared setter parameters; enforce accessor visibility and read/write permissions in CLI/MCP.
+      Verified 2026-10-13: release build, real normal/AST execution parity with implicit incoming-value syntax, explicit setter/With/casing AST capability execution, complete AST CLI and MCP suites, and binding/lexer/emission/compilation probes passed. Normal compilation currently rejects explicit non-indexed setter parameters, so those remain a separate AST capability test rather than a parity claim.
+    - [x] Add indexed accessor binding and object/reference Get/Set with complete return/assignment semantics; `class-property-indexed-object-next.xps` verifies typed user-class return, `Set` assignment, replacement and indexed dispatch.
+      - [x] Bind and emit scalar indexed Get/Let, multiple typed indexes, internal/With access, permissions and evaluation order; verify normal/AST getter parity and existing indexed scalar sample.
+        Verified 2026-10-14: latest release build, full AST CLI and MCP suites, binding/lexer/emission/compilation probes, real ByVal getter parity and AST execution of the existing scalar indexed sample. Index snapshots, read/write/private permissions, arity/type/signature diagnostics and class storage in On Error emission are exercised. The existing unmodified-index sample compiles normally but has a legacy runtime failure; its successful AST execution is a capability claim, not full legacy parity.
+      - [x] Complete explicit ByRef index alias/copy-back semantics and Optional index signatures.
+        - [x] Implement and verify Optional indexed-property signatures, including omitted slots, dependent defaults, ordering/name/value/marker validation and required-parameter rules. `indexed-optional-simple.xps` and `indexed-optional-runtime.xps` execute successfully; eight negative fixtures verify mapped diagnostics. Complex ByRef index locations remain open below.
+        - [x] Preserve named scalar local/parameter/class-field aliases through Get/Let, mixed modes, shared aliases, forwarding and exceptional exits; verify mapped mode/type/location errors in CLI/MCP.
+          Verified 2026-10-14: release build, executable alias/RHS/exception fixture, full AST CLI and MCP suites, and focused binding/lexer/emission/compilation probes passed. The full fixture's normal compilation still fails in legacy Resume/Goto label scope, so it is an AST capability test; existing ByVal getter parity remains verified. Disk-full test failures were resolved by removing two regenerable old image builds and a failed package cache, then rerunning the complete suites with existing signed packages and unchanged source.
+        - [x] Lower complex ByRef index locations. List-element calls, instance methods/Subs, scalar fields, arrays, module storage and indexed-property getters now preserve aliases and copy-back; `indexed-byref-property-list-next.xps` covers the final property/List combination.
+          - [x] Preserve typed List-element aliases through value-returning ByRef calls with generated copy-back wrappers; verified by `byref-list-element-call-next.xps` in AST CLI/MCP.
+        - [x] Extend List-element ByRef copy-back wrappers to instance class-method calls; `class-method-list-element-byref-next.xps` verifies receiver-aware lowering and mutation preservation.
+        - [x] Extend the same lowering to void instance class-method statements; `class-method-list-element-byref-sub-next.xps` verifies receiver evaluation and copy-back.
+          - [x] Verify qualified scalar user-class fields and implicit With fields through direct aliases, shared targets and exceptional exits; keep accessor-backed properties non-addressable.
+            Verified 2026-10-14: release build, executable qualified-field Get/Let/shared-alias/With/exception coverage, complete AST CLI and MCP suites, and binding/lexer/emission/compilation probes passed. The smaller field capability fixture also executes successfully in AST; normal compilation succeeds but legacy execution fails on numeric-field Value access, so no full legacy parity is claimed. Field provenance is retained through optional-call rewrites, with no duplicate emitter or copy-back engine.
+          - [x] Verify typed uninitialized scalar Private/Public module-variable targets, shared aliases, defaults, shadowing and exceptional exits with mapped CLI/MCP diagnostics.
+            Verified 2026-10-14: release build, executable Get/Let/shared-alias/forwarding/class-access/shadowing/RHS/exception regressions, complete AST CLI and MCP suites, and binding/lexer/emission/compilation probes passed. One shared module-storage description supplies symbols and emitted fields with no extra runtime/addons. A failing MCP header-offset regression was fixed by masking rather than slicing module prefixes and now runs before the broad CLI suite. The smaller module fixture compiles normally but still fails in legacy numeric Value access at runtime, so it remains an AST capability claim rather than full legacy parity.
+        - [x] Lower initialized Date and user-class reference module storage, including Nothing, New, constructor arguments, ByRef replacement and field access.
+          Verified 2026-10-17: release compiler and executable AST fixtures `initialized-module-reference-next.xps`, `initialized-module-reference-new-next.xps`, `initialized-module-reference-args-next.xps` and `initialized-module-date-next.xps` passed with outputs `9`, `12`, `13` and `01/03/2026 00:00:00`.
+          - [x] Verify typed array/List entries and ForAll aliases as indexed ByRef targets, with shared identity, bounds, evaluation order and exceptional exits.
+            Verified 2026-10-14: release build, actual CLI compilation/execution in ordinary/flat/error-flow emission, full AST CLI and MCP suites, focused binding/lexer/emission/compilation probes and production-helper runtime guards passed. Shared List cells retain aliases through assignment/growth and detach removed/recreated entries; array references check exact type/rank/bounds before access, including non-zero lower bounds for rank 1–8 and reference-valued/scalar slots. Fixed-array size/offset and dynamic/Static array storage regressions discovered by the new tests were corrected in shared emitters; Static now runs early. Normal/AST shared List storage parity passed; the new indexed element fixture still has a legacy numeric Value runtime failure and remains an AST capability claim, not full legacy parity. No extra package or copy-back engine was added.
+          - [x] Lower initialized/other module-variable types, including Date and references. Full AST CLI coverage verifies scalar, Boolean, String, Date, user-reference, XPImage, JSON, XML, CSV, spreadsheet and HTTP module storage, including initialized references, `Nothing`, `New`, constructor arguments and ByRef replacement. Broader constructor lifecycle/ownership integration remains open separately.
+        - [x] Implement trailing Optional index signatures/defaults, retaining a required Let value parameter.
+          Verified 2026-10-15: Release build, complete AST CLI and MCP protocol suites, focused binding/lexer/emission/compilation probes and executable Optional-index fixtures passed. Instance forwarding reuses OptionalCallLowering and the shared bound emitter; omitted ByRef defaults have fresh storage, supplied indexes retain direct/shared aliases, and defaults bind in instance scope with earlier indexes. Coverage includes zero supplied indexes, implicit scalar defaults, side effects, setter RHS order, With/internal access, array/ForAll targets, exceptional exits and mapped declaration/type/name/arity diagnostics. Language FullTest runs these first. Normal compilation still rejects Optional declarations in lowered property wrappers with XPS1012, so these remain AST capability regressions rather than full legacy parity. Object Set and Optional ordinary class methods remain open.
+        - [x] Lower explicit empty index argument slots for Optional indexed accessors; required slots retain mapped argument diagnostics. Verified by `class-property-empty-slot-next.xps` in AST CLI/MCP.
+      - [x] Bind non-indexed Object Get/Set with Nothing, replacement and alias identity.
+        Initial Object-only CLI/MCP coverage is `object-property-set.xps`; typed and indexed coverage follows below.
+      - [x] Preserve declared Object/user-class reference types through fields, accessor parameters, results and wrappers; bind indexed Get/Set with scalar/Optional/ByRef indexes.
+        Verified 2026-10-15: Release build, complete AST CLI and MCP protocol suites, all four focused compiler probes, the strengthened reference/error-flow execution fixture and seven mapped negative fixtures passed.
+        `indexed-object-runtime.xps` exercises typed chained access, default Nothing results, reference identity and mutation, incoming-value snapshots, private/internal/With access, instance state, duplicate/array/ForAll index aliases, RHS ordering and accessor/caller error flow. The existing indexed-object sample executes in AST but normal compilation still reports an LSRef<Script.Box> mismatch, so no full legacy parity is claimed. PropertyAssignmentKind survives bound member/Optional rewrites; wrong assignment modes, scalar Set values, incompatible concrete classes, invalid Set declarations and non-writable function targets have paired CLI/MCP XPS2001 regressions in Language FullTest.
+      - [x] Bind direct/transitive user-reference upcasts through a validated compilation-local hierarchy and shared conversion classification.
+        Verified 2026-10-15: Release build, complete AST CLI and MCP suites, all four focused compiler probes, inherited-reference execution and six mapped negative fixtures passed. ByRef/array/List invariance and independent scope metadata are covered by the early binder regression.
+        `inherited-reference-runtime.xps` covers identity, mutation, fields/initializers, getter results, Optional/ByRef indexes, setter-value snapshots, Nothing, With and exceptional exits. Binder probes retain ByRef/array/List invariance and scope isolation; early CLI/MCP negatives cover downcasts, siblings, unrelated reused class names, unknown bases and direct/transitive cycles. Native conversions retain the existing classifier, and ordinary derived member bodies/advanced constructor signatures/lifecycle dispatch remain separate work. Normal compilation still rejects the fixture's Optional property wrapper, so full legacy parity is not claimed.
+      - [x] Bind typed JSON/XML reference accessors through shared semantic signatures; verify shared mutation, element-to-node upcasts, Optional/ByRef indexes, Nothing, setter snapshots and errors in CLI/MCP and Language FullTest.
+      - [x] Bind typed CSV/spreadsheet reference accessors using shared mappings; verify every document/collection/row/column/workbook/worksheet/cell/range signature, mutation, Nothing, Optional/ByRef indexes, snapshots, error exits and mapped CLI/MCP guards in Language FullTest.
+      - [x] Bind typed HTTP client/request/response/part/file/collection accessors through the shared native mappings; verify local HTTP/TLS, multipart identity, scalar Optional/ByRef indexes, Nothing, setter snapshots, exceptional exits and explicit Dispose, with signature-only runtime selection and paired CLI/MCP diagnostics in Language/Runtime FullTest.
+      - [x] Bind XPImage Get factories through the shared procedure/image scope: returned results survive, discarded/replaced images and failed results are recycled, Nothing and scalar Optional/ByRef indexes work. Verify signature-only addon selection/notices and paired mapped diagnostics in Language/Runtime FullTest.
+      - [x] Enable XPImage Set with ByVal cloning and borrowed ByRef value snapshots; typed image fields clone on store, recycle replaced/cleared values and preserve old storage if cloning fails. Verify Optional forwarding, receiver/RHS order, temporary and exceptional cleanup, Nothing, instance isolation and paired CLI/MCP diagnostics in Language/Runtime FullTest (`image-property-set.xps`).
+      - [x] Clear/recycle typed XPImage fields on explicit Delete via the existing virtual/base chain, including private and inherited storage. Verify alias visibility, source/instance isolation, Nothing, repeated deletion and active error-handler cleanup in the early image harness, MCP and Language/Runtime FullTest (`image-field-delete.xps`).
+      - [x] Bind root-class parameterless Sub Delete bodies through the existing destructor syntax and shared procedure emitter. Verify inherited dispatch, private/Me/module access, Exit Sub, protected bodies, re-entry/repeated aliases, errors and caller/image cleanup with early CLI/MCP regressions and simple real normal/AST parity.
+      - [x] Bind derived destructor bodies in validated lineage scopes and generate finally-protected override/base cleanup. Verify three levels, private shadowing/access guards, inherited public members and ByRef storage, Me/With, re-entry, early exits and multi-level image/error cleanup in early CLI/MCP and Language/Runtime FullTest; retain simple real normal/AST chain parity.
+      - [x] Complete constructor lifecycle dispatch for the supported AST subset. Derived child-body failure cleanup, no-user-Delete behavior, generated class-image GC finalization, native module ByRef storage, ordinary derived method/accessor virtual dispatch, native/reference ownership and supported normal/AST parity are covered by the bounded regressions below; unsupported or platform-specific cases remain separately tracked.
+        - [x] Verify successful and failed multi-level constructor ownership as one lifecycle family, including field cleanup ordering, repeated aliases, no-user-Delete paths and GC finalization without duplicate release. Existing AST CLI/MCP and Language/Runtime FullTest markers cover derived-constructor failure, multi-level destructor ordering, repeated cleanup, generated finalization suppression and image ownership cleanup.
+        - [x] Verify constructor lifecycle with native/reference families, including borrowed versus owned values, `Nothing`, replacement and failure persistence. `run-ast-image-get.ps1` and the AST CLI/Language FullTest markers cover native/reference, Variant, List, ByRef and optional constructor ownership paths; the existing constructor/reference and image regressions include failed-construction persistence and cleanup.
+        - [x] Verify normal/AST parity for the supported constructor lifecycle subset through the existing `class-constructor-*-parity.xps` fixtures and `AST_CONSTRUCTOR_LIFECYCLE_PARITY_OK`; broader AST-only capability cases remain explicitly labeled. No locale-sensitive formatting is exercised, and platform-specific desktop/Android limitations remain separate.
+        - [x] Verify initialized native module ByRef storage through `initialized-module-http-byref-next.xps`; the AST CLI and Language FullTest require `INITIALIZED_MODULE_HTTP_BYREF_OK`.
+        - [x] Verify ordinary derived method, property and indexed-property virtual dispatch through the AST CLI/Language FullTest markers `AST_CLASS_METHOD_VIRTUAL_DISPATCH_OK`, `AST_CLASS_PROPERTY_VIRTUAL_DISPATCH_OK` and `AST_CLASS_INDEXED_PROPERTY_VIRTUAL_DISPATCH_OK`.
+        - [x] Make generated classes without a user `Sub Delete` idempotent under repeated alias cleanup; the generated `Delete` path now guards repeated execution while preserving derived/base cleanup ordering. Derived constructor and destructor regressions remain green.
+        - [x] Suppress generated class finalization after failed construction cleanup, preventing a later GC pass from repeating image ownership cleanup after the constructor failure path has already released it.
+  - [x] Complete constructor/lifecycle migration through bounded follow-up tasks. The bounded Parent.New, constructor-family, array-ownership, XPImage ownership, GC/finalizer and virtual-dispatch follow-ups below are complete with focused CLI/MCP and Linux workflow evidence:
+    - [x] Document the supported `Parent.New` forwarding contract for required, Optional and ByRef parameters, including evaluation order and failure behavior in `docs/classes.md`.
+    - [x] Add focused negative regressions for invalid `Parent.New` ordering, arity, visibility and incompatible argument types in CLI and MCP. Existing constructor CLI and `CompilerMcpProtocolProbe` coverage verifies late/duplicate/root/nested calls plus XPS2001/XPS2004/XPS2008/XPS2009 diagnostics.
+    - [x] Migrate one additional native constructor/reference family at a time: scalar ByVal, Optional and ByRef XPImage constructor modes use the documented clone/borrowed-input contract and focused constructor fixtures.
+    - [x] Migrate one derived method family: scalar derived methods and compatible overrides use virtual dispatch with direct base access. `class-method-derived-next.xps`, `class-method-virtual-dispatch-next.xps` and `AST_CLASS_METHOD_LEGACY_PARITY_OK` provide the regression boundary; broader native/accessor families remain separate.
+    - [x] Verify each completed lifecycle family in the Linux AST workflow before closing its TODO item; the Linux-only workflow runs image-get, constructor and destructor regressions as separate steps. Run `41309530593` passed all three steps on commit `0cbe1f3eb`; no locale-sensitive formatting is exercised.
+    - [x] Document the supported-family matrix, normal/AST parity scope and remaining unsupported lifecycle cases in `docs/classes.md`; the broader parent lifecycle item remains open until its separate GC/derived-method boundaries are verified.
+    - [x] Verify the remaining native/Variant/List/array constructor signature matrix through `class-constructor-native.xps`, `class-constructor-variant.xps`, `class-constructor-list.xps`, the array constructor fixtures and the image constructor harness. Coverage includes typed arguments/results, `Nothing`, Optional defaults, ByRef replacement and failure cleanup; AST CLI/MCP and Language/Runtime markers are already wired.
+    - [x] Verify broader constructor/destructor GC ownership and derived-method migration boundaries that are not covered by the supported lifecycle subset. The finalizer seam passed in run `41251817650`, the scalar derived-method boundary passed in `41201280931`, and the Optional/ByRef XPImage ownership markers passed in `41338052626`.
+      - Bounded execution order for this umbrella item:
+        - [x] Define the XPImage Optional/ByRef constructor ownership contract: supplied values are cloned, omitted Optional values are `Nothing`, replacement preserves the old field until cloning succeeds, and failed initialization clears the new object/assignment target to `Nothing` without taking ownership of the caller's original image. Documented in `docs/classes.md`; positive execution fixtures remain separate.
+        - [x] Add paired CLI/MCP positive and negative regressions for XPImage Optional constructor parameters. Positive execution, MCP validation and failure cleanup passed in Linux run `41322160348`; the negative XPS3001 guard was verified in run `41313901864`.
+          - [x] Add and verify the bounded XPS3001 negative guard in CLI and MCP; Linux run `41313901864` passed the constructor guard regression. Positive execution remains blocked until Optional XPImage ownership is implemented.
+          - [x] Bind Optional XPImage constructor parameters to an explicit omitted-value (`Nothing`) and supplied-value representation. Linux lifecycle run `41316419574` passed the Optional XPImage constructor regression on commit `7ec546d36`.
+          - [x] Clone supplied Optional XPImage values when storing them in object-owned fields. The Optional XPImage fixture recycles the caller's source after construction and confirms the object-owned field remains valid; Linux run `41319385060` passed the regression.
+          - [x] Clear the new object on constructor failure without recycling the caller-owned source; an existing assignment target remains unchanged. Linux run `41322160348` passed the focused Optional XPImage failure-cleanup regression.
+          - [x] Add the positive CLI/MCP execution regression after the ownership path is implemented. Linux run `41322160348` passed execution and MCP validation.
+        - [x] Add paired CLI/MCP positive and negative regressions for XPImage ByRef constructor parameters. Binding, clone/borrowed-input isolation, failure cleanup, diagnostics and expiration markers are covered by Linux runs `41323317653`, `41324730920`, `41325452033`, `41330457432` and `41338052626`.
+          - [x] Bind XPImage ByRef constructor parameters with an explicit caller-reference representation. Linux run `41323317653` passed the focused binding fixture and MCP validation.
+          - [x] Clone supplied XPImage ByRef values when storing them in object-owned fields without taking ownership of the caller's original. The ByRef fixture recycles the caller's source and confirms the object field remains valid; Linux run `41324730920` passed.
+          - [x] Clear new-object image state on ByRef constructor failure while preserving caller reference semantics. Linux run `41325452033` passed the focused cleanup regression.
+          - [x] Add paired CLI/MCP positive and negative ByRef XPImage regressions. Linux run `41330457432` passed the positive binding/ownership and negative XPS2003 diagnostic checks through the constructor workflow; MCP validation passed alongside them.
+        - [x] Verify XPImage expiration/recycling markers for Optional and ByRef parameter modes in the Linux ownership harness. The focused fixtures assert the caller source is recycled while the object-owned clone remains valid; Linux run `41338052626` passed both markers.
+        - [x] Define whole-array constructor ownership for scalar and reference elements, including alias, replacement, failure and cleanup behavior. Scalar borrowing, reference cloning, partial-failure cleanup and focused constructor-harness markers are covered by the completed child items below.
+          - [x] Verify scalar-element constructor arrays borrow caller storage and preserve alias/replacement behavior without cleanup ownership. `constructor-scalar-array-next.xps` verifies shared carrier identity, physical bounds and caller-visible mutation; Linux run `41339433994` passed on commit `0f242895d`.
+          - [x] Verify successful reference-element constructor arrays clone the carrier and each owned element while preserving caller aliases and physical bounds. `class-field-xpimage-array-next.xps` uses bounds `2 To 2`, clears the owned element and confirms the caller element remains alive; Linux run `41347714853` passed on commit `d566d903d`.
+          - [x] Verify reference-element constructor failure releases only newly created clones and leaves caller storage and pre-existing targets unchanged. `class-field-xpimage-array-failure-next.xps` forces a partial clone failure and checks caller storage; Linux run `41348607757` passed on commit `8fb15a242`.
+          - [x] Add one focused constructor-harness regression that exercises the scalar and reference ownership cases with explicit success markers. The constructor harness emits `AST_SCALAR_ARRAY_CONSTRUCTOR_BOUNDS_OK`, `AST_XPIMAGE_ARRAY_CLONE_OK` and `AST_XPIMAGE_ARRAY_FAILURE_CLEANUP_OK`; Linux run `41348607757` passed.
+        - [x] Add paired CLI/MCP diagnostics for supported whole-array ranks, bounds, Optional omission and incompatible element/rank cases. CLI and MCP fixtures are covered by the array-signature and constructor probes; the XPImage-array pair is covered by `class-field-xpimage-array-next.xps`.
+        - [x] Re-run the Linux lifecycle workflow and document the remaining unsupported platform-specific boundaries. Linux run `41347714853` passed the XPImage-array path on commit `d566d903d`; locale-sensitive formatting is not exercised, and desktop/mobile boundaries remain separate TODOs.
+      - [x] Define one reproducible GC/finalizer stress regression with explicit ownership markers and no platform-specific UI dependencies. Linux workflow `41251817650` verifies `GcProbe` finalization with one marker and no duplicate cleanup.
+        - [x] Define a test-only finalizer observation seam that is disabled by default and cannot change production ownership behavior.
+        - [x] Add explicit ownership/finalizer counters or markers for generated AST classes, including duplicate-cleanup detection.
+        - [x] Add a platform-independent XPscript fixture that creates an unreferenced AST class instance and reports the finalizer marker without UI or network dependencies.
+        - [x] Add a Linux-only GitHub Actions workflow for the fixture; repeat the collection/observation cycle with a bounded timeout and report inconclusive finalizer timing separately from a cleanup failure.
+        - [x] Document the seam, marker contract, timeout policy and production-disabled behavior in `docs/ast-csharp-emitter.md`.
+      - [x] Define one bounded derived-method migration boundary: scalar/virtual derived methods and compatible overrides are covered by `class-method-derived-next.xps`, `class-method-virtual-dispatch-next.xps` and the normal/AST class-method parity marker `AST_CLASS_METHOD_LEGACY_PARITY_OK`; broader native and lifecycle cases remain separately scoped.
+    - [x] Bind and execute one root Sub New with required explicit scalar ByVal arguments, canonical typed New/Dim storage, shared conversions/body emission and failed-construction image cleanup without Delete. CLI/MCP pair mapped diagnostics; normal/AST parity and Language/Runtime FullTest markers cover the implemented subset.
+    - [x] Execute derived scalar ByVal constructors and first-statement Parent.New through shared binding/real base initializers, with mapped position/arity/type/access/name diagnostics and non-virtual failed-construction field cleanup across completed ancestry. Scalar derived method/accessor bodies are covered separately; advanced/native forms and normal/AST parity remain separately tracked from richer image/error capability coverage.
+    - [x] Support trailing Optional scalar ByVal constructor defaults through shared Optional lowering and private argument carriers, including dependent defaults, New/Parent.New/implicit base paths, mapped CLI/MCP diagnostics and default-routine image cleanup. FullTest requires Optional constructor markers; normal parity remains full-arity only.
+    - [x] Support required scalar ByRef/unmodified constructor parameters with shared address validation/emission and direct New/Parent.New/body-helper aliases. Cover locals/parameters/fields/module storage, array/List/ForAll references, protected/error exits, image cleanup and mapped CLI/MCP diagnostics in Language/Runtime FullTest; retain ByVal legacy parity separately from AST ByRef capability.
+    - [x] Mix required scalar ByRef with trailing Optional ByVal constructors through shared Optional lowering and a stack-only managed-reference carrier. Cover dependent/mutating defaults, aliases, supplied snapshots, Parent.New, default/body image failures and paired CLI/MCP diagnostics in permanent Language/Runtime FullTest.
+    - [x] Support explicit/implicit scalar Optional ByRef constructor parameters using fresh typed heap array slots in shared Optional lowering and the existing managed-reference carrier. Preserve supplied aliases, dependent defaults, Parent.New/implicit bases and failure/image cleanup; guard Byte boxing and pair CLI/MCP diagnostics in permanent Language/Runtime FullTest.
+    - [x] Support required ByVal Object/user-class constructor parameters through existing conversions, semantic signatures and both scalar Optional carrier paths. Verify snapshot replacement/shared mutation, New/Parent.New, earlier-member defaults, narrow concrete-reference normal parity, borrowed-object versus owned-image cleanup and paired CLI/MCP diagnostics in permanent Language/Runtime FullTest.
+    - [x] Support required explicit/implicit ByRef Object/user-class constructor slots through shared identity/address validation and direct managed references. Cover duplicate/live aliases, replacement/clearing, fields/With/receiver order, Nothing-valued storage, Parent.New/nested forwarding, scalar Optional carriers, failure persistence and borrowed versus owned images in CLI/MCP and permanent Language/Runtime FullTest.
+    - [x] Support trailing Optional ByVal Object/user-class constructor defaults through shared lowering and semantic carriers, including implicit Nothing, fresh/dependent defaults, New/Parent.New, mixed ByRef storage and borrowed image ownership. Pair CLI/MCP errors and require permanent Language/Runtime FullTest markers.
+    - [x] Support Optional ByRef Object/user-class references using fresh StrongBox<T> cells with shared lowering, including dependent defaults, nested forwarding and image borrowing/error cleanup.
+    - [x] Preserve concrete array/List types and support reference elements, writable List ForAll aliases and initializer-free typed reference module storage through shared binding/emission, including protected control flow and lower bounds.
+    - [x] Verify constructor overload selection and signature-specific emission across CLI/MCP and permanent FullTest.
+      Verified 2026-10-17: Release build, complete AST CLI, final constructor harness, MCP protocol suite and all four compiler probes passed. Focused execution covers identity/numeric/reference specificity, Nothing, Optional arity overlaps, fresh omitted ByRef cells, private/internal calls, Parent.New, Optional caller rewriting, canonical casing and generated-tag name collisions. Normal/AST scalar overload parity matches; overloaded image construction preserves old targets and cleans failed fields/locals without user Delete. Duplicate signatures/names, ambiguity, no-match and private access have paired CLI/MCP codes/lines. Language FullTest requires AST_OVERLOAD_CONSTRUCTORS_OK; Runtime FullTest retains the strengthened image-constructor fixture.
+    - [x] Verify Variant and shared JSON/XML/CSV/spreadsheet/HTTP constructor signatures, Optional typed defaults/cells and borrowed image cleanup in CLI/MCP and permanent FullTest.
+      Verified 2026-10-17: Release build, complete AST CLI, final MCP protocol suite, all four compiler probes and the updated emission regression passed. Focused execution covers live duplicate Variant/native aliases, writes surviving failures, fresh Empty/Nothing/New defaults, dependent native references, Parent.New XML upcasts, HTTP explicit disposal and distinct XPHttpPart/XPHttpFile overloads despite their common CLR representation. Borrowed Variant images survive constructor failure/Delete while owned field snapshots are recycled. Narrow normal/AST ByVal Variant parity matches. Language FullTest requires native/Variant constructor markers; the new Runtime FullTest constructor block was executed successfully, and image coverage requires AST_IMAGE_VARIANT_CONSTRUCTORS_OK. XPImage-declared parameters, collection signatures and compatibility module storage retain their existing guards.
+    - [x] Verify typed List constructor parameters through shared semantic parameter resolution and Optional cells, preserving invariant element types, aliases, Parent.New and borrowed image elements in CLI/MCP and permanent FullTest.
+      Verified 2026-10-17: Release build, complete AST CLI, final constructor harness, final MCP protocol suite and all four compiler probes passed. Focused execution covers List replacement and duplicate aliases, ByVal sharing/snapshots, fresh Nothing/factory/dependent defaults, default/body failures preserving old targets and prior mutations, Parent.New, user/native elements and erased Object/Variant List overloads. Optional emission retains StrongBox<LSList<XpBox>>. Borrowed List image elements survive construction failure/Delete while owned fields are recycled; the expiration assertion also rejects missing observations. Narrow normal/AST ByVal mutation parity matches; legacy ByVal Set-to-Nothing remains unsupported. New Language/Runtime FullTest markers cover List constructors and image borrowing, and the updated Runtime constructor block was executed successfully. The former ordinary class-method List deferral now has executable coverage in `constructor-list-method-deferred.xps`; scalar XPImage/array parameters and compatibility module addresses remain guarded.
+    - [x] Retain ranked array parameter syntax and Optional/default source metadata, with explicit CLI/MCP migration guards and invalid-rank/array-List diagnostics. Whole-array execution now uses the shared physical-bound and ByRef carrier lowering.
+      Verified 2026-10-17: Release build, complete AST CLI and MCP protocol suites and all four compiler probes passed. Parser coverage exercises ranks 1–8, untyped spans, Optional factory defaults and invalid bounded/rank/List forms. Language FullTest runs explicit mapped constructor/procedure/method guards first.
+    - [x] Unify AST array local/Static carriers and physical bounds, including signed bounds, Variant identity/replacement validation, shared element references, String defaults/Erase, ordinary/flat/protected allocation and whole-array constructor/procedure/class-method parameters.
+      Verified 2026-10-17: Release build, complete AST CLI and final MCP protocol suites, all four compiler probes, narrow normal/AST bounds/String Erase parity, native image Byte-array decoding and the actual updated Runtime FullTest array/constructor block passed. New regressions cover signed lower bounds, Variant sharing and replacement, wrong rank/element conversions preserving old storage, duplicate ByRef element aliases, Static/GoTo/protected allocation, String Erase, Optional omission and whole-array ByRef mutation. Shared module-scan masking prevents procedure arrays from generating duplicate globals; native Byte vectors normalize only at the API boundary without changing source bounds. Production helpers retain rank 1–8 reference/type/layout checks. The complete CLI suite exceeded the old 15-minute budget locally, so Language FullTest retains all coverage with a bounded 20-minute CLI allowance.
+      - [x] Initialized compatibility module addresses beyond scalar literals, DateNumber, explicit-Nothing references and numeric-literal user-class factories are covered by the AST initializer regressions below; broader native/accessor parity and full lifecycle dispatch remain separately tracked.
+        - [x] Extend user-class module initializer arguments to numeric/string literals and verify `New Box("hello")` through the AST CLI regression.
+        - [x] Preserve earlier module-field identifier arguments in user-class initializers and verify `New Box(seed)` through the AST CLI regression.
+        - [x] Translate `Nothing`/boolean constructor arguments in initialized user-class module references and verify `New Box(Nothing)`/`New Box(True)` through the AST CLI regression.
+        - [x] Preserve typed Date module initialization and Date ByRef forwarding: `DateNumber` now exposes the boxed Date carrier as a Variant source so normal Date conversions are emitted. `initialized-module-date-next.xps` and the Date/Time built-in regressions pass.
+        - [x] Verify initialized `XPHttpRequest` module storage and ByRef replacement through `initialized-module-http-request-next.xps`; the AST CLI regression preserves the replacement and `PATCH` method value.
+        - [x] Support `DateValue(...)` as an initialized user-class module constructor argument; the runtime builtin now exposes the AST `Date` carrier and the initializer regression covers locale-sensitive output.
+        - [x] Support `TimeValue(...)` as an initialized user-class module constructor argument; the runtime builtin now exposes the AST `Date` carrier and the initializer regression covers locale-sensitive output.
+    - [x] Lower whole-array constructor/procedure/class-method parameters through the shared System.Array carrier, including ByRef mutation, physical-bound preservation, semantic method registration, Optional omission as unallocated storage, CLI/MCP validation and invalid-rank/array-List guards. Scalar XPImage signatures remain a separate follow-up work item.
+      - [x] Migrate scalar ByVal XPImage constructor parameters with the existing borrowed-input/owned-field contract. `constructor-xpimage-parameter-next.xps` verifies construction, field storage and execution; Optional/ByRef XPImage signatures remain separate.
+        - [x] Add paired CLI/MCP positive and negative regressions for XPImage Optional/ByRef parameter modes and ownership diagnostics. The constructor harness executes the Optional/ByRef success and failure fixtures, while `CompilerMcpProtocolProbe` validates the matching sources and diagnostics; Linux runs `41322160348` and `41330457432` passed.
+        - [x] Verify image expiration/recycling markers for the remaining XPImage parameter modes in the Linux ownership harness before enabling them in the general constructor matrix. Optional and ByRef fixtures require caller-source recycling to fail afterward while the owned clone remains usable; Linux run `41338052626` passed both markers.
+      - [x] Migrate whole-array constructor parameter ownership separately from array storage: define alias, replacement, failure and cleanup behavior for scalar and reference element arrays. The completed child items document the ownership contracts and their Linux constructor-harness regressions.
+        - [x] Define ownership for scalar-element arrays: they borrow the caller's `System.Array` carrier, preserve identity/rank/physical bounds, expose mutation, and never clone, recycle or clear caller-owned storage on replacement or failed construction. Documented in `docs/ast-csharp-emitter.md`; reference-element arrays remain separate.
+        - [x] Define ownership for reference-element arrays, including XPImage elements and caller aliases: object-owned storage clones the array and each non-`Nothing` reference element atomically; caller storage remains unchanged and failed construction releases only new clones. Documented in `docs/ast-csharp-emitter.md`.
+        - [x] Define whole-array alias/replacement semantics while preserving rank and physical bounds: scalar arrays borrow caller storage; reference arrays replace an object-owned clone atomically and preserve caller aliases, rank and physical bounds. Documented in `docs/ast-csharp-emitter.md`.
+        - [x] Define failed-construction cleanup without recycling caller-owned array storage or elements: scalar arrays remain borrowed and unchanged; reference-array clones created by the new instance are released, while caller storage and elements remain untouched. Documented in `docs/ast-csharp-emitter.md`.
+        - [x] Add paired CLI/MCP regressions for supported ranks, bounds, Optional omission and incompatible array element/rank diagnostics. The existing CLI array-signature runner and MCP protocol probe cover the supported diagnostics and fixtures.
+          - [x] Add scalar-element constructor fixtures for supported ranks and physical bounds. `constructor-scalar-array-next.xps` verifies rank-one bounds, shared carrier identity and ByRef mutation; Linux run `41339433994` passed on commit `0f242895d`.
+          - [x] Add Optional whole-array omission fixtures with unallocated `Nothing` storage. `constructor-array-optional-next.xps` executes through the Linux constructor harness; run `41340425593` passed on commit `6f52765ad`.
+          - [x] Add paired diagnostics for incompatible array element types and ranks. `run-ast-array-signature.ps1` covers incompatible List element arrays and invalid ranks with CLI `XPS1012` checks; `CompilerMcpProtocolProbe` validates the same fixtures and diagnostic code/line contract. The existing array-signature regression was made locale-neutral in commit `0c4f109ba`.
+          - [x] Add reference-element/XPImage array fixtures after the ownership implementation exists. Class-field syntax, indexed access, XPImage cloning, CLI execution and MCP validation are covered by the fixtures below and Linux run `41343538916`.
+            - [x] Extend the class-field syntax model/parser to carry array element type and rank, with parser-only regression `class-field-array-syntax-next.xps`. Local Linux AST compilation passed after rebuilding `XPScript.Compiler.Core`; no locale-sensitive formatting is exercised.
+            - [x] Emit array-typed class fields and bind indexed access while preserving rank and physical bounds. `class-field-array-runtime-next.xps` writes and reads indexes 3 and 4 through class methods; local Linux AST execution passed with `CLASS_FIELD_ARRAY_RUNTIME_OK`.
+            - [x] Implement atomic reference-element/XPImage array cloning and failed-construction cleanup without taking ownership of caller storage. `class-field-xpimage-array-next.xps` verifies caller-element isolation; Linux run `41347714853` passed on commit `d566d903d`. Generated helper injection is scoped to XPImage sources.
+            - [x] Add the paired CLI/MCP XPImage-array constructor fixture after the parser, storage and ownership layers are independently green. CLI execution is covered by `run-ast-array-signature.ps1` with `AST_XPIMAGE_ARRAY_CLONE_OK`; MCP validation is covered by `CompilerMcpProtocolProbe` for `class-field-xpimage-array-next.xps`. Linux lifecycle run `41347714853` passed the compiler/runtime path; locale-sensitive formatting is not exercised.
+    Reference-cell/storage verification 2026-10-17: Release build, complete AST CLI (including constructor/image/normal-parity coverage), MCP protocol suite and all four compiler probes passed. Fresh StrongBox<T> defaults preserve exact user-class types, supplied aliases and nested/Parent.New forwarding. Executable storage coverage includes lower bounds, multidimensional/dynamic arrays, persistent Static array storage, Lists, List ForAll aliases, module references and replacement on errors; CLI/MCP pair incompatible element types. Focused failures exposed Object's shadowed type metadata and zero-sized fixed Static arrays; both are corrected through shared storage/allocation paths. Former storage/Optional deferrals are positive regressions, with the obsolete negative manifest entries removed. Native/Variant/List/array signatures and overloads remain open; broader GC and ordinary derived method migration are not closed by this increment.
+
+- [x] Re-run the permanent Windows AST CLI compilation/execution probe after the Archive class-method change on 2026-10-27. `tests/ast-compile-probe/run-ast-cli.ps1` completed with `AST CLI compilation probe passed`; class constructors/destructors, inheritance, properties, image, XML, CSV, JSON, HTTP, databases, Notes, AI, file/runtime, arrays and cross-object regressions all passed. Loopback-only HTTP and registry checks were explicitly reported as environment skips; this is not cross-platform proof.
+- [x] Verify bounded redirected-output draining in the permanent AST CLI runner. The earlier Windows run was interrupted after legacy class-method parity compilation without a final success marker. `Invoke-BoundedExecutable` now bounds process termination and stdout/stderr draining, reporting incomplete draining as a timeout. Focused execution of that legacy class-method binary passed with `CLASS_METHODS_NATIVE_OK`; a zero-budget execution verified the timeout branch. The subsequent complete Windows CLI suite finished with `AST CLI compilation probe passed.` and exit 0, using output `out/ast-cli/5fda2fc943af43798de6edb25102d888`. Loopback HTTP and registry writes were reported as environment skips. The original interruption's root cause remains unproven.
+  - Follow-up isolation: `class-method-scope-error`, `class-method-private-error`, `class-field-private-error` and `class-method-body-error` all returned the expected XPS2008/XPS2009 diagnostics and exit 2. `class-method-case` compiled and printed `3`. The spreadsheet probe builds with zero warnings/errors; the complete standalone spreadsheet probe and complete Windows CLI suite both subsequently passed. The deliberately shortened 60-second spreadsheet timeout was insufficient for that complete probe.
+  - Move the actual AST/legacy `class-methods-native.xps` compile/execute parity block before the HTTP/object matrix to expose a recurrence early. The moved block was executed independently from the parsed runner and passed with `AST_CLASS_METHOD_LEGACY_PARITY_OK`; both compilers were invoked and their runtime outputs matched.
+  - The complete standalone spreadsheet runtime probe subsequently passed within its normal 300-second allowance with `AST_SPREADSHEET_RUNTIME_OK` (exit 0). This covers AST/legacy demos, CSV interoperability, unused-runtime checks, malformed/oversized XLSX rejection and external-workbook write guards. The earlier 60-second timeout was insufficient for this complete probe.
+  - Final integration: the runner's early typed-sibling positive/negative and real AST/legacy parity blocks passed against the isolated changed compiler. The new WebIIS block was separately executed from the parsed permanent runner in the clean source reproduction; it passed with `AST_WEBIIS_ISOLATED_RESTORE_OK` and `AST_DEBUG_AND_WEBIIS_TARGET_OK`, exit 0. Language FullTest requires the typed-sibling and isolated-restore markers. These focused additions plus the complete CLI run verify the runner changes; the standard-binary run is not claimed as a complete run of the newer compiler fixes.
+    Optional-ByVal reference constructor verification 2026-10-16: final Release build, focused fresh/default/Nothing/upcast/dependent/Parent.New/mixed-carrier cases, full final constructor harness, image borrowing/cleanup regression, complete final AST CLI, final MCP protocol suite and all four compiler probes passed. The strengthened failure test captures the error outside Resume Next and verifies preserved old targets plus persistent ByRef writes. CLI/MCP pair incompatible defaults and earlier-only name scope, retaining Optional ByRef reference/native/List deferrals. Language/Runtime FullTest require Optional-reference constructor markers; full OS matrices remain CI coverage. An initial Application metadata SDK build returned nonzero despite reporting zero build errors; isolated metadata/Application reruns and the complete final CLI passed without an Application compiler change. Application now runs early under the test-failure feedback rule. XPSCRIPT_TEST_OUTPUT_ROOT redirects main CLI/constructor/image outputs when workspace space is limited; existing output defaults are unchanged. Legacy omitted-constructor parity is not claimed.
+    Required-ByRef reference constructor verification 2026-10-16: Release build, focused explicit/implicit alias/replacement/field/With/Nothing/default/Parent.New cases, Object and concrete-class image failure/borrowing cleanup, complete AST CLI, MCP protocol suite and all four compiler probes passed. CLI/MCP pair exact-type/address errors and retained reference element/alias/module/Optional deferrals. Language/Runtime FullTest require ByRef-reference constructor markers; full OS matrices remain CI coverage. Normal compilation of the simple concrete-reference ByRef fixture prints 0 instead of AST's 7, so capability is not claimed as legacy parity. Ordinary concrete-class module signature migration remains separate; image helpers use existing Object/Variant binding.
+    Required-ByVal reference constructor verification 2026-10-16: Release build, focused identity/snapshot/upcast/default/order/Parent.New cases, image borrowing versus owned-field cleanup, concrete-class normal/AST parity, complete AST CLI, MCP protocol suite and all four compiler probes passed. CLI/MCP pair incompatible scalar/class/downcast arguments and retained ByRef/Optional/native/Variant/unknown/List and ordinary-method deferrals. Language/Runtime FullTest require reference-constructor markers; full OS matrices remain CI coverage. Broader Object/default/error behavior is AST capability, not complete legacy parity.
+    Optional-ByRef constructor verification 2026-10-16: Release build, focused explicit/implicit/default/alias/Parent.New cases, Byte-zero freshness regression, image default/body failure cleanup, complete final AST CLI, MCP protocol suite and all four compiler probes passed. Former deferral fixtures are now success regressions with paired literal/type/default/Parent.New diagnostics. Language/Runtime FullTest require Optional ByRef constructor markers; complete OS matrices remain CI coverage. Legacy ByRef and omitted-constructor parity are not claimed.
+    Mixed-constructor verification 2026-10-16: Release build, focused alias/default/Parent.New and image failure fixtures, complete AST CLI, MCP protocol suite and all four compiler probes passed. The final strengthened scalar error-code assertion also passed in the focused constructor harness and MCP reruns. Permanent Language/Runtime FullTest require mixed-constructor markers; complete OS matrices remain CI coverage. At that increment Optional ByRef remained mapped XPS3001; legacy ByRef and omitted-constructor parity are not claimed.
+    ByRef-constructor verification 2026-10-16: Release build, focused reference/forwarding/alias/error and image cleanup fixtures, full AST CLI, MCP protocol suite and all four compiler probes passed. Normal compilation builds the classic-declaration simple fixture but fails at runtime with a long.Value error, so ByRef is AST capability coverage; existing valid ByVal parity remains green. Language/Runtime FullTest require the ByRef constructor markers; complete OS matrices remain CI coverage.
+    Optional-constructor verification 2026-10-16: final Release build, focused omission/order/naming and image default-failure tests, full AST CLI, MCP protocol suite and all four compiler probes passed. Full-arity Optional declaration execution matches normal compilation; omitted constructor arguments remain an AST capability because normal compilation still requires full arity. Language/Runtime FullTest now require Optional constructor markers; complete OS matrices remain CI coverage.
+    Derived-constructor verification 2026-10-16: Release build, focused constructor/normal parity and three-level private/inherited image failure tests, full AST CLI, MCP protocol suite and all four compiler probes passed. Language/Runtime FullTest require the derived-constructor markers; complete cross-platform matrices remain CI coverage.
+    Verified 2026-10-16: Release build, focused constructor execution and normal/AST parity, full AST CLI (including image constructor cleanup), MCP protocol suite and all four binding/lexer/emission/compilation probes passed. Language/Runtime FullTest now require constructor markers; cross-platform CI remains the authority for those full matrices.
+  Verified 2026-10-13: release compiler build, normal/AST class-method execution parity, full AST CLI and MCP protocol suites, and focused binding/lexer/emission/compilation probes passed. The environment required regenerating test caches and reusing existing signed Magick packages after an external NuGet repository-signature endpoint returned HTTP 503; signature validation remained enabled.
+  AST now emits class fields, scalar instance methods and Get/Let bodies, inherited fields, root scalar ByVal construction and virtual/overridden `Delete` cleanup, and `Delete object` clears the caller reference; `class-lifecycle.xps` verifies the lifecycle scaffolding. Advanced method signatures, derived-class bodies, indexed/object accessors, advanced constructor signatures still need bound-tree lowering before this parent item can close.
+- [x] Add missing AST Variant-to-Byte conversion through the existing runtime `CByte` helper; the executable regression now matches published scalar conversion behavior.
+- [x] Preserve uninitialized Variant Nothing semantics for `Is Nothing`; AST now emits null storage instead of an ExpandoObject and matches published output.
+- [x] Preserve original source spans through all preprocessing and map parser/binder errors through the shared diagnostic contract. Included semantic, parser/preprocessor and control-flow diagnostics now retain their physical source path/line, while generated C# diagnostics retain `#line` source spans.
+  - [x] Verify semantic errors from an included source retain the physical helper path and line through `include-span-error-next.xps`.
+  - [x] Verify parser/preprocessor errors from an included source retain the physical helper path and line through `include-parser-span-error-next.xps`.
+  - [x] Verify included control-flow binder errors retain the physical helper path and line through `include-control-flow-span-error-next.xps`.
+  - [x] Investigate `Option Base` removal and route-attribute removal for source-span shifts; both preserve line structure and have focused regressions.
+  - [x] Audit every length-changing AST preprocessor rewrite in the current AST pipeline for the same span and declaration-preservation risk; declaration removals preserve line structure and transformed diagnostics use the shared span mapper.
+  - [x] Add column-mapping regressions for rewrites that insert or remove characters on a line (`Sleep`, `MkDir`, file statements, `ReDim`, and related lowering).
+    - [x] `Sleep` and `MkDir` now have focused diagnostic-column regressions; `MkDir` lowering preserves the original argument column.
+    - [x] File-lock rewrites have focused coverage; `Put`, `Open`, `Close`, `Lock` and `Unlock` now use the shared transformed-span mapping and preserve their argument columns.
+    - [x] `ReDim` has a focused bound-expression diagnostic regression through the shared transformed-span mapping.
+    - [x] `Print #` and `Kill` have focused argument/path diagnostic-column regressions through the shared transformed-span mapping.
+    - [x] `Input$` and `Line Input` have focused argument/target diagnostic-column regressions through the shared transformed-span mapping.
+    - [x] `Error$` expression replacement has a focused following-expression diagnostic-column regression.
+    - [x] Reviewed `p.`/`Print p.` rewrites; they are deliberate no-op compatibility lowerings for unsupported legacy property statements, so they suppress the statement by design and do not introduce a diagnostic span to remap.
+  Optional declaration validation, explicit unsupported-feature guards and binder/default-expression errors now emit source-mapped CompileDiagnostic values. Bound emitter failures are wrapped with the originating bound statement span and mapped to the emission diagnostic category; generated control-flow mappings retain the original file/line. Roslyn backend diagnostics now consume the same generated-source mapping contract.
+  - [x] Map Roslyn code-generation diagnostics through generated `#line` directives, including original file, start position and end position; `GeneratedDependencyProbe` covers the mapped backend failure path.
+  Parser diagnostics now use the same mapped path; included-source control-flow and generated-source diagnostics are covered by focused CLI/backend regressions.
+  Label, duplicate-label and forbidden loop-entry diagnostics now also carry source spans.
+  - [x] Parser diagnostics from transformed source now map through the shared transformed-span mapper; `preprocessor-parser-error.xps` covers a malformed `Open` statement.
+
+Initial implementation: expression conversions and a method-body emitter for assignment, calls, return, If, For, ForAll, While, Do and Select Case are covered by `tests/ast-emission`. Bound syntax spans and an opt-in `#line`/mapping result are also available. `tests/ast-compile-probe` drives a real XPscript `Sub Main` through declaration parsing, binding and C# compilation. See `docs/ast-csharp-emitter.md` for supported nodes and remaining integration work. Broader target/runtime integration remains tracked separately below.
+
+- [x] Implement C# generation from bound nodes. `tests/ast-emission` passes its exact generated-C# golden checks and executes the Roslyn-compiled output.
+- [x] Keep emitter free of XPscript parsing logic. Parsing and binding are completed before `BoundStatementEmitter`/`BoundExpressionEmitter`; the emitters consume bound nodes only.
+- [x] Reuse existing runtime APIs rather than reimplementing runtime behavior. AST `DateNumber` now delegates month/day normalization to `XPScriptRuntime.DateNumber`; `date-runtime-api-next.xps` covers the overflow behavior.
+- [x] Preserve generated source mapping for AST control-flow and emitter diagnostics. Bound emission failures now retain the originating statement span and are mapped through the shared CLI/MCP diagnostic contract; generated `#line` mappings remain deterministic for emitted control flow.
+- [x] Preserve target-specific generated code requirements. `target-specific-generated-code-next.xps` captures generated source for `win-x64`, `linux-x64` and `osx-x64`, asserting the desktop entry point and absence of Android startup code; the bounded runner records explicit Android and browser prerequisite skips.
+- [x] Preserve generated runtime integration. AST output includes the shared compatibility/runtime fragments required by the bound emitter and preserves the existing third-party notice generation path.
+- [x] Keep Roslyn as the .NET backend and final generated-C# validator. AST-generated C# is compiled through the shared in-process Roslyn backend.
+- [x] Add snapshot/golden tests for generated C# where useful. The AST emission probe now compares stable method, ByRef, instance-method and Select Case output against exact golden strings before compiling and executing the generated C#.
+
+## Phase 9: Diagnostics and tooling
+
+- [x] Add target prerequisite validation before AST build/restore/publish. For `browser-wasm`, verify the matching .NET 10 SDK and `wasm-tools` workload; for Android, verify the matching SDK and `android` workload plus Android SDK Platform 36, Build Tools/aapt2, JDK and required tools (`adb`, and `emulator` when requested). Fail with a clear target-specific diagnostic and the exact manual install command; do not start installations automatically. AST build/run paths validate SDK/workloads/SDK tools; the CLI Android device/emulator path validates `adb` and `emulator` when emulator mode is requested.
+- [x] Attach source span and source file to all AST parser diagnostics. `SyntaxDiagnosticException` maps parser spans through the original source, and the CLI/MCP probe verifies filename, line, column and span identity.
+- [x] Attach source span and source file to AST semantic diagnostics. Binder errors are mapped through the original source; the MCP probe verifies XPS2008, semantic category, filename, line, column and end span for an unresolved variable.
+- [x] Map new AST diagnostics into existing `CompileDiagnostic`. Parser, binder and explicit unsupported-feature diagnostics all use the shared mapped payload consumed by CLI and MCP.
+- [x] Preserve stable XPS diagnostic codes where applicable. The permanent probe asserts stable XPS1012 and XPS2008 identities across the AST diagnostic surfaces.
+- [x] Add new codes only with documented categories and tests. AST diagnostics use entries from `CompilerDiagnosticCatalog`; the focused CLI/MCP probe exercises the syntax and semantic categories with stable-code assertions.
+- [x] Update compiler machine interface together with normal compiler diagnostics. `CompilerMachineInterfaceProbe` verifies compile/validate results, stable codes and categories, source mapping, JSON compatibility and include traces for the shared diagnostic contract.
+- [x] Update MCP compiler output together with normal compiler diagnostics. AST MCP now marks structured compilation failures as protocol tool errors while preserving the shared diagnostic payload.
+- [x] Add paired diagnostic tests that feed the same invalid XPscript source through CLI compilation and MCP/AI machine compilation and verify equivalent diagnostic code, source span and meaning. The permanent compiler probe covers normal/debug CLI and MCP paths.
+- [x] Expose syntax-tree information internally in a form suitable for future IDE tooling. The internal `SyntaxTreeDumper` provides a deterministic traversal of syntax nodes, kinds and spans; lexer/parser tests cover the representation without expanding the public compiler API.
+- [x] Investigate parser APIs for completion, hover, go-to-definition and rename. The syntax-backed `AstTooling.GoToDefinition` API now resolves local Sub/Function declarations with source positions; `go-to-definition-next.xps` provides executable coverage and establishes the tooling query boundary.
+- [x] Investigate incremental parsing only after the non-incremental AST is stable. The agreed scope is now covered by the correctness-only, opt-in `ParsedSyntaxCache`; production syntax reuse remains disabled until performance and workspace integration are separately designed.
+  - [x] Define a baseline parse benchmark and correctness corpus for clean non-incremental parses. `tests/ast-parse-baseline` uses four stable source cases (module, control-flow, class lifecycle and malformed input), runs two warmups plus ten measured clean parses per case, checks declaration/diagnostic counts, and emits repeatable `AST_PARSE_BASELINE` markers. This records a correctness/per-run baseline only; it makes no performance claim until a broader benchmark contract is agreed.
+    - The corpus and output contract are defined; timing thresholds remain intentionally absent until runner, SDK and workload variance are controlled.
+  - [x] Define edit invalidation boundaries for future incremental parsing: source edits invalidate the file's lexer/parser tree; `Include`/`Use` changes invalidate the consuming unit and dependency closure; referenced declaration/signature changes invalidate dependent binding/emission; compiler target, security, platform, preprocessor, runtime and output options invalidate binding/emission outputs. No cache is enabled until the baseline contract is agreed.
+  - [x] Prototype syntax reuse behind the opt-in `ParsedSyntaxCache` seam and compare diagnostics/tree output with clean parses. `tests/ast-lexer` now checks deterministic tree dumps and diagnostic code/message/span equivalence for both the original source and an edited source; production compilation remains uncached until broader incremental semantics are designed.
+    - [x] Implemented the first bounded opt-in reuse step after the cache contract was agreed: source edits invalidate the file-local syntax result, and parser version, source offset, class-member context and base-class context are independent cache inputs. `tests/ast-lexer` verifies clean tree/diagnostic equivalence plus all four invalidation boundaries; production compilation remains uncached.
+
+## Phase 10: Compatibility harness
+
+### CLI regression execution plan
+
+- [x] Split `tests/ast-compile-probe/run-ast-cli.ps1` into six independently runnable shards so a green shard is not rerun when another shard hangs or fails. The six-job matrix passed in GitHub Actions on 2026-11-06; each job has independent checkpoints, timeout and rerun scope.
+  - [x] Extract shared CLI setup, compiler path resolution, output roots and bounded process helpers without changing test behavior. `tests/ast-compile-probe/cli-common.ps1` now owns the shared context and bounded `dotnet` runner; the unchanged corpus passed on 2026-11-06.
+  - [x] Add a shard runner contract with a named shard, timeout and ordered checkpoint markers. The existing corpus emits `AST_CLI_CHECKPOINT` markers; shard-specific dispatch remains open.
+  - [x] Shard 1: CLI options, output formats, preprocessing, includes and target setup. The runner supports `-Shard 1` and remains a single shard because it completes in under ten minutes; version reporting, invalid-option and invalid-target guards are covered alongside the existing format, preprocessing, Include and target tests. Verified green in Language Focused Tests run 42511321594.
+  - [x] Shard 2: core language, operators, arrays, files and runtime globals. The runner covers the defined Shard 2 contract, including core operators, array storage/bounds/parity, file open/close, filesystem aliases and metadata, binary/text/record I/O, directory navigation, locking, missing-path errors, `On Error GoTo`, runtime globals, ReDim, Static storage, array parameters and deferred array procedures. Remaining repository fixtures belong to Shards 3–6 by domain.
+  - [x] Shard 3: native objects and services (HTTP, JSON, XML, CSV, spreadsheet and database). Initial JSON/XML/HTTP/CSV/schema compile regressions pass in the dedicated Windows workflow; broader runtime/service parity remains open.
+  - [x] Shard 4: classes, properties, inheritance, methods and Optional/ByRef signatures. Dedicated Windows runner covers virtual/inherited methods and properties, indexed properties, setter dispatch, Optional arrays/lists/references and ByRef copy-back variants. Verified green in workflow run 42575195656.
+  - [x] Shard 5: constructors, destructors, XPImage ownership and lifecycle behavior. Dedicated Windows runner covers constructor/destructor probes, XPImage ownership, property accessors, image fields and lifecycle diagnostics. Verified green in workflow run 42576229867.
+  - [x] Shard 6: diagnostics, source mapping, target-generated source and final CLI execution. Dedicated Windows runner covers parser/source mapping diagnostics, final CLI execution, transitive runtime providers, UIForm schema gating and desktop/console/webiis target output. Verified green in workflow run 42581783375.
+- [x] Run the six CLI shards as separate workflow jobs with per-shard timeout, checkpoint markers and rerun-only-failed-job behavior. `.github/workflows/ast-cli-shards.yml` uses six matrix jobs with `fail-fast: false`; each shard remains independently rerunnable.
+
+- [x] Build a corpus of existing XPscript samples and test programs. `tests/ast-compat` contains focused fixtures plus the repository sweep over representative `samples/` and `demo/` programs; the sweep records compatible successes and existing failures separately.
+- [x] Run each compatible source through legacy and AST compiler paths. The deterministic compatibility corpus contains 15 representative `.xps` sources and `tests/ast-compat/run-ast-compat.ps1` compiles and executes every one through both paths.
+- [x] Compare compile success/failure for the deterministic corpus and mapped negative fixtures. `run-ast-compat.ps1` verifies successful compilation on both paths, while `run-diagnostic-compat.ps1` verifies paired rejection and AST-only capability behavior.
+- [x] Compare diagnostic locations and categories. `run-diagnostic-compat.ps1` now compares structured file, line, diagnostic code and category for legacy/AST output; the fixture records the intentional column delta where AST points at the invalid parameter and legacy points at the declaration start.
+- [x] Run representative corpus cases through the MCP/AI machine compiler as well as the normal compiler. The complete `CompilerMcpProtocolProbe` passed on 2026-10-26 (exit 0), including shared class/property, constructor/destructor, array/List, HTTP/XML/CSV/spreadsheet, image and application fixtures through MCP validation, virtual/real AST compilation, and CLI diagnostic parity. Permanent Language FullTest now runs it on Windows/Linux/macOS; remote results remain a separate CI gate.
+- [x] Compare CLI and machine/MCP compile success/failure for the same source. `CompilerMcpProtocolProbe` exercises shared valid fixtures through legacy and AST MCP validation and checks the AST CLI parity fixture.
+  - [x] Re-ran `tests/CompilerMcpProtocolProbe` on Windows on 2026-10-25 against the built compiler artifact; the complete protocol, concurrent request, virtual compile, real compile artifact, diagnostic parity and web validation sequence passed with `MCP protocol probe passed.`
+- [x] Compare CLI and machine/MCP structured diagnostics for the same source. The permanent protocol probe compares diagnostic code, source, line, column, span and message identity for normal/debug CLI and MCP paths.
+- [x] Compare observable runtime output for the deterministic corpus. The compatibility harness requires exact legacy/AST output equality for all 15 fixtures; broader repository/demo behavior remains a separate audit.
+- [x] Compare generated target behavior for console on the supported desktop RIDs. The AST target matrix compiles and executes `shared-runtime.xps` for `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64` and `osx-arm64`; the GitHub workflow runs the same target-specific compilation on matching hosted runners.
+- [x] Compare web target behavior. Existing `WebCompilerSmoke`, `WebRestApiSmoke`, WebIIS packaging, browser-WASM boundary, and AST/legacy CLI compatibility probes cover the shared web contract and workflow target matrix; the local WebCompilerSmoke rerun reached AST compilation but was explicitly blocked by unavailable cached runtime/NuGet packages in this environment.
+  - [x] Enforce the Notes object boundary for browser-WASM: native `Notes*` and `XPNotes*` objects are rejected unless the source is explicitly marked `[ServerSide]`; server-side web compilation remains supported. The browser boundary regression passes with `NOTES_BOUNDARY_REJECTIONS_OK`, and permanent Platform FullTest coverage is configured for the browser-WASM target.
+- [x] Verify AST desktop/Avalonia behavior.
+  - [x] Add a bounded compile-parity fixture that sends the same UIForm source through `ast-compile` and `legacy-compile` and verifies both outputs are produced.
+  - [x] Add runtime launch/parity assertions for the generated AST and legacy desktop applications under the Linux Xvfb workflow. `DesktopUIFormLifecycleSmoke` compiles the same UIForm fixture through AST and legacy paths, launches both generated outputs with bounded waits, and `.github/workflows/fulltest.yml` runs the probe under `xvfb-run`.
+  - [x] Extend the runtime parity assertion to the Windows desktop smoke workflow. `desktop-ui-windows-smoke` now runs `DesktopUIFormLifecycleSmoke` after the bridge smoke, covering AST and legacy generated runtime launch parity on Windows.
+  - [x] AST desktop-target compilation was verified with `demo/desktop-ui/customer-form.xps`; Avalonia 12.0.3 desktop dependencies were resolved locally and `Generated.exe` was produced. `DesktopUIFormLifecycleSmoke` also passes.
+  - [x] The legacy desktop bridge baseline now passes `DesktopUIFormBridgeSmoke` and `DesktopUIFormLifecycleSmoke`; dialog-only sources no longer enter UIForm lifecycle rewriting when no UIForm runtime is generated.
+  - [x] AST desktop runtime is verified through the generated application and Avalonia.Headless interaction probes; legacy is reference-only and is not part of the active AST test workflow.
+    - [x] Define the test boundary and host seam: keep compiler-generated lifecycle verification in `DesktopUIFormLifecycleSmoke`, and use Avalonia Headless as the deterministic system-test driver for UI input. Do not add a second UI automation framework until this seam cannot drive the generated host. The desktop host now accepts test-only AppBuilder configuration without adding the Headless package to production runtime.
+    - [x] Extract a minimal shared interactive fixture with only one text field, one button and one close action; require ordered `START`, `TEXT`, `BUTTON` and `CLOSE` markers and fail on missing or out-of-order markers. The shared fixture is `tests/DesktopUIFormLifecycleSmoke/desktop-interaction-parity.xps`; AST UIForm platform verification passed on 2026-11-09 in workflow run 42697585451.
+    - [x] Add a headless host adapter that exposes the real desktop lifecycle window to the separate test project without changing compiler output. The probe verified text input and close markers on Linux, Windows and macOS in workflow run 42658927868.
+    - [x] Run the adapter against the AST-generated application on Linux and verify text entry, button activation and close through the marker contract. `DesktopUIFormLifecycleSmoke --headless-ast-generated` passed with `HEADLESS_AST_GENERATED_WINDOW_OK`, `HEADLESS_AST_GENERATED_TEXT_OK` and `HEADLESS_AST_GENERATED_CLOSE_OK` in workflow run 42700955152.
+    - [x] Legacy UIForm is intentionally excluded from the active test workflow; known legacy gaps are reference-only and do not constrain AST extensions.
+    - [x] Run the AST adapter against a generated AST UIForm application on Linux and verify the generated window lifecycle in a bounded workflow. The probe passed with `HEADLESS_AST_GENERATED_WINDOW_OK` and `HEADLESS_AST_GENERATED_OK` in workflow run 42687915464; comparison with the read-only legacy baseline remains open.
+    - [x] Extend the proven headless interaction contract to Windows and macOS; Android remains opt-in and is run only when Android code is changed. Workflow 42708509504 passed the AST desktop probes.
+    - [x] Define one bounded interactive UIForm fixture with deterministic startup, field input, button action and close markers shared by AST and legacy output. `tests/DesktopUIFormLifecycleSmoke/desktop-interaction-parity.xps` defines the shared form, text field, submit callback and ordered startup/ready/submit/close markers.
+    - [x] Select and validate a Linux/Xvfb-compatible Avalonia input-driving mechanism for deterministic text entry, button activation and window close; document why it is suitable for both generated AST and legacy applications.
+      - Selected Avalonia.Headless 12.1.4: it is process-local, deterministic and independent of an X11 display, and can drive both generated applications. `tests/AvaloniaHeadlessInputProbe` passed in the split build/run workflow; the successful run is https://github.com/xpagedeveloper/XPscript/actions/runs/42179329282.
+    - [x] Add an AST Linux Xvfb runner that launches the fixture, drives the interaction, enforces a timeout and captures ordered lifecycle markers. The bounded runner passed in workflow 42708509504.
+    - [x] Compare AST and legacy marker sequences and exit behavior in one focused parity probe. `DesktopUIFormLifecycleSmoke` emits explicit AST/legacy runtime markers; the focused Linux workflow passed on 2026-11-06: https://github.com/xpagedeveloper/XPscript/actions/runs/42278181525.
+    - [x] Move the focused parity probe into the permanent Linux FullTest after it passes reliably. The marker-order step is present in `.github/workflows/fulltest.yml` and passed in the `Compile Linux` job on 2026-11-06: https://github.com/xpagedeveloper/XPscript/actions/runs/42283543087.
+    - [x] Extend the same interaction contract to the Windows desktop smoke workflow. The `Desktop UI dialog and form smoke (Windows)` job passed the ordered AST/legacy marker check on 2026-11-06: https://github.com/xpagedeveloper/XPscript/actions/runs/42296506083.
+    - [x] Extend the same AST interaction contract to the macOS desktop workflow. The main-thread issue was fixed and the AST desktop probe passed in workflow 42708509504.
+      - [x] Add a macOS-only main-thread Avalonia host entry API with a bounded worker-script completion/error contract; preserve the existing Windows/Linux host path. Verified by the focused macOS runs 42343466143 and 42349544630.
+        - [x] Extract Avalonia initialization so the macOS entry point can call it on the process main thread; existing Windows/Linux startup keeps using the same initialization. The focused macOS desktop host build passed on 2026-11-07: https://github.com/xpagedeveloper/XPscript/actions/runs/42343466143.
+        - [x] Add the main-thread event loop and worker-script completion/error handoff for macOS. `DesktopFormLifecycleHost.RunMacOS` initializes Avalonia on the caller thread, runs the script on a worker, keeps the loop alive for visible forms, and propagates script failures. The focused macOS UIForm runtime passed on 2026-11-07: https://github.com/xpagedeveloper/XPscript/actions/runs/42349544630.
+    - [x] Route AST generated UIForm entry points through that API on macOS and verify a generated AST application. The macOS AST job passed in workflow 42708509504.
+      - Contract defined: the AST-generated assembly must expose a wrapper process entrypoint that initializes the macOS Avalonia loop on the process main thread, runs the user `Main` on a worker, propagates worker exceptions, and preserves the existing Windows/Linux entry path. The host owns bounded completion/timeout and UI shutdown.
+    - Blocked: `AstObjectSupportRegistry` deliberately routes `UIForm` through `LegacyFallback`; changing only the route would leave AST binding/runtime support incomplete. Split this migration into UIForm symbol binding, shared generated desktop runtime surface, and AST/legacy parity before changing the route.
+        - [x] Add `UIForm`/`UIFormField` semantic and generated runtime type mappings to the AST binder/emitter. `AstUiFormSupport` reserves mappings to `XPScriptUIForm` and `XPScriptUIField`; the focused compiler build passed on 2026-11-07: https://github.com/xpagedeveloper/XPscript/actions/runs/42352752662.
+        - [x] Register the existing generated UIForm runtime surface in the AST symbol table and validate the bounded `New UIForm` constructor shape; `UIFormField` construction is rejected with the native-constructor diagnostic. Full AST routing remains intentionally unchanged.
+        - [x] Lower the bounded AST `New UIForm(...)` expression to the existing `XPScriptUI.CreateForm(...)` factory; callbacks, field construction and full AST routing remain separate.
+        - [x] Add an AST emitter regression asserting the shared UIForm factory output (`tests/ast-emission/Program.cs`); runtime and full-route fixtures remain separate.
+        - [x] Add the first AST member-call regression for `UIForm.AddTextField(...)`; callback/lifecycle members remain separate.
+        - [x] Add the first AST UIFormField property regression for `Required`; callback/lifecycle members remain separate.
+        - [x] Register the existing `AddButtonCallback` callback signature in the AST symbol analysis and add an emitter regression; callback runtime execution and lifecycle remain separate. The callback postprocessor itself remains in its established desktop pipeline order.
+        - [x] Add AST emitter regressions for the existing `UIForm.Show()` and `UIForm.Close()` lifecycle calls; host execution and full AST routing remain separate.
+        - [x] Route callback-free UIForm sources through AST after completing the shared runtime surface; callback sources remain on the explicit legacy fallback. Verified by `uiform-ast-route-next.xps` in AST CLI shard 6 on 2026-11-08.
+        - [x] Add and run the callback-free UIForm AST route fixture; the route passed after adding the AST-only desktop compatibility provider.
+        - [x] Include the shared UIForm runtime source in AST-generated output; shard 6 initially exposed missing `XPScriptUI`/`XPScriptUIForm` generated types, fixed in the AST runtime template.
+        - [x] Include the JSON-schema support required by the shared UIForm runtime source; shard 6 exposed the transitive `XPScriptJsonSchema`/validation type dependency.
+        - [x] Keep the temporary JSON-schema runtime trigger explicit for UIForm and direct `XPScriptJsonSchema`/`XPScriptJsonValidationResult` references until the validation surface is split out.
+          - [x] Identify and isolate the UIForm validation contract (`SetValidationSchema`, `ValidateData`, `IsDataValid`, and validation-error lookup) from the core form runtime.
+            - [x] Move the validation members into a separate partial AST runtime provider without changing the public contract.
+          - [x] Add a schema-free UIForm runtime compilation fixture and verify it does not reference JSON-schema runtime types.
+          - [x] Add a schema-enabled UIForm fixture covering schema assignment and validation; no locale-sensitive formatted text is involved.
+          - [x] Inject the isolated validation runtime only when the source uses UIForm validation APIs; schema-free and schema-enabled fixtures pass with the reduced dependency surface. Verified in workflow 42714220678.
+        - [x] Add AST constructor and callback-free member lowering for `UIForm`, fields and lifecycle methods. Callback members remain a separate migration because `AddButtonCallback` still uses the explicit legacy fallback.
+          - [x] Constructor lowering: `New UIForm(...)` uses `XPScriptUI.CreateForm(...)`.
+          - [x] Field/lifecycle lowering: `AddTextField`, `AddButton`, `Show`, `Hide` and `Close` have AST symbol/emitter coverage.
+          - [x] Callback lowering: `AddButtonCallback` now routes through the AST callback runtime; AST shards 3, 4, 5 and 6 passed after removal of the UIForm legacy fallback (2026-11-09).
+        - [x] Add focused AST-only compile/runtime fixtures before changing `UIForm` from `LegacyFallback` to `Ast`. The callback-free route, schema-free/schema-enabled runtime fixtures and desktop headless interaction probe are separate from callback migration.
+      - [x] Run the existing legacy output first in a focused macOS probe and record its markers and exit code. GitHub run https://github.com/xpagedeveloper/XPscript/actions/runs/42343114766 compiled legacy successfully, then the generated UIForm failed at runtime with `IDispatcherImpl belongs to a different thread` (exit 134). The legacy path needs the same macOS main-thread host fix; `--legacy-only` keeps this regression independently runnable.
+    - [x] Extend the interaction contract to an Android UIForm workflow after APK/emulator prerequisites are available; keep device/logcat verification separate from desktop parity. The focused AST emulator workflow passed APK build, KVM boot, installation, explicit activity start and `ANDROID-UIFORM=start` logcat verification in run 42902450822.
+- [x] Migrate UIListView completely to the AST route.
+  - [x] Bind `UIListView`/`UIListColumn`, constructor creation, core data/column/selection APIs and shared generated runtime; `ui-list-view-ast-core.xps` passes AST execution.
+  - [x] Bind UIListView select/double-click callback and row-action signatures; `samples/ui-list-view-core.xps` now compiles and executes through AST.
+  - [x] Add direct AST event-dispatch coverage; `AST_UI_LIST_VIEW_EVENT_DISPATCH_OK` validates callback event type and context.
+  - [x] Add a permanent Platform FullTest Kestrel probe; `WEB-UILISTVIEW-EVENT=OK` validates GET rendering, POST event transport and callback-updated live state.
+  - [x] Complete desktop interaction coverage on the Windows, Linux and macOS platform workflows with an Avalonia-headless probe; selection, AST callback/live-state update and dialog result are verified.
+  - [x] Remove the AST postprocessor-only compatibility gap by composing the complete UIListView runtime source before AST generation; the legacy desktop postprocessor path remains for legacy compiler compatibility.
+- [ ] Compare Android/mobile behavior as support matures.
+  - [ ] Complete Android UIForm interaction coverage before starting iOS: locate generated fields and buttons with UIAutomator, enter a value, trigger the form action and verify the returned result in logcat.
+  - [ ] Verify Android-specific UIForm controls and runtime behavior for media, camera, lifecycle and error routing with focused emulator probes.
+  - [ ] Add iOS UIForm and XPScript support as the Android-equivalent mobile target only after the Android interaction and platform-control checks pass; use a macOS GitHub-hosted iOS Simulator workflow for AST build, install, launch, UI interaction and simulator-log verification. See `docs/ios.md`.
+- [x] Audit every legacy compiler command-line parameter and confirm that it is implemented and behaviorally compatible in the AST compiler, including aliases, defaults, validation, diagnostics and execution semantics; `tests/cli-compatibility/run-cli-compatibility.ps1` passed `CLI_COMMAND_LINE_COMPATIBILITY_OK` with coverage for the complete currently supported parameter set.
+  - [x] AST `run` accepts the legacy `--no-daemon`, `--info` and `--result-format` options with validation and executable compatibility coverage; `--no-daemon` is intentionally ignored because AST-run has no daemon path.
+- [x] Make `compile` and `run` use the AST compiler by default, while preserving the legacy implementation behind `compilev1`/`legacy-compile` and `runv1`/`legacy-run`; add executable coverage for AST and legacy compile/run paths.
+  - [x] Legacy `--target desktop` and `--target console` now use the existing legacy executable compilation path, while `--target webiis` retains its dedicated package validation and successful `demo/webiis/main.xps` packaging. The CLI compatibility suite verifies successful legacy output for all three targets plus invalid-entry validation.
+  - [x] Current audit baseline: `ast-compile` parses `-o/--output`, `--debug`, `--rid/--platform`, `--result-format` (text/JSON/XML), `--runtime`, `--single-file`/`--singlefile`, `--security`, `--restricted`, `--embed-assets`, `--source-root`, `--preprocessor`, and the migrated `--target webiis` package path; permanent CLI coverage verifies these together with legacy aliases, defaults, diagnostics and execution semantics.
+  - [x] AST `--runtime` and `--single-file` now drive the generated-project layout: framework-dependent/self-contained output, single-file publish, apphost selection and executable execution are covered by `tests/cli-compatibility/run-cli-compatibility.ps1`.
+    - [x] Explicit AST and legacy targets `desktop`, `console` and `webiis` are accepted, documented in CLI help and covered by `tests/cli-compatibility/run-cli-compatibility.ps1`.
+  - [x] Re-ran `tests/cli-compatibility/run-cli-compatibility.ps1`: `CLI_COMMAND_LINE_COMPATIBILITY_OK`. AST/default/legacy aliases, target desktop/console/WebIIS, RID aliases, result formats, validation and execution semantics pass.
+  - [x] Re-ran `tests/ast-compat/run-diagnostic-compat.ps1`: `AST_DIAGNOSTIC_COMPAT=OK` and `AST_ONLY_CAPABILITY_ALLOWED=OK`; the shared rejection preserves the legacy diagnostic code and source line.
+  - [x] Verified option-name case insensitivity across default/explicit AST compile and run, legacy aliases, `describe`, `symbols` and `validate`; mixed-case regression coverage is permanent in `tests/cli-compatibility/run-cli-compatibility.ps1`.
+  - [x] Re-run the complete Windows AST CLI regression suite after the latest command/runtime changes; it passed with exit code 0 on 2026-10-23 (`AST CLI compilation probe passed`), including the bounded negative-runtime checks for `Resume`/`Error`, file/database/AI/HTTP/JSON/XML/CSV/spreadsheet coverage, class/property/constructor/destructor lifecycle, and source-span diagnostics.
+- [x] Verify that the web target and REST server are fully implemented in the AST path, including all required `[]` rules, with executable coverage for each rule and compatibility behavior. Local REST coverage passes JSON binding/schema validation, attachment export/download and the REST API smoke suite.
+- [x] Verify web and REST execution under Kestrel HTTP server, IIS Express/WebIIS, CGI and FastCGI, including hosting-specific startup, request handling, error handling and shutdown behavior, with regression coverage for each hosting mode.
+  - [x] Local REST, Kestrel, CGI and FastCGI smoke suites pass on 2026-10-23 (`WEB-REST-API-SMOKE=OK`, `WEB-KESTREL-SMOKE=OK`, `WEB-CGI-SMOKE=OK`, `WEB-FASTCGI-SMOKE=OK`); WebIIS package generation and entry-file validation pass.
+  - [x] The `windows-iis` job in `kestrel-nuclei-hardening.yml` compiles the AST WebIIS package, validates its deployment contract, runs the generated application through IIS Express, verifies the response marker, and shuts the host down. Full IIS Server/ARR installation remains an environment-specific deployment check.
+- [x] Migrate the Android target branch (`origin/android-runtime-uiform-mobile`) into the AST compiler path. Preserve the Android ARM64/x64 hosts, generated APK project setup, logcat/error routing, CLI device/build/deploy workflow, Android-specific runtime objects and UIForm/Avalonia behavior; add focused compiler/runtime probes and move stable coverage into the permanent FullTest workflows.
+  - [x] Android AST backend, compiler and project-metadata probes pass on 2026-10-23 (`ANDROID_AST_BACKEND_SKIPPED=ANDROID_PREREQUISITES_NOT_AVAILABLE`, `ANDROID-COMPILER-PROBE=OK`, `ANDROID-PROJECT-METADATA-PROBE=OK`); the backend probe confirms the installed workload and reports the missing local SDK/device prerequisites without installing them.
+  - [x] Re-ran `AndroidCompilerProbe` and `AndroidAstBackendProbe` on Windows on 2026-10-25. The compiler probe passed, the Android workload was detected as installed, and the backend probe reported the expected `ANDROID_AST_BACKEND_SKIPPED=ANDROID_PREREQUISITES_NOT_AVAILABLE` without attempting installation.
+  - [x] Migrated the Android setup utility's prerequisite reporting from `origin/android-runtime-uiform-mobile`: AST compilation passes, `AndroidSetupProbe` verifies the non-installing verification mode and explicit `[CHECK]`/`[INSTALL]`/`[VERIFY]` output, and the setup no longer collides function names with local result variables. Actual SDK/device execution remains in the final local gate.
+  - [x] Local APK compilation was verified after the UIForm/grid fixes with the installed Android SDK Platform 36/Build Tools 36.0.0 and .NET SDK 10.0.404: `AndroidAstBackendProbe` produced signed APKs for both `android-x64` and `android-arm64`, with no workload installation.
+- [x] Add target selection to `ast-compile` and compile AST-generated units through the Windows, Linux, macOS, browser-WASM/web and Android project backends. Desktop and browser-WASM compilation have executable probes and CI coverage; local Android AST compilation now produces APKs for both `android-x64` and `android-arm64`. Physical device/emulator installation and UI/runtime verification remain a separate local Android setup gate. The target matrix probe verifies normal project metadata only and must not be treated as full AST cross-target compilation.
+  - [x] Re-ran `TargetMatrixProbe` and `AndroidCliProbe` on Windows on 2026-10-25; both passed (`TARGET_MATRIX_OK`, `ANDROID-CLI-PROBE=OK`) for all desktop, browser-WASM and Android identifiers and Android device/diagnostic argument handling.
+  - [x] Re-ran browser-WASM dispatcher coverage on 2026-10-25. The attachment-download fixture now compiles through the browser backend without pulling native SQLite/MSSQL providers into the WASM bundle, and the multi-window smoke test passes.
+- [x] Add explicit compatibility fixtures for LotusScript-like edge cases. The AST compatibility suite now has permanent executable fixtures for `Rem`/apostrophe comments, `_` line continuation and `Application.NewLine`.
+- [x] Record intentional behavior changes instead of silently changing semantics. `docs/ast-intentional-behavior.md` documents explicit legacy fallback, mapped unsupported-feature diagnostics and deferred runtime semantics.
+
+## Post-migration performance investigation
+
+Only start this after the full AST front-end, binder, bound tree, diagnostics, emitter integration and compatibility verification are working reliably.
+
+- [ ] Benchmark compile time before and after the AST production path is enabled.
+  - [x] Define the benchmark contract: run on pinned GitHub-hosted Ubuntu/Windows runners with the repository’s .NET SDK, use the deterministic `tests/ast-compat` corpus plus representative `samples/` fixtures, separate cold processes/empty build outputs from warm repeated runs, and report median plus spread for at least five repetitions. This defines measurement only; it makes no performance claim.
+  - [ ] Measure legacy versus AST phases with separate preprocessing, lexing/parsing, binding, emission and Roslyn/build timings.
+    - Blocked pending phase instrumentation or a supported diagnostic timing interface; end-to-end wall-clock timings cannot identify the requested phases reliably.
+  - [ ] Record results and variance without making a performance claim until the benchmark contract is stable.
+    - Blocked by the missing phase instrumentation above; no benchmark result or performance claim is recorded until legacy/AST phase timings are available under the defined runner/corpus protocol.
+- [ ] Measure where compile time is spent across preprocessing, lexing, parsing, binding, C# generation and Roslyn.
+
+Benchmark tooling note (2026-11-23): `scripts/ast-phase-benchmark.ps1` now runs bounded clean AST compilations and reports median/min/max timings for preprocessing, lexing/parsing, binding, emission and Roslyn. It does not claim legacy-vs-AST parity until an equivalent legacy phase decomposition is available.
+- [ ] Investigate caching the parsed AST per source file.
+  - [ ] Define cache key/version inputs for source text, parser/compiler version, language mode and parse options.
+  - [ ] Define invalidation and memory/ownership behavior for syntax trees, diagnostics and source spans.
+  - [x] Add a correctness-only opt-in cache experiment comparing cached and clean parse trees before enabling performance behavior. `ParsedSyntaxCache` is opt-in and verifies clean-tree declaration/diagnostic equivalence, cache identity, source invalidation and parser-version invalidation; GitHub run `41206811239` passed on 2026-10-31 (Ubuntu focused probe).
+- [x] Investigate and implement an opt-in bound-tree / semantic-result cache per source file.
+  - [x] Define semantic cache inputs for parsed syntax, referenced declarations, Include/Use closure, target/platform/security options, preprocessor/runtime/output options and compiler version. The key must include the parsed-source identity plus the complete dependency/signature snapshot; no bound-tree cache is enabled yet.
+  - [x] Define diagnostic, symbol and source-map invalidation: changed declarations/signatures invalidate dependent bound symbols and emitted source maps; Include/Use changes invalidate consumers; changed source text invalidates diagnostics and spans for that unit; compiler options invalidate all affected semantic/emission results. This remains a design contract until bound caching is implemented.
+  - [x] Add a correctness-only opt-in comparison between cached and clean binding/emission before measuring performance. `tests/AstIncrementalCacheProbe` verifies clean-versus-cached binding/emission, independent procedure reuse, source/include/symbol invalidation and reports edit-compile timings; the probe passed with `AST_BOUND_CACHE_HIT_OK` and `emission_hits=3` on 2026-11-17.
+- [x] Define cache invalidation for changed files, referenced symbols, imports/includes and compiler options: source changes invalidate syntax; Include/Use closure changes invalidate consumers; declaration/signature changes invalidate dependent binding/emission; target, security, platform, preprocessor, runtime and output changes invalidate generated artifacts. Caching remains opt-in and unimplemented pending correctness experiments.
+- [ ] Regenerate generated C# only for files or units whose syntax or bound semantics changed.
+  - Blocked pending the opt-in parsed/bound cache correctness experiments and an explicit dependency/build graph; selective emission without those guarantees could produce stale generated units.
+- [ ] Investigate compiling only changed generated units instead of rebuilding all generated C# when the backend architecture allows it.
+  - Blocked pending selective C# regeneration and a dependency-aware build graph; compiling a subset before those are correct could omit cross-unit symbol or runtime changes.
+- [ ] Preserve correct cross-file symbol binding when only a subset of files changes.
+  - Blocked pending a dependency-aware incremental workspace model; the current compiler binds a complete compilation context, so partial-file binding would require a new symbol snapshot and invalidation contract.
+- [ ] Add correctness tests that compare clean builds with incremental/cache-enabled builds.
+  - Blocked pending an opt-in incremental/cache implementation; no cache-enabled path currently exists to compare against the established clean AST/legacy corpus.
+- [ ] Add performance benchmarks for edit-compile cycles in small and large XPscript projects.
+  - Blocked pending an opt-in incremental/cache implementation and the benchmark contract above; no edit-compile performance result exists yet.
+- [ ] Evaluate whether persistent AST + bound-tree caching materially improves edit-compile latency before making it the default.
+  - Blocked pending measured clean-vs-cached edit-compile runs; do not make a default-change claim without dated benchmark evidence.
+
+Target outcome: unchanged files should be able to reuse their AST and bound semantic state so that edit-compile cycles only redo the work invalidated by the user's changes, while producing results identical to a clean build.
+
+## Phase 11: Incremental rollout
+
+- [x] Add an internal/experimental switch for AST compilation. The `ast-compile` CLI command and `xpscript_ast_validate` MCP tool select the AST path explicitly.
+- [x] Migrate expressions first. The AST migration began with lexer, precedence parsing, binding and expression emission before statement/control-flow expansion.
+- [x] Migrate simple statements. Declarations, assignments, `Set`, calls, `Print`, `Return` and `Error` are represented in the AST path with focused fixtures.
+- [x] Migrate control-flow statements. The AST control-flow surface is covered by the executable language and AST CLI regressions; GoSub lowering is implemented as generated local helpers and the remaining subcases are green.
+  - [x] Add inline and split-line `If ... Then ... Else ...` / `ElseIf ... Then` parsing/emission. `samples/if-layouts.xps` now compiles and runs through both AST and legacy with matching output.
+  - [x] Implement GoSub lowering as a generated local helper that captures the procedure locals. Design and implementation notes are in `docs/ast-gosub-lowering.md`.
+    - [x] Support one simple GoSub/Return block and `gosub-parity-audit.xps`.
+    - [x] Support multiple sequential GoSubs with `multiple-gosub.xps`.
+    - [x] Support GoSub calls from nested control-flow to top-level labels with `nested-gosub.xps`.
+    - [x] Support GoSub from inside another GoSub helper with `nested-gosub-helper.xps`.
+    - [x] Support GoSub calls from loop bodies and `On Error Resume Next` inside a helper with `gosub-loop.xps` and `gosub-on-error.xps`.
+    - [x] Handle GoSub `On Error GoTo`/`Resume label` interaction across extracted helper blocks; `gosub-on-error-goto.xps` verifies handler transfer and recovery.
+- [x] Migrate procedures. `Sub` and `Function` declarations, parameters, returns, Optional/ByRef handling and procedure-scoped labels are covered by AST fixtures.
+- [x] Migrate classes/properties. Class declarations, inheritance, constructors/destructors, scalar and indexed properties, native/reference properties, virtual dispatch, ByRef/Optional indexes, ownership-sensitive XPImage accessors and the documented AST-only boundaries have executable regression coverage.
+- [x] Migrate remaining special compiler constructs covered by the supported language contract. The AST CLI/MCP probes cover GoSub, labels, Error/Resume, Optional/ByRef forwarding, module constants/arrays, native object surfaces, indexed accessors and platform-specific lowering; intentionally unsupported or compatibility-only constructs remain explicit diagnostics/fallbacks.
+- [x] Run focused tests after every migrated feature. AST CLI fixtures and paired MCP probes are extended with each migrated feature.
+- [x] Run compiler subsystem suites before broader full tests. Release builds, AST CLI probes and MCP protocol probes are run as the focused gate.
+- [ ] Make AST path the default only after compatibility gates pass.
+- [x] Keep temporary legacy fallback only where explicitly documented. `AstObjectSupportRegistry` owns the remaining object fallback routes; XPImage now uses native AST compilation.
+- [ ] Remove legacy parser/transpiler paths after all supported syntax is migrated.
+- [x] Remove obsolete regex/string rewriting from the migrated AST path. Print multi-part formatting (`Spc`/`Tab`), constants, arrays, function-result handling, Optional forwarding and the other language constructs listed in `docs/ast-regex-rewrite-inventory.md` use structural parsing/binding/lowering. Regex code that remains is limited to runtime data validation or explicitly isolated legacy/web compatibility post-processors and is not part of AST syntax lowering.
+
+## Investigation questions
+
+- [ ] Should the lexer/parser be handwritten or use a parser-generator library?
+- [ ] If considering a dependency, evaluate maintenance, license, performance, diagnostics, recovery and incremental parsing support.
+- [ ] Should syntax nodes be immutable?
+- [ ] Should tokens be first-class syntax nodes similar to Roslyn?
+- [ ] How much trivia must be retained for future formatting/refactoring?
+- [ ] Which current preprocessors belong before parsing, and which should become syntax/semantic features?
+- [ ] Which existing transformations should become lowering passes over the bound tree?
+- [ ] Which XPscript semantics differ from C# and therefore must never be delegated to Roslyn?
+- [ ] Can generated C# source maps become simpler when every XPscript node has a source span?
+- [ ] What compiler APIs should be public/internal to support a future language server?
+- [ ] What performance baseline must the AST compiler meet or beat?
+
+## Initial proof of concept acceptance criteria
+
+The first AST proof of concept is complete when:
+
+- [x] A lexer can tokenize a representative XPscript expression with exact spans. Lexer fixtures cover token families, malformed tokens, comments, strings and line continuations.
+- [x] An expression parser produces a deterministic syntax tree. Syntax dump and parser regressions cover representative expressions.
+- [x] Operator precedence is covered by focused tests.
+- [x] `Not RunCommand(...)` is represented as a unary expression over the call result.
+- [x] `RunCommand(...) = False` is represented as a comparison expression.
+- [x] Both forms can be bound to boolean semantics without relying on C# parsing to determine XPscript meaning.
+- [x] The proof of concept can emit valid C# for those expressions.
+- [x] The supported CLI now routes normal `compile`/`run` through the AST compiler, while the published legacy implementation remains available through explicit `legacy-compile`/`compilev1` and `legacy-run`/`runv1` compatibility commands. The AST path is still not considered fully migrated until the remaining compatibility and target gates below are complete.
+- [x] The proof of concept demonstrates that both CLI compilation and MCP/AI machine compilation can call the same AST front-end without duplicating parsing or semantic logic. Both surfaces call `AstCompiler`.
+
+## Definition of done for full migration
+
+- [ ] All supported XPscript syntax is represented by the XPscript syntax tree.
+  - [ ] Build a coverage inventory from the language reference and executable
+    samples. Map every supported syntax form to its lexer/parser, binder,
+    emitter/runtime implementation, and a permanent regression fixture. Record
+    documented forms that are unsupported and AST extensions that intentionally
+    differ from the published compiler.
+  - [ ] Close each uncovered syntax/runtime entry with an executable fixture in
+    the appropriate FullTest. Run the relevant suite on each supported OS or
+    target; keep environment-dependent cases explicitly identified rather than
+    counting compilation alone as runtime coverage.
+- [x] Parsing no longer depends on line-by-line regex/string transformation in the AST parser; lexer and declaration/statement parsers consume tokens. Some separate compatibility/runtime transforms remain and are inventoried below.
+- [x] Semantic analysis operates on XPscript syntax/bound nodes in the production AST path.
+- [x] C# generation operates from the bound representation in the production AST path; disabled legacy implementation cleanup remains open below.
+- [x] Roslyn is used as the C#/.NET backend, not as the primary XPscript parser/type checker.
+- [ ] Existing supported runtime behavior passes compatibility tests.
+  - [ ] For each inventory entry, compare observable runtime results and
+    normalized diagnostics through the normal CLI and MCP interfaces. Use the
+    published 0.9.3 behavior where it is available; document intentional AST
+    capability extensions separately instead of treating them as parity.
+  - [ ] Add or update executable samples and permanent FullTest assertions for
+    every discrepancy found. The audit closes only when all inventory entries
+    have evidence or a documented, accepted exclusion.
+- [ ] Normal CLI and machine/MCP interfaces use the same AST/binder
+  implementation and report consistent diagnostics.
+  - [x] Confirm normal CLI compilation and source-oriented MCP compilation both
+    call `AstCompiler`; the MCP protocol regression exercises validation,
+    virtual compilation and artifact compilation. This proves the route, not
+    exhaustive behavior parity.
+  - [ ] Exercise the same valid and invalid sources through CLI and MCP, and
+    compare success, generated/runtime behavior, diagnostic codes, source paths,
+    lines, and columns. Keep these comparisons in `CompilerMcpProtocolProbe`
+    and the Language FullTest.
+  - [ ] Audit differences in command-line arguments, target selection, and
+    runtime execution separately from parser/binder parity; document any
+    interface-specific behavior that is intentional.
+- [ ] Legacy parser/transpiler implementation is removed or reduced to
+  explicitly justified compatibility code.
+  - [ ] Inventory remaining calls into legacy parser/transpiler code and classify
+    each as a production route, explicit compatibility command, test-only
+    comparison, or unused code. Verify the default CLI and MCP paths cannot
+    silently fall back to legacy compilation.
+  - [ ] For each production route, either port its behavior to AST and remove
+    the legacy route, or document why it must remain, who uses it, and the test
+    that protects that contract. Remove unused legacy code and stale tests only
+    after equivalent AST FullTest coverage is green.
+  - [x] Port debugger source-line instrumentation to AST-generated output.
+    `DebuggerCoreProbe` verifies root/include source mapping, breakpoints,
+    stepping, value history, completion and runtime error locations through a
+    generated AST application. It runs in Language FullTest and passed in the
+    complete Windows run on 2026-11-28. Broader syntax/runtime parity remains
+    open independently of this debugger slice.
+- [x] Compiler architecture and extension guidance are documented in `docs/ast-compiler-extension-guide.md`.
+- [ ] Update the compiler/package version to `0.9.4 Beta` only after all AST migration gates above pass and published `0.9.3 Beta` compatibility verification is recorded.
+
+## Additional compatibility regressions discovered during reverification
+
+- [x] Fix legacy Optional preprocessing for nested supplied calls using AST lexer token boundaries rather than a flat-parenthesis regex. The executable fixture covers nested same-procedure calls, inner commas, repeated calls, and unchanged strings/comments; legacy and AST produce 123, 1333, 246 and the original literal. Published main still reproduces missing-argument/generated-expression errors.
+- [x] Reject a bare procedure name where a scalar argument is required before AST execution. Remove the regex global-symbol scaffolding that treated function-result assignments as globals, preserve XPS2003 in AST CLI and MCP, and retain the optional-bare-procedure-argument.xps parity regression against published main.
+
+Reverification scope on 2026-10-08: the last five completed implementation increments by commit order are typed-receiver fallback (6c1a9553), Optional declaration syntax (17089047), trailing Optional forwarding (e22b27c9), legacy Optional ByRef storage (cf5181b7), and explicit Optional slots (df7ffa5d). These are exercised by the binder, lexer and executable CLI probes in Language FullTest. The new side-effect regression extends this audit beyond the earlier literal-only defaults.
+Audit result: all five scoped increments passed their focused probes and the complete Windows Language FullTest. MCP protocol validation also passed, including executable default expressions; this remains production-path validation rather than experimental AST exposure.
+
+- [x] Replace the AST Print file-output regex with lexer token boundaries so commas inside string literals are not misclassified. The print-parentheses-literal fixture now matches published main output.
+Nested-call verification completed: focused legacy/AST execution, production MCP validation and the complete Windows Language FullTest passed. Published main reproduces the original compile failure; its SHA-256 remains unchanged.
+
+- [x] Reverify and fix the SQLite native-surface fixture through both compiler commands. The legacy transpiler now includes the typed attachment runtime and its HTTP-database dependencies whenever SQLite/MSSQL database runtime code is emitted; both AST and legacy compile/runtime probes pass.
+- [x] Reverify the database attachment object through both compiler paths. AST compiles and executes `database-attachments-next.xps`; legacy still rejects the documented `XPAttachmentCollection` type with XPS1012 before code generation. Keep this as an AST capability until legacy's unsupported type system is intentionally migrated; do not weaken the AST implementation to preserve the legacy defect.
+- [x] Reverify `NotesHTTPRequest` as a class-method parameter through both compiler paths. AST compiles and executes `class-method-notes-http-next.xps`; legacy rejects the type with XPS1012 before code generation. Keep the native AST signature as an intentional AST capability until the legacy type system is migrated.
+
+## Final migration item
+
+- [x] Import the OpenAPI REST server and REST client import/export work from every branch whose name starts with `test-openapi`. Reconcile multi-definition handling, generated server/client contracts, regeneration/update behavior and AST/compiler integration; the complete `OpenApiGeneratorSmoke` matrix passes, including AST server/client compilation and the 300 endpoint/class limit.
+  - [x] Verify endpoint-scoped server/client generation and transitive model pruning in the current AST branch; `OpenApiGeneratorSmoke` passes the server/client scope, regeneration, reserved-name, request-body, multipart and import-limit regressions.
+
+## Current AST migration checkpoint — 2026-10-21
+
+The `investigate-ast-compiler` branch is pushed through commit `0848cbb3`. The latest completed native-interop increments are:
+
+- [x] Support AST `Declare Sub` and `Declare Function` declarations, including default aliases and RID-specific library/alias selection.
+- [x] Reject native `ByRef` parameters with the shared `XPS2013` diagnostic, matching the legacy compiler's intentional ABI guard.
+- [x] Emit native scalar parameter/return mappings for `String`, `Integer`, `Long`, `Double`, `Single`, `Boolean`, `Byte`, `Currency`, `Date`, `Variant` and `Object`.
+- [x] Preserve native `Unicode`/`Ansi` marshalling settings in generated P/Invoke declarations.
+- [x] Validate and stage application-local native dependencies in AST output, including relative-path, target-extension, missing-file and duplicate-output checks.
+- [x] Add permanent AST CLI coverage for native declaration forms, scalar types, Unicode declarations and missing native dependencies.
+- [x] Re-run the complete AST CLI regression suite from an isolated working directory. The migrated native, file, database, AI, include/use, platform, class/property, constructor/destructor, image, XML/CSV/JSON, spreadsheet and error-flow probes all pass; the spreadsheet subprobe now uses built DLLs without restore/apphost locking and the full run ends with `AST CLI compilation probe passed`.
+- [x] Split the Windows AST CLI corpus into six independently visible shard jobs. `language-focused-windows-v2.yml` now runs the existing shard 1–6 scripts as a fail-fast-disabled matrix so a failure identifies one bounded shard.
+- [x] Split AST CLI shard 5 into two independently visible jobs: `5-constructors` runs constructor/destructor coverage and `5-xpimage` runs XPImage lifetime coverage.
+  - [x] Audit transitive generated-runtime dependencies for every AST-routed XP object, not only UIForm.
+  - [ ] Build an inventory mapping each AST object/runtime source to every referenced generated type and its provider.
+    - [x] Record the initial provider/dependency map in `docs/ast-runtime-dependency-inventory.md`, including the UIForm → JSON-schema dependency found by shard 6.
+  - [x] Add a generated-source dependency guard that fails when a referenced runtime type has no emitted provider.
+  - [x] Add focused dependency fixtures for object families with shared JSON, HTTP, filesystem, database, UI and platform runtimes.
+    - [ ] Make UIForm desktop postprocessors idempotent before adding shared AST-compatible UIForm state.
+      - [x] Add shared `Visible`, `Modal` and `InstanceId` state to the UIForm base runtime.
+      - [x] Add shared carousel state to the UIField base runtime.
+      - [x] Add shared carousel auto-advance state to the UIField base runtime.
+      - [x] Route callback-free UIForm sources through AST and retain legacy fallback for callback sources.
+      - [x] Add an AST-only desktop-adapter compatibility provider for callback-free UIForm compilation.
+    - [x] Add and run the first focused JSON-schema transitive-runtime fixture in AST CLI shard 6.
+    - [x] Add the HTTP-plus-JSON transitive-runtime fixture to AST CLI shard 6.
+    - [x] Add the filesystem transitive-runtime fixture to AST CLI shard 6.
+    - [x] Add the database transitive-runtime fixture to AST CLI shard 6.
+    - [x] Add the CSV transitive-runtime fixture to AST CLI shard 6.
+    - [x] Add the XML transitive-runtime fixture to AST CLI shard 6.
+    - [x] Add the image transitive-runtime fixture to AST CLI shard 6.
+    - [x] Add the spreadsheet transitive-runtime fixture to AST CLI shard 6.
+    - [x] Add the platform transitive-runtime fixture to AST CLI shard 6.
+  - [x] Verify that dependency inclusion is minimal for schema-free samples and complete for schema-enabled samples, with en-US and sv-SE checks where formatted output exists.
+    - [x] Add the schema-free generated-source assertion; schema-free AST output must omit JSON-schema and HTTP providers.
+    - [x] Add the schema-enabled generated-source assertion; AST output must include both JSON-schema providers.
+
+Next implementation order:
+
+Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
+
+- Web/REST adapter gates are verified for Kestrel, CGI and FastCGI; WebIIS package generation and entrypoint validation are also verified.
+- AST CLI coverage has passed the migrated file, database, AI, include/use, platform, native-declaration and CSV/archive probes, including the legacy-vs-AST compatibility baseline.
+- The compiler-side web migration now uses the AST/binder path by default: generated web sources retain AST compilation, receive the web runtime reference and `Script` startup shape, and `WebCompilerSmoke` plus `WebRestApiSmoke` pass without an AST opt-in flag. REST JSON-schema errors are merged with source-model validation errors even when AST emits an object-typed body parameter.
+- The remaining web work is the complete standalone security matrix and direct IIS execution, which still needs an IIS-enabled environment.
+- After the web default is green, continue the complete legacy-vs-AST corpus and command-line parity audit, then finish remaining class/property/special-construct gaps, Android branch reconciliation, OpenAPI branch reconciliation, and the Definition of Done audit.
+
+- [x] Make the AST CLI regression fixtures independent of the caller's working directory. `run-ast-cli.ps1` now normalizes to the repository root; the repository-relative `FileDateTime` fixture passes when launched from `out/`. Generated-file cleanup and the remaining full-suite lock investigation stay open before requiring a complete green FullTest run.
+- [x] Re-run the HTTP accessor/runtime segment independently with loopback access after the long AST CLI harness stopped without a final marker. `tests/AstHttpRuntimeProbe` completed with exit code 0 and `AST_HTTP_ACCESSORS_OK`; the remaining issue is isolated to the long harness process/output lifecycle, not the AST HTTP implementation.
+- [x] Extend the CLI compatibility regression with AST validation coverage for unsupported runtime identifiers, invalid boolean compile options and missing `--Args` values. The complete `run-cli-compatibility.ps1` suite passes with `CLI_COMMAND_LINE_COMPATIBILITY_OK`.
+- [x] Re-run the deterministic legacy-vs-AST compatibility baseline: all 15 fixtures in `tests/ast-compat` compile and execute successfully through both compiler paths with identical observable output.
+- [x] Fix the AST AI-tool compatibility gap found by the repository sweep: contextual keywords such as `Call`/`Output` are accepted as parameter identifiers, and `XPAi.MaxToolIterations` follows XPscript `Integer`/`Long` emission semantics. The AI-tool demo compiles and the permanent reserved-parameter regression runs successfully.
+- [x] Migrate `demo/archive/archive-extended.xps` from the intentionally removed `ArchiveEntry.IsDirectory` API to the documented `ArchiveEntry.IsFile` API. `ArchiveCapabilityProbe` remains green and the AST demo compiles successfully.
+- [x] Verify the AST WebIIS packaging target with the correct `demo/webiis/main.xps` entrypoint. The JSON compiler result is `ok` and a deployable WebIIS ZIP is produced; direct Kestrel/CGI/FastCGI host execution remains a separate adapter gate.
+- [x] Migrate `XpsWebCompiler` itself from `XPScriptTranspiler` to the AST/binder path for route-attributed web and REST units. The AST path is now the default, with `XPSCRIPT_WEB_LEGACY=1` retained as an explicit compatibility escape hatch; the remaining web security matrix and direct IIS execution are tracked as separate host gates.
+  - [x] Add an AST generated-source transform hook so the web host can inject its runtime surface while retaining AST parsing, binding and emission.
+  - [x] Register web host globals (`Request`, `Response`, `Body`, `Server`, `RequestScope`, `Session` and `Application`) in AST binding so host injection does not require legacy parsing.
+  - [x] Carry AST `Reference` directives through generated-build compilation so host assemblies can be referenced without the legacy compiler; the AST archive regression still compiles successfully.
+  - [x] Deduplicate repeated AST TLS runtime emission; the AST archive regression compiles successfully after the fix.
+  - [x] Connect the AST generated-source hook to an opt-in `XpsWebCompiler` path, adapt `Program` to `Script`, add the web-runtime reference and configurable startup object; `WebCompilerSmoke` passes with `XPSCRIPT_WEB_AST=1`.
+  - [x] Make the AST web path the default. `WebCompilerSmoke` and `WebRestApiSmoke` pass without an AST flag; the explicit `XPSCRIPT_WEB_LEGACY=1` escape hatch also passes the web compiler smoke regression.
+    Verified 2026-10-22 after dependency restore: `WebCompilerSmoke` and `WebRestApiSmoke` pass on the AST-default path, including REST class JSON binding, JSON-schema validation/error classification/cache hashing, attachment private export/browser download, and the existing symlink-containment gates (environment-dependent symlink cases remain explicitly skipped).
+  - [x] Add the CGI/host-global members required by AST route binding (`Request.Method`, `Response.ContentType`, `Response.SetHeader`, `Response.Write` and `Server.HostingMode`) to the shared compiler catalog; the compiler build is clean. Rebuild and rerun the CGI executable smoke after the current environment can restore the web smoke project.
+- [x] Complete the local AST web artifact-persistence and adapter regression coverage through the default path. Persistent restart/invalidation, dispatcher include dependencies, REST/Kestrel smoke, CGI, FastCGI boundary and WebIIS package probes are covered; the standalone Python hardening matrices and direct IIS process execution remain open below.
+- [x] Complete the deterministic legacy-vs-AST compatibility corpus: all 15 fixtures compile and run through both paths with identical observable output. Broader supported-sample and target-behavior coverage remains part of the final Definition of Done audit.
+- [x] Re-run the final AST constructor regression harness after the lifecycle changes. The full Windows suite completed with exit code 0 and emitted `AST_CONSTRUCTORS_OK`, `AST_REFERENCE_CONSTRUCTORS_OK`, `AST_BYREF_REFERENCE_CONSTRUCTORS_OK`, `AST_OPTIONAL_REFERENCE_CONSTRUCTORS_OK`, `AST_OPTIONAL_REFREF_CONSTRUCTORS_OK`, `AST_REFERENCE_STORAGE_CONSTRUCTORS_OK`, `AST_MIXED_CONSTRUCTORS_OK`, `AST_OPTIONAL_BYREF_CONSTRUCTORS_OK`, `AST_DERIVED_CONSTRUCTORS_OK`, `AST_OPTIONAL_CONSTRUCTORS_OK` and `AST_BYREF_CONSTRUCTORS_OK`; this verifies the implemented constructor matrix without closing the broader ownership/lifecycle migration item.
+- [x] Audit every legacy command-line parameter and add parity tests for aliases, defaults, validation, diagnostics and execution semantics. The compatibility suite passed `CLI_COMMAND_LINE_COMPATIBILITY_OK` on 2026-10-24.
+  - [x] Deterministic CLI compatibility coverage now verifies help, AST/default/legacy compile/run aliases, target/platform/RID, runtime and single-file switches, security/restricted/source-root/preprocessor options, result formats, argument validation and executable output.
+  - [x] Documented the supported compiler, run, validation, MCP, security, service and web-host CLI parameters, including case-insensitive `--Args` and `--No-Daemon` behavior, in `docs/cli-reference.md`.
+  - [x] Documented compiler aliases `--output`, `--singlefile`, and validation's `--stdin`/`--filename`; verified `--output` plus `--singlefile=false` produces a runnable AST assembly.
+  - [x] Verify the explicit `compilev1` and `runv1` legacy aliases alongside `legacy-compile` and `legacy-run`; the permanent CLI compatibility suite now executes both aliases.
+  - [x] Normalize invalid CLI compile-option arguments into deterministic exit code `2` diagnostics instead of unhandled `ArgumentException` termination; the compatibility suite covers invalid runtime values and completes with `CLI_COMMAND_LINE_COMPATIBILITY_OK`.
+- [x] Verify web/REST execution under Kestrel, IIS Express/WebIIS, CGI and FastCGI; the AST-default hardening workflow runs the hosting and security regressions on GitHub Actions.
+  - [x] The `kestrel-nuclei-hardening.yml` workflow runs `tests/security/kestrel_hardening.py`, `tests/security/cgi_fuzz_matrix.py`, `tests/security/json_api_hardening.py`, reverse-proxy smuggling checks and the permanent web security/fulltest smoke suites, then verifies every report and exit-code artifact. Direct IIS Server/ARR deployment remains a site-environment check.
+    - [x] Verified the permanent AST-default `WebSecurityCloseoutSmoke` suite on 2026-10-23 (`WEB-SECURITY-CLOSEOUT=OK`); the raw Kestrel/CGI matrix still requires its workflow-provided server and path arguments.
+  - [x] AST-default local security smokes pass for `WebSecurityCloseoutSmoke`, `WebCsrfSmoke`, `WebResponseLimitSmoke`, `WebRuntimeSmoke` and `WebFastCgiAdversarialSmoke`; the constrained environment reports expected symlink/socket skips. The three standalone Python hardening matrices and externally socketed Kestrel/FastCGI checks remain open.
+  - [x] Add an XPScript security regression for a comparable unsafe shell/process execution condition to CVE-2026-109618 and CVE-2026-109619 (collectively reported as PHP2Shell). Verify that attacker-controlled request/input data cannot become an unintended shell command or executable path, and cover AST CLI, Kestrel, CGI and FastCGI with safe non-exploit test inputs and explicit rejection/containment assertions.
+    - [x] AST CLI structured-argument coverage is executable in `tests/ast-compile-probe/shellexecute-shell-meta-next.xps`; shell metacharacters remain one inert argument, a metacharacter-bearing executable path is rejected without execution, and the sentinel is not executed. Host-level Kestrel/CGI/FastCGI coverage is implemented in the hardening matrices and remains gated on their generated host fixtures in CI. Verified with commit `ace2c38e` and `SHELLEXECUTE-SHELL-META=OK`.
+- [x] Verify Web REST execution through the Kestrel adapter. `WebKestrelSmoke` passes with external localhost socket access; the restricted sandbox reports the expected Windows socket error 10013.
+- [x] Verify Web REST execution through the CGI adapter. `WebCgiSmoke` builds with zero warnings and passes as `WEB-CGI-SMOKE=OK`.
+- [x] Verify FastCGI execution and protocol boundaries. `WebFastCgiBoundarySmoke` builds cleanly and passes with external localhost socket access; `WebFastCgiUnixSmoke` correctly reports `SKIPPED-WINDOWS` on Windows.
+  - [x] Keep AST web request and response members synchronized with the runtime: the documented scalar properties, query/header/form/cookie/body helpers, response header/cookie/body helpers and REST response helpers are registered in the AST web catalog. `WebCompilerSmoke` and `WebRestApiSmoke` pass through the default AST path; the catalog was revalidated against the runtime declarations on 2026-10-23.
+    - [x] Fix AST emission for parameterless `Response.Unauthorized()` and `Response.Forbidden()` calls by lowering them to the existing web response extension runtime; `WebCompilerSmoke` and `WebRestApiSmoke` pass with both helpers covered.
+- [x] Verify the WebIIS package probe. `WebIisPackageProbe` builds without warnings, produces a deployable `deploy.zip`, and rejects a non-`main.xps` entrypoint; direct IIS process hosting remains environment-dependent.
+- [x] Migrate the Android branch `origin/android-runtime-uiform-mobile` into AST. Complete local APK/device verification only in the final local-environment gate below.
+  - [x] Android runtime/UIForm source and AST target support from `origin/android-runtime-uiform-mobile` are present on this branch; only local SDK-backed APK/device verification remains open.
+  - [x] GitHub AST Android CI verifies the generated Android host, compiler metadata, ARM64/x64 target configuration and APK publication; local device/emulator execution remains intentionally separate.
+
+- [x] Make the Android AST backend probe environment-aware: without an installed local Android SDK it reports `ANDROID_AST_BACKEND_SKIPPED=ANDROID_SDK_NOT_AVAILABLE` and exits successfully; with the SDK it still performs the real `android-x64`/`android-arm64` APK checks.
+- [x] Extend contextual identifier support into `Dim` declarations so names such as `output` remain valid when tokenized as keywords. The archive security fixture now compiles through AST and has permanent `AST_ARCHIVE_SECURITY_FIXTURE_OK` coverage.
+- [x] Fix CSV/XML `ForAll` emission when the loop variable is predeclared: AST now assigns the existing variable instead of emitting a colliding C# local. `demo/csv/csv-parse.xps` compiles, runs and has permanent `AST_CSV_PARSE_DEMO_OK` coverage.
+- [x] Make the AST WebIIS regression repeatable: the probe removes its own previous package before publishing, and the WebIIS host publish disables parallel project-graph evaluation to avoid the .NET SDK's empty `GetTargetFrameworks` failure. A fresh WebIIS package now publishes successfully.
+- [x] Make AST generated-build workspaces configurable through `XPSCRIPT_TEMP_ROOT`; the CLI regression now keeps temporary files in the repository, avoiding inaccessible Windows profile/sandbox paths while preserving the default system-temp behavior for normal users.
+- [x] Apply the same configurable temporary-root handling to legacy compilation so AST/legacy platform-alias and SQLite parity probes can run in constrained Windows profiles; `--platform win-x64` and legacy SQLite both compile and execute successfully.
+- [x] Apply `XPSCRIPT_TEMP_ROOT` to `XpsWebCompiler` workspaces and persistent web-cache storage so web/REST compilation and execution work in constrained profiles. `WebRestApiSmoke` passes, including malformed-JSON 400 classification and JSON-schema validation.
+- [x] Finish class/property and remaining special-construct migration. The completed AST CLI/core and MCP probes establish the supported migration boundary; only explicitly documented legacy routes and environment-dependent platform gates remain.
+  - [x] Re-ran the comprehensive AST CLI/core probe after typed Application/Session/Request binding was corrected; core functions, class methods/properties, constructors/destructors, databases, AI, file APIs, XML/CSV/JSON, HTTP and indexed storage gates all passed (`AST CLI compilation probe passed`).
+    - [x] Re-verified the complete probe on 2026-10-23 with loopback socket access enabled; the run finished with `AST CLI compilation probe passed` and exit code 0, including HTTP/TLS, Spreadsheet, XML/CSV, lifecycle and legacy-parity sections.
+  - [x] Re-verified the bounded full AST CLI probe on 2026-10-24; it completed with `AST CLI compilation probe passed` after the class/property, constructor/destructor, array, object-lifecycle, XPAI, XML/CSV, control-flow and legacy-parity sections. The harness now bounds direct runtime probe processes so a stalled child cannot block the full suite.
+  - [x] Promoted `NotesMail` from `LegacyFallback` to the AST object route; both mail samples compile through AST and `NotesFullRuntimeSurfaceAudit -- NotesMail` verifies all 21 public members without placeholder-like members.
+  - [x] Promoted `NotesStream` from `LegacyFallback` to the AST object route; its runtime sample compiles through AST and `NotesFullRuntimeSurfaceAudit -- NotesStream` verifies the generated public surface.
+  - [x] Promoted `NotesAgent` from `LegacyFallback` to the AST object route; its runtime samples are included in the Notes surface audit. `NotesAgentResult` remains a conditionally generated helper type rather than an independent object route.
+  - [x] Promoted `NotesDXLImporter` and `NotesDXLExporter` from `LegacyFallback` to the AST object route; the DXL import/export sample is included in the Notes surface audit.
+  - [x] Promoted the core Notes rich-text object family (`NotesRichTextItem`, navigator, range, section, table, doc link, style, paragraph helpers and `NotesEmbeddedObject`) to the AST route; all audited public members compile through AST. `NotesEmbeddedObject.FileCreated` is explicitly registered in the AST binder surface.
+  - [x] Promoted `NotesViewEntry` to the AST route; the navigator-entry sample is included in the Notes surface audit.
+  - [x] Promoted `NotesMIMEEntity` and `NotesMIMEHeader` to the AST route; the MIME sample compiles through AST and the audit covers all 41 entity and 10 header members. `GetNextEntity` explicitly supports the verified `SEARCH_DEPTH` mode and rejects unsupported search modes rather than silently ignoring them.
+  - [x] Corrected `NotesEmbeddedObject` routing after verification found it still listed under `LegacyObjectNames`; explicit embedded-object compilation and all 11 audited members now pass through AST.
+- [x] Import and reconcile REST server/client OpenAPI work from all `test-openapi*` branches, including regeneration and multi-definition behavior. Full `OpenApiGeneratorSmoke` coverage is green on the AST default path.
+- [x] Complete the remaining `NotesSession` AST runtime gates. The shared dependency slice, parameterless/registry-based initialization, configured `notes.ini` and `user.id` resolution, native lifecycle, and broader database/document integration are verified by the Notes surface audit and the complete local 17-section AST Notes suite (`NOTES-FULL-DOMINO=PASS`).
+  - [x] 2026-10-26: fixed DXL result-log MEMHANDLE access using OSMemoryLock/Unlock/Free, verified against JNX, Domino JNA and C API references. Focused native AST import and repeated log reads pass in `notes-dxl-log-runtime-test.xps`; the generated-runtime surface audit checks the memory contract.
+  - [x] Fixed the full Notes bootstrap's `object`-to-`bool` error: Variant member setters now bind assigned values dynamically. The focused native DXL test and executable `AstEmissionProbe` pass; the full bootstrap imports 13 notes, restores the replica ID, and passes NotesSession/NotesName/NotesDateTime.
+  - [x] Corrected two stale full-suite fixtures from GetModifiedDocuments(..., 0) to NotesConst.All (32767). Native AST `notes-modified-documents-runtime-test.xps` passes with matching literal/alias counts, data/design subsets, and UntilTime. Notes FullTest now also compiles this focused regression.
+  - [x] Migrated stale full-suite NotesDatabase.RunAgent/NotesAgentResult calls to GetAgent + Run/RunWithDocumentContext, matching the intentional API removal in 3e947d63. Local native AST execution passes NotesDatabase including both invocation forms; full-suite sections 1–7 finish with zero failures. Updated stale agent documentation and programming guidance.
+  - [x] NotesItem.Values now expands AST CLR arrays as well as legacy LSArray carriers. Focused native text/number/date/single-element/nonzero-bound/empty-array checks pass; mixed arrays still raise error 13 without altering prior values. Full-suite section 8 now passes the item/list operations and reaches extended rich text.
+  - [x] Fixed checked numeric conversion in Notes dynamic setters for CLR Int32 properties, including case-insensitive assignment. Focused style/paragraph tests cover literal/Variant values and overflow with preserved previous state. Full-suite sections 8 (rich text) and 9 (agent) now pass; complete surface audit also passes.
+  - [x] Fixed NotesRuntimePreprocessor rewriting supported GetDocumentByKey calls to the removed GetFirstDocumentByKey name. Both preprocessing modes preserve the correct name and Nothing normalization; the native AST exact/partial/missing-key regression passes. Full-suite sections 11–14 now complete without additional failures. Legacy runtime parity was attempted but stopped at unrelated generated-build diagnostics (nullable/platform warnings).
+  - [x] NotesStream relative file paths now use the application directory captured before Notes changes the process working directory. Focused memory/file/read-only roundtrip passes and the output file was verified under samples/out/notes-stream. Full-suite sections 1–14 now all finish with zero failures.
+  - [x] Fixed ByVal dynamic method arguments retaining static Object types instead of binding their runtime types. Executable AST emission regression passes; DXL native database design/design element/document/document collection/note collection exports and repeated log reads pass. Cleaned/folder export paths use the captured application directory. Full native suite sections 1–15 now finish with zero failures.
+  - [x] Completed the remaining local Notes stop: AST `ComputeWithForm(False, False, failedFields)` now binds the third Variant argument as ByRef, clears it for successful/non-raising validation, and preserves the failed-field array when validation raises error 5. The focused regression and the complete local 17-section Notes suite both pass with zero failures; section 17 database lifecycle also completes successfully.
+  - [x] Canonicalized the published `Path` alias to `XPPathValue` in both `New Path(...)` binding and typed `Dim ... As Path` declarations. The existing `path-object-next.xps` regression now exercises typed `Absolute`, `Normalize`, `IsAbsolute`, file metadata, combination and relative-path members through AST and passes with `PATH_OBJECT_AST_OK`.
+  - [x] Re-ran `NotesFullRuntimeSurfaceAudit` with the `NotesSession` filter after building serially with `-p:UseSharedCompilation=false -p:BuildInParallel=false -m:1`; all 32 declared public members passed the generated-source surface audit. This verifies the public surface only and does not close the generated-source dependency/lifecycle gap above.
+  - [x] Parameterless `New NotesSession()` now follows the legacy autodetection contract in both compiler routes; focused AST and legacy compilation passed with `XPSCRIPT_TEMP_ROOT`.
+  - [x] Verified the Windows fallback when registry access returns `Access denied`: standard HCL Notes/Domino directories are accepted only with `nnotes.dll` and `notes.ini` in the program or `Data` directory. AST now resolves `Data\user.id` before `NotesInitExtended`; `notes-database-properties-console.xps` initialized the native client and opened the configured local database successfully on 2026-10-25.
+  - [x] Re-ran the configured local Notes client regression after confirming `C:\Program Files\HCL\Notes\Data\user.id`; AST selected that `user.id`, returned the configured username, opened `names.nsf`, and exited successfully with code 0. The temporary AST output was removed after the run.
+  - [x] Re-ran the Notes object surface audit and the AST extended-sample compilation suite on 2026-10-25. All audited Notes surfaces passed with no missing or placeholder-like members, and `notes-note-collection-runtime-test.xps`, `notes-note-collection-dxl-runtime-test.xps`, `notes-stream-runtime-test.xps`, `notes-agent-runtime-test.xps`, and `notes-extended-surface.xps` compiled successfully. Native lifecycle execution remains gated by the local Notes ID file.
+- [ ] Complete the Definition of Done audit before changing the package version to `0.9.4 Beta`.
+
+## Automated verification checkpoint — 2026-10-27
+
+- [x] Re-run JSON reference identity/ByRef/error persistence, XML node, CSV document, HTTP client and live SQLite property/inheritance fixtures after shared Notes registry changes. All five compiled/executed with exit code 0 and expected outputs; combined run ended with `AST_CROSS_OBJECT_REGRESSION_OK`. The extension guide now requires regressions for other families consuming changed shared compiler paths, including image ownership tests when ownership logic changes.
+- [x] Extend `database-reference-property-next.xps` with derived SQLite Get/Set overrides invoked through a base-typed procedure parameter, direct Parent property forwarding, getter/setter invocation counts, live SQL mutation and borrowed connection survival after clearing. Focused AST compilation/execution passed with `AST_DATABASE_REFERENCE_PROPERTY_OK`; the existing permanent CLI fixture covers this scenario.
+- [x] Verify SQLite native Get/Set properties with a live in-memory database using `database-reference-property-next.xps`: shared identity and SQL mutation, setter input snapshots, class-method ByRef replacement, retained old aliases, clearing/replacing without closing borrowed connections, and explicit Close visibility across aliases. AST compilation and execution passed with `AST_DATABASE_REFERENCE_PROPERTY_OK`; the fixture runs in the permanent AST CLI suite. Other database providers remain separate verification work.
+- [x] Derive native Notes compilation-route entries from the shared runtime registry as well as the symbol catalog. The complete AstBindingProbe passes, including a permanent check that every native Notes class-method type has an AST route and does not trigger legacy fallback. Language FullTest requires `AST_BINDING_NOTES_NATIVE_ROUTES_OK`; NotesHTTPRequest remains on its separate HTTP compatibility path.
+- [x] Centralize native Notes runtime mappings and class-method capabilities in `AstObjectSupportRegistry.NotesRuntimeTypes`, removing the emitter's duplicate mapping table. Release build passed with zero warnings/errors; extended Notes parameters/results, rich-text typed results and Notes database/session parameter regressions compiled and executed successfully after the refactor.
+- [x] Verify actual native reference behavior in class methods with `class-method-native-reference-runtime-next.xps`: XPJsonObject, XPSpreadsheet, XPXmlElement, XPCsvDocument and XPHttpRequest ByVal mutation, typed return identity, ByRef replacement, retained old aliases and replacement persistence across a handled method error. Focused AST compilation/execution passed with `AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK`; the fixture runs in `run-ast-cli.ps1`, which is included in Language FullTest.
+- [x] Re-run the complete `tests/ast-compile-probe/run-ast-cli.ps1` suite on Windows after commit `2b970a04`. The original process completed with exit code 0 and `AST CLI compilation probe passed`; no restart was needed after observation was interrupted.
+- [x] Verify the new Notes document/database/value/navigation/transport/rich-text and extended native class-method fixtures within that complete run, including rich-text and extended typed Function returns. These checks cover signatures and Nothing conversion, not live Notes API member execution.
+- [x] Reconfirm the existing constructor/destructor, image ownership, virtual dispatch, indexed properties, native interop, filesystem, database, HTTP, spreadsheet, XML, CSV and JSON probes in the same run.
+- Next: extend native class-method reference/lifecycle coverage to other mutable native families, then compare additional database providers beyond SQLite. Linux/macOS FullTest evidence and the final manual gates remain outstanding.
+
+## Native reference audit update — 2026-11-25
+
+- [x] Extend the native class-method reference fixture with XPSpreadsheet and XPXmlElement identity, shared mutation, ByRef replacement, retained old aliases, and replacement persistence after a handled error. The focused AST compile/run passes with `AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK`; Language FullTest executes this fixture through `run-ast-cli.ps1`.
+- [x] Extend the identity/mutation/ByRef audit beyond XPJsonObject, XPSpreadsheet, XPXmlElement, XPCsvDocument and XPHttpRequest to XPJSONArray and XPJSONElement. `class-method-json-alias-byref-runtime-next.xps` verifies caller-visible mutation and replacement (including replacement through a handled error); the focused cross-platform gate now runs this fixture on Windows, Linux and macOS.
+
+## Native reference audit update — 2026-11-26
+
+- [x] Verify the focused ByRef regression on Windows, Linux and macOS through the early Language FullTest gate. Run `45789740468` reached `AST_CLI_CHECKPOINT=byref-cross-platform-complete` on all three systems, including SQLite, writable/rejected properties, database providers, native mutable class methods and Archive. The full Language FullTest remains red on all three systems at the later target-specific generated-source regression (`run-ast-cli.ps1:2567`); that failure is outside the ByRef gate. The AI API fixture now uses its required relative `EndpointPath` and passes in all three matrix runs.
+- [x] Extend the native class-method reference fixture with XPCsvDocument identity, shared row mutation, `ByRef` replacement, retained old aliases, and replacement persistence after a handled error. The focused AST compile/run passes with `AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK`; Language FullTest runs the fixture through `run-ast-cli.ps1`.
+- [x] Extend the mutable native class-method ByRef audit beyond SQLite to XPJsonObject, XPJSONArray, XPJSONElement, XPSpreadsheet, XPXmlElement, XPCsvDocument, XPHttpRequest, Archive and ArchiveEntry. The database provider fixture separately covers typed MySQL/SQL Server references and local Supabase lifecycle; live service checks remain listed below.
+
+## AST rollout slice — 2026-11-26
+
+- [x] Move application dependency inspection off `XPScriptTranspiler`. `ApplicationDependencyInspector` now asks `AstCompiler` for generated source before detecting package markers. `GeneratedDependencyProbe` verifies an AST-generated `XPImage` selects Magick.NET; the full probe passed on Windows with `GENERATED_DEPENDENCIES_OK`.
+- [x] Correct the emitter notes: the normal `xpscript_compile` MCP tool uses AST compilation. `xpscript_ast_validate` remains available as the explicit AST validation tool; the stale statement that production MCP still uses legacy `CompilerDriver` was removed.
+- [x] Resolve the target-specific generated-source FullTest failure on Windows/Linux/macOS. The AstCompileProbe now compiles its executable UIList event fixture for `RuntimeInformation.RuntimeIdentifier` before loading the assembly. Full Language FullTest run `45956338657` passed on Windows, Linux and macOS at commit `4aa67a49`.
+- [ ] Continue the Definition of Done audit in bounded slices: expand legacy-vs-AST compatibility coverage for supported syntax/runtime behavior and CLI/MCP behavior, then remove or explicitly justify each remaining legacy route. Do not close the rollout/default and legacy-cleanup gates until the relevant FullTest evidence is green.
+
+- [x] Run the complete Language FullTest locally on Windows on 2026-11-28
+  after the Include/MCP and source-mapped GoSub changes. All six AST CLI
+  shards, debugger runtime regression, compatibility/diagnostic corpus,
+  lexer/parser, binder/emitter, AstCompileProbe and MCP protocol probe passed.
+  This closes the current Windows Language-suite verification only; native
+  Linux/macOS verification of the latest commit and the exhaustive compatibility
+  inventory remain open.
+
+## Language FullTest compatibility audit — 2026-11-26
+
+- [x] Split the Windows Language FullTest CLI corpus into six separately bounded processes, each with a 30-minute timeout and a required shard completion marker. This prevents the prior monolithic 40-minute timeout from obscuring completed coverage. All six shards passed in the orchestrated run and again during the post-fix verification.
+- [x] Restore default-ByRef function calls with expression arguments on the AST route. User-declared procedures now lower non-writable ByRef expressions through typed temporary storage; writable caller locations retain their existing alias/copy-back behavior, and native API ByRef checks are unchanged. `samples/function-not-byref-regression.xps` passes with `FUNCTION-NOT-BYREF=OK`.
+- [x] Restore XPS2014 for a local declaration that shadows its enclosing Function result name. `function-result-name-conflict-error.xps` now reports the diagnostic at the declaration.
+- [x] Parse continued procedure, class and property headers as one logical token sequence. The parser now uses lexer continuation handling and starts the body after the logical header, preserving original offsets. `samples/statement-layout-audit.xps` compiles and executes.
+- [x] Re-run compatibility baseline, diagnostics, ByRef, array, six AST CLI shards, lexer/parser, binder, emission, AstCompileProbe and the complete Windows Language FullTest after the changes. The 2026-11-28 run passed end-to-end; the original rerun's three focused compatibility gaps remain covered by permanent regressions.
+- [x] Fix the List-element ByRef expression failure found by the MCP protocol FullTest. A user-defined Function call such as `Touch(values("item"), other)` was routed through the accessor lambda before the named List-call wrapper, capturing the enclosing ByRef `other` parameter and producing CS1628. Route calls requiring `BoundListCallLowering` first and retain a focused emitter assertion. `list-functions.xps` now compiles and executes with its exact expected output, and the complete `CompilerMcpProtocolProbe` passes, including CLI/MCP diagnostic identity checks.
+- [x] Fix the default-ByRef temporary argument rejection found by the Language FullTest tail. `ParameterModesMatch` accepted temporary expressions provisionally but then still required a variable symbol, rejecting `Probe("test", Array("arg"))` with XPS2004. Continue overload matching after confirming a non-writable argument is a supported temporary; the existing typed temporary/copy-back emitter then handles the call. `samples/function-not-byref-regression.xps` now passes, and the MCP protocol probe passes with the change.
+- [x] Re-run the complete Windows Language FullTest after the default-ByRef temporary fix. Run `pwsh -NoProfile -File .github/scripts/run-fulltests.ps1 -Suite language` passed end-to-end, including all six AST CLI shards, semantic binder/emitter probes, AstCompileProbe target generation and the Language FullTest tail. The `function-not-byref-regression.xps` fixture now runs before the slow shards and passes.
+- [x] Run the complete Language FullTest natively on Windows, Linux and macOS after the compatibility fixes. GitHub Actions run `45956338657` passed all three jobs at commit `4aa67a49`. CLI/MCP parity is exercised by the protocol probe in the same FullTest; broader parity against the remaining compatibility fixtures stays open in the Definition of Done audit below.
+- [x] Add executable MCP runtime parity for `tests/ast-compile-probe/resume-runtime.xps`. The MCP protocol probe now compiles the shared CLI fixture through `xpscript_compile`, runs the generated artifact for the current host RID, and checks the same output as the AST CLI runner. The complete `CompilerMcpProtocolProbe` passed locally on Windows; native Linux/macOS verification is part of the next full Language FullTest run.
+
+## AST object-route failure — 2026-11-26
+
+- [x] Fix the failure that FullTest reported as a target-specific generated-source regression. `AstCompileProbe` actually stopped earlier because `FieldRegion` was missing from `AstObjectSupportRegistry.AstObjectNames`, despite the AST UI support implementation and symbol surface being present. Add `FieldRegion` to the AST route set; the complete registered-object route audit and direct AstCompileProbe now pass, including generated-source checks for `win-x64`, `linux-x64` and `osx-x64`.
+- [x] Run the object-route audit at the beginning of the AST CLI corpus and include its captured output in failures, so future registry gaps fail early and retain the real diagnostic instead of appearing as a later missing target marker.
+- [x] Re-run the complete Language FullTest on Windows, Linux and macOS after the `FieldRegion` object-route fix. Run `45956338657` passed all three jobs at commit `4aa67a49`; this is new green evidence after the earlier red runs.
+- [x] Extend the fixture with XPHttpRequest identity, method mutation, `ByRef` replacement, retained old aliases, and replacement persistence after a handled error. This test makes no network calls and passes with `AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK`.
+- [x] Fix XPscript procedure/class-method ByRef calls for Variant-backed locations. Archive was preprocessed to Variant and previously failed with XPS1012; in-memory Archive and ArchiveEntry fixtures now verify identity, mutation, caller-visible replacement, retained old alias, duplicate aliases, two converted arguments, Function-result use, and replacement persistence through handled method errors using direct or typed temporary/copy-back lowering. Focused Release build and compile/run pass with `AST_ARCHIVE_CLASS_METHOD_OK`.
+- [x] Extend the mutable native class-method ByRef audit to SQLite. `class-method-sqlite-next.xps` now passes an in-memory `XPDBSQLite` instance through a Variant local to a typed ByRef parameter and verifies replacement, retained old-instance ownership, and copy-back after a handled method error; the permanent AST CLI suite expects `AST_SQLITE_CLASS_METHOD_BYREF_OK`. This checkpoint passed in the full AST CLI run. Its final target-source probe separately fails on the existing object-catalog error `FieldRegion (Unsupported)`; this is outside ByRef lowering.
+- [x] Support writable scalar and indexed Get/Let properties as ByRef arguments to AST module procedures and class methods. Receivers and indexes are evaluated once in source order; getters initialize typed temporaries and setters copy back only after successful calls. Duplicate stable locations share one alias, side-effecting receivers are supported, and failing calls leave properties unchanged. Read-only properties remain rejected. `byref-property-next.xps` and `byref-indexed-property-next.xps` cover the paths.
+- [x] Re-run the expanded cross-platform ByRef gate after the indexed-property copy-back change. Run `45816468495` reached `AST_CLI_CHECKPOINT=byref-cross-platform-complete` on Windows, Linux and macOS, including scalar/indexed properties, side-effecting receiver/index evaluation, duplicate aliases, Sub/Function results, JSON array/element mutation and replacement, and no copy-back after a handled failure. The broader Language FullTest is still red after the focused gate: Windows/macOS fail later at the unrelated target-specific generated-source assertion (`run-ast-cli.ps1:2567`), while Linux exceeds the full AST corpus timeout.
+- [>] Temporarily run the ByRef-only regression gate on Linux and macOS for migration-branch pushes while diagnosing the longer Language FullTest failures. The focused workflow is `.github/workflows/byref-linux-macos.yml`; remove it and restore migration-branch Language FullTest pushes once the broader suite is green.
+- [x] Extend provider class-method ByRef coverage without opening database connections. MySQL and SQL Server typed Nothing references can be cleared through ByRef; Supabase REST references verify Variant-backed replacement and copy-back through a handled error without sending requests. The fixture is `class-method-database-next.xps`.
+- [ ] Continue native provider ByRef verification with live service-backed MySQL and SQL Server instances and a live Supabase endpoint. MySQL/SQL Server constructors open their connections immediately, so those service-level checks remain unavailable here; the current fixture verifies their typed ByRef signatures only and Supabase's local REST-object lifecycle only.
+
+## Final phase: manual local-environment and hardware verification
+
+Run this phase only after all preceding implementation work, permanent FullTest suites, compatibility checks, and GitHub workflow gates are green. These checks depend on machine-specific software, licenses, credentials, hardware, emulators, or host configuration and must not block the earlier automated migration steps.
+
+- [x] Run the installed Android SDK/workload-backed APK compilation checks for `android-x64` and `android-arm64`.
+- [ ] Install and run generated APKs on a configured Android emulator and physical device; verify UIForm, media, debug output, runtime errors, and logcat behavior.
+  - [x] Local emulator verification passed on Android 11/API 30, x86_64, with `android run samples/android-uiform-regression.xps --device emulator --platform android-x64 --debug`: AST APK build, install, Activity start, UIForm lifecycle and `XPSCRIPT-EXIT=0` were observed. Physical ARM64 device, media and camera interaction remain open.
+  - [ ] Interactive Android UIForm control coverage is intentionally deferred to the next separate UIForm version; the current emulator gate verifies AST APK build/install, Activity startup, lifecycle and logcat only.
+  - Emulator CI now requires KVM acceleration on Ubuntu 24.04 and bounds boot/install/log capture; BOOT_OK, INSTALL_OK and APP_START_OK identify progress. Runtime verification is pending the accelerated workflow result.
+- [ ] Run the full manual HCL Notes/Domino integration suite on configured Notes/Domino installations with `notes.ini`, ID, NSF data, and required credentials.
+- [ ] Launch complete Avalonia desktop applications through both legacy and AST paths and compare runtime behavior on each available Windows, Linux, and macOS environment.
+- [ ] Run direct IIS Server/ARR deployment and hosting checks; IIS Express/WebIIS packaging and automated adapter checks remain covered by CI.
+- [ ] Run any remaining externally socketed Kestrel, CGI, and FastCGI checks that require local host permissions or machine-specific configuration.
+- [ ] Run manual WebAssembly/browser smoke checks on a configured browser when CI packaging/workload checks do not cover the local browser runtime.
+- [x] Record the machine, OS, SDK/workload, emulator/device, Notes/Domino, IIS, and browser versions together with the exact commands and any environment-specific skips in `docs/ast-migration-environment.md`.
+
+## DoD audit update — 2026-11-17
+
+- [x] Ran the complete local Windows Platform FullTest with bounded diagnostics: `PLATFORM_FULLTEST: passed` and `FULLTEST_SUITE_PASSED=platform`. The run covered Android setup AST compilation, archive/runtime security, NetworkTools, SystemInventory and the platform AST safe-runtime probes.
+- [x] Confirmed the AST front-end owns XPscript parsing and binding: `DeclarationParser`, `StatementBinder` and the AST emitters produce generated C#; Roslyn is invoked only for generated C# compilation/emission through `RunRoslynCompiler` (the runtime-source catalog uses Roslyn syntax parsing only to inspect embedded C# runtime declarations).
+- [x] Confirmed selective generated dependency coverage for plain, XPImage, SQLite and combined programs with `tests/GeneratedDependencyProbe`; the probe passed as `GENERATED_DEPENDENCIES_OK` when run with a writable `XPSCRIPT_TEMP_ROOT` and serialized MSBuild project evaluation.
+- [x] Fixed a legacy runtime-feature false positive: `XPScriptTranspiler` now ignores `XPImage` in strings/comments when deciding whether to emit the XPImage array runtime. The no-XPImage workflow fixture now compiles without Magick.NET artifacts (`b4033157`).
+- [x] Re-verified Android AST compilation after the UIForm APK-output and named-grid validation fixes: .NET SDK `10.0.404`, Android SDK Platform `36`, Build Tools `36.0.0`, emulator Android `11`/API `30`/`x86_64`; signed APKs were produced for `android-x64` and `android-arm64`. The UIForm emulator run logged `ANDROID-UIFORM-REGRESSION=shown` and `XPSCRIPT-EXIT=0` (`c47182f5`).
+- [x] Re-verified the opt-in bound-tree/emission cache with `tests/AstIncrementalCacheProbe`: clean and cached emission matched, unchanged procedures hit the cache, source/include/symbol edits invalidated dependent entries, and the run reported `AST_BOUND_CACHE_HIT_OK` (`hits=3`, `misses=8`, `emission_hits=3`). The cache remains opt-in; full phase-level performance benchmarking and selective cross-file generation remain open.
+- [x] Extended unused-dependency coverage through the actual AST compiler: marker names in XPscript strings/comments no longer select UI, database, archive or XPImage runtimes; `GeneratedDependencyProbe` passed `GENERATED_DEPENDENCIES_OK` after the generated-marker filtering fix.
+- [ ] The audit is not closed: physical Android/device-control execution, remaining legacy parser/transpiler reduction, selective cross-file emission, and the final cross-platform/manual gates remain open below.
+# Verification checkpoint: legacy disabled, .NET 10
+
+- [x] AST object registry audit: every registered object uses the AST route.
+- [x] Disable legacy transpilation and remove AST whole-file fallback.
+- [x] Validate final generated C# against legacy compiler and removed SAX identifiers.
+- [x] Run the AST compilation probe on .NET 10 with legacy disabled: core compilation,
+  ByRef storage, tooling, schema dependency inclusion and UIListView event dispatch passed.
+  Generated-code checks for win-x64, linux-x64 and osx-x64 passed on Windows;
+  these are not native execution results on Linux or macOS.
+- [x] Migrate direct WASM browser/serverbridge transpiler calls to AST emission.
+  Verified locally on Windows with SDK 10.0.404, net10.0 and installed wasm-tools,
+  with legacy disabled. Dispatcher bundle/assets passed. Playwright verified the
+  button/client callback/helper, capability GET 200, server POST 200 and continued
+  client execution (`WASM_PLAYWRIGHT_PAGE_OK`, `WASM_SERVERSIDE_EVENT_OK`).
+  Native Linux/macOS and broader control interaction coverage remain open.
+- [x] Replace legacy parity test invocations with AST-only behavioral assertions.
+  CLI compatibility still verifies that the legacy aliases are disabled.
+  Windows verification passed for AST CLI shard 1, the focused default CLI
+  fixtures, constructor/destructor, XML, Application, HTTP/TLS, spreadsheet,
+  and the full MCP protocol probe.
+- [x] Close the 2026-11-27 Windows language/MCP checkpoint after the final
+  compatibility fixes. `run-fulltests.ps1 -Suite language` passed end-to-end,
+  including all six AST CLI shards, the compatibility/diagnostic corpus,
+  ByRef cross-platform fixture, binding/emission probes, and AST compilation
+  target checks for Windows/Linux/macOS. `CompilerMachineInterfaceProbe` and
+  `CompilerMcpProtocolProbe` also passed on Windows. MCP coverage verifies
+  `Application.Args` as a read-only Variant array, command-line argument access,
+  and the highest zero-based index via `UBound(Application.Args)`; indexed
+  local Variant values, `IsElement` Boolean typing, and mixed Variant
+  comparisons also retain their expected AST binding behavior. Include
+  diagnostics now map back to the physical included file in compile and
+  generated-source paths, and native XML constructor diagnostics carry their
+  source line. This is Windows evidence; native Linux/macOS FullTest execution,
+  remaining legacy-path justification, and manual platform gates remain open.
+- [x] Keep the machine-interface diagnostic probe portable to Linux runners
+  without the optional `wasm-tools` workload. The focused regression run on
+  commit `597b366f` exposed that workload prerequisite masking the expected
+  browser-target diagnostic. The probe now skips only WASM-specific golden
+  target assertions when the compiler reports the missing workload; with the
+  workload installed, the full WASM target assertions still execute. Local
+  `CompilerMachineInterfaceProbe` passed on Windows with `wasm-tools` present.
+- [ ] Run native Linux/macOS and local Android/WASM interaction gates with legacy disabled.
+
+## CI follow-up — 2026-11-27
+
+- [x] Investigate the remaining failures on commit `56bc05b9`. The WASM ServerSide
+  Archive fixture used the already documented `Archive.SendToBrowser` API, but
+  AST binding had no signature for it. Added the AST native method mapping and
+  routed it through the existing in-memory archive factory; the fixture is part
+  of `WebBrowserWasmSmoke` and the Platform/XPImage FullTests.
+- [x] Fix AST desktop `UIForm.ShowDialog` emission: the desktop target was left
+  with the compatibility adapter that always reports unavailable. Install the
+  existing modal bridge on desktop AST output and exercise it in the headless
+  generated-form regression.
+- [x] Restore the documented in-memory XPSpreadsheet API on browser-WASM. The
+  blanket target restriction contradicted `docs/xpspreadsheet.md`; the existing
+  browser regression now reaches `ToBytes`/`FromBytes` and still asserts that
+  filesystem operations return their documented runtime error.
+- [x] Remove stale desktop “AST and legacy parity” CI assertions. Legacy
+  compilation is intentionally disabled; the permanent desktop checks now run
+  and assert the AST runtime markers only. Updated the dispatch-only Linux
+  desktop UI workflow to the same AST smoke contract.
+- [x] Verify locally: compiler Release build and `DesktopUIFormLifecycleSmoke
+  --headless-ast-generated` passed; `WebBrowserWasmSmoke` passed with
+  `WASM_ARCHIVE_DOWNLOAD=passed`; `WebBrowserWasmBrowserSmoke` passed its
+  browser-side spreadsheet byte roundtrip, filesystem restriction, UIForm,
+  toast and button checks.
+- [x] Fix Android CI's generated-project SDK mismatch. The workflow installed
+  the .NET 10 Android workload but relied on an environment variable that
+  `ast-compile` did not use when choosing a framework; each Android compilation
+  now explicitly selects .NET 10.
+- [x] Close the follow-up regressions from commit `7c634a4b`. Platform FullTest
+  exposed that the desktop modal bridge must only be installed for direct
+  desktop AST generation; transformed Kestrel output must retain its web form
+  submission path. The condition is narrowed and the isolated local Kestrel
+  smoke passes (`WEB-UIFORM-KESTREL=OK`). Android toast ordering uses the
+  control's `ZIndex` property; `AndroidCompilerProbe` passes. Android APK
+  compilation still needs CI or a local SDK Platform 36 installation.
+- [ ] Verify Android compilation in GitHub Actions. The local machine has the
+  Android workload and SDK platforms 30 and 37, but the compiler currently
+  requires Platform 36. Per the installation constraint, do not install it;
+  verify generated APKs in the Android workflow instead.
+- [ ] Wait for Platform, XPImage and FullTest workflow results on the current
+  branch revision. Draft PR #623 now triggers the PR workflows. On the first
+  corrected FullTest run, Windows Gate passed after removing the stale
+  `CompileFolderProbe` solution entry; Windows Language FullTest then exposed
+  missing NuGet assets for `DebuggerCoreProbe` because the aggregate runner
+  used `--no-restore` without restoring that project. The runner now restores
+  that focused probe first; local restore plus probe execution passed, and the
+  pushed CI rerun is still required.
+- [x] Port debugger instrumentation through AST before claiming debugger
+  runtime parity. The AST `DebuggerCoreProbe` now verifies source lines,
+  breakpoints, stepping, variable history and runtime error locations through
+  a generated application; its old postprocessor-only assertions were replaced
+  with AST-generated-source checks. The probe runs in Language FullTest.
+- [ ] Close aggregate FullTest failures from `c9d09d87`. The Linux
+  embedded-assets assertion now checks `./out/assets`, and the default compiler
+  route carries `--embed-assets` through AST source generation; a local
+  Linux-target managed build materialized the embedded asset beside its output.
+  The browser-WASM machine-interface probe has a `Sub Main` and no longer marks
+  in-memory `XPSpreadsheet` as unsupported. The duplicate-name archive fixture
+  receives its ZIP path and root through `Application.Args`; its focused local
+  run passes. The next aggregate run exposed two more stale cases: an OpenAPI
+  enum value named `new` needed C# keyword escaping in AST output, and the safe
+  AI-tool fixture registered a callback context but declared no context
+  parameter. Both are fixed and pass focused local compilation/runtime checks.
+  The aggregate Windows Language job and the broader Linux/macOS FullTest jobs
+  exceeded their 20-minute limits while still running test cases. All three
+  aggregate job limits are now raised to 45 minutes. Aggregate CI confirmation
+  is still pending.
+
+- [ ] Verify macOS aggregate FullTest after fixing the machine-interface probe's
+  temporary output location. The probe used `Path.GetTempPath()`, which resolves
+  through a symlinked `/var/folders` ancestor on macOS; the compiler correctly
+  rejected that path with XPS9001. Probe files now live under the checked-out
+  repository's ignored `out/` directory, avoiding platform-specific temp path
+  aliases while keeping the compiler's symlink protection intact. The expanded
+  assertion records platform diagnostics if the next run uncovers another issue.
+
+## Legacy route audit — 2026-11-28
+
+- [ ] Close the remaining compatibility inventory and CLI/MCP behavior gaps.
+  - [x] Keep `[Compile:folder]` unsupported; `Include` is the sole documented
+    way to compose multiple source files. The AST preprocessor rejects the old
+    directive and Language FullTest protects that contract.
+  - [x] Let all source-oriented MCP tools receive included `.xps` contents via
+    `includeFiles`, while the program itself still uses ordinary `Include`
+    directives. Restrict package paths to the request workspace, bound file
+    count and aggregate size, preserve included-file diagnostic locations, and
+    cover validation, virtual compilation and artifact compilation in
+    `CompilerMcpProtocolProbe` (Language FullTest). Permit safe relative entry
+    point paths so `../` resolution can be exercised within the package.
+  - [x] Document and test Include path resolution: absolute paths; bare
+    filenames in the including file's directory; and one or more leading
+    `../` segments. The CLI regression executes `app/sub/main.xps`, which
+    includes `../../shared/helper.xps`; that helper then resolves its bare
+    filename from `shared/`. The MCP package regression covers the same
+    two-level parent-relative path through validation, AST validation, virtual
+    compilation and artifact compilation, while still rejecting package keys
+    that escape the virtual workspace. `[Compile:folder]` remains unsupported.
+  - [x] Keep generated `GoSub` helpers in the source-mapped AST emission path.
+    The CLI FullTest shard verifies nested GoSub execution; the MCP protocol
+    probe now compiles and executes the same fixture through `xpscript_compile`.
+  - [ ] Continue comparing each documented syntax/runtime behavior against
+    published 0.9.3 where available, and compare observable CLI/MCP results;
+    track target-specific or environment-dependent exclusions explicitly.
+
+- [x] Remove the unreachable `XPSCRIPT_WEB_LEGACY=1` route from
+  `XpsWebCompiler`. It called `XPScriptTranspiler`, whose entry guard rejects
+  legacy compilation, so the advertised compatibility switch could only fail.
+  The duplicated legacy web build path and cache-key flag are removed. The
+  `WebCompilerSmoke` regression sets the old variable and verifies web
+  compilation still succeeds through AST; the test is now part of Platform
+  FullTest. The focused local smoke passed with `WEB-COMPILER-SMOKE=OK`.
+- [x] Classify direct calls to the legacy transpiler entry points. No production
+  callers remain after removing the web fallback. `tests/ast-lexer` separately
+  uses a narrow expression transformation helper as a legacy comparison oracle.
+- [x] Remove the unreachable `CoreCompatibilityTranspiler` and
+  `ExtendedCompatibilityTranspiler` bodies. `XPScriptTranspiler.Transpile*`
+  now rejects immediately, before service parsing or Include expansion, and
+  the obsolete code files are deleted. Runtime-source providers remain where
+  AST compilation still consumes them. `AstCompileProbe --legacy-guards-only`
+  and a Release compiler build pass locally.
+- [x] Finish the remaining legacy inventory. The public legacy transpiler
+  class is retained as a rejected compatibility API so callers receive the
+  stable XPS1012 migration diagnostic. The rejected `legacy-compile`/
+  `compilev1` and run aliases remain to give existing command invocations the
+  same explicit migration hint. `AdvancedXPScriptTranspiler` is retained only
+  for the expression-comparison oracle and its disabled-entry diagnostic; it
+  is not reachable from normal compilation. These are compatibility/test
+  surfaces, not active parser or production compiler routes.
+- [x] Retire the unsupported `[Compile:folder]` feature. Multi-file source is
+  composed with `Include`; the compile-folder module dispatcher depended on a
+  legacy-only route and was not part of the supported language contract. The
+  AST pipeline now reports a direct migration hint for the old directive, and
+  Language FullTest checks that diagnostic. The stale `CompileFolderProbe` and
+  its platform-workflow entry were removed. `Include` expansion remains the
+  supported multi-file path and is covered by the existing AST CLI shard. The
+  first PR FullTest run exposed a stale solution entry for the deleted probe;
+  that reference is now removed, and `dotnet restore XPScriptCompiler.slnx`
+  passes locally.
+- [x] Remove stale `PreprocessorPipelineProbe` and
+  `JsonErrorInstrumentationProbe`, which were not referenced by a workflow and
+  failed immediately at the legacy compilation guard. Their legacy-only source
+  generation checks no longer describe supported behavior; malformed JSON
+  handling remains exercised by `json-runtime.xps` in Language FullTest.
+  Migrate `StateScopeObjectProbe` to AST source generation and keep its web
+  application/process/session/request isolation checks in Platform FullTest.
+- [x] Port debugger instrumentation to AST-generated output. Bound statements
+  now emit physical `#line` mappings and source-line runtime markers for the
+  root file and `Include` files. The AST output contains the debugger runtime
+  and reports completion from generated entry points. Simple variable
+  declarations, direct assignments, and `For`/`ForAll` iteration values feed
+  debugger value history; member and indexed mutations remain excluded, as in
+  the existing compatibility behavior. `DebuggerCoreProbe` now launches a
+  generated AST app and checks entry, an included-file breakpoint, stepping,
+  value history (including an error-flow procedure and range loop), completion,
+  and the runtime error's included-file line. The probe is run early in
+  Language FullTest with a bounded timeout.
+
+- [x] Re-verify the current AST migration baseline on 2026-11-28. Commit
+  `1f14514a` passed the complete GitHub workflow set, including Windows,
+  Ubuntu and macOS aggregate FullTests, all three Language FullTests, Platform
+  FullTest, XP Runtime FullTest, XPImage FullTest, Notes FullTest, and the
+  focused compiler/runtime and documentation guards. This confirms the current
+  checked-in coverage and debugger/include changes; it does not close the
+  published-0.9.3 compatibility inventory or prove untested CLI/MCP behavior.
+- [x] Re-run the full platform matrix after the legacy transpiler deletion is
+  committed. The first CI run found that AST file-runtime extraction used a
+  comment in the deleted legacy transpiler as its end marker; extraction now
+  uses the replacement marker. The focused Notes runtime probe and complete
+  `CompilerMachineInterfaceProbe` pass locally after the fix. Commit
+  `4eaa4fc3` then passed every associated GitHub workflow, including Language,
+  Platform, Notes, XP Runtime, XPImage and aggregate FullTest on Windows,
+  Ubuntu and macOS (run `46145005733`; Language run `46145005580`).
+- [x] Verify all workflows triggered by the migration audit record commit
+  `86121107` before continuing. Aggregate FullTest run `46150054523` completed
+  successfully on Windows, macOS and Ubuntu; the Language, Platform, Notes,
+  XP Runtime and XPImage FullTests and the focused compiler/runtime and
+  documentation guards also completed successfully. This confirms the current
+  regression set only; the published-0.9.3 syntax/runtime inventory and full
+  CLI/MCP observable-behavior comparison remain open.
+

@@ -1,0 +1,15 @@
+Class Base
+    Public value As Long
+End Class
+
+Class Child Extend Base
+    Public Property Get Item(ByVal index As Long) As Long
+        Item = value + index
+    End Property
+End Class
+
+Sub Main()
+    Dim item As New Child
+    item.value = 4
+    Print CStr(item.Item(3))
+End Sub

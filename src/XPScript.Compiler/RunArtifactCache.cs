@@ -43,7 +43,10 @@ internal sealed class RunArtifactCache
             typeof(CompilerDriver).Assembly.ManifestModule.ModuleVersionId.ToString("N"));
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity))).ToLowerInvariant();
 
-        var localRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var localRoot = string.IsNullOrWhiteSpace(configuredRoot)
+            ? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)
+            : Path.GetFullPath(configuredRoot);
         if (string.IsNullOrWhiteSpace(localRoot))
             localRoot = Path.GetTempPath();
 

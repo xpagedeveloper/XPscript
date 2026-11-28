@@ -1,0 +1,13 @@
+Sub Main()
+    Dim failure As Long
+    On Error Resume Next
+    Open "ast-file-runtime-missing.xps" For Input As #71
+    failure = Err
+    On Error GoTo 0
+    If failure = 0 Then Error 6341, "AST Open accepted a missing input path"
+
+    Open "ast-file-runtime-next.tmp" For Output As #72
+    If Loc(72) <> 0 Then Error 6341, "AST Loc was not zero for a new output file"
+    Close #72
+    Print "FILE_RUNTIME_OK"
+End Sub

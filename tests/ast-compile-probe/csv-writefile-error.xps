@@ -1,0 +1,4 @@
+Sub Main()
+    Dim table As New XPCsvDocument
+    Call table.WriteFile("removed.csv")
+End Sub

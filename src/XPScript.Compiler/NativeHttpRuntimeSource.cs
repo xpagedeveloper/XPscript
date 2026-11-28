@@ -9,9 +9,9 @@ internal static class XPScriptNativeHttp
     public static XPScriptHttpRequest CreateRequest() => new();
 }
 
-internal sealed class XPScriptHttpClient : IDisposable
+internal sealed partial class XPScriptHttpClient : IDisposable
 {
-    private const int MaxRequestBodyBytes = 8 * 1024 * 1024;
+    private const long DefaultMaxRequestBodyBytes = 8L * 1024 * 1024;
     private const int MaxResponseBodyBytes = 64 * 1024 * 1024;
 
     private readonly System.Net.Http.HttpClientHandler _handler;
@@ -19,20 +19,25 @@ internal sealed class XPScriptHttpClient : IDisposable
     private readonly XPScriptTlsValidationState _tls = new();
     private readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
     private TimeSpan _timeout = TimeSpan.FromSeconds(30);
+    private long _maxRequestBodyBytes = DefaultMaxRequestBodyBytes;
     private bool _allowPrivateNetwork;
     private bool _disposed;
 
     public XPScriptHttpClient()
     {
-        _handler = new System.Net.Http.HttpClientHandler
+        _handler = new System.Net.Http.HttpClientHandler { AllowAutoRedirect = false };
+        // BrowserHttpHandler does not implement the desktop cookie, decompression,
+        // or certificate-handler switches. Browser requests are governed by the
+        // browser fetch policy and the server-side bridge; keep these settings
+        // desktop-only so invoking [ServerSide] from WASM remains supported.
+        if (!OperatingSystem.IsBrowser())
         {
-            AllowAutoRedirect = false,
-            UseCookies = false,
-            AutomaticDecompression = System.Net.DecompressionMethods.GZip |
-                                     System.Net.DecompressionMethods.Deflate |
-                                     System.Net.DecompressionMethods.Brotli,
-            ServerCertificateCustomValidationCallback = _tls.Validate
-        };
+            _handler.UseCookies = false;
+            _handler.AutomaticDecompression = System.Net.DecompressionMethods.GZip |
+                                             System.Net.DecompressionMethods.Deflate |
+                                             System.Net.DecompressionMethods.Brotli;
+            _handler.ServerCertificateCustomValidationCallback = _tls.Validate;
+        }
         _client = new System.Net.Http.HttpClient(_handler, disposeHandler: false)
         {
             Timeout = System.Threading.Timeout.InfiniteTimeSpan
@@ -62,6 +67,18 @@ internal sealed class XPScriptHttpClient : IDisposable
             {
                 throw new XPScriptRuntimeException(5, "HttpClient.Timeout is outside the supported range.");
             }
+        }
+    }
+
+    public double MaxRequestBodyBytes
+    {
+        get => _maxRequestBodyBytes;
+        set
+        {
+            EnsureNotDisposed();
+            if (value <= 0 || double.IsNaN(value) || double.IsInfinity(value) || value > long.MaxValue)
+                throw new XPScriptRuntimeException(5, "HttpClient.MaxRequestBodyBytes must be a finite value greater than zero.");
+            _maxRequestBodyBytes = checked((long)value);
         }
     }
 
@@ -110,6 +127,14 @@ internal sealed class XPScriptHttpClient : IDisposable
     public XPScriptHttpResponse Put(object? url, object? body) => SendCore(System.Net.Http.HttpMethod.Put, url, body);
     public XPScriptHttpResponse Patch(object? url, object? body) => SendCore(System.Net.Http.HttpMethod.Patch, url, body);
 
+    public void SetBearerToken(object? token) => XPScriptHttpCoreHelpers.SetBearerToken(this, token);
+    public void SetBasicAuth(object? username, object? password) => XPScriptHttpCoreHelpers.SetBasicAuth(this, username, password);
+    public string AddQuery(object? url, object? name, object? value) => XPScriptHttpCoreHelpers.AddQuery(this, url, name, value);
+    public XPScriptJsonDocument GetJson(object? url) => XPScriptHttpJsonHelpers.GetJson(this, url);
+    public XPScriptHttpResponse PostJson(object? url, object? data) => XPScriptHttpJsonHelpers.PostJson(this, url, data);
+    public XPScriptHttpResponse PutJson(object? url, object? data) => XPScriptHttpJsonHelpers.PutJson(this, url, data);
+    public XPScriptHttpResponse PatchJson(object? url, object? data) => XPScriptHttpJsonHelpers.PatchJson(this, url, data);
+    public XPScriptHttpResponse PostForm(object? url, object? data) => XPScriptHttpJsonHelpers.PostForm(this, url, data);
     public XPScriptHttpResponse Send(object? requestValue)
     {
         EnsureNotDisposed();
@@ -118,7 +143,7 @@ internal sealed class XPScriptHttpClient : IDisposable
         var methodText = XPScriptRuntime.CStr(request.Method).Trim().ToUpperInvariant();
         if (methodText.Length == 0 || methodText.Any(ch => !IsHttpMethodTokenCharacter(ch)))
             throw new XPScriptRuntimeException(5, "HTTP method contains an invalid character.");
-        return SendCore(new System.Net.Http.HttpMethod(methodText), request.Url, request.Body, request.Headers);
+        return SendCore(new System.Net.Http.HttpMethod(methodText), request.Url, request.Body, request.Headers, request.MultipartParts);
     }
 
     // Generic request entry point exposed as XPHttpClient.Send(method, url [, body]).
@@ -150,7 +175,7 @@ internal sealed class XPScriptHttpClient : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private XPScriptHttpResponse SendCore(System.Net.Http.HttpMethod method, object? urlValue, object? bodyValue, IReadOnlyDictionary<string, string>? requestHeaders = null)
+    private XPScriptHttpResponse SendCore(System.Net.Http.HttpMethod method, object? urlValue, object? bodyValue, IReadOnlyDictionary<string, string>? requestHeaders = null, IReadOnlyList<XPScriptHttpMultipartPart>? multipartParts = null)
     {
         EnsureNotDisposed();
         _tls.Reset();
@@ -161,11 +186,46 @@ internal sealed class XPScriptHttpClient : IDisposable
         ValidateOutboundTarget(uri, _allowPrivateNetwork);
 
         using var request = new System.Net.Http.HttpRequestMessage(method, uri);
-        if (bodyValue is not null)
+        if (multipartParts is { Count: > 0 })
+        {
+            if (bodyValue is not null) throw new XPScriptRuntimeException(5, "HTTP request cannot combine Body with multipart fields.");
+            var multipart = new System.Net.Http.MultipartFormDataContent();
+            long totalBytes = 0;
+            foreach (var part in multipartParts)
+            {
+                System.Net.Http.HttpContent content;
+                if (part.FilePath is not null)
+                {
+                    byte[] bytes;
+                    try { bytes = File.ReadAllBytes(part.FilePath); }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        multipart.Dispose();
+                        throw new XPScriptRuntimeException(5, "Unable to read multipart file: " + ex.Message);
+                    }
+                    totalBytes = checked(totalBytes + bytes.LongLength);
+                    if (totalBytes > _maxRequestBodyBytes) { multipart.Dispose(); throw new XPScriptRuntimeException(5, "HTTP request body exceeds the 8 MiB limit."); }
+                    content = new System.Net.Http.ByteArrayContent(bytes);
+                    if (!string.IsNullOrWhiteSpace(part.ContentType))
+                        content.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(part.ContentType);
+                    multipart.Add(content, part.Name, Path.GetFileName(part.FilePath));
+                }
+                else
+                {
+                    var value = part.Value ?? string.Empty;
+                    totalBytes = checked(totalBytes + Encoding.UTF8.GetByteCount(value));
+                    if (totalBytes > _maxRequestBodyBytes) { multipart.Dispose(); throw new XPScriptRuntimeException(5, "HTTP request body exceeds the 8 MiB limit."); }
+                    content = new System.Net.Http.StringContent(value, Encoding.UTF8);
+                    multipart.Add(content, part.Name);
+                }
+            }
+            request.Content = multipart;
+        }
+        else if (bodyValue is not null)
         {
             var bodyText = XPScriptRuntime.CStr(bodyValue);
             var requestBytes = Encoding.UTF8.GetByteCount(bodyText);
-            if (requestBytes > MaxRequestBodyBytes)
+            if (requestBytes > _maxRequestBodyBytes)
                 throw new XPScriptRuntimeException(5, "HTTP request body exceeds the 8 MiB limit.");
 
             request.Content = new System.Net.Http.StringContent(bodyText, Encoding.UTF8);
@@ -217,10 +277,10 @@ internal sealed class XPScriptHttpClient : IDisposable
         {
             throw new XPScriptRuntimeException(5, "HTTP request timed out.");
         }
-        catch (System.Net.Http.HttpRequestException)
+        catch (System.Net.Http.HttpRequestException ex)
         {
             if (_tls.LastError.Length > 0) throw _tls.Failure("HTTP request");
-            throw new XPScriptRuntimeException(5, "HTTP request failed.");
+            throw new XPScriptRuntimeException(5, "HTTP request failed: " + ex.Message);
         }
         catch (IOException)
         {
@@ -369,13 +429,36 @@ internal sealed class XPScriptHttpClient : IDisposable
     private static bool IsHttpMethodTokenCharacter(char c) => IsHeaderTokenCharacter(c);
 }
 
+internal sealed record XPScriptHttpMultipartPart(string Name, string? Value, string? FilePath, string? ContentType);
+
 internal sealed class XPScriptHttpRequest
 {
     private readonly Dictionary<string, string> _headers = new(StringComparer.OrdinalIgnoreCase);
     public object? Method { get; set; }
     public object? Url { get; set; }
     public object? Body { get; set; }
+    private readonly List<XPScriptHttpMultipartPart> _multipartParts = [];
     public IReadOnlyDictionary<string, string> Headers => _headers;
+    public IReadOnlyList<XPScriptHttpMultipartPart> MultipartParts => _multipartParts;
+
+    public void AddMultipartField(object? nameValue, object? value)
+    {
+        var name = XPScriptRuntime.CStr(nameValue).Trim();
+        if (name.Length == 0 || name.IndexOfAny(['\r', '\n', '\0', '"']) >= 0)
+            throw new XPScriptRuntimeException(5, "Multipart field name is invalid.");
+        _multipartParts.Add(new XPScriptHttpMultipartPart(name, XPScriptRuntime.CStr(value), null, null));
+    }
+
+    public void AddMultipartFile(object? nameValue, object? pathValue, object? contentTypeValue = null)
+    {
+        var name = XPScriptRuntime.CStr(nameValue).Trim();
+        var path = XPScriptRuntime.CStr(pathValue).Trim();
+        if (name.Length == 0 || name.IndexOfAny(['\r', '\n', '\0', '"']) >= 0)
+            throw new XPScriptRuntimeException(5, "Multipart field name is invalid.");
+        if (path.Length == 0) throw new XPScriptRuntimeException(5, "Multipart file path cannot be empty.");
+        var contentType = contentTypeValue is null ? null : XPScriptRuntime.CStr(contentTypeValue).Trim();
+        _multipartParts.Add(new XPScriptHttpMultipartPart(name, null, path, string.IsNullOrWhiteSpace(contentType) ? null : contentType));
+    }
 
     public void SetHeader(object? nameValue, object? value)
     {
@@ -439,6 +522,7 @@ internal sealed class XPScriptHttpResponse
     public XPScriptHttpPart GetFile(object? indexValue) => Files.Get(indexValue);
 
     public void SaveBodyToFile(object? pathValue) => XPScriptHttpFileStorage.Save(pathValue, RawBodyBytes);
+    public XPScriptJsonDocument Json() => XPScriptHttpCoreHelpers.ResponseJson(this);
 }
 
 internal sealed class XPScriptHttpPartCollection

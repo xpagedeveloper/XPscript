@@ -1,0 +1,13 @@
+Option Declare
+
+Class NotesNavigationMethods
+    Public Function Accept(ByVal view As NotesView, ByVal agent As NotesAgent) As Boolean
+        Accept = (view Is Nothing) And (agent Is Nothing)
+    End Function
+End Class
+
+Sub Main()
+    Dim methods As New NotesNavigationMethods
+    If Not methods.Accept(Nothing, Nothing) Then Error 4266
+    Print "AST_NOTES_VIEW_CLASS_METHOD_OK"
+End Sub

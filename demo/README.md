@@ -187,7 +187,7 @@ xpscriptc .\demo\http\http-client.xps -o .\out\demo-http.exe --runtime=false
 
 Demonstrates `XPHttpClient`, headers, timeout and `XPHttpResponse`.
 
-## XPAi and AITool callbacks
+## XPAi and XPAITool callbacks
 
 Source: [`ai/ai-tool-demo.xps`](ai/ai-tool-demo.xps)
 
@@ -205,7 +205,7 @@ xpscriptc .\demo\ai\ai-tool-demo.xps -o .\out\demo-ai.exe --runtime=false
 .\out\demo-ai.exe
 ```
 
-Demonstrates `AITool`, JSON parameter schemas, compile-time callback validation, callback context, automatic tool execution and `XPAi.Complete()`.
+Demonstrates `XPAITool`, JSON parameter schemas, compile-time callback validation, callback context, automatic tool execution and `XPAi.Complete()`.
 
 ## Managed and native references
 

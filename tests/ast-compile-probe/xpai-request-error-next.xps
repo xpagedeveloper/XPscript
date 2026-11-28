@@ -1,0 +1,14 @@
+Sub Main()
+    Dim ai As New XPAi("http://127.0.0.1:1/v1/chat/completions", "XPAI_SECRET_MARKER")
+    Dim response As Variant
+    Dim code As Long
+    Dim description As String
+    On Error Resume Next
+    Set response = ai.Complete()
+    code = Err
+    description = Error$
+    On Error GoTo 0
+    If code = 0 Then Error 5, "XPAi request unexpectedly succeeded"
+    If InStr(description, "XPAI_SECRET_MARKER") > 0 Then Error 5, "XPAi leaked the API key"
+    Print "XPAI_REQUEST_ERROR_OK"
+End Sub

@@ -1,0 +1,16 @@
+Class Box
+    Public value As Long
+End Class
+
+Class Reader
+    Public Function Read(ByVal box As Box) As Long
+        Read = box.value
+    End Function
+End Class
+
+Sub Main()
+    Dim box As New Box
+    box.value = 7
+    Dim reader As New Reader
+    Print CStr(reader.Read(box))
+End Sub

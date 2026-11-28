@@ -62,6 +62,7 @@ if REFERENCE.exists():
         "| Command | Syntax | Parameters | Description | Example |",
         "| Command/property | Syntax | Parameters | Description | Example |",
         "| Command/option | Syntax | Parameters | Description | Example |",
+        "| Member | Syntax | Parameters | Behavior | Example |",
     }
     for lineno, line in enumerate(lines, 1):
         if line.strip() in accepted_headers:

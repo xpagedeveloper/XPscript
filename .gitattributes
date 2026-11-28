@@ -2,3 +2,4 @@
 # Several compiler postprocessors compare generated source with raw string
 # templates, so checkout-specific CRLF conversion must not change templates.
 *.cs text eol=lf
+tests/OpenApiGeneratorSmoke/run-rest-host-ci.sh text eol=lf

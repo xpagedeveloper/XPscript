@@ -1,0 +1,13 @@
+Sub Main()
+    Dim fileNumber As Integer
+    Dim line As String
+    fileNumber = FreeFile
+    Open "ast-file-text-next.txt" For Output As #fileNumber
+    Print #fileNumber, "TEXT_RUNTIME"
+    Close #fileNumber
+    Open "ast-file-text-next.txt" For Input As #fileNumber
+    Line Input #fileNumber, line
+    If line <> "TEXT_RUNTIME" Then Error 6341, "AST Line Input did not read Print output"
+    Close #fileNumber
+    Print "FILE_TEXT_OK"
+End Sub

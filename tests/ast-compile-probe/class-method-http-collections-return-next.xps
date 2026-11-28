@@ -1,0 +1,17 @@
+Class Reader
+    Public Function Parts() As XPHttpPartCollection
+        Parts = Nothing
+    End Function
+    Public Function Files() As XPHttpFileCollection
+        Files = Nothing
+    End Function
+End Class
+
+Sub Main()
+    Dim reader As New Reader
+    Dim parts As XPHttpPartCollection
+    Dim files As XPHttpFileCollection
+    Set parts = reader.Parts()
+    Set files = reader.Files()
+    Print 1
+End Sub

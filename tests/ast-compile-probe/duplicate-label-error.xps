@@ -1,0 +1,6 @@
+Sub Main()
+first:
+    Print "one"
+first:
+    Print "two"
+End Sub

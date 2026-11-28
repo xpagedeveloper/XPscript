@@ -1,0 +1,189 @@
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim view As NotesView
+    Dim doc As NotesDocument
+    Dim docs As NotesDocumentCollection
+    Dim agentResult As NotesAgentResult
+    Dim noteCollection As NotesNoteCollection
+    Dim access As NotesDatabaseAccess
+    Dim created As NotesDateTime
+    Dim modified As NotesDocumentCollection
+    Dim item As NotesItem
+    Dim name As NotesName
+    Set session = New NotesSession()
+    Print session.UserName
+    Print session.Platform
+    Set db = session.OpenDatabase("", "apps\customers.nsf")
+    Print db.Server
+    Print db.FilePath
+    Print db.FileName
+    Print db.IsOpen
+    Print db.ReplicaID
+    Print db.Title
+    Set view = db.OpenView("Customers")
+    Set doc = db.GetDocumentByNoteId(1)
+    Set doc = db.GetDocumentByUNID("0123456789ABCDEF0123456789ABCDEF")
+    Set docs = db.Search("Form = \"Customer\"")
+    Set docs = db.FullTextSearch("customer")
+    Set agentResult = db.RunAgent("RefreshCustomers", doc)
+    Set doc = db.CreateDocument()
+    Set noteCollection = db.CreateNoteCollection(True)
+    Set docs = db.AllDocuments
+    Set doc = db.GetProfileDocument("Profile")
+    Set created = db.Created
+    Set created = db.LastModified
+    Print db.FileFormat
+    Set access = db.QueryAccess()
+    Set modified = db.GetModifiedDocuments()
+    Set docs = db.CreateDocumentCollection()
+    Call db.RemoveFTIndex()
+    Print doc.NoteID
+    Print doc.UniversalID
+    Print doc.IsNewNote
+    Print doc.IsResponse
+    Print doc.IsDeleted
+    Print doc.IsValid
+    Print doc.HasItem("Form")
+    Print doc.GetValue("Form")
+    Print doc.GetString("Form")
+    Print doc.GetNumber("Amount")
+    Set item = doc.GetFirstItem("Form")
+    Set item = doc.ReplaceItemValue("Status", "Open")
+    Call doc.SetString("Status", "Closed")
+    Call doc.SetNumber("Amount", 10)
+    Call doc.RemoveItem("Status")
+    Call doc.Save()
+    Print doc.Save(False, False, True)
+    Call doc.Send(False, "admin@example.com")
+    Call doc.MakeResponse(doc)
+    Set doc = doc.CopyToDatabase(db)
+    Call doc.CopyAllItems(doc, True)
+    Set item = doc.CopyItem(item, "StatusCopy")
+    Print doc.Remove(True)
+    Print docs.Count
+    Print docs.FirstNoteId
+    Set doc = docs.GetFirstDocument()
+    Set doc = docs.GetLastDocument()
+    Set doc = docs.GetNthDocument(1)
+    Set doc = docs.GetNextDocument(doc)
+    Set doc = docs.GetPrevDocument(doc)
+    Set doc = docs.GetDocument(1)
+    Set docs = docs.Clone()
+    Print docs.Contains(doc)
+    Call docs.Merge(doc)
+    Call docs.Intersect(doc)
+    Call docs.Subtract(doc)
+    Call docs.AddDocument(doc)
+    Call docs.DeleteDocument(doc)
+    Call docs.RemoveDocument(doc)
+    Call docs.MarkAllRead()
+    Call docs.MarkAllRead("CN=Admin/O=Example")
+    Call docs.MarkAllUnread()
+    Call docs.MarkAllUnread("CN=Admin/O=Example")
+    Call docs.PutAllInFolder("Customers")
+    Call docs.PutAllInFolder("Customers", True)
+    Call docs.RemoveAllFromFolder("Customers")
+    Call docs.StampAll("Status", "Open")
+    Call docs.StampAllMulti(doc)
+    Call docs.RemoveAll(True)
+    Print item.Name
+    Print item.Text
+    Print item.Type
+    Print item.ValueLength
+    Print item.IsAuthors
+    Print item.IsEncrypted
+    Print item.IsNames
+    Print item.IsProtected
+    Print item.IsReaders
+    Print item.IsSigned
+    Print item.IsSummary
+    Print item.Values
+    Set created = item.LastModified
+    Set created = item.DateTimeValue
+    Set item = item.CopyToDocument(doc)
+    Set item = item.CopyToDocument(doc, "StatusCopy2")
+    Call item.SaveAttachment("file.txt", "file.txt")
+    Call item.Remove()
+    Print access.Parent.FilePath
+    Print access.UserName
+    Print access.Level
+    Print access.LevelName
+    Print access.AccessFlags
+    Print access.NamesList
+    Print access.Groups
+    Print access.Roles
+    Print access.CannotCreateDocuments
+    Print access.IsServerEntry
+    Print access.CannotDeleteDocuments
+    Print access.CanCreatePersonalAgents
+    Print access.CanCreatePersonalFolders
+    Print access.IsPersonEntry
+    Print access.IsGroupEntry
+    Print access.CanCreateSharedFolders
+    Print access.CanCreateLotusScriptAgents
+    Print access.IsPublicReader
+    Print access.IsPublicWriter
+    Print access.CannotReplicateOrCopy
+    Print view.Name
+    Print view.ColumnNames
+    Print view.Columns
+    Set doc = view.GetDocumentByKey("Customer")
+    Set docs = view.GetAllDocumentsByKey("Customer", True)
+    Set docs = view.FullTextSearch("customer")
+    Set doc = view.GetFirstDocument()
+    Set doc = view.GetNextDocument(doc)
+    view.AutoUpdate = False
+    view.AutoUpdate = True
+    Call view.Refresh()
+    noteCollection.SelectionFormula = "Form = \"Customer\""
+    noteCollection.SelectDocuments = True
+    noteCollection.SelectForms = True
+    noteCollection.SelectAllDataNotes(True)
+    noteCollection.SelectAllDesignElements(False)
+    Print noteCollection.Parent.FilePath
+    Print noteCollection.Count
+    Set created = noteCollection.LastBuildTime
+    Call noteCollection.BuildCollection()
+    Print noteCollection.GetFirstNoteID()
+    Print noteCollection.GetNextNoteID("00000001")
+    Call noteCollection.Add(doc)
+    Call noteCollection.Remove(doc)
+    Call noteCollection.Intersect(docs)
+    Call noteCollection.ClearCollection()
+    Print created.IsValidDate
+    Print created.IsDST
+    Print created.TimeZone
+    Print created.LocalTime
+    Print created.GMTTime
+    Print created.ZoneTime
+    Print created.DateOnly
+    Print created.TimeOnly
+    Call created.SetNow()
+    Call created.SetAnyDate()
+    Call created.SetAnyTime()
+    Call created.AdjustSecond(1)
+    Call created.AdjustMinute(1)
+    Call created.AdjustHour(1)
+    Call created.AdjustDay(1)
+    Call created.AdjustMonth(1)
+    Call created.AdjustYear(1)
+    Print created.TimeDifference(created)
+    Print created.TimeDifferenceDouble(created)
+    Call created.ConvertToZone(0)
+    Set name = session.CreateName("CN=Alice Example/OU=Dev/O=Example")
+    Print name.Source
+    Print name.Canonical
+    Print name.Abbreviated
+    Print name.IsHierarchical
+    Print name.Common
+    Print name.Organization
+    Print name.OrgUnit1
+    Print name.Surname
+    Print name.Given
+    Print name.Initials
+    Print name.Country
+    Print name.Language
+End Sub

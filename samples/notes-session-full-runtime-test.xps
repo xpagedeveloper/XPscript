@@ -7,9 +7,22 @@ Sub Main()
     Dim hashedPassword As String
     Dim oldStringEnvironmentValue As String
     Dim oldNumberEnvironmentValue As String
+    Dim usernameObject As NotesName
 
     failures = 0
     Set session = New NotesSession()
+
+    If session.EffectiveUserName <> session.UserName Then
+        Print "FAIL EffectiveUserName must match the active Notes user"
+        failures = failures + 1
+    End If
+    Set usernameObject = session.UserNameObject
+    If usernameObject Is Nothing Then
+        Print "FAIL UserNameObject must be created from the active Notes user"
+        failures = failures + 1
+    Else
+        Call usernameObject.Recycle()
+    End If
 
     If session Is Nothing Then
         Print "NOTES-SESSION-FULL=FAIL COUNT=1"

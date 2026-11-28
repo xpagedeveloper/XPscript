@@ -1,0 +1,7 @@
+Class Record
+    Public Sub New()
+        Print missing
+    End Sub
+End Class
+Sub Main()
+End Sub

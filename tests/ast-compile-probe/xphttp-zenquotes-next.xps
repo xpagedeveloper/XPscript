@@ -1,0 +1,26 @@
+Option Declare
+
+Sub Main()
+    Dim client As New XPHttpClient
+    client.Timeout = 10
+    Dim response As XPHttpResponse
+    Dim code As Long
+    On Error Resume Next
+    Set response = client.Get("https://zenquotes.io/api/random")
+    code = Err
+    On Error GoTo 0
+    If code <> 0 Then
+        Print "AST_XPHTTP_ZENQUOTES_SKIPPED=NETWORK"
+        Exit Sub
+    End If
+    If response.StatusCode <> 200 Then Error 9853, "ZenQuotes returned HTTP " & CStr(response.StatusCode)
+    Dim document As XPJsonDocument
+    Set document = XPJsonDocument.Parse(response.Body)
+    Dim quotes As XPJsonArray
+    Set quotes = document.Root.AsArray()
+    If quotes.Count < 1 Then Error 9853, "ZenQuotes returned no quote entries"
+    Dim quote As XPJsonObject
+    Set quote = quotes.Get(0)
+    If Len(CStr(quote.Get("q"))) = 0 Or Len(CStr(quote.Get("a"))) = 0 Then Error 9853, "ZenQuotes JSON quote fields were missing"
+    Print "AST_XPHTTP_ZENQUOTES_OK"
+End Sub

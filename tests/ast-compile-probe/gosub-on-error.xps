@@ -1,0 +1,10 @@
+Sub Main()
+    GoSub worker
+    Print "after"
+    Exit Sub
+worker:
+    On Error Resume Next
+    Error 5, "expected"
+    Print "recovered"
+    Return
+End Sub

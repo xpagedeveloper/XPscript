@@ -1,0 +1,7 @@
+Sub Main()
+    Dim db As New XPDBSQLite(":memory:")
+    If Not db.IsOpen Then Error 7101, "SQLite database did not open"
+    Call db.Dispose()
+    If db.IsOpen Then Error 7102, "SQLite Dispose did not close the database"
+    Print "DATABASE_DISPOSE_OK"
+End Sub

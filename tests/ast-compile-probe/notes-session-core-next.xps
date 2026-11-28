@@ -1,0 +1,5 @@
+Sub Main()
+    Dim session As NotesSession
+    If Not (session Is Nothing) Then Error 5, "uninitialized NotesSession"
+    Print "NOTES_SESSION_CORE_OK"
+End Sub

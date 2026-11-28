@@ -1,0 +1,143 @@
+Public evaluations As Long
+Public moduleValue As Long
+Class Counter
+    Public Value As Long
+    Public Sub New(ByRef left As Long, ByRef right As Long, ByVal extra As Long, ByVal fail As Boolean)
+        left = left + 1
+        right = right + extra
+        Value = left + right
+        If fail Then Error 3851, "constructor failed"
+    End Sub
+End Class
+Class Child Extend Counter
+    Public ChildValue As Long
+    Public Sub New(ByRef seed As Long)
+        Call Parent.New(seed, seed, 2, False)
+        seed = seed + 10
+        ChildValue = seed
+    End Sub
+End Class
+Class Snapshot Extend Counter
+    Public ChildValue As Long
+    Public Sub New(ByVal seed As Long)
+        Call Parent.New(seed, seed, 2, False)
+        ChildValue = seed
+    End Sub
+End Class
+Class DefaultMode
+    Public Sub New(value As Long)
+        value = value + 1
+    End Sub
+End Class
+Class Handled
+    Public Sub New(ByRef value As Long)
+        On Error Resume Next
+        Error 3850, "handled"
+        value = value + 7
+        On Error GoTo 0
+    End Sub
+End Class
+Class TextRecord
+    Public Sub New(ByRef value As String)
+        value = value & "x"
+    End Sub
+End Class
+Class Holder
+    Public Value As Long
+    Public Property Get Current As Holder
+        evaluations = evaluations + 1
+        Set Current = Me
+    End Property
+End Class
+Function Position() As Long
+    evaluations = evaluations + 1
+    Position = 0
+End Function
+Function Tag() As String
+    evaluations = evaluations + 1
+    Tag = "x"
+End Function
+Function Mutate(ByVal values List As Long) As Long
+    values("x") = 10
+    Mutate = 2
+End Function
+Sub Through(ByRef value As Long)
+    Dim item As New DefaultMode(value)
+End Sub
+Function Make(Optional ByVal seed As Long = 3, Optional ByVal item As Variant = New DefaultMode(seed)) As Long
+    Make = seed
+End Function
+Sub Main()
+    Dim value As Long = 1
+    Dim item As New Counter(value, value, 2, False)
+    If value <> 4 Or item.Value <> 8 Then Error 6, "shared scalar ByRef alias"
+    Dim child As New Child(value)
+    If value <> 17 Or child.Value <> 14 Or child.ChildValue <> 17 Then Error 6, "Parent.New ByRef forwarding"
+    Dim snapshot As New Snapshot(value)
+    If value <> 17 Or snapshot.ChildValue <> 20 Then Error 6, "ByVal child parameter must remain a snapshot"
+    Call Through(value)
+    If value <> 18 Then Error 6, "parameter forwarding or implicit ByRef mode"
+    Dim handled As New Handled(value)
+    If value <> 25 Then Error 6, "protected constructor ByRef storage"
+    If Make() <> 4 Then Error 6, "constructor reference metadata lost during Optional caller rewriting"
+    moduleValue = 1
+    Set item = New Counter(moduleValue, moduleValue, 2, False)
+    If moduleValue <> 4 Then Error 6, "typed module storage"
+    Dim holder As New Holder
+    holder.Value = 1
+    Set item = New Counter(holder.Current.Value, holder.Value, 2, False)
+    If holder.Value <> 4 Or evaluations <> 1 Then Error 6, "class field receiver evaluated more than once"
+    Dim values(1) As Long
+    values(0) = 1
+    evaluations = 0
+    Set item = New Counter(values(Position()), values(Position()), 2, False)
+    If values(0) <> 4 Or evaluations <> 2 Then Error 6, "array shared address/order"
+    Dim bounded(3 To 4) As Long
+    bounded(3) = 1
+    Set item = New Counter(bounded(3), bounded(3), 2, False)
+    If bounded(3) <> 4 Then Error 6, "nonzero array lower bound"
+    Dim matrix(1 To 2, 3 To 4) As Long
+    matrix(1, 3) = 1
+    Set item = New Counter(matrix(1, 3), matrix(1, 3), 2, False)
+    If matrix(1, 3) <> 4 Then Error 6, "multidimensional address"
+    Dim dynamicValues() As Long
+    ReDim dynamicValues(3 To 4)
+    dynamicValues(3) = 1
+    Set item = New Counter(dynamicValues(3), dynamicValues(3), 2, False)
+    If dynamicValues(3) <> 4 Then Error 6, "dynamic array address"
+    Dim words(1) As String
+    Dim texts List As String
+    words(0) = "a"
+    texts("x") = "b"
+    Dim word As New TextRecord(words(0))
+    Set word = New TextRecord(texts("x"))
+    If words(0) <> "ax" Or texts("x") <> "bx" Then Error 6, "reference-valued scalar slots"
+    Dim entries List As Long
+    entries("x") = 1
+    evaluations = 0
+    Set item = New Counter(entries(Tag()), entries(Tag()), Mutate(entries), False)
+    If entries("x") <> 13 Or item.Value <> 26 Or evaluations <> 2 Then Error 6, "List reference must observe later argument writes"
+    ForAll entry In entries
+        Set item = New Counter(entry, entries("x"), 2, False)
+    End ForAll
+    If entries("x") <> 16 Then Error 6, "ForAll element shared alias"
+    Dim original As Counter = item
+    Dim failure As Long
+    On Error Resume Next
+    Set item = New Counter(entries("x"), entries("x"), 2, True)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3851 Or entries("x") <> 19 Or Not (item Is original) Then Error 6, "exceptional alias updates or old target lost"
+    evaluations = 0
+    On Error Resume Next
+    Set item = New Counter(values(99), values(Position()), 2, False)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 9 Or evaluations <> 0 Then Error 6, "bounds error must precede later argument"
+    On Error Resume Next
+    Set item = New Counter(entries("missing"), entries(Tag()), 2, False)
+    failure = Err
+    On Error GoTo 0
+    If failure = 0 Or evaluations <> 0 Then Error 6, "missing List tag must fail before later arguments"
+    Print "BYREF_CONSTRUCTORS_OK"
+End Sub

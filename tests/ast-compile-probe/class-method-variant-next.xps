@@ -1,0 +1,10 @@
+Class Converter
+    Public Function ConvertValue(ByVal value As Variant) As Long
+        ConvertValue = CLng(value) + 1
+    End Function
+End Class
+
+Sub Main()
+    Dim converter As New Converter
+    Print CStr(converter.ConvertValue(4))
+End Sub

@@ -1,0 +1,14 @@
+Class Record
+    Public Value As Long
+    Public Sub New(Optional ByRef small As Byte, Optional fraction As Double, Optional flag As Boolean, Optional text As String)
+        If CLng(small) <> 0 Or fraction <> 0 Or flag Or text <> "" Then Error 6, "scalar defaults are not zero"
+        small = CByte(1)
+        Value = CLng(small)
+    End Sub
+End Class
+Sub Main()
+    Dim first As New Record()
+    Dim second As New Record()
+    If first.Value <> 1 Or second.Value <> 1 Then Error 6, "omitted slots are not fresh"
+    Print "OPTIONAL_BYREF_ZERO_OK"
+End Sub

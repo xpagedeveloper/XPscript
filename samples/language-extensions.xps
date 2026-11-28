@@ -24,11 +24,11 @@ Class NameBox
     End Property
 End Class
 
-Function MakeGreeting(name As String, Optional prefix As String = "Hello") As String
+Function MakeGreeting(ByVal name As String, Optional ByVal prefix As String = "Hello") As String
     MakeGreeting = prefix & " " & name
 End Function
 
-Sub ShowValue(value As Integer, Optional label As String = "VALUE")
+Sub ShowValue(ByVal value As Integer, Optional ByVal label As String = "VALUE")
     Print label & "=" & CStr(value)
 End Sub
 

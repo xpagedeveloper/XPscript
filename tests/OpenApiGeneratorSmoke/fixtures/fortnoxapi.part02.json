@@ -1,0 +1,4996 @@
+          "customerNumber": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "hasAuditObligations": {
+            "type": "boolean"
+          },
+          "homepage": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "information": {
+            "maxLength": 4096,
+            "type": "string"
+          },
+          "lastReconciliationDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "phone": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "postalAddress": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "postalCity": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "postalCode": {
+            "maxLength": 10,
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "visitingCountry": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "visitingPostalAddress": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "visitingPostalCity": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "visitingPostalCode": {
+            "maxLength": 10,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_UpdatableBureauClientContact": {
+        "properties": {
+          "email": {
+            "maxLength": 100,
+            "pattern": "^$|^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$",
+            "type": "string"
+          },
+          "firstName": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "lastName": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "mobilePhone": {
+            "maxLength": 20,
+            "pattern": "^$|^[0-9+()\\- ]+$",
+            "type": "string"
+          },
+          "phone": {
+            "maxLength": 20,
+            "pattern": "^$|^[0-9+()\\- ]+$",
+            "type": "string"
+          },
+          "roleType": {
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_UpdatableTask": {
+        "properties": {
+          "assignees": {
+            "items": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "NOT_DONE",
+              "DONE"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "bureau_UpdateActivityOptions": {
+        "properties": {
+          "locators": {
+            "$ref": "#/components/schemas/bureau_UpdateActivityOptions_Locators"
+          },
+          "values": {
+            "$ref": "#/components/schemas/bureau_UpdateActivityOptions_Values"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_UpdateActivityOptions_Locators": {
+        "properties": {
+          "activity": {
+            "type": "string"
+          },
+          "periodEnd": {
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_UpdateActivityOptions_Values": {
+        "properties": {
+          "count": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "date": {
+            "format": "date",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "NEW",
+              "MIN",
+              "MAR",
+              "COM",
+              "DON"
+            ],
+            "type": "string"
+          },
+          "titleSuffix": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_UpdateWrapperUpdatableAgreement": {
+        "properties": {
+          "old": {
+            "$ref": "#/components/schemas/bureau_UpdatableAgreement"
+          },
+          "updated": {
+            "$ref": "#/components/schemas/bureau_UpdatableAgreement"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_UpdateWrapperUpdatableBureauClient": {
+        "properties": {
+          "old": {
+            "$ref": "#/components/schemas/bureau_UpdatableBureauClient"
+          },
+          "updated": {
+            "$ref": "#/components/schemas/bureau_UpdatableBureauClient"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_UpdateWrapperUpdatableBureauClientContact": {
+        "properties": {
+          "old": {
+            "$ref": "#/components/schemas/bureau_UpdatableBureauClientContact"
+          },
+          "updated": {
+            "$ref": "#/components/schemas/bureau_UpdatableBureauClientContact"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_UpdateWrapperUpdatableTask": {
+        "properties": {
+          "old": {
+            "$ref": "#/components/schemas/bureau_UpdatableTask"
+          },
+          "updated": {
+            "$ref": "#/components/schemas/bureau_UpdatableTask"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_User": {
+        "properties": {
+          "cellular": {
+            "type": "string"
+          },
+          "civicNo": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "tenantId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "userId": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_UserWithClientInfo": {
+        "properties": {
+          "clientId": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sysAdmin": {
+            "type": "boolean"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/bureau_Tag"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_UsersFilter": {
+        "properties": {
+          "excludeTaggedUsers": {
+            "type": "boolean"
+          },
+          "nameFilter": {
+            "type": "string"
+          },
+          "statuses": {
+            "items": {
+              "enum": [
+                "ACTIVE",
+                "INACTIVE",
+                "DELETED",
+                "CONSULTANT",
+                "DELETED_CONSULTANT",
+                "TIME_USER",
+                "DELETED_TIME_USER",
+                "ACTIVE_SUPPORT",
+                "INACTIVE_SUPPORT",
+                "SERVICE_USER",
+                "API_USER",
+                "DELETED_API_USER"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "bureau_WebException": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fileattachments_Attachment": {
+        "properties": {
+          "entityId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "entityType": {
+            "enum": [
+              "OF",
+              "O",
+              "F",
+              "C",
+              "LGR_IO",
+              "LGR_IG"
+            ],
+            "type": "string"
+          },
+          "fileId": {
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "includeOnSend": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "fileattachments_NumberOfAttachments": {
+        "properties": {
+          "entityId": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "numberOfAttachments": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entityId"
+        ],
+        "type": "object"
+      },
+      "fileattachments_WebException": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AdjustAssetValue_Wrap": {
+        "properties": {
+          "Asset": {
+            "$ref": "#/components/schemas/fortnox_Anl_AssetActionsSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetActionsSingleItem": {
+        "properties": {
+          "Amount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AssetIds": {
+            "items": {
+              "format": "int32",
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "Comment": {
+            "type": "string"
+          },
+          "Date": {
+            "format": "date",
+            "type": "string"
+          },
+          "DepreciateUntil": {
+            "format": "date",
+            "type": "string"
+          },
+          "FinancialYearId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Percentage": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Price": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "TransactionDate": {
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetHistorySingleItem": {
+        "properties": {
+          "Amount": {
+            "type": "string"
+          },
+          "Date": {
+            "format": "date",
+            "type": "string"
+          },
+          "EventId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Notes": {
+            "type": "string"
+          },
+          "SupplierInvoice": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "UserId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "UserName": {
+            "type": "string"
+          },
+          "VoucherNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "VoucherSeries": {
+            "type": "string"
+          },
+          "VoucherYear": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetTypesListResponse_Wrap": {
+        "properties": {
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          },
+          "Types": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Anl_AssetTypesResponse"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetTypesResponse": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "AccountAsset": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountAssetId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountDepreciation": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountDepreciationId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountOffsetSale": {
+            "type": "string"
+          },
+          "AccountOffsetSaleId": {
+            "type": "string"
+          },
+          "AccountRevaluation": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountRevaluationId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountSaleLoss": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountSaleLossId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountSaleWin": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountSaleWinId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountValueLoss": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountValueLossId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountWriteDown": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountWriteDownAck": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountWriteDownAckId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccountWriteDownId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "InUse": {
+            "type": "boolean"
+          },
+          "Notes": {
+            "type": "string"
+          },
+          "Number": {
+            "type": "string"
+          },
+          "Type": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetTypesSingleResponse_Wrap": {
+        "properties": {
+          "Type": {
+            "$ref": "#/components/schemas/fortnox_Anl_AssetTypesResponse"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetsActionResponse": {
+        "properties": {
+          "Assets": {
+            "$ref": "#/components/schemas/fortnox_Anl_AssetsSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetsDepreciationResponse": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "FinancialYear": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "VoucherNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "VoucherSeries": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetsDepreciationResponse_Wrap": {
+        "properties": {
+          "AssetsDepreciation": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Anl_AssetsDepreciationResponse"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetsListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "AcquisitionDate": {
+            "type": "string"
+          },
+          "AcquisitionStart": {
+            "type": "string"
+          },
+          "AcquisitionValue": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Brand": {
+            "type": "string"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Department": {
+            "type": "string"
+          },
+          "DepreciateToResidualValue": {
+            "format": "float",
+            "type": "number"
+          },
+          "DepreciatedTo": {
+            "type": "string"
+          },
+          "DepreciationFinal": {
+            "type": "string"
+          },
+          "DepreciationMethod": {
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Group": {
+            "type": "string"
+          },
+          "History": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Anl_AssetHistorySingleItem"
+            },
+            "type": "array"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "InsuredNumber": {
+            "type": "string"
+          },
+          "InsuredWith": {
+            "type": "string"
+          },
+          "ManualOb": {
+            "type": "string"
+          },
+          "Notes": {
+            "type": "string"
+          },
+          "Number": {
+            "type": "string"
+          },
+          "Placement": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "Reference": {
+            "type": "string"
+          },
+          "Room": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "StatusId": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "TypeId": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetsListItem_Wrap": {
+        "properties": {
+          "Assets": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Anl_AssetsListItem"
+            },
+            "type": "array"
+          },
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetsSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "AcquisitionDate": {
+            "type": "string"
+          },
+          "AcquisitionStart": {
+            "type": "string"
+          },
+          "AcquisitionValue": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Brand": {
+            "type": "string"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Department": {
+            "type": "string"
+          },
+          "DepreciateToResidualValue": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "DepreciatedTo": {
+            "type": "string"
+          },
+          "DepreciationFinal": {
+            "type": "string"
+          },
+          "DepreciationMethod": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Group": {
+            "type": "string"
+          },
+          "History": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Anl_AssetHistorySingleItem"
+            },
+            "type": "array"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "InsuredNumber": {
+            "type": "string"
+          },
+          "InsuredWith": {
+            "type": "string"
+          },
+          "ManualOb": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Notes": {
+            "type": "string"
+          },
+          "Number": {
+            "type": "string"
+          },
+          "Placement": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "Reference": {
+            "type": "string"
+          },
+          "Room": {
+            "type": "string"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "StatusId": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "TypeId": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetsSingleItemResponse_Wrap": {
+        "properties": {
+          "Assets": {
+            "$ref": "#/components/schemas/fortnox_Anl_AssetsSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetsSinglePayloadItem": {
+        "properties": {
+          "AcquisitionDate": {
+            "type": "string"
+          },
+          "AcquisitionStart": {
+            "type": "string"
+          },
+          "AcquisitionValue": {
+            "type": "string"
+          },
+          "Brand": {
+            "type": "string"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Department": {
+            "type": "string"
+          },
+          "DepreciateToResidualValue": {
+            "format": "float",
+            "type": "number"
+          },
+          "DepreciationFinal": {
+            "type": "string"
+          },
+          "DepreciationMethod": {
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Group": {
+            "type": "string"
+          },
+          "InsuredNumber": {
+            "type": "string"
+          },
+          "InsuredWith": {
+            "type": "string"
+          },
+          "Notes": {
+            "type": "string"
+          },
+          "Number": {
+            "type": "string"
+          },
+          "Placement": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "Reference": {
+            "type": "string"
+          },
+          "Room": {
+            "type": "string"
+          },
+          "TypeId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_AssetsSinglePayloadItem_Wrap": {
+        "properties": {
+          "Asset": {
+            "$ref": "#/components/schemas/fortnox_Anl_AssetsSinglePayloadItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_CreateAssetType": {
+        "properties": {
+          "AccountAssetId": {
+            "type": "string"
+          },
+          "AccountDepreciationId": {
+            "type": "string"
+          },
+          "AccountOffsetSaleId": {
+            "type": "string"
+          },
+          "AccountRevaluationId": {
+            "type": "string"
+          },
+          "AccountSaleLossId": {
+            "type": "string"
+          },
+          "AccountSaleWinId": {
+            "type": "string"
+          },
+          "AccountValueLossId": {
+            "type": "string"
+          },
+          "AccountWriteDownAckId": {
+            "type": "string"
+          },
+          "AccountWriteDownId": {
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Notes": {
+            "type": "string"
+          },
+          "Number": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_CreateAssetType_Wrap": {
+        "properties": {
+          "AssetType": {
+            "$ref": "#/components/schemas/fortnox_Anl_CreateAssetType"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_Depreciation_Wrap": {
+        "properties": {
+          "Asset": {
+            "$ref": "#/components/schemas/fortnox_Anl_AssetActionsSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_ScrapAsset_Wrap": {
+        "properties": {
+          "Asset": {
+            "$ref": "#/components/schemas/fortnox_Anl_AssetActionsSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_SellAsset_Wrap": {
+        "properties": {
+          "Asset": {
+            "$ref": "#/components/schemas/fortnox_Anl_AssetActionsSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_UpdateAssetType": {
+        "properties": {
+          "AccountAssetId": {
+            "type": "string"
+          },          "AccountDepreciationId": {
+            "type": "string"
+          },
+          "AccountOffsetSaleId": {
+            "type": "string"
+          },
+          "AccountRevaluationId": {
+            "type": "string"
+          },
+          "AccountSaleLossId": {
+            "type": "string"
+          },
+          "AccountSaleWinId": {
+            "type": "string"
+          },
+          "AccountValueLossId": {
+            "type": "string"
+          },
+          "AccountWriteDownAckId": {
+            "type": "string"
+          },
+          "AccountWriteDownId": {
+            "type": "string"
+          },
+          "AcquisitionDate": {
+            "type": "string"
+          },
+          "AcquisitionStart": {
+            "type": "string"
+          },
+          "AcquisitionValue": {
+            "type": "string"
+          },
+          "Brand": {
+            "type": "string"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Department": {
+            "type": "string"
+          },
+          "DepreciateToResidualValue": {
+            "format": "float",
+            "type": "number"
+          },
+          "DepreciationFinal": {
+            "type": "string"
+          },
+          "DepreciationMethod": {
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Group": {
+            "type": "string"
+          },
+          "InsuredNumber": {
+            "type": "string"
+          },
+          "InsuredWith": {
+            "type": "string"
+          },
+          "Notes": {
+            "type": "string"
+          },
+          "Number": {
+            "type": "string"
+          },
+          "Placement": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "Reference": {
+            "type": "string"
+          },
+          "Room": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "TypeId": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Anl_UpdateAssetType_Wrap": {
+        "properties": {
+          "AssetType": {
+            "$ref": "#/components/schemas/fortnox_Anl_UpdateAssetType"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleBundleItemSingleItem": {
+        "properties": {
+          "ArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "FixedPrice": {
+            "type": "boolean"
+          },
+          "Quantity": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleBundleItemSinglePayloadItem": {
+        "properties": {
+          "ArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "FixedPrice": {
+            "type": "boolean"
+          },
+          "Quantity": {
+            "format": "double",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleBundleSingleItem": {
+        "properties": {
+          "Comment": {
+            "type": "string"
+          },
+          "PriceAdjustmentRow": {
+            "$ref": "#/components/schemas/fortnox_ArticleBundleSubItemRowSingleItem"
+          },
+          "SubItems": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ArticleBundleItemSingleItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleBundleSinglePayloadItem": {
+        "properties": {
+          "Comment": {
+            "type": "string"
+          },
+          "PriceAdjustmentRow": {
+            "$ref": "#/components/schemas/fortnox_ArticleBundleSubItemRowSinglePayloadItem"
+          },
+          "SubItems": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ArticleBundleItemSinglePayloadItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleBundleSubItemRowSingleItem": {
+        "properties": {
+          "ConstructionAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Description": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "EUAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "EUVATAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "EuAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "EuVatAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ExportAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "SalesAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "VAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "Vat": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleBundleSubItemRowSinglePayloadItem": {
+        "properties": {
+          "ConstructionAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Description": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "EUAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "EUVATAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "EuAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "EuVatAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ExportAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "SalesAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "VAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "Vat": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Active": {
+            "type": "boolean"
+          },
+          "ArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Bulky": {
+            "type": "boolean"
+          },
+          "CommodityCode": {
+            "type": "string"
+          },
+          "ConstructionAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "CostCalculationMethod": {
+            "type": "string"
+          },
+          "DefaultStockLocation": {
+            "type": "string"
+          },
+          "DefaultStockPoint": {
+            "type": "string"
+          },
+          "Depth": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "DirectCost": {
+            "format": "float",
+            "type": "number"
+          },
+          "DisposableQuantity": {
+            "type": "string"
+          },
+          "EAN": {
+            "maxLength": 30,
+            "type": "string"
+          },
+          "EUAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "EUVATAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Expired": {
+            "type": "boolean"
+          },
+          "ExportAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "FreightCost": {
+            "format": "float",
+            "type": "number"
+          },
+          "Height": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Housework": {
+            "type": "boolean"
+          },
+          "HouseworkType": {
+            "type": "string"
+          },
+          "Manufacturer": {
+            "type": "string"
+          },
+          "ManufacturerArticleNumber": {
+            "type": "string"
+          },
+          "Note": {
+            "type": "string"
+          },
+          "OtherCost": {
+            "format": "float",
+            "type": "number"
+          },
+          "PurchaseAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "PurchasePrice": {
+            "type": "string"
+          },
+          "QuantityInStock": {
+            "format": "double",
+            "type": "number"
+          },
+          "ReservedQuantity": {
+            "type": "string"
+          },
+          "SalesAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "SalesPrice": {
+            "type": "string"
+          },
+          "StockAccount": {
+            "type": "string"
+          },
+          "StockChangeAccount": {
+            "type": "string"
+          },
+          "StockGoods": {
+            "type": "boolean"
+          },
+          "StockPlace": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "StockValue": {
+            "type": "string"
+          },
+          "StockWarning": {
+            "format": "float",
+            "type": "number"
+          },
+          "SupplierName": {
+            "type": "string"
+          },
+          "SupplierNumber": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "Unit": {
+            "type": "string"
+          },
+          "VAT": {
+            "type": "string"
+          },
+          "WebshopArticle": {
+            "type": "boolean"
+          },
+          "Weight": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Width": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_ArticleListItem_Wrap": {
+        "properties": {
+          "Articles": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ArticleListItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Active": {
+            "type": "boolean"
+          },
+          "ArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Bulky": {
+            "type": "boolean"
+          },
+          "CommodityCode": {
+            "type": "string"
+          },
+          "ConstructionAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "CostCalculationMethod": {
+            "type": "string"
+          },
+          "DefaultStockLocation": {
+            "type": "string"
+          },
+          "DefaultStockPoint": {
+            "type": "string"
+          },
+          "Depth": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "DirectCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "DisposableQuantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "EAN": {
+            "maxLength": 30,
+            "type": "string"
+          },
+          "EUAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "EUVATAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Expired": {
+            "type": "boolean"
+          },
+          "ExportAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "FreightCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "Height": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Housework": {
+            "type": "boolean"
+          },
+          "HouseworkType": {
+            "enum": [
+              "CONSTRUCTION",
+              "ELECTRICITY",
+              "GLASSMETALWORK",
+              "GROUNDDRAINAGEWORK",
+              "MASONRY",
+              "PAINTINGWALLPAPERING",
+              "HVAC",
+              "CLEANING",
+              "TEXTILECLOTHING",
+              "COOKING",
+              "SNOWPLOWING",
+              "GARDENING",
+              "BABYSITTING",
+              "OTHERCARE",
+              "TUTORING",
+              "FURNISHING",
+              "HOMEMAINTENANCE",
+              "TRANSPORTATIONSERVICES",
+              "WASHINGANDCAREOFCLOTHING",
+              "SOLARCELLS",
+              "STORAGESELFPRODUCEDELECTRICITY",
+              "CHARGINGSTATIONELECTRICVEHICLE",
+              "EMPTYHOUSEWORK",
+              "OTHERCOSTS"
+            ],
+            "type": "string"
+          },
+          "Manufacturer": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "ManufacturerArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Note": {
+            "maxLength": 10000,
+            "type": "string"
+          },
+          "OtherCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "PurchaseAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "PurchasePrice": {
+            "format": "double",
+            "type": "number"
+          },
+          "QuantityInStock": {
+            "format": "double",
+            "type": "number"
+          },
+          "ReservedQuantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "SalesAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "SalesPrice": {
+            "format": "double",
+            "type": "number"
+          },
+          "StockAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "StockChangeAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "StockGoods": {
+            "type": "boolean"
+          },
+          "StockPlace": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "StockValue": {
+            "format": "double",
+            "type": "number"
+          },
+          "StockWarning": {
+            "format": "double",
+            "type": "number"
+          },
+          "SupplierName": {
+            "type": "string"
+          },
+          "SupplierNumber": {
+            "type": "string"
+          },
+          "Type": {
+            "enum": [
+              "STOCK",
+              "SERVICE"
+            ],
+            "type": "string"
+          },
+          "Unit": {
+            "type": "string"
+          },
+          "VAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "WebshopArticle": {
+            "type": "boolean"
+          },
+          "Weight": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Width": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_ArticleSingleItem_Wrap": {
+        "properties": {
+          "Article": {
+            "$ref": "#/components/schemas/fortnox_ArticleSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleSinglePayloadItem": {
+        "properties": {
+          "Active": {
+            "type": "boolean"
+          },
+          "ArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Bulky": {
+            "type": "boolean"
+          },
+          "ConstructionAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "CostCalculationMethod": {
+            "type": "string"
+          },
+          "DefaultStockLocation": {
+            "type": "string"
+          },
+          "DefaultStockPoint": {
+            "type": "string"
+          },
+          "Depth": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "DirectCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "DisposableQuantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "EAN": {
+            "maxLength": 30,
+            "type": "string"
+          },
+          "EUAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "EUVATAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Expired": {
+            "type": "boolean"
+          },
+          "ExportAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "FreightCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "Height": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Housework": {
+            "type": "boolean"
+          },
+          "HouseworkType": {
+            "enum": [
+              "CONSTRUCTION",
+              "ELECTRICITY",
+              "GLASSMETALWORK",
+              "GROUNDDRAINAGEWORK",
+              "MASONRY",
+              "PAINTINGWALLPAPERING",
+              "HVAC",
+              "CLEANING",
+              "TEXTILECLOTHING",
+              "COOKING",
+              "SNOWPLOWING",
+              "GARDENING",
+              "BABYSITTING",
+              "OTHERCARE",
+              "TUTORING",
+              "FURNISHING",
+              "HOMEMAINTENANCE",
+              "TRANSPORTATIONSERVICES",
+              "WASHINGANDCAREOFCLOTHING",
+              "SOLARCELLS",
+              "STORAGESELFPRODUCEDELECTRICITY",
+              "CHARGINGSTATIONELECTRICVEHICLE",
+              "EMPTYHOUSEWORK",
+              "OTHERCOSTS"
+            ],
+            "type": "string"
+          },
+          "Manufacturer": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "ManufacturerArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Note": {
+            "maxLength": 10000,
+            "type": "string"
+          },
+          "OtherCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "PurchaseAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "PurchasePrice": {
+            "format": "double",
+            "type": "number"
+          },
+          "QuantityInStock": {
+            "format": "double",
+            "type": "number"
+          },
+          "ReservedQuantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "SalesAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "SalesPrice": {
+            "format": "double",
+            "type": "number"
+          },
+          "StockAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "StockChangeAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "StockGoods": {
+            "type": "boolean"
+          },
+          "StockPlace": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "StockValue": {
+            "format": "double",
+            "type": "number"
+          },
+          "StockWarning": {
+            "format": "double",
+            "type": "number"
+          },
+          "SupplierName": {
+            "type": "string"
+          },
+          "SupplierNumber": {
+            "type": "string"
+          },
+          "Type": {
+            "enum": [
+              "STOCK",
+              "SERVICE"
+            ],
+            "type": "string"
+          },
+          "Unit": {
+            "type": "string"
+          },
+          "VAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "WebshopArticle": {
+            "type": "boolean"
+          },
+          "Weight": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Width": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_ArticleSinglePayloadItem_Wrap": {
+        "properties": {
+          "Article": {
+            "$ref": "#/components/schemas/fortnox_ArticleSinglePayloadItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleV2ListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Active": {
+            "type": "boolean"
+          },
+          "ArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Bulky": {
+            "type": "boolean"
+          },
+          "Bundle": {
+            "$ref": "#/components/schemas/fortnox_ArticleBundleSingleItem"
+          },
+          "BundleArticle": {
+            "type": "boolean"
+          },
+          "CommodityCode": {
+            "type": "string"
+          },
+          "ConstructionAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "CostCalculationMethod": {
+            "type": "string"
+          },
+          "DefaultStockLocation": {
+            "type": "string"
+          },
+          "DefaultStockPoint": {
+            "type": "string"
+          },
+          "Depth": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "DirectCost": {
+            "format": "float",
+            "type": "number"
+          },
+          "DisposableQuantity": {
+            "type": "string"
+          },
+          "EAN": {
+            "maxLength": 30,
+            "type": "string"
+          },
+          "EUAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "EUVATAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Expired": {
+            "type": "boolean"
+          },
+          "ExportAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "FreightCost": {
+            "format": "float",
+            "type": "number"
+          },
+          "Height": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Housework": {
+            "type": "boolean"
+          },
+          "HouseworkType": {            "type": "string"
+          },
+          "Manufacturer": {
+            "type": "string"
+          },
+          "ManufacturerArticleNumber": {
+            "type": "string"
+          },
+          "Note": {
+            "type": "string"
+          },
+          "OtherCost": {
+            "format": "float",
+            "type": "number"
+          },
+          "PurchaseAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "PurchasePrice": {
+            "type": "string"
+          },
+          "QuantityInStock": {
+            "format": "double",
+            "type": "number"
+          },
+          "ReservedQuantity": {
+            "type": "string"
+          },
+          "SalesAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "SalesPrice": {
+            "type": "string"
+          },
+          "StockAccount": {
+            "type": "string"
+          },
+          "StockChangeAccount": {
+            "type": "string"
+          },
+          "StockGoods": {
+            "type": "boolean"
+          },
+          "StockPlace": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "StockValue": {
+            "type": "string"
+          },
+          "StockWarning": {
+            "format": "float",
+            "type": "number"
+          },
+          "SupplierName": {
+            "type": "string"
+          },
+          "SupplierNumber": {
+            "type": "string"
+          },
+          "Type": {
+            "type": "string"
+          },
+          "Unit": {
+            "type": "string"
+          },
+          "VAT": {
+            "type": "string"
+          },
+          "WebshopArticle": {
+            "type": "boolean"
+          },
+          "Weight": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Width": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_ArticleV2ListItem_Wrap": {
+        "properties": {
+          "Articles": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ArticleV2ListItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleV2SingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Active": {
+            "type": "boolean"
+          },
+          "ArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Bulky": {
+            "type": "boolean"
+          },
+          "Bundle": {
+            "$ref": "#/components/schemas/fortnox_ArticleBundleSingleItem"
+          },
+          "BundleArticle": {
+            "type": "boolean"
+          },
+          "CommodityCode": {
+            "type": "string"
+          },
+          "ConstructionAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "CostCalculationMethod": {
+            "type": "string"
+          },
+          "DefaultStockLocation": {
+            "type": "string"
+          },
+          "DefaultStockPoint": {
+            "type": "string"
+          },
+          "Depth": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "DirectCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "DisposableQuantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "EAN": {
+            "maxLength": 30,
+            "type": "string"
+          },
+          "EUAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "EUVATAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Expired": {
+            "type": "boolean"
+          },
+          "ExportAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "FreightCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "Height": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Housework": {
+            "type": "boolean"
+          },
+          "HouseworkType": {
+            "enum": [
+              "CONSTRUCTION",
+              "ELECTRICITY",
+              "GLASSMETALWORK",
+              "GROUNDDRAINAGEWORK",
+              "MASONRY",
+              "PAINTINGWALLPAPERING",
+              "HVAC",
+              "CLEANING",
+              "TEXTILECLOTHING",
+              "COOKING",
+              "SNOWPLOWING",
+              "GARDENING",
+              "BABYSITTING",
+              "OTHERCARE",
+              "TUTORING",
+              "FURNISHING",
+              "HOMEMAINTENANCE",
+              "TRANSPORTATIONSERVICES",
+              "WASHINGANDCAREOFCLOTHING",
+              "SOLARCELLS",
+              "STORAGESELFPRODUCEDELECTRICITY",
+              "CHARGINGSTATIONELECTRICVEHICLE",
+              "EMPTYHOUSEWORK",
+              "OTHERCOSTS"
+            ],
+            "type": "string"
+          },
+          "Manufacturer": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "ManufacturerArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Note": {
+            "maxLength": 10000,
+            "type": "string"
+          },
+          "OtherCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "PurchaseAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "PurchasePrice": {
+            "format": "double",
+            "type": "number"
+          },
+          "QuantityInStock": {
+            "format": "double",
+            "type": "number"
+          },
+          "ReservedQuantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "SalesAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "SalesPrice": {
+            "format": "double",
+            "type": "number"
+          },
+          "StockAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "StockChangeAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "StockGoods": {
+            "type": "boolean"
+          },
+          "StockPlace": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "StockValue": {
+            "format": "double",
+            "type": "number"
+          },
+          "StockWarning": {
+            "format": "double",
+            "type": "number"
+          },
+          "SupplierName": {
+            "type": "string"
+          },
+          "SupplierNumber": {
+            "type": "string"
+          },
+          "Type": {
+            "enum": [
+              "STOCK",
+              "SERVICE"
+            ],
+            "type": "string"
+          },
+          "Unit": {
+            "type": "string"
+          },
+          "VAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "WebshopArticle": {
+            "type": "boolean"
+          },
+          "Weight": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Width": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_ArticleV2SingleItem_Wrap": {
+        "properties": {
+          "Article": {
+            "$ref": "#/components/schemas/fortnox_ArticleV2SingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ArticleV2SinglePayloadItem": {
+        "properties": {
+          "Active": {
+            "type": "boolean"
+          },
+          "ArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Bulky": {
+            "type": "boolean"
+          },
+          "Bundle": {
+            "$ref": "#/components/schemas/fortnox_ArticleBundleSinglePayloadItem"
+          },
+          "BundleArticle": {
+            "type": "boolean"
+          },
+          "ConstructionAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "CostCalculationMethod": {
+            "type": "string"
+          },
+          "DefaultStockLocation": {
+            "type": "string"
+          },
+          "DefaultStockPoint": {
+            "type": "string"
+          },
+          "Depth": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "DirectCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "DisposableQuantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "EAN": {
+            "maxLength": 30,
+            "type": "string"
+          },
+          "EUAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "EUVATAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Expired": {
+            "type": "boolean"
+          },
+          "ExportAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "FreightCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "Height": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Housework": {
+            "type": "boolean"
+          },
+          "HouseworkType": {
+            "enum": [
+              "CONSTRUCTION",
+              "ELECTRICITY",
+              "GLASSMETALWORK",
+              "GROUNDDRAINAGEWORK",
+              "MASONRY",
+              "PAINTINGWALLPAPERING",
+              "HVAC",
+              "CLEANING",
+              "TEXTILECLOTHING",
+              "COOKING",
+              "SNOWPLOWING",
+              "GARDENING",
+              "BABYSITTING",
+              "OTHERCARE",
+              "TUTORING",
+              "FURNISHING",
+              "HOMEMAINTENANCE",
+              "TRANSPORTATIONSERVICES",
+              "WASHINGANDCAREOFCLOTHING",
+              "SOLARCELLS",
+              "STORAGESELFPRODUCEDELECTRICITY",
+              "CHARGINGSTATIONELECTRICVEHICLE",
+              "EMPTYHOUSEWORK",
+              "OTHERCOSTS"
+            ],
+            "type": "string"
+          },
+          "Manufacturer": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "ManufacturerArticleNumber": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "Note": {
+            "maxLength": 10000,
+            "type": "string"
+          },
+          "OtherCost": {
+            "format": "double",
+            "type": "number"
+          },
+          "PurchaseAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "PurchasePrice": {
+            "format": "double",
+            "type": "number"
+          },
+          "QuantityInStock": {
+            "format": "double",
+            "type": "number"
+          },
+          "ReservedQuantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "SalesAccount": {
+            "format": "int32",
+            "maximum": 99999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "SalesPrice": {
+            "format": "double",
+            "type": "number"
+          },
+          "StockAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "StockChangeAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "StockGoods": {
+            "type": "boolean"
+          },
+          "StockPlace": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "StockValue": {
+            "format": "double",
+            "type": "number"
+          },
+          "StockWarning": {
+            "format": "double",
+            "type": "number"
+          },
+          "SupplierName": {
+            "type": "string"
+          },
+          "SupplierNumber": {
+            "type": "string"
+          },
+          "Type": {
+            "enum": [
+              "STOCK",
+              "SERVICE"
+            ],
+            "type": "string"
+          },
+          "Unit": {
+            "type": "string"
+          },
+          "VAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "WebshopArticle": {
+            "type": "boolean"
+          },
+          "Weight": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "Width": {
+            "format": "int32",
+            "maximum": 999999999,
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Description"
+        ],
+        "type": "object"
+      },
+      "fortnox_ArticleV2SinglePayloadItem_Wrap": {
+        "properties": {
+          "Article": {
+            "$ref": "#/components/schemas/fortnox_ArticleV2SinglePayloadItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_AccountChartListItem_Wrap": {
+        "properties": {
+          "AccountCharts": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_AccountChartSingleItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_AccountChartSingleItem": {
+        "properties": {
+          "Name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_AccountListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Active": {
+            "type": "boolean"
+          },
+          "BalanceBroughtForward": {
+            "format": "double",
+            "type": "number"
+          },
+          "BalanceCarriedForward": {
+            "format": "float",
+            "type": "number"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "CostCenterSettings": {
+            "enum": [
+              "ALLOWED",
+              "MANDATORY",
+              "NOTALLOWED"
+            ],
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Number": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "OpeningQuantities": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_AccountingQuantityBalancesSingleItem"
+            },
+            "type": "array"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "ProjectSettings": {
+            "enum": [
+              "ALLOWED",
+              "MANDATORY",
+              "NOTALLOWED"
+            ],
+            "type": "string"
+          },
+          "QuantitySettings": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "QuantityUnit": {
+            "type": "string"
+          },
+          "SRU": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "TransactionInformation": {
+            "type": "string"
+          },
+          "TransactionInformationSettings": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "VATCode": {
+            "type": "string"
+          },
+          "Year": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Description",
+          "Number"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_AccountListItem_Wrap": {
+        "properties": {
+          "Accounts": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_AccountListItem"
+            },
+            "type": "array"
+          },
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_AccountSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Active": {
+            "type": "boolean"
+          },
+          "BalanceBroughtForward": {
+            "format": "double",
+            "type": "number"
+          },
+          "BalanceCarriedForward": {
+            "format": "double",
+            "type": "number"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "CostCenterSettings": {
+            "enum": [
+              "ALLOWED",
+              "MANDATORY",
+              "NOTALLOWED"
+            ],
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Number": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "OpeningQuantities": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_AccountingQuantityBalancesSingleItem"
+            },
+            "type": "array"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "ProjectSettings": {
+            "enum": [
+              "ALLOWED",
+              "MANDATORY",
+              "NOTALLOWED"
+            ],
+            "type": "string"
+          },
+          "QuantitySettings": {
+            "enum": [
+              "ALLOWED",
+              "MANDATORY",
+              "NOTALLOWED"
+            ],
+            "type": "string"
+          },
+          "QuantityUnit": {
+            "type": "string"
+          },
+          "SRU": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "TransactionInformation": {
+            "type": "string"
+          },
+          "TransactionInformationSettings": {
+            "enum": [
+              "ALLOWED",
+              "MANDATORY",
+              "NOTALLOWED"
+            ],
+            "type": "string"
+          },
+          "VATCode": {
+            "type": "string"
+          },
+          "Year": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Description",
+          "Number"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_AccountSingleItem_Wrap": {
+        "properties": {
+          "Account": {
+            "$ref": "#/components/schemas/fortnox_Bf_AccountSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_AccountSinglePayloadItem": {
+        "properties": {
+          "Active": {
+            "type": "boolean"
+          },
+          "BalanceBroughtForward": {
+            "format": "double",
+            "type": "number"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "CostCenterSettings": {
+            "enum": [
+              "ALLOWED",
+              "MANDATORY",
+              "NOTALLOWED"
+            ],
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Number": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "OpeningQuantities": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_AccountingQuantityBalancesSinglePayloadItem"
+            },
+            "type": "array"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "ProjectSettings": {
+            "enum": [
+              "ALLOWED",
+              "MANDATORY",
+              "NOTALLOWED"
+            ],
+            "type": "string"
+          },
+          "SRU": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "TransactionInformation": {
+            "type": "string"
+          },
+          "TransactionInformationSettings": {
+            "enum": [
+              "ALLOWED",
+              "MANDATORY",
+              "NOTALLOWED"
+            ],
+            "type": "string"
+          },
+          "VATCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "Description",
+          "Number"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_AccountSinglePayloadItem_Wrap": {
+        "properties": {
+          "Account": {
+            "$ref": "#/components/schemas/fortnox_Bf_AccountSinglePayloadItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_AccountingQuantityBalancesSingleItem": {
+        "properties": {
+          "Balance": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Project": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_AccountingQuantityBalancesSinglePayloadItem": {
+        "properties": {
+          "Balance": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Project": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_FinancialYearListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "AccountChartType": {
+            "type": "string"
+          },
+          "AccountingMethod": {
+            "enum": [
+              "ACCRUAL",
+              "CASH"
+            ],
+            "type": "string"
+          },
+          "FromDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ToDate": {
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "FromDate",
+          "ToDate"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_FinancialYearListItem_Wrap": {
+        "properties": {
+          "FinancialYears": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_FinancialYearListItem"
+            },
+            "type": "array"
+          },
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_FinancialYearSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "AccountChartType": {
+            "type": "string"
+          },
+          "AccountingMethod": {
+            "enum": [
+              "ACCRUAL",
+              "CASH"
+            ],
+            "type": "string"
+          },
+          "FromDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ToDate": {
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "FromDate",
+          "ToDate"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_FinancialYearSingleItem_Wrap": {
+        "properties": {
+          "FinancialYear": {
+            "$ref": "#/components/schemas/fortnox_Bf_FinancialYearSingleItem"
+          }
+        },
+        "required": [
+          "FinancialYear"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_FinancialYearSinglePayloadItem": {
+        "properties": {
+          "AccountChartType": {
+            "type": "string"          },
+          "AccountingMethod": {
+            "enum": [
+              "ACCRUAL",
+              "CASH"
+            ],
+            "type": "string"
+          },
+          "FromDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ToDate": {
+            "format": "date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "FromDate",
+          "ToDate"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_FinancialYearSinglePayloadItem_Wrap": {
+        "properties": {
+          "FinancialYear": {
+            "$ref": "#/components/schemas/fortnox_Bf_FinancialYearSinglePayloadItem"
+          }
+        },
+        "required": [
+          "FinancialYear"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_PreDefinedVoucherSeriesListItem_Wrap": {
+        "properties": {
+          "PreDefinedVoucherSeriesCollection": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_PreDefinedVoucherSeriesSingleItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_PreDefinedVoucherSeriesSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Name": {
+            "type": "string"
+          },
+          "VoucherSeries": {
+            "maxLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "VoucherSeries"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_PreDefinedVoucherSeriesSingleItem_Wrap": {
+        "properties": {
+          "PreDefinedVoucherSeries": {
+            "$ref": "#/components/schemas/fortnox_Bf_PreDefinedVoucherSeriesSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_PreDefinedVoucherSeriesSinglePayloadItem": {
+        "properties": {
+          "Name": {
+            "type": "string"
+          },
+          "VoucherSeries": {
+            "maxLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "VoucherSeries"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_PreDefinedVoucherSeriesSinglePayloadItem_Wrap": {
+        "properties": {
+          "PreDefinedVoucherSeries": {
+            "$ref": "#/components/schemas/fortnox_Bf_PreDefinedVoucherSeriesSinglePayloadItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_SieSingleItem": {
+        "properties": {
+          "Accounts": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ContactDeliveryAddress": {
+            "type": "string"
+          },
+          "ContactMailingAddress": {
+            "type": "string"
+          },
+          "ContactName": {
+            "type": "string"
+          },
+          "ContactPhone": {
+            "type": "string"
+          },
+          "CostCenters": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "DateOfGeneration": {
+            "type": "string"
+          },
+          "Extent": {
+            "type": "string"
+          },
+          "IncomingBalances": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Projects": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "TermBudgets": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "TypeOfSie": {
+            "type": "string"
+          },
+          "UsedAccounts": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "UsedCostCenters": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "UsedProjects": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Verifications": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "VerificationsIntervals": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_SieVerificationSeriesSingleItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_SieSingleItem_Wrap": {
+        "properties": {
+          "SieSummary": {
+            "$ref": "#/components/schemas/fortnox_Bf_SieSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_SieVerificationSeriesSingleItem": {
+        "properties": {
+          "First": {
+            "type": "string"
+          },
+          "Last": {
+            "type": "string"
+          },
+          "Series": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherApproverSingleItem": {
+        "properties": {
+          "Id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Name": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "ApprovalState": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Comments": {
+            "type": "string"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "ReferenceNumber": {
+            "type": "string"
+          },
+          "ReferenceType": {
+            "enum": [
+              "INVOICE",
+              "SUPPLIERINVOICE",
+              "INVOICEPAYMENT",
+              "SUPPLIERPAYMENT",
+              "MANUAL",
+              "CASHINVOICE",
+              "ACCRUAL"
+            ],
+            "type": "string"
+          },
+          "TransactionDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "VoucherNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "VoucherRows": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_VoucherRowSingleItem"
+            },
+            "type": "array"
+          },
+          "VoucherSeries": {
+            "type": "string"
+          },
+          "Year": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherListItem_Wrap": {
+        "properties": {
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          },
+          "Vouchers": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_VoucherListItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherRowSingleItem": {
+        "properties": {
+          "Account": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "CostCenter": {
+            "nullable": true,
+            "type": "string"
+          },
+          "Credit": {
+            "format": "double",
+            "type": "number"
+          },
+          "Debit": {
+            "format": "double",
+            "type": "number"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "Quantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "Removed": {
+            "type": "boolean"
+          },
+          "TransactionInformation": {
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "required": [
+          "Account"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherRowSinglePayloadItem": {
+        "properties": {
+          "Account": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "CostCenter": {
+            "nullable": true,
+            "type": "string"
+          },
+          "Credit": {
+            "format": "double",
+            "type": "number"
+          },
+          "Debit": {
+            "format": "double",
+            "type": "number"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "Quantity": {
+            "format": "double",
+            "type": "number"
+          },
+          "Removed": {
+            "type": "boolean"
+          },
+          "TransactionInformation": {
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "required": [
+          "Account"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherSeriesListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Approver": {
+            "$ref": "#/components/schemas/fortnox_Bf_VoucherApproverSingleItem"
+          },
+          "Code": {
+            "maxLength": 10,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "Manual": {
+            "type": "boolean"
+          },
+          "NextVoucherNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Year": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Code"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherSeriesListItem_Wrap": {
+        "properties": {
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          },
+          "VoucherSeriesCollection": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_VoucherSeriesListItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherSeriesSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "Approver": {
+            "$ref": "#/components/schemas/fortnox_Bf_VoucherApproverSingleItem"
+          },
+          "Code": {
+            "maxLength": 10,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "Manual": {
+            "type": "boolean"
+          },
+          "NextVoucherNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Year": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Code"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherSeriesSingleItem_Wrap": {
+        "properties": {
+          "VoucherSeries": {
+            "$ref": "#/components/schemas/fortnox_Bf_VoucherSeriesSingleItem"
+          }
+        },
+        "required": [
+          "VoucherSeries"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherSeriesSinglePayloadItem": {
+        "properties": {
+          "Code": {
+            "maxLength": 10,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "Manual": {
+            "type": "boolean"
+          },
+          "NextVoucherNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Year": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Code"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherSeriesSinglePayloadItem_Wrap": {
+        "properties": {
+          "VoucherSeries": {
+            "$ref": "#/components/schemas/fortnox_Bf_VoucherSeriesSinglePayloadItem"
+          }
+        },
+        "required": [
+          "VoucherSeries"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "ApprovalState": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Comments": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "ReferenceNumber": {
+            "type": "string"
+          },
+          "ReferenceType": {
+            "enum": [
+              "INVOICE",
+              "SUPPLIERINVOICE",
+              "INVOICEPAYMENT",
+              "SUPPLIERPAYMENT",
+              "MANUAL",
+              "CASHINVOICE",
+              "ACCRUAL"
+            ],
+            "type": "string"
+          },
+          "TransactionDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "VoucherNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "VoucherRows": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_VoucherRowSingleItem"
+            },
+            "maxItems": 2147483647,
+            "minItems": 2,
+            "type": "array"
+          },
+          "VoucherSeries": {
+            "type": "string"
+          },
+          "Year": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Description",
+          "TransactionDate",
+          "VoucherSeries",
+          "Year"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherSingleItem_Wrap": {
+        "properties": {
+          "Voucher": {
+            "$ref": "#/components/schemas/fortnox_Bf_VoucherSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherSinglePayloadItem": {
+        "properties": {
+          "ApprovalState": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Comments": {
+            "maxLength": 1000,
+            "type": "string"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "ReferenceNumber": {
+            "type": "string"
+          },
+          "ReferenceType": {
+            "enum": [
+              "INVOICE",
+              "SUPPLIERINVOICE",
+              "INVOICEPAYMENT",
+              "SUPPLIERPAYMENT",
+              "MANUAL",
+              "CASHINVOICE",
+              "ACCRUAL"
+            ],
+            "type": "string"
+          },
+          "TransactionDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "VoucherNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "VoucherRows": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bf_VoucherRowSinglePayloadItem"
+            },
+            "maxItems": 2147483647,
+            "minItems": 2,
+            "type": "array"
+          },
+          "VoucherSeries": {
+            "type": "string"
+          },
+          "Year": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "Description",
+          "TransactionDate",
+          "VoucherSeries",
+          "Year"
+        ],
+        "type": "object"
+      },
+      "fortnox_Bf_VoucherSinglePayloadItem_Wrap": {
+        "properties": {
+          "Voucher": {
+            "$ref": "#/components/schemas/fortnox_Bf_VoucherSinglePayloadItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bflc_ClientAuthExchangeSingleItem": {
+        "properties": {
+          "AuthorizationCode": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bflc_ClientAuthExchangeSingleItem_Wrap": {
+        "properties": {
+          "Authorization": {
+            "$ref": "#/components/schemas/fortnox_Bflc_ClientAuthExchangeSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bflc_ClientListListItem": {
+        "properties": {
+          "CompanyName": {
+            "type": "string"
+          },
+          "Id": {
+            "type": "string"
+          },
+          "OrganizationNumber": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Bflc_ClientListListItem_Wrap": {
+        "properties": {
+          "Clients": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_Bflc_ClientListListItem"
+            },
+            "type": "array"
+          },
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_CompanyInformationSingleItem": {
+        "properties": {
+          "Address": {
+            "type": "string"
+          },
+          "City": {
+            "type": "string"
+          },
+          "CompanyName": {
+            "type": "string"
+          },
+          "CountryCode": {
+            "type": "string"
+          },
+          "DatabaseNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "OrganizationNumber": {
+            "type": "string"
+          },
+          "VisitAddress": {
+            "type": "string"
+          },
+          "VisitCity": {
+            "type": "string"
+          },
+          "VisitCountryCode": {
+            "type": "string"
+          },
+          "VisitZipCode": {
+            "type": "string"
+          },
+          "ZipCode": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_CompanyInformationSingleItem_Wrap": {
+        "properties": {
+          "CompanyInformation": {
+            "$ref": "#/components/schemas/fortnox_CompanyInformationSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Company_CompanyLogoBinaryItem": {
+        "properties": {
+          "file": {
+            "format": "byte",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Company_CompanyLogoBinaryItem_Wrap": {
+        "properties": {
+          "CompanyLogo": {
+            "$ref": "#/components/schemas/fortnox_Company_CompanyLogoBinaryItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Company_CompanySettingsResponse_Wrap": {
+        "properties": {
+          "CompanySettings": {
+            "$ref": "#/components/schemas/fortnox_Company_CompanySettingsSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_Company_CompanySettingsSingleItem": {
+        "properties": {
+          "Address": {
+            "type": "string"
+          },
+          "BG": {
+            "type": "string"
+          },
+          "BIC": {
+            "type": "string"
+          },
+          "BranchCode": {
+            "type": "string"
+          },
+          "City": {
+            "type": "string"
+          },
+          "ContactFirstName": {
+            "type": "string"
+          },
+          "ContactLastName": {
+            "type": "string"
+          },
+          "Country": {
+            "type": "string"
+          },
+          "CountryCode": {
+            "type": "string"
+          },
+          "DatabaseNumber": {
+            "type": "string"
+          },
+          "Domicile": {
+            "type": "string"
+          },
+          "Email": {
+            "type": "string"
+          },
+          "Fax": {
+            "type": "string"
+          },
+          "IBAN": {
+            "type": "string"
+          },
+          "Name": {
+            "type": "string"
+          },
+          "OrganizationNumber": {
+            "type": "string"
+          },
+          "PG": {
+            "type": "string"
+          },
+          "Phone1": {
+            "type": "string"
+          },
+          "Phone2": {
+            "type": "string"
+          },
+          "TaxEnabled": {
+            "type": "boolean"
+          },
+          "VATNumber": {
+            "type": "string"
+          },
+          "VisitAddress": {
+            "type": "string"
+          },
+          "VisitCity": {
+            "type": "string"
+          },
+          "VisitCountry": {
+            "type": "string"
+          },
+          "VisitCountryCode": {
+            "type": "string"
+          },
+          "VisitName": {
+            "type": "string"
+          },
+          "VisitZipCode": {
+            "type": "string"
+          },
+          "WWW": {
+            "type": "string"
+          },
+          "ZipCode": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractAccrualListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "AccrualAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "AccrualRows": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualRowSingleItem"
+            },
+            "type": "array"
+          },
+          "CostAccount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "DocumentNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Period": {
+            "enum": [
+              "MONTHLY",
+              "BIMONTHLY",
+              "QUARTERLY",
+              "SEMIANNUALLY",
+              "ANNUALLY"
+            ],
+            "type": "string"
+          },
+          "Times": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Total": {
+            "format": "float",
+            "type": "number"
+          },
+          "VATIncluded": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "Description",
+          "DocumentNumber"
+        ],
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractAccrualListItem_Wrap": {
+        "properties": {
+          "ContractAccruals": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualListItem"
+            },
+            "type": "array"
+          },
+          "MetaInformation": {
+            "$ref": "#/components/schemas/fortnox_MetaInformation"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractAccrualRowSingleItem": {
+        "properties": {
+          "Account": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Credit": {
+            "format": "double",
+            "type": "number"
+          },
+          "Debit": {
+            "format": "double",
+            "type": "number"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "TransactionInformation": {
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "required": [
+          "Account"
+        ],
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractAccrualRowSinglePayloadItem": {
+        "properties": {
+          "Account": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Credit": {
+            "format": "double",
+            "type": "number"
+          },
+          "Debit": {
+            "format": "double",
+            "type": "number"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "TransactionInformation": {
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "required": [
+          "Account"
+        ],
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractAccrualSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "AccrualAccount": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "AccrualRows": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualRowSingleItem"
+            },
+            "maxItems": 2147483647,
+            "minItems": 2,            "type": "array"
+          },
+          "CostAccount": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "DocumentNumber": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Period": {
+            "enum": [
+              "MONTHLY",
+              "BIMONTHLY",
+              "QUARTERLY",
+              "SEMIANNUALLY",
+              "ANNUALLY"
+            ],
+            "type": "string"
+          },
+          "Times": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Total": {
+            "format": "double",
+            "type": "number"
+          },
+          "VATIncluded": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "AccrualAccount",
+          "AccrualRows",
+          "CostAccount",
+          "Description",
+          "DocumentNumber",
+          "Total"
+        ],
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractAccrualSingleItem_Wrap": {
+        "properties": {
+          "ContractAccrual": {
+            "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractAccrualSinglePayloadItem": {
+        "properties": {
+          "AccrualAccount": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "AccrualRows": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualRowSinglePayloadItem"
+            },
+            "maxItems": 2147483647,
+            "minItems": 2,
+            "type": "array"
+          },
+          "CostAccount": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "DocumentNumber": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "Period": {
+            "enum": [
+              "MONTHLY",
+              "BIMONTHLY",
+              "QUARTERLY",
+              "SEMIANNUALLY",
+              "ANNUALLY"
+            ],
+            "type": "string"
+          },
+          "Times": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Total": {
+            "format": "double",
+            "type": "number"
+          },
+          "VATIncluded": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "AccrualAccount",
+          "AccrualRows",
+          "CostAccount",
+          "Description",
+          "DocumentNumber",
+          "Total"
+        ],
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractAccrualSinglePayloadItem_Wrap": {
+        "properties": {
+          "ContractAccrual": {
+            "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractAccrualSinglePayloadItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractCreatePayload": {
+        "properties": {
+          "Active": {
+            "type": "boolean"
+          },
+          "AdministrationFee": {
+            "format": "double",
+            "type": "number"
+          },
+          "Comments": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "Continuous": {
+            "type": "boolean"
+          },
+          "ContractDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "ContractLength": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Currency": {
+            "type": "string"
+          },
+          "CustomerNumber": {
+            "type": "string"
+          },
+          "DocumentNumber": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "EmailInformation": {
+            "$ref": "#/components/schemas/fortnox_DocumentEmailFieldSinglePayloadItem"
+          },
+          "ExternalInvoiceReference1": {
+            "type": "string"
+          },
+          "ExternalInvoiceReference2": {
+            "type": "string"
+          },
+          "Freight": {
+            "format": "double",
+            "maximum": 9999999999,
+            "minimum": -9999999999,
+            "type": "number"
+          },
+          "HouseWork": {
+            "type": "boolean"
+          },
+          "InvoiceDiscount": {
+            "format": "double",
+            "type": "number"
+          },
+          "InvoiceInterval": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "InvoiceRows": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractInvoiceRowSinglePayloadItem"
+            },
+            "type": "array"
+          },
+          "Language": {
+            "enum": [
+              "SV",
+              "EN"
+            ],
+            "type": "string"
+          },
+          "OurReference": {
+            "maxLength": 25,
+            "type": "string"
+          },
+          "PeriodEnd": {
+            "format": "date",
+            "type": "string"
+          },
+          "PeriodStart": {
+            "format": "date",
+            "type": "string"
+          },
+          "PriceList": {
+            "type": "string"
+          },
+          "PrintTemplate": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "Remarks": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "TaxReductionType": {
+            "enum": [
+              "none",
+              "rot",
+              "rut",
+              "green"
+            ],
+            "type": "string"
+          },
+          "TemplateNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "TermsOfDelivery": {
+            "type": "string"
+          },
+          "TermsOfPayment": {
+            "type": "string"
+          },
+          "VATIncluded": {
+            "type": "boolean"
+          },
+          "WayOfDelivery": {
+            "type": "string"
+          },
+          "YourOrderNumber": {
+            "maxLength": 75,
+            "type": "string"
+          },
+          "YourReference": {
+            "maxLength": 50,
+            "type": "string"
+          }
+        },
+        "required": [
+          "CustomerNumber",
+          "InvoiceRows",
+          "PeriodEnd"
+        ],
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractCreatePayload_Wrap": {
+        "properties": {
+          "Contract": {
+            "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractCreatePayload"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractInvoiceRowSingleItem": {
+        "properties": {
+          "AccountNumber": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "ArticleNumber": {
+            "type": "string"
+          },
+          "ContributionPercent": {
+            "type": "string"
+          },
+          "ContributionValue": {
+            "type": "string"
+          },
+          "CostCenter": {
+            "nullable": true,
+            "type": "string"
+          },
+          "DeliveredQuantity": {
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "Discount": {
+            "format": "double",
+            "type": "number"
+          },
+          "DiscountType": {
+            "enum": [
+              "AMOUNT",
+              "PERCENT"
+            ],
+            "type": "string"
+          },
+          "EAN": {
+            "type": "string"
+          },
+          "HouseWork": {
+            "type": "boolean"
+          },
+          "HouseWorkHoursToReport": {
+            "format": "int32",
+            "maximum": 999,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "HouseWorkType": {
+            "enum": [
+              "CONSTRUCTION",
+              "ELECTRICITY",
+              "GLASSMETALWORK",
+              "GROUNDDRAINAGEWORK",
+              "MASONRY",
+              "PAINTINGWALLPAPERING",
+              "HVAC",
+              "CLEANING",
+              "TEXTILECLOTHING",
+              "COOKING",
+              "SNOWPLOWING",
+              "GARDENING",
+              "BABYSITTING",
+              "OTHERCARE",
+              "TUTORING",
+              "OTHERCOSTS"
+            ],
+            "type": "string"
+          },
+          "Price": {
+            "format": "double",
+            "type": "number"
+          },
+          "PriceExcludingVAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "RowId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Total": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "TotalExcludingVAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "Unit": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "VAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "VATCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ArticleNumber",
+          "DeliveredQuantity"
+        ],
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractInvoiceRowSinglePayloadItem": {
+        "properties": {
+          "AccountNumber": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "ArticleNumber": {
+            "type": "string"
+          },
+          "ContributionPercent": {
+            "type": "string"
+          },
+          "ContributionValue": {
+            "type": "string"
+          },
+          "CostCenter": {
+            "nullable": true,
+            "type": "string"
+          },
+          "DeliveredQuantity": {
+            "type": "string"
+          },
+          "Description": {
+            "maxLength": 255,
+            "type": "string"
+          },
+          "Discount": {
+            "format": "double",
+            "type": "number"
+          },
+          "DiscountType": {
+            "enum": [
+              "AMOUNT",
+              "PERCENT"
+            ],
+            "type": "string"
+          },
+          "EAN": {
+            "type": "string"
+          },
+          "HouseWork": {
+            "type": "boolean"
+          },
+          "HouseWorkHoursToReport": {
+            "format": "int32",
+            "maximum": 999,
+            "minimum": 0,
+            "nullable": true,
+            "type": "integer"
+          },
+          "HouseWorkType": {
+            "enum": [
+              "CONSTRUCTION",
+              "ELECTRICITY",
+              "GLASSMETALWORK",
+              "GROUNDDRAINAGEWORK",
+              "MASONRY",
+              "PAINTINGWALLPAPERING",
+              "HVAC",
+              "CLEANING",
+              "TEXTILECLOTHING",
+              "COOKING",
+              "SNOWPLOWING",
+              "GARDENING",
+              "BABYSITTING",
+              "OTHERCARE",
+              "TUTORING",
+              "OTHERCOSTS"
+            ],
+            "type": "string"
+          },
+          "Price": {
+            "format": "double",
+            "type": "number"
+          },
+          "PriceExcludingVAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "RowId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Total": {
+            "format": "double",
+            "nullable": true,
+            "type": "number"
+          },
+          "TotalExcludingVAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "Unit": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "VAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "VATCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ArticleNumber",
+          "DeliveredQuantity"
+        ],
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "@urlTaxReductionList": {
+            "type": "string"
+          },
+          "Active": {
+            "type": "boolean"
+          },
+          "AdministrationFee": {
+            "format": "float",
+            "type": "number"
+          },
+          "BasisTaxReduction": {
+            "format": "float",
+            "type": "number"
+          },
+          "Comments": {
+            "type": "string"
+          },
+          "Continuous": {
+            "type": "boolean"
+          },
+          "ContractDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "ContractLength": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ContributionPercent": {
+            "format": "float",
+            "type": "number"
+          },
+          "ContributionValue": {
+            "format": "float",
+            "type": "number"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Currency": {
+            "type": "string"
+          },
+          "CustomerName": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "CustomerNumber": {
+            "type": "string"
+          },
+          "DocumentNumber": {
+            "type": "string"
+          },
+          "EmailInformation": {
+            "$ref": "#/components/schemas/fortnox_DocumentEmailFieldSingleItem"
+          },
+          "ExternalInvoiceReference1": {
+            "type": "string"
+          },
+          "ExternalInvoiceReference2": {
+            "type": "string"
+          },
+          "Freight": {
+            "format": "float",
+            "maximum": 9999999999,
+            "minimum": -9999999999,
+            "type": "number"
+          },
+          "Gross": {
+            "format": "float",
+            "type": "number"
+          },
+          "HouseWork": {
+            "type": "boolean"
+          },
+          "InvoiceDiscount": {
+            "format": "float",
+            "type": "number"
+          },
+          "InvoiceInterval": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "InvoiceRows": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractInvoiceRowSingleItem"
+            },
+            "type": "array"
+          },
+          "Invoiceinterval": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "InvoicesRemaining": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "Language": {
+            "type": "string"
+          },
+          "LastInvoiceDate": {
+            "type": "string"
+          },
+          "Net": {
+            "format": "float",
+            "type": "number"
+          },
+          "OurReference": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "PeriodEnd": {
+            "format": "date",
+            "type": "string"
+          },
+          "PeriodStart": {
+            "format": "date",
+            "type": "string"
+          },
+          "PriceList": {
+            "type": "string"
+          },
+          "PrintTemplate": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "Remarks": {
+            "type": "string"
+          },
+          "RoundOff": {
+            "format": "float",
+            "type": "number"
+          },
+          "Status": {
+            "type": "string"
+          },
+          "TaxReduction": {
+            "format": "float",
+            "type": "number"
+          },
+          "TaxReductionType": {
+            "type": "string"
+          },
+          "TemplateName": {
+            "type": "string"
+          },
+          "TemplateNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "TermsOfDelivery": {
+            "type": "string"
+          },
+          "TermsOfPayment": {
+            "type": "string"
+          },
+          "Total": {
+            "format": "double",
+            "maximum": 9999999999,
+            "minimum": -999999999,
+            "type": "number"
+          },
+          "TotalToPay": {
+            "format": "float",
+            "type": "number"
+          },
+          "TotalVAT": {
+            "format": "float",
+            "type": "number"
+          },
+          "VATIncluded": {
+            "type": "boolean"
+          },
+          "WayOfDelivery": {
+            "type": "string"
+          },
+          "YourOrderNumber": {
+            "type": "string"
+          },
+          "YourReference": {
+            "maxLength": 50,
+            "type": "string"
+          }
+        },
+        "required": [
+          "CustomerNumber",
+          "PeriodEnd"
+        ],
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractListResponse_Wrap": {
+        "properties": {
+          "Contracts": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractListItem"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractResponse_Wrap": {
+        "properties": {
+          "Contract": {
+            "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractSingleItem"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractSingleItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "@urlTaxReductionList": {
+            "type": "string"
+          },
+          "Active": {
+            "type": "boolean"
+          },
+          "AdministrationFee": {
+            "format": "double",
+            "type": "number"
+          },
+          "BasisTaxReduction": {
+            "format": "double",
+            "type": "number"
+          },
+          "Comments": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "Continuous": {
+            "type": "boolean"
+          },
+          "ContractDate": {
+            "format": "date",
+            "type": "string"
+          },
+          "ContractLength": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ContributionPercent": {
+            "format": "double",
+            "type": "number"
+          },
+          "ContributionValue": {
+            "format": "double",
+            "type": "number"
+          },
+          "CostCenter": {
+            "type": "string"
+          },
+          "Currency": {
+            "type": "string"
+          },
+          "CustomerName": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "CustomerNumber": {
+            "type": "string"
+          },
+          "DocumentNumber": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "EmailInformation": {
+            "$ref": "#/components/schemas/fortnox_DocumentEmailFieldSingleItem"
+          },
+          "ExternalInvoiceReference1": {
+            "type": "string"
+          },
+          "ExternalInvoiceReference2": {
+            "type": "string"
+          },
+          "Freight": {
+            "format": "double",
+            "maximum": 9999999999,
+            "minimum": -9999999999,
+            "type": "number"
+          },
+          "Gross": {
+            "format": "double",
+            "type": "number"
+          },
+          "HouseWork": {
+            "type": "boolean"
+          },
+          "InvoiceDiscount": {
+            "format": "double",
+            "type": "number"
+          },
+          "InvoiceInterval": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "InvoiceRows": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractInvoiceRowSingleItem"
+            },
+            "type": "array"
+          },
+          "InvoicesRemaining": {
+            "type": "string"
+          },
+          "Language": {
+            "enum": [
+              "SV",
+              "EN"
+            ],
+            "type": "string"
+          },
+          "LastInvoiceDate": {
+            "type": "string"
+          },
+          "Net": {
+            "format": "double",
+            "type": "number"
+          },
+          "OurReference": {
+            "maxLength": 25,
+            "type": "string"
+          },
+          "PeriodEnd": {
+            "format": "date",
+            "type": "string"
+          },
+          "PeriodStart": {
+            "format": "date",
+            "type": "string"
+          },
+          "PriceList": {
+            "type": "string"
+          },
+          "PrintTemplate": {
+            "type": "string"
+          },
+          "Project": {
+            "type": "string"
+          },
+          "Remarks": {
+            "maxLength": 1024,
+            "type": "string"
+          },
+          "RoundOff": {
+            "format": "double",
+            "type": "number"
+          },
+          "TaxReduction": {
+            "format": "double",
+            "type": "number"
+          },
+          "TaxReductionType": {
+            "enum": [
+              "none",
+              "rot",
+              "rut",
+              "green"
+            ],
+            "type": "string"
+          },
+          "TemplateName": {
+            "type": "string"
+          },
+          "TemplateNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "TermsOfDelivery": {
+            "type": "string"
+          },
+          "TermsOfPayment": {
+            "type": "string"
+          },
+          "Total": {
+            "format": "double",
+            "maximum": 9999999999,
+            "minimum": -999999999,
+            "type": "number"
+          },
+          "TotalToPay": {
+            "format": "double",
+            "type": "number"
+          },
+          "TotalVAT": {
+            "format": "double",
+            "type": "number"
+          },
+          "VATIncluded": {
+            "type": "boolean"
+          },
+          "WayOfDelivery": {
+            "type": "string"
+          },
+          "YourOrderNumber": {
+            "maxLength": 75,
+            "type": "string"
+          },
+          "YourReference": {
+            "maxLength": 50,
+            "type": "string"
+          }
+        },
+        "required": [
+          "CustomerNumber",
+          "InvoiceRows",
+          "PeriodEnd"
+        ],
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractTemplateListItem": {
+        "properties": {
+          "@url": {
+            "type": "string"
+          },
+          "AdministrationFee": {
+            "format": "float",
+            "type": "number"
+          },
+          "Continuous": {
+            "type": "boolean"
+          },
+          "ContractLength": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "ContractTemplate": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ContractTemplateName": {
+            "type": "string"
+          },
+          "Freight": {
+            "format": "float",
+            "type": "number"
+          },
+          "InvoiceInterval": {
+            "format": "int32",
+            "maximum": 9999,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "InvoiceRows": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractTemplateRowSingleItem"
+            },
+            "type": "array"
+          },
+          "OurReference": {
+            "type": "string"
+          },
+          "PrintTemplate": {
+            "type": "string"
+          },
+          "Remarks": {
+            "type": "string"
+          },
+          "TemplateName": {
+            "type": "string"
+          },
+          "TemplateNumber": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "TermsOfDelivery": {
+            "type": "string"
+          },
+          "TermsOfPayment": {
+            "type": "string"
+          },
+          "WayOfDelivery": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "fortnox_ContractInvoice_ContractTemplateListResponse_Wrap": {
+        "properties": {
+          "ContractTemplates": {
+            "items": {
+              "$ref": "#/components/schemas/fortnox_ContractInvoice_ContractTemplateListItem"
+            },
+            "type": "array"
+          }
+        },

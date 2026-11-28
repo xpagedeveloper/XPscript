@@ -1,0 +1,14 @@
+Class Bucket
+    Public Function Add() As Long
+        Static values() As Long
+        ReDim Preserve values(1)
+        values(0) = values(0) + 1
+        Add = values(0)
+    End Function
+End Class
+
+Sub Main()
+    Dim bucket As New Bucket
+    Print CStr(bucket.Add())
+    Print CStr(bucket.Add())
+End Sub

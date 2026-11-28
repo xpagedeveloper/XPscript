@@ -7,6 +7,12 @@ internal static class XPScriptArchiveFactory
 {
     public static object Create() => new XPScriptMemoryArchive();
 
+    public static bool SendToBrowser(object archive, object? downloadName)
+    {
+        if (archive is XPScriptMemoryArchive memoryArchive) return memoryArchive.SendToBrowser(downloadName);
+        throw new XPScriptRuntimeException(5, "Archive.SendToBrowser requires an in-memory archive.");
+    }
+
     public static object Create(object? value)
     {
         if (IsBytes(value)) return new XPScriptMemoryArchive(value);

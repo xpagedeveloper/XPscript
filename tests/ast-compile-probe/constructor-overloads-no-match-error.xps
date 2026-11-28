@@ -1,0 +1,9 @@
+Class Record
+    Public Sub New(ByVal value As Long)
+    End Sub
+    Public Sub New(ByVal value As String)
+    End Sub
+End Class
+Sub Main()
+    Dim item As Record = New Record(True)
+End Sub

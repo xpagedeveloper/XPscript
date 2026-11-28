@@ -322,6 +322,54 @@ def run(host, port):
             "referrer-policy" in h,
             "one or more default security headers missing"))
 
+    # PHP2Shell-style regression guard: exercise request-parser cleanup with
+    # truncated/oversized multipart data and shell metacharacters as inert
+    # input. This must never become process execution, leak request state, or
+    # leave the host unable to serve a subsequent request. It intentionally
+    # does not contain an exploit payload.
+    multipart_boundary = b"----xpscript-security-boundary"
+    multipart_body = (
+        b"--" + multipart_boundary + b"\r\n"
+        b"Content-Disposition: form-data; name=command\r\n\r\n"
+        b"$(XPSCRIPT_PHP2SHELL_SENTINEL); & echo XPSCRIPT_PHP2SHELL_SENTINEL\r\n"
+        b"--" + multipart_boundary + b"--\r\n")
+    multipart_request = (b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\n"
+                         b"Content-Type: multipart/form-data; boundary=" + multipart_boundary + b"\r\n" +
+                         f"Content-Length: {len(multipart_body)}\r\nConnection: close\r\n\r\n".encode("ascii") + multipart_body)
+    add("multipart-input-is-inert-and-does-not-execute",
+        multipart_request,
+        {200,400,404,413},
+        lambda c,h,r: (
+            b"XPSCRIPT_PHP2SHELL_SENTINEL" not in r and
+            b"stacktrace" not in r.lower() and
+            b"use-after-free" not in r.lower(),
+            "multipart input was executed, leaked diagnostics, or exposed stale request state"))
+
+    truncated_multipart = (
+        b"--" + multipart_boundary + b"\r\n"
+        b"Content-Disposition: form-data; name=file; filename=probe.bin\r\n"
+        b"Content-Type: application/octet-stream\r\n\r\n" + b"A" * 8192)
+    truncated_request = (b"POST / HTTP/1.1\r\nHost: 127.0.0.1\r\n"
+                         b"Content-Type: multipart/form-data; boundary=" + multipart_boundary + b"\r\n" +
+                         f"Content-Length: {len(truncated_multipart) + 32}\r\nConnection: close\r\n\r\n".encode("ascii") + truncated_multipart)
+    add("truncated-multipart-cleanup-is-safe",
+        truncated_request,
+        {400,408,413,500},
+        lambda c,h,r: (
+            b"XPSCRIPT_PHP2SHELL_SENTINEL" not in r and
+            b"stacktrace" not in r.lower(),
+            "truncated multipart cleanup leaked diagnostics or process-execution marker"))
+
+    for attempt in range(3):
+        add(f"post-multipart-follow-up-{attempt + 1}-still-serves",
+            b"GET / HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n",
+            {200,404},
+            lambda c,h,r: (
+                r.count(b"HTTP/1.1 ") == 1 and
+                b"XPSCRIPT_PHP2SHELL_SENTINEL" not in r and
+                b"stacktrace" not in r.lower(),
+                "host did not return a single safe response after malformed multipart input"))
+
     return tests
 
 def main():

@@ -1,0 +1,232 @@
+Option Declare
+
+Class NativeReferenceMethods
+    Public Function Identity(ByVal value As XPJsonObject) As XPJsonObject
+        Call value.Set("mutation", 7)
+        Set Identity = value
+    End Function
+
+    Public Sub Replace(ByRef value As XPJsonObject)
+        Set value = New XPJsonObject
+        Call value.Set("replacement", 9)
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPJsonObject)
+        Call Replace(value)
+        Error 4266, "replacement must survive failure"
+    End Sub
+End Class
+
+Class TabularReferenceMethods
+    Public Function Identity(ByVal value As XPSpreadsheet) As XPSpreadsheet
+        Call value.AddWorksheet("mutated")
+        Set Identity = value
+    End Function
+
+    Public Sub Replace(ByRef value As XPSpreadsheet)
+        Set value = New XPSpreadsheet
+        Call value.AddWorksheet("replacement")
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPSpreadsheet)
+        Call Replace(value)
+        Error 4277, "tabular replacement must survive failure"
+    End Sub
+End Class
+
+Class XmlReferenceMethods
+    Public Function Identity(ByVal value As XPXmlElement) As XPXmlElement
+        value.Value = "mutated"
+        Set Identity = value
+    End Function
+
+    Public Sub Replace(ByRef value As XPXmlElement)
+        Dim replacement As XPXmlDocument = XmlParse("<replacement>new</replacement>")
+        Set value = replacement.Root
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPXmlElement)
+        Call Replace(value)
+        Error 4287, "XML replacement must survive failure"
+    End Sub
+End Class
+
+Class CsvReferenceMethods
+    Public Function Identity(ByVal value As XPCsvDocument) As XPCsvDocument
+        Call value.Rows[0].Set("name", "mutated")
+        Set Identity = value
+    End Function
+
+    Public Sub Replace(ByRef value As XPCsvDocument)
+        Set value = New XPCsvDocument("id,name" & Chr(10) & "002,replacement")
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPCsvDocument)
+        Call Replace(value)
+        Error 4298, "CSV replacement must survive failure"
+    End Sub
+End Class
+
+Class HttpRequestReferenceMethods
+    Public Function Identity(ByVal value As XPHttpRequest) As XPHttpRequest
+        value.Method = "PATCH"
+        Set Identity = value
+    End Function
+
+    Public Sub Replace(ByRef value As XPHttpRequest)
+        Set value = New XPHttpRequest
+        value.Method = "PUT"
+    End Sub
+
+    Public Sub ReplaceAndFail(ByRef value As XPHttpRequest)
+        Call Replace(value)
+        Error 4309, "HTTP request replacement must survive failure"
+    End Sub
+End Class
+
+Sub VerifySpreadsheetReferenceMethods()
+    Dim book As New XPSpreadsheet
+    Dim methods As New TabularReferenceMethods
+    Dim current As XPSpreadsheet
+    Dim returned As XPSpreadsheet
+    Set current = book
+    Set returned = methods.Identity(book)
+    If Not (returned Is book) Then Error 4278
+    If book.WorksheetCount <> 1 Then Error 4279
+    Call methods.Replace(current)
+    If current Is book Then Error 4280
+    If current.WorksheetCount <> 1 Or book.WorksheetCount <> 1 Then Error 4281
+    If Not (returned Is book) Then Error 4282
+
+    Set current = book
+    On Error GoTo ExpectedTabularFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4283, "expected tabular error missing"
+    Exit Sub
+ExpectedTabularFailure:
+    If Err <> 4277 Then Error 4284
+    If current Is book Then Error 4285
+    If current.WorksheetCount <> 1 Or book.WorksheetCount <> 1 Then Error 4286
+End Sub
+
+Sub VerifyXmlReferenceMethods()
+    Dim methods As New XmlReferenceMethods
+    Dim originalDocument As XPXmlDocument = XmlParse("<root>original</root>")
+    Dim original As XPXmlElement = originalDocument.Root
+    Dim current As XPXmlElement
+    Dim returned As XPXmlElement
+    Set current = original
+    Set returned = methods.Identity(current)
+    If Not (returned Is original) Then Error 4288
+    If original.Value <> "mutated" Then Error 4289
+
+    Call methods.Replace(current)
+    If current Is original Then Error 4290
+    If current.Name <> "replacement" Or current.Value <> "new" Then Error 4291
+    If returned Is original And original.Value = "mutated" Then
+    Else
+        Error 4292
+    End If
+
+    Set current = original
+    On Error GoTo ExpectedXmlFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4293, "expected XML error missing"
+    Exit Sub
+ExpectedXmlFailure:
+    If Err <> 4287 Then Error 4294
+    If current Is original Then Error 4295
+    If current.Name <> "replacement" Or current.Value <> "new" Then Error 4296
+    If original.Value <> "mutated" Then Error 4297
+End Sub
+
+Sub VerifyCsvReferenceMethods()
+    Dim methods As New CsvReferenceMethods
+    Dim original As New XPCsvDocument("id,name" & Chr(10) & "001,initial")
+    Dim current As XPCsvDocument
+    Dim returned As XPCsvDocument
+    Set current = original
+    Set returned = methods.Identity(current)
+    If Not (returned Is original) Then Error 4299
+    If original.Rows[0].Get("name") <> "mutated" Then Error 4300
+
+    Call methods.Replace(current)
+    If current Is original Then Error 4301
+    If current.Rows[0].Get("name") <> "replacement" Then Error 4302
+    If returned Is original And original.Rows[0].Get("name") = "mutated" Then
+    Else
+        Error 4303
+    End If
+
+    Set current = original
+    On Error GoTo ExpectedCsvFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4304, "expected CSV error missing"
+    Exit Sub
+ExpectedCsvFailure:
+    If Err <> 4298 Then Error 4305
+    If current Is original Then Error 4306
+    If current.Rows[0].Get("name") <> "replacement" Then Error 4307
+    If original.Rows[0].Get("name") <> "mutated" Then Error 4308
+End Sub
+
+Sub VerifyHttpRequestReferenceMethods()
+    Dim methods As New HttpRequestReferenceMethods
+    Dim original As New XPHttpRequest
+    Dim current As XPHttpRequest
+    Dim returned As XPHttpRequest
+    Set current = original
+    Set returned = methods.Identity(current)
+    If Not (returned Is original) Then Error 4310
+    If original.Method <> "PATCH" Then Error 4311
+
+    Call methods.Replace(current)
+    If current Is original Then Error 4312
+    If current.Method <> "PUT" Then Error 4313
+    If returned Is original And original.Method = "PATCH" Then
+    Else
+        Error 4314
+    End If
+
+    Set current = original
+    On Error GoTo ExpectedHttpFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4315, "expected HTTP request error missing"
+    Exit Sub
+ExpectedHttpFailure:
+    If Err <> 4309 Then Error 4316
+    If current Is original Then Error 4317
+    If current.Method <> "PUT" Then Error 4318
+    If original.Method <> "PATCH" Then Error 4319
+End Sub
+
+Sub Main()
+    Dim methods As New NativeReferenceMethods
+    Dim original As New XPJsonObject
+    Dim current As XPJsonObject
+    Dim returned As XPJsonObject
+    Set current = original
+    Set returned = methods.Identity(current)
+    If Not (returned Is original) Then Error 4267
+    If CLng(original.Get("mutation")) <> 7 Then Error 4268
+    Call methods.Replace(current)
+    If current Is original Then Error 4269
+    If CLng(current.Get("replacement")) <> 9 Then Error 4270
+    If Not (returned Is original) Then Error 4271
+
+    Call VerifySpreadsheetReferenceMethods()
+    Call VerifyXmlReferenceMethods()
+    Call VerifyCsvReferenceMethods()
+    Call VerifyHttpRequestReferenceMethods()
+    Set current = original
+    On Error GoTo ExpectedFailure
+    Call methods.ReplaceAndFail(current)
+    Error 4272, "expected error missing"
+    Exit Sub
+ExpectedFailure:
+    If Err <> 4266 Then Error 4273
+    If current Is original Then Error 4274
+    If CLng(current.Get("replacement")) <> 9 Then Error 4275
+    If CLng(original.Get("mutation")) <> 7 Then Error 4276
+    Print "AST_NATIVE_CLASS_METHOD_REFERENCE_RUNTIME_OK"
+End Sub

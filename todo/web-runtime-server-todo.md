@@ -362,19 +362,19 @@ execute
 ### Cache key
 
 - [x] Cache by canonical root/source identity, not only URL text.
-- [ ] Include compiler version in cache identity.
-- [ ] Include target/runtime/code-generation options in cache identity.
-- [ ] Include configured preprocessor identities + versions + ordering in cache identity.
-- [ ] Include the root source and every included source dependency in invalidation/hash calculation.
-- [ ] Include relevant project/reference/native dependency configuration.
+- [x] Include compiler version in cache identity; `XPScriptCompilationSnapshotBuilder` records the compiler informational version.
+- [x] Include target/runtime/code-generation options in cache identity; the snapshot records the runtime identifier and effective web compiler configuration.
+- [x] Include configured preprocessor identities + versions + ordering in cache identity; `XpsWebCompilationCache` includes the ordered active preprocessor specifications.
+- [x] Include the root source and every included source dependency in invalidation/hash calculation; `WebDispatcherSmoke` verifies root and include edits.
+- [x] Include relevant project/reference/native dependency configuration; web snapshots include managed and native external inputs and invalidate when they change.
 - [x] Prevent one site/tenant from receiving another site's cached executable.
 
 ### Invalidation
 
 - [x] Invalidate when root `.xps` changes.
 - [x] Invalidate when any included `.xps` changes.
-- [ ] Invalidate when a referenced managed/native dependency changes where relevant.
-- [ ] Invalidate when compiler/preprocessor configuration changes.
+- [x] Invalidate when a referenced managed/native dependency changes where relevant.
+- [x] Invalidate when compiler/preprocessor configuration changes, including the AST/legacy web switch and configured source preprocessors.
 - [x] Make invalidation race-safe while requests are running.
 - [x] Existing in-flight requests may finish on an immutable old compiled unit while new requests switch atomically to the new unit.
 
@@ -382,7 +382,7 @@ execute
 
 - [x] Only one compilation for the same cache key/version may run at a time (`single-flight` behavior).
 - [x] Concurrent requests for a cold/stale script should wait on/share that compilation rather than compile the same source N times.
-- [ ] Bound total concurrent compilations globally and per site.
+- [x] Bound concurrent compilations per cache/site with `MaxConcurrentCompilations` (default 4, range 1-256) and globally per worker process (16).
 - [ ] Apply compile timeout/cancellation semantics.
 - [x] A failed compilation must not replace a previously valid cached version unless explicitly configured.
 - [ ] Decide whether production can optionally keep serving last-known-good code after a new source revision fails compilation.
@@ -514,7 +514,7 @@ Configuration precedence (CLI/config/env) must be explicitly defined rather than
 - [x] Source changes should invalidate only affected script dependency graphs.
 - [x] Next request compiles changed code once and atomically publishes it to cache after success.
 - [x] Define optional eager/precompile mode for production startup/deployment.
-- [ ] Provide a command to precompile/validate all reachable `.xps` files before deployment.
+- [x] Provide `xpscript web precompile --root DIR` to compile and validate all `.xps` files beneath the web root before deployment; failures are reported and produce a non-zero exit code.
 - [x] Compile errors should have a production-safe HTTP response while retaining full diagnostics in server logs.
 - [ ] Development mode may display source diagnostics only after explicit opt-in.
 
@@ -579,7 +579,7 @@ All examples must be reconsidered after the object API has been finalized.
 - [x] Application concurrency
 - [x] source edit invalidates cache
 - [x] included-file edit invalidates parent script cache
-- [ ] preprocessor version/order invalidates cache
+- [x] preprocessor version/order invalidates cache; `WebDispatcherSmoke` changes the active preprocessor configuration between acquisitions and verifies a new compiled unit is created.
 - [x] simultaneous cold requests compile once
 - [x] compile failure does not poison unrelated cache entries
 - [x] traversal/encoded traversal rejected

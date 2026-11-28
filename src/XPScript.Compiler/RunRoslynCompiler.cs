@@ -40,6 +40,13 @@ global using System.Threading.Tasks;
     {
         try
         {
+            // Archive runtime code is emitted as generated source and needs
+            // SharpCompress beside the compiled application. Keep this
+            // dependency conditional: ordinary AST programs remain in-process
+            // and do not restore the archive package.
+            if (generatedSource.Contains("XPScriptExtendedArchive", StringComparison.Ordinal) ||
+                ApplicationDependencyCatalog.Detect(generatedSource).Count > 0)
+                return await RunCompiler.CompileGeneratedWithDependenciesAsync(generatedSource, outputDirectory, debug, cancellationToken).ConfigureAwait(false);
             return await CompileCoreAsync(generatedSource, outputDirectory, debug, cancellationToken).ConfigureAwait(false);
         }
         catch (CompilerException)
@@ -211,15 +218,21 @@ global using System.Threading.Tasks;
         foreach (var diagnostic in diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error))
         {
             if (diagnostic.Location.SourceTree is null) continue;
+            var mapped = diagnostic.Location.GetMappedLineSpan();
             var sourceText = diagnostic.Location.SourceTree.GetText();
             var position = sourceText.Lines.GetLinePosition(diagnostic.Location.SourceSpan.Start);
+            var file = string.IsNullOrWhiteSpace(mapped.Path)
+                ? (string.IsNullOrWhiteSpace(diagnostic.Location.SourceTree.FilePath) ? "Program.cs" : Path.GetFileName(diagnostic.Location.SourceTree.FilePath))
+                : mapped.Path;
+            var line = mapped.IsValid ? mapped.StartLinePosition.Line + 1 : position.Line + 1;
+            var column = mapped.IsValid ? mapped.StartLinePosition.Character + 1 : position.Character + 1;
             result.Add(new CompileDiagnostic
             {
-                File = string.IsNullOrWhiteSpace(diagnostic.Location.SourceTree.FilePath)
-                    ? "Program.cs"
-                    : Path.GetFileName(diagnostic.Location.SourceTree.FilePath),
-                Line = position.Line + 1,
-                Position = position.Character + 1,
+                File = file,
+                Line = line,
+                Position = column,
+                EndLine = mapped.IsValid ? mapped.EndLinePosition.Line + 1 : 0,
+                EndColumn = mapped.IsValid ? mapped.EndLinePosition.Character + 1 : 0,
                 Description = diagnostic.GetMessage(),
                 UpstreamCode = diagnostic.Id,
                 Category = "code-generation"

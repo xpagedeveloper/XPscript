@@ -1,0 +1,4 @@
+Sub Main()
+    Dim client As New XPHttpClient
+    Print client.UnknownMember
+End Sub

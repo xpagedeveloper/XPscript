@@ -1,0 +1,33 @@
+Sub Main()
+    Dim payload As New XPJsonObject
+    Dim numbers As New XPJsonArray
+    Dim document As XPJsonDocument
+    Dim rootObject As XPJsonObject
+    Call numbers.Add(1)
+    Call numbers.Add(2)
+    Call numbers.Set(0, 7)
+    Call numbers.RemoveAt(1)
+    Call payload.Set("name", "Åsa")
+    Call payload.Set("values", numbers)
+    Call payload.Set("active", True)
+    Print JsonStringify(payload)
+    Set document = XPJsonDocument.Parse(JsonEncode(payload))
+    Set rootObject = document.Root.AsObject()
+    Print rootObject.Get("name")
+    Print document.Root.Type
+    Print rootObject.Contains("active")
+    Call rootObject.Remove("active")
+    Print rootObject.Count
+    Print numbers.Get(0)
+    Print numbers.Count
+    ForAll item In numbers
+        Print item
+    End ForAll
+    Set document = JsonDecode("[null,false,3]")
+    Print document.Stringify()
+    On Error Resume Next
+    Set document = JsonParse("invalid")
+    Print Error$
+    Call numbers.Get(99)
+    Print Error$
+End Sub

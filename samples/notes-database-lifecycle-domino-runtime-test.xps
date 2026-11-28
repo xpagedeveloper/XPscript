@@ -4,11 +4,11 @@
 ' This script ONLY creates/removes the temporary databases named below.
 ' It never calls Remove on xpscript.nsf.
 '
-' Supported HCL Create patterns:
-'   Dim db As New NotesDatabase("", "")
+' Supported HCL Create pattern through the XPscript NotesSession owner:
+'   Set db = session.OpenDatabase("", "")
 '   Call db.Create("server", "database.nsf", True)
 '
-'   Dim db As New NotesDatabase("", "database.nsf")
+'   Set db = session.OpenDatabase("", "database.nsf")
 '   If Not db.IsOpen Then Call db.Create("", "", True)
 '
 ' XPscript extension:
@@ -64,16 +64,17 @@ Sub Main()
 End Sub
 
 Function TestCreateExplicitArguments(ByVal session As Variant, ByVal path As String) As Integer
-    Dim db As New NotesDatabase("", "")
+    Dim db As NotesDatabase
     Dim reopened As NotesDatabase
     Dim failures As Integer
 
     failures = 0
     Print "SECTION=NotesDatabase.Create explicit server/file"
     Call RemoveIfExists(session, path)
+    Set db = session.OpenDatabase("", "")
 
     ' Same semantics as the HCL form:
-    ' Dim db As New NotesDatabase("", "")
+    ' Set db = session.OpenDatabase("", "")
     ' Call db.Create("Zagreb", "inventry.nsf", True)
     ' The runtime test uses the local server and a temporary NSF so it is self-contained.
     Call db.Create("", path, True)
@@ -118,13 +119,14 @@ Function TestCreateExplicitArguments(ByVal session As Variant, ByVal path As Str
 End Function
 
 Function TestCreateBoundArguments(ByVal session As Variant, ByVal path As String) As Integer
-    Dim db As New NotesDatabase("", path)
+    Dim db As NotesDatabase
     Dim reopened As NotesDatabase
     Dim failures As Integer
 
     failures = 0
     Print "SECTION=NotesDatabase.Create constructor-bound server/file"
     Call RemoveIfExists(session, path)
+    Set db = session.OpenDatabase("", path)
 
     If db.IsOpen Then
         failures = failures + 1

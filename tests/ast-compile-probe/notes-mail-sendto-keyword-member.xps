@@ -1,0 +1,9 @@
+Sub Main()
+    Dim session As NotesSession
+    Dim mail As NotesMail
+    Set session = New NotesSession()
+    Set mail = session.CreateMail()
+    mail.SendTo = "recipient@example.invalid"
+    mail.BlindCopyTo = "blind@example.invalid"
+    Print "NOTES_MAIL_KEYWORD_MEMBERS_OK"
+End Sub

@@ -26,12 +26,13 @@ internal static class SourceMapDiagnostics
         if (candidates.Length == 0) return message;
 
         var pattern = new Regex(
-            $@"(?<source>{string.Join("|", candidates)})\((?<line>\d+)(?:,(?<pos>\d+))?\):\s*(?<description>[^\r\n]*)",
+            $@"(?<source>{string.Join("|", candidates)})(?:\((?<line>\d+)(?:,(?<pos>\d+))?\)|:(?<colonLine>\d+)(?::(?<colonPos>\d+))?):\s*(?<description>[^\r\n]*)",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         return pattern.Replace(message, match =>
         {
-            if (!int.TryParse(match.Groups["line"].Value, out var expandedLine)) return match.Value;
+            var lineText = match.Groups["line"].Success ? match.Groups["line"].Value : match.Groups["colonLine"].Value;
+            if (!int.TryParse(lineText, out var expandedLine)) return match.Value;
 
             var location = map.Resolve(expandedLine, flattenedSourceName);
 
@@ -80,7 +81,9 @@ internal static class SourceMapDiagnostics
                 rootFullPath,
                 OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
-            var position = match.Groups["pos"].Success ? match.Groups["pos"].Value : "1";
+            var position = match.Groups["pos"].Success
+                ? match.Groups["pos"].Value
+                : match.Groups["colonPos"].Success ? match.Groups["colonPos"].Value : "1";
             var description = match.Groups["description"].Value.Trim();
             var matchedSource = match.Groups["source"].Value;
 

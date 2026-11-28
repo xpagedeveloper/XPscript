@@ -1,0 +1,7 @@
+Class Box
+    Public Property Get Item(ByVal index As Long = 1) As Long
+        Item = index
+    End Property
+End Class
+Sub Main()
+End Sub

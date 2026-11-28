@@ -187,7 +187,7 @@ internal static class LSOperatorArrayRuntime
     public static LSArray ArraySort(object? sourceArray)
     {
         var array = RequireOneDimensional(sourceArray);
-        var values = Values(array).ToList();
+        var values = Values(array).Where(value => value is not null).ToList();
         var comparison = _compareNoCase ? StringComparison.CurrentCultureIgnoreCase : StringComparison.CurrentCulture;
         switch (array.ElementType.ToLowerInvariant())
         {

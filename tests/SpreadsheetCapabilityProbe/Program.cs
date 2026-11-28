@@ -1,6 +1,14 @@
 using XPScript.Compiler;
 
-var transpiler = new XPScriptTranspiler();
+var workspace = Path.GetFullPath(Path.Combine("out", "spreadsheet-capability-probe", Guid.NewGuid().ToString("N")));
+Directory.CreateDirectory(workspace);
+
+async Task<string> GenerateAsync(string sourceText, string filename)
+{
+    var path = Path.Combine(workspace, filename);
+    await File.WriteAllTextAsync(path, sourceText);
+    return await AstCompiler.GenerateSourceAsync(path, workspace);
+}
 
 const string source = """
 Option Declare
@@ -47,7 +55,7 @@ Sub Main()
 End Sub
 """;
 
-var generated = transpiler.Transpile(source, "spreadsheet-probe.xps", "win-x64");
+var generated = await GenerateAsync(source, "spreadsheet-probe.xps");
 if (!generated.Contains("XPScriptSpreadsheetFactory.Create", StringComparison.Ordinal))
     throw new Exception("XPSpreadsheet constructor was not lowered to the native runtime factory.");
 if (!generated.Contains("internal sealed class XPScriptSpreadsheet", StringComparison.Ordinal)
@@ -71,8 +79,8 @@ if (!generated.Contains(".AddWorksheet(", StringComparison.Ordinal)
     || !generated.Contains(".AutoFit(", StringComparison.Ordinal)
     || !generated.Contains(".AutoFilter(", StringComparison.Ordinal)
     || !generated.Contains(".ClearAutoFilter(", StringComparison.Ordinal)
-    || !generated.Contains("__xpsSpreadsheetCell", StringComparison.Ordinal)
-    || !generated.Contains("__xpsSpreadsheetRange", StringComparison.Ordinal)
+    || !generated.Contains(".Value =", StringComparison.Ordinal)
+    || !generated.Contains(".BackgroundColor =", StringComparison.Ordinal)
     || !generated.Contains(".ToBytes(", StringComparison.Ordinal)
     || !generated.Contains(".FromBytes(", StringComparison.Ordinal))
     throw new Exception("XPSpreadsheet range, formatting, filter, or direct-assignment members were not lowered correctly.");
@@ -95,7 +103,7 @@ Sub Main()
 End Sub
 """;
 
-var csvGenerated = transpiler.Transpile(csvSource, "csv-bytes-probe.xps", "win-x64");
+var csvGenerated = await GenerateAsync(csvSource, "csv-bytes-probe.xps");
 if (!csvGenerated.Contains(".ToBytes()", StringComparison.Ordinal)
     || !csvGenerated.Contains("XPScriptNativeCsv.ParseBytes", StringComparison.Ordinal)
     || csvGenerated.Contains(".FromBytes(", StringComparison.OrdinalIgnoreCase))
@@ -108,20 +116,12 @@ Sub Main()
 End Sub
 """;
 
-var unrelatedGenerated = transpiler.Transpile(unrelated, "no-spreadsheet.xps", "win-x64");
+var unrelatedGenerated = await GenerateAsync(unrelated, "no-spreadsheet.xps");
 if (unrelatedGenerated.Contains("internal sealed class XPScriptSpreadsheet", StringComparison.Ordinal))
     throw new Exception("XPSpreadsheet runtime was injected into a program that does not use it.");
 
-try
-{
-    _ = transpiler.Transpile(source, "spreadsheet-wasm.xps", "browser-wasm");
-    throw new Exception("XPSpreadsheet unexpectedly compiled for browser-wasm.");
-}
-catch (CompilerException ex)
-{
-    if (!ex.Message.Contains("XPSpreadsheet", StringComparison.Ordinal)
-        || !ex.Message.Contains("browser-wasm", StringComparison.OrdinalIgnoreCase))
-        throw new Exception("XPSpreadsheet returned the wrong browser-wasm diagnostic: " + ex.Message);
-}
+if (!generated.Contains("System.OperatingSystem.IsBrowser()", StringComparison.Ordinal) ||
+    !generated.Contains("XPSpreadsheet file operations are not available in browser-wasm.", StringComparison.Ordinal))
+    throw new Exception("XPSpreadsheet did not emit the browser file-operation guard.");
 
 Console.WriteLine("XPSPREADSHEET-CAPABILITY-PROBE=OK");

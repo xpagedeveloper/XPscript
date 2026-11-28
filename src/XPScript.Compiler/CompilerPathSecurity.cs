@@ -4,7 +4,7 @@ using System.Security.Principal;
 
 namespace XPScript.Compiler;
 
-internal static class CompilerPathSecurity
+public static class CompilerPathSecurity
 {
     public static string ResolveProjectLocalFile(string sourceDirectory, string declaredPath, string kind)
     {
@@ -43,7 +43,7 @@ internal static class CompilerPathSecurity
         if (string.IsNullOrWhiteSpace(prefix))
             throw new ArgumentException("Temporary directory prefix must not be empty.", nameof(prefix));
 
-        var logicalRoot = Path.Combine(Path.GetTempPath(), "XPScript");
+        var logicalRoot = GetLogicalTemporaryRoot();
         Directory.CreateDirectory(logicalRoot);
         var physicalRoot = CanonicalizeExistingDirectory(logicalRoot);
         var directory = Path.Combine(physicalRoot, prefix + Guid.NewGuid().ToString("N"));
@@ -92,7 +92,7 @@ internal static class CompilerPathSecurity
     public static void DeleteOwnedTemporaryDirectory(string path)
     {
         var full = CanonicalizeExistingDirectory(Path.GetFullPath(path));
-        var logicalTempRoot = Path.Combine(Path.GetTempPath(), "XPScript");
+        var logicalTempRoot = GetLogicalTemporaryRoot();
         if (!Directory.Exists(logicalTempRoot)) return;
         var tempRoot = CanonicalizeExistingDirectory(logicalTempRoot);
         EnsureLexicallyContained(tempRoot, full, "Compiler temporary workspace", full);
@@ -103,7 +103,36 @@ internal static class CompilerPathSecurity
         if (IsLinkOrReparsePoint(rootInfo))
             throw TemporaryWorkspaceSecurity("Refusing to recursively clean a compiler temporary workspace that is itself a symbolic link or reparse point.");
 
-        DeleteDirectoryWithoutFollowingLinks(rootInfo);
+        // dotnet/MSBuild can release file handles just after the child process
+        // exits. Retry the removal briefly so normal transient sharing
+        // violations do not leave one run-build-* directory per invocation.
+        Exception? lastError = null;
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            try
+            {
+                DeleteDirectoryWithoutFollowingLinks(rootInfo);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                lastError = ex;
+                if (attempt == 3) break;
+                Thread.Sleep(50 * (attempt + 1));
+            }
+        }
+
+        if (lastError is not null) throw lastError;
+    }
+
+    private static string GetLogicalTemporaryRoot()
+    {
+        var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var defaultRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(defaultRoot)) defaultRoot = Path.GetTempPath();
+        return string.IsNullOrWhiteSpace(configuredRoot)
+            ? Path.Combine(defaultRoot, "XPScript")
+            : Path.Combine(Path.GetFullPath(configuredRoot), "XPScript");
     }
 
     private static string CanonicalizeExistingDirectory(string path)
@@ -274,9 +303,13 @@ internal static class CompilerPathSecurity
     {
         try
         {
-            var directory = new DirectoryInfo(path);
-            if (directory.Exists || directory.LinkTarget is not null || (directory.Attributes & FileAttributes.ReparsePoint) != 0)
-                return directory;
+            // On Windows DirectoryInfo(path) can surface the attributes of a
+            // regular file even when the directory does not exist. Inspect the
+            // file first so a normal managed reference is not misclassified as
+            // a reparse point.
+            var file = new FileInfo(path);
+            if (file.Exists || file.LinkTarget is not null)
+                return file;
         }
         catch (FileNotFoundException) { }
         catch (DirectoryNotFoundException) { }
@@ -287,9 +320,9 @@ internal static class CompilerPathSecurity
 
         try
         {
-            var file = new FileInfo(path);
-            if (file.Exists || file.LinkTarget is not null || (file.Attributes & FileAttributes.ReparsePoint) != 0)
-                return file;
+            var directory = new DirectoryInfo(path);
+            if (directory.Exists || directory.LinkTarget is not null)
+                return directory;
         }
         catch (FileNotFoundException) { }
         catch (DirectoryNotFoundException) { }

@@ -1,0 +1,7 @@
+Class Factory
+    Public Property Get Image As XPImage
+        Set Image = missing
+    End Property
+End Class
+Sub Main()
+End Sub

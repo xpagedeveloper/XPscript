@@ -595,6 +595,49 @@ jobs:
           done
           python3 ./tests/security/reverse_proxy_smuggling.py --host 127.0.0.1 --port 18082 --json ./artifacts/hardening/nginx-kestrel-smuggling.json
 
+      - name: Verify hardening matrix results
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          exit_files=(./artifacts/hardening/*.exit-code)
+          if (( ${#exit_files[@]} == 0 )); then
+            echo "No scanner exit-code reports were produced."
+            exit 1
+          fi
+
+          for report in "${exit_files[@]}"; do
+            if [[ "$(tr -d '[:space:]' < "${report}")" != "0" ]]; then
+              echo "Scanner failed according to ${report}:"
+              cat "${report}"
+              exit 1
+            fi
+          done
+
+          required_json=(
+            ./artifacts/hardening/cgi-fuzz-matrix.json
+            ./artifacts/hardening/raw-http-results.json
+            ./artifacts/hardening/nginx-kestrel-smuggling.json
+            ./artifacts/hardening/nuclei-scan-metadata.json
+          )
+          for report in "${required_json[@]}"; do
+            if [[ ! -s "${report}" ]]; then
+              echo "Required hardening report is missing or empty: ${report}"
+              exit 1
+            fi
+          done
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          for path in Path("./artifacts/hardening").glob("*.json"):
+              with path.open(encoding="utf-8") as stream:
+                  json.load(stream)
+          print("Hardening matrix reports verified.")
+          PY
+
       - name: Upload hardening artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -613,7 +656,7 @@ jobs:
 
   windows-iis:
     needs: hardening
-    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening'
+    if: github.ref == 'refs/heads/ai-kestrel-nuclei-hardening' || github.ref == 'refs/heads/investigate-ast-compiler'
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
@@ -657,6 +700,42 @@ jobs:
           $handlers = $config.configuration.location.'system.webServer'.handlers.add
           if ($null -eq $handlers) { throw "Generated web.config has no IIS handler mapping." }
 
+      - name: Run generated application through IIS Express
+        shell: pwsh
+        run: |
+          $iisExpress = @(
+            (Get-Command iisexpress.exe -ErrorAction SilentlyContinue).Source,
+            'C:\Program Files\IIS Express\iisexpress.exe',
+            'C:\Program Files (x86)\IIS Express\iisexpress.exe'
+          ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+          if (-not $iisExpress) { throw 'IIS Express is not installed on the GitHub Windows runner.' }
+
+          $siteRoot = (Resolve-Path './out/hardening-iis-expanded/site').Path
+          $logPath = (Resolve-Path './out').Path + '\iisexpress.log'
+          $port = 18080
+          $process = Start-Process -FilePath $iisExpress -ArgumentList "/path:$siteRoot", "/port:$port", "/systray:false" -PassThru -RedirectStandardOutput $logPath -RedirectStandardError ($logPath + '.err')
+          try {
+            $ready = $false
+            for ($attempt = 1; $attempt -le 30; $attempt++) {
+              try {
+                $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -UseBasicParsing -TimeoutSec 2
+                if ($response.StatusCode -eq 200 -and $response.Content -match 'XPSCRIPT-IIS-HARDENING') {
+                  $ready = $true
+                  break
+                }
+              } catch { }
+              Start-Sleep -Seconds 1
+            }
+            if (-not $ready) {
+              if (Test-Path $logPath) { Get-Content $logPath }
+              if (Test-Path ($logPath + '.err')) { Get-Content ($logPath + '.err') }
+              throw 'Generated WebIIS application did not answer through IIS Express.'
+            }
+            Write-Host 'WEB-IIS-EXECUTION=OK'
+          } finally {
+            if ($process -and -not $process.HasExited) { Stop-Process -Id $process.Id -Force }
+          }
+
       - name: Upload Windows IIS hardening artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -665,5 +744,6 @@ jobs:
           path: |
             ./out/hardening-iis.zip
             ./out/hardening-iis-expanded/site/web.config
+            ./out/iisexpress.log*
           retention-days: 3
 

@@ -2,7 +2,7 @@
 
 XPscript Notes runtime objects are server-only in a `[Platform:browser-wasm]` application.
 
-The browser WebAssembly runtime must never load or invoke the Domino Notes C API. Code that creates or uses `NotesSession`, `NotesDatabase`, `NotesDocument`, `NotesView`, `NotesDBDirectory`, rich-text objects, MIME objects, DXL objects, agents, or other `Notes*` runtime objects must execute in the web-server companion runtime.
+The browser WebAssembly runtime must never load or invoke the Domino Notes C API. Code that creates or uses `NotesSession`, `NotesDatabase`, `NotesDocument`, `NotesView`, `NotesDBDirectory`, rich-text objects, MIME objects, DXL objects, agents, `XPNotes*` compatibility objects such as `XPNotesHTTPRequest`, or other `Notes*` runtime objects must execute in the web-server companion runtime.
 
 ## Use `[ServerSide]`
 

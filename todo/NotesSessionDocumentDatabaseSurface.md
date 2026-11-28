@@ -19,7 +19,7 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 - [ ] CurrentAgent
 - [ ] CurrentDatabase
 - [ ] DocumentContext
-- [ ] EffectiveUserName
+- [x] EffectiveUserName
 - [ ] HttpURL
 - [ ] International
 - [ ] IsOnServer
@@ -32,7 +32,7 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 - [ ] URLDatabase
 - [ ] UserGroupNameList
 - [ ] UserNameList
-- [ ] UserNameObject
+- [x] UserNameObject
 
 ### Methods
 
@@ -43,7 +43,7 @@ The automated `NotesFullRuntimeSurfaceAudit` currently verifies the generated XP
 - [ ] CreateLog
 - [ ] CreateNewsletter
 - [ ] CreateRegistration
-- [ ] CreateSAXParser
+- [x] CreateSAXParser — intentionally excluded from the AST/runtime migration; use the native `XPXml` parser for XML processing instead.
 - [ ] CreateTimer
 - [ ] CreateXSLTransformer
 - [ ] FileOpBegin

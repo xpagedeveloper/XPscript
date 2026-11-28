@@ -1,0 +1,52 @@
+Public escaped As Variant
+Public destructorCalls As Long
+Class ImageRecord
+    Private picture As XPImage
+    Public Stored As Variant
+    Public Borrowed As Variant
+    Public Sub New(ByVal value As Variant, Optional ByRef state As Variant = 0, Optional ByVal fail As Boolean = False)
+        escaped = Me
+        Set Borrowed = value
+        Set picture = value
+        Stored = picture
+        state = CLng(state) + 1
+        value = "snapshot"
+        If fail Then Error 4240, "variant image constructor"
+    End Sub
+    Public Sub Delete()
+        destructorCalls = destructorCalls + 1
+    End Sub
+End Class
+Sub AssertExpired(ByVal value As Variant)
+    Dim picture As XPImage = value
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = picture.Width
+    failure = Err
+    On Error GoTo 0
+    If failure = 0 Or width <> -1 Then Error 4241
+End Sub
+Sub Main()
+    Dim source As New XPImage(4, 3)
+    Dim value As Variant = source
+    Dim state As Variant = 0
+    Dim item As New ImageRecord(value, state)
+    If CLng(state) <> 1 Or Not (value Is source) Or Not (item.Borrowed Is source) Then Error 4242
+    Dim old As ImageRecord = item
+    Dim failure As Long
+    On Error Resume Next
+    Set item = New ImageRecord(value, state, True)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4240 Or CLng(state) <> 2 Or Not (item Is old) Then Error 4243
+    Dim failed As ImageRecord = escaped
+    Call AssertExpired(failed.Stored)
+    If source.Width <> 4 Or Not (failed.Borrowed Is source) Then Error 4244
+    If destructorCalls <> 0 Then Error 4245
+    Dim stored As Variant = item.Stored
+    Delete item
+    Call AssertExpired(stored)
+    If source.Width <> 4 Or destructorCalls <> 1 Then Error 4246
+    Print "IMAGE_VARIANT_CONSTRUCTORS_OK"
+End Sub

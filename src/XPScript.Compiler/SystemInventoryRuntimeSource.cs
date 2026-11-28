@@ -21,8 +21,27 @@ internal sealed class XPScriptSystemInventory
         var serial = "";
         var biosVendor = "";
         var biosVersion = "";
+        var operatingSystem = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
+        var osVersion = Environment.OSVersion.VersionString;
 
-        if (System.OperatingSystem.IsWindows())
+        if (System.OperatingSystem.IsAndroid())
+        {
+            var release = "";
+            var apiLevel = 0;
+#if __ANDROID__
+            release = global::Android.OS.Build.VERSION.Release ?? "";
+            apiLevel = (int)global::Android.OS.Build.VERSION.SdkInt;
+            manufacturer = global::Android.OS.Build.Manufacturer ?? "";
+            model = global::Android.OS.Build.Model ?? "";
+            serial = global::Android.OS.Build.Serial ?? "";
+            biosVendor = global::Android.OS.Build.Brand ?? "";
+            biosVersion = global::Android.OS.Build.Bootloader ?? "";
+#endif
+            var androidVersion = release.Length != 0 ? release : "API " + apiLevel.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            operatingSystem = "Android " + androidVersion;
+            osVersion = androidVersion;
+        }
+        else if (System.OperatingSystem.IsWindows())
         {
             using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"HARDWARE\DESCRIPTION\System\BIOS");
             manufacturer = RegistryText(key, "SystemManufacturer");
@@ -47,8 +66,8 @@ internal sealed class XPScriptSystemInventory
 
         return new XPScriptSystemInventorySystemInfo(
             Environment.MachineName,
-            System.Runtime.InteropServices.RuntimeInformation.OSDescription,
-            Environment.OSVersion.VersionString,
+            operatingSystem,
+            osVersion,
             System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString(),
             System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
             System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription,
@@ -498,6 +517,7 @@ internal sealed class XPScriptSystemInventory
 
     private static string GetMap(Dictionary<string, string> values, string key, string fallback) => values.TryGetValue(key, out var value) ? value : fallback;
     private static string ReadTextFile(string path) { try { return System.IO.File.Exists(path) ? System.IO.File.ReadAllText(path).Trim() : ""; } catch { return ""; } }
+
     private static string RegistryText(Microsoft.Win32.RegistryKey? key, string name) { try { return Convert.ToString(key?.GetValue(name), System.Globalization.CultureInfo.InvariantCulture)?.Trim() ?? ""; } catch { return ""; } }
     private static long RegistryLong(Microsoft.Win32.RegistryKey? key, string name) { try { return Convert.ToInt64(key?.GetValue(name) ?? 0, System.Globalization.CultureInfo.InvariantCulture); } catch { return 0; } }
 

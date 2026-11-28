@@ -51,8 +51,11 @@ internal static class XPScriptCallbackRuntime
         {
             throw runtime;
         }
-        catch (System.Reflection.TargetInvocationException)
+        catch (System.Reflection.TargetInvocationException ex)
         {
+            System.Diagnostics.Debug.WriteLine(ex.InnerException ?? ex);
+            if (OperatingSystem.IsBrowser())
+                Console.Error.WriteLine($"{operation} callback '{callbackName}' failed: {ex.InnerException ?? ex}");
             throw new XPScriptRuntimeException(5, $"{operation} callback '{callbackName}' failed.");
         }
         catch (Exception)

@@ -1,0 +1,5 @@
+Sub Main()
+    Print "APPLICATION_NEWLINE_BEGIN"
+    Print "A" & Application.NewLine & "B"
+    Print "APPLICATION_NEWLINE_END"
+End Sub

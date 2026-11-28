@@ -1,0 +1,6 @@
+Option Declare
+Const Answer As Integer = 42
+
+Sub Main()
+    Print Answer
+End Sub

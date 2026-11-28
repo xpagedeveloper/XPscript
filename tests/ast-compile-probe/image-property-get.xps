@@ -1,0 +1,117 @@
+Class ImageFactory
+    Public Size As Long
+    Public Scratch As Variant
+    Public Property Get Fresh As XPImage
+        Dim discarded As New XPImage(1, 1)
+        Scratch = discarded
+        Dim result As New XPImage(Size, 2, "#abcdef")
+        Set Fresh = result
+    End Property
+    Public Property Get Item(Optional ByRef index As Long = 4) As XPImage
+        Set Item = New XPImage(index, 2)
+        index = index + 1
+    End Property
+    Public Property Get Protected(Optional ByRef index As Long = 4) As XPImage
+        Dim discarded As New XPImage(1, 1)
+        Scratch = discarded
+        On Error Resume Next
+        Error 3702, "handled image getter"
+        On Error GoTo 0
+        Dim result As New XPImage(index, 3)
+        Set Protected = result
+        index = index + 1
+    End Property
+    Public Property Get Replaced As XPImage
+        Dim first As New XPImage(1, 1)
+        Scratch = first
+        Set Replaced = first
+        Set Replaced = New XPImage(3, 2)
+    End Property
+    Public Property Get Failing(ByRef index As Long) As XPImage
+        Dim result As New XPImage(2, 2)
+        Scratch = result
+        Set Failing = result
+        index = index + 1
+        Error 3701, "failed image getter"
+    End Property
+    Public Property Get Unassigned As XPImage
+    End Property
+End Class
+Sub Main()
+    Dim factory As New ImageFactory
+    Dim other As New ImageFactory
+    factory.Size = 5
+    other.Size = 7
+    If factory.Unassigned Is Nothing Then
+    Else
+        Error 6, "unassigned image result"
+    End If
+    Dim picture As XPImage = factory.Fresh
+    If picture.Width <> 5 Or picture.Height <> 2 Then Error 6, "image getter result lifetime"
+    Dim expired As XPImage = factory.Scratch
+    If expired Is Nothing Then Error 6, "missing cleanup observation"
+    Dim observed As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    observed = expired.Width
+    failure = Err
+    On Error GoTo 0
+    If observed <> -1 Or failure = 0 Then Error 6, "getter temporary was not recycled"
+    Dim independent As XPImage = other.Fresh
+    If independent.Width <> 7 Then Error 6, "instance getter state"
+    Dim withImage As XPImage
+    With factory
+        Set withImage = .fReSh
+    End With
+    If withImage.Width <> 5 Then Error 6, "With image getter"
+    Call picture.Resize(6, 2)
+    If independent.Width <> 7 Then Error 6, "independent image getter results"
+    Dim index As Long = 3
+    Dim indexed As XPImage = factory.Item(index)
+    If indexed.Width <> 3 Or index <> 4 Then Error 6, "image ByRef getter index"
+    Dim omitted As XPImage = factory.Item()
+    Dim repeated As XPImage = factory.Item()
+    If omitted.Width <> 4 Or repeated.Width <> 4 Then Error 6, "Optional image getter storage"
+    Dim protectedImage As XPImage = factory.Protected(index)
+    If protectedImage.Width <> 4 Or protectedImage.Height <> 3 Or index <> 5 Then Error 6, "protected image result"
+    Dim protectedDefault As XPImage = factory.Protected()
+    If protectedDefault.Width <> 4 Then Error 6, "protected Optional forwarding"
+    Set expired = factory.Scratch
+    If expired Is Nothing Then Error 6, "missing protected observation"
+    observed = -1
+    On Error Resume Next
+    observed = expired.Width
+    failure = Err
+    On Error GoTo 0
+    If observed <> -1 Or failure = 0 Then Error 6, "protected getter cleanup"
+    Dim replaced As XPImage = factory.Replaced
+    If replaced.Width <> 3 Then Error 6, "replaced getter result"
+    Set expired = factory.Scratch
+    If expired Is Nothing Then Error 6, "missing replaced observation"
+    observed = -1
+    On Error Resume Next
+    observed = expired.Width
+    failure = Err
+    On Error GoTo 0
+    If observed <> -1 Or failure = 0 Then Error 6, "replaced result was not recycled"
+    Dim failed As XPImage
+    On Error Resume Next
+    Set failed = factory.Failing(index)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3701 Or index <> 6 Then Error 6, "failed image getter alias"
+    If failed Is Nothing Then
+    Else
+        Error 6, "failed getter returned an image"
+    End If
+    Set expired = factory.Scratch
+    If expired Is Nothing Then Error 6, "missing failed observation"
+    observed = -1
+    On Error Resume Next
+    observed = expired.Width
+    failure = Err
+    On Error GoTo 0
+    If observed <> -1 Or failure = 0 Then Error 6, "failed getter result escaped cleanup"
+    Call picture.Recycle()
+    Print "IMAGE_PROPERTY_GET_OK"
+End Sub

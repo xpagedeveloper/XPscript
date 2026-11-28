@@ -1,0 +1,17 @@
+Class Holder
+    Public Property Get Index() As Long
+        Index = 1
+    End Property
+End Class
+Class Counter
+    Public Property Get Item(ByRef index As Long) As Long
+        index = index + 1
+        Item = index
+    End Property
+End Class
+Sub Main()
+    Dim holder As New Holder
+    Dim counter As New Counter
+    Dim result As Long
+    result = counter.Item(holder.Index)
+End Sub

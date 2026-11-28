@@ -1,0 +1,93 @@
+using XPScript.Compiler;
+using XPScript.Compiler.Binding;
+using XPScript.Compiler.Emission;
+
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE", "1");
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_EMISSION_CACHE", "1");
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_PERSISTENT_CACHE", "1");
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE", null);
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_EMISSION_CACHE", null);
+if (!BoundTreeCache.Enabled || !BoundEmissionCache.Enabled)
+    throw new InvalidOperationException("Process-local AST caches are not enabled by default.");
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE", "1");
+Environment.SetEnvironmentVariable("XPSCRIPT_AST_EMISSION_CACHE", "1");
+BoundTreeCache.Clear();
+BoundEmissionCache.Clear();
+PersistentAstCompilationCache.ClearCounters();
+var root = Path.Combine(Path.GetTempPath(), "xpscript-ast-cache-probe-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(root);
+try
+{
+    var include = Path.Combine(root, "shared.xps");
+    var source = Path.Combine(root, "main.xps");
+    File.WriteAllText(include, "Const SharedValue As Long = 7\n");
+    File.WriteAllText(source, "Include \"shared.xps\"\nConst LocalValue As Long = 7\nSub Main()\nPrint SharedValue + LocalValue\nEnd Sub\nSub Helper()\nPrint 1\nEnd Sub\n");
+
+    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+    await AstCompiler.CompileAsync(source, Path.Combine(root, "first"));
+    stopwatch.Stop();
+    var cleanMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
+    var missesAfterFirst = BoundTreeCache.Misses;
+    stopwatch.Restart();
+    await AstCompiler.CompileAsync(source, Path.Combine(root, "second"));
+    stopwatch.Stop();
+    var cachedMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
+    if (BoundTreeCache.Hits == 0)
+        throw new InvalidOperationException("Unchanged source did not reuse a bound tree.");
+    if (BoundEmissionCache.Hits == 0)
+        throw new InvalidOperationException("Unchanged source did not reuse emitted C#.");
+    var hitsBeforeIndependentEdit = BoundTreeCache.Hits;
+    var missesBeforeIndependentEdit = BoundTreeCache.Misses;
+
+    File.WriteAllText(source, "Include \"shared.xps\"\nConst LocalValue As Long = 7\nSub Main()\nPrint SharedValue + LocalValue\nEnd Sub\nSub Helper()\nPrint 2\nEnd Sub\n");
+    await AstCompiler.CompileAsync(source, Path.Combine(root, "independent-edit"));
+    if (BoundTreeCache.Hits <= hitsBeforeIndependentEdit || BoundTreeCache.Misses <= missesBeforeIndependentEdit)
+        throw new InvalidOperationException("Editing one procedure did not preserve an independent procedure cache hit.");
+
+    var missesBeforeSymbolEdit = BoundTreeCache.Misses;
+    File.WriteAllText(source, "Include \"shared.xps\"\nConst LocalValue As Long = 8\nSub Main()\nPrint SharedValue + LocalValue\nEnd Sub\nSub Helper()\nPrint 2\nEnd Sub\n");
+    await AstCompiler.CompileAsync(source, Path.Combine(root, "changed-symbol"));
+    if (BoundTreeCache.Misses <= missesBeforeSymbolEdit)
+        throw new InvalidOperationException("Changing a shared module constant did not invalidate its dependent procedure.");
+
+    File.WriteAllText(include, "Const SharedValue As Long = 8\n");
+    stopwatch.Restart();
+    await AstCompiler.CompileAsync(source, Path.Combine(root, "changed-include"));
+    stopwatch.Stop();
+    var includeEditMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
+    if (BoundTreeCache.Misses <= missesAfterFirst)
+        throw new InvalidOperationException("Included-file edit did not invalidate the bound tree.");
+
+    File.WriteAllText(source, "Include \"shared.xps\"\nSub Main()\nPrint SharedValue + 1\nEnd Sub\n");
+    stopwatch.Restart();
+    await AstCompiler.CompileAsync(source, Path.Combine(root, "changed-source"));
+    stopwatch.Stop();
+    var sourceEditMilliseconds = stopwatch.Elapsed.TotalMilliseconds;
+    if (BoundTreeCache.Misses <= missesAfterFirst + 1)
+        throw new InvalidOperationException("Source edit did not invalidate the bound tree.");
+
+    var persistentOutput = Path.Combine(root, "persistent");
+    await AstCompiler.CompileAsync(source, persistentOutput);
+    await AstCompiler.CompileAsync(source, persistentOutput);
+    if (PersistentAstCompilationCache.Hits == 0 || !File.Exists(Path.Combine(persistentOutput, ".xpscript-ast-cache.json")))
+        throw new InvalidOperationException($"Persistent dependency-aware cache did not reuse the completed output. hits={PersistentAstCompilationCache.Hits} misses={PersistentAstCompilationCache.Misses} manifest={File.Exists(Path.Combine(persistentOutput, ".xpscript-ast-cache.json"))}");
+    var persistentHits = PersistentAstCompilationCache.Hits;
+    File.WriteAllText(include, "Const SharedValue As Long = 9\n");
+    await AstCompiler.CompileAsync(source, persistentOutput);
+    if (PersistentAstCompilationCache.Hits != persistentHits)
+        throw new InvalidOperationException("Included-file edit incorrectly reused persistent output.");
+
+    Console.WriteLine($"AST_BOUND_CACHE_HIT_OK hits={BoundTreeCache.Hits} misses={BoundTreeCache.Misses}");
+    Console.WriteLine($"AST_EDIT_COMPILE_BENCHMARK clean_ms={cleanMilliseconds:F1} cached_ms={cachedMilliseconds:F1} include_edit_ms={includeEditMilliseconds:F1} source_edit_ms={sourceEditMilliseconds:F1} emission_hits={BoundEmissionCache.Hits}");
+    Console.WriteLine($"AST_PERSISTENT_CACHE_OK hits={PersistentAstCompilationCache.Hits} misses={PersistentAstCompilationCache.Misses}");
+}
+finally
+{
+    Environment.SetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE", null);
+    Environment.SetEnvironmentVariable("XPSCRIPT_AST_EMISSION_CACHE", null);
+    Environment.SetEnvironmentVariable("XPSCRIPT_AST_PERSISTENT_CACHE", null);
+    BoundTreeCache.Clear();
+    BoundEmissionCache.Clear();
+    PersistentAstCompilationCache.ClearCounters();
+    if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+}

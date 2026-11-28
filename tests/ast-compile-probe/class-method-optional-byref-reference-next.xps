@@ -1,0 +1,16 @@
+Class Holder
+    Public Function HasValue(Optional ByRef value As Object = Nothing) As Long
+        If value Is Nothing Then
+            HasValue = 0
+        Else
+            HasValue = 1
+        End If
+    End Function
+End Class
+
+Sub Main()
+    Dim holder As New Holder
+    Dim value As New Object
+    Print CStr(holder.HasValue())
+    Print CStr(holder.HasValue(value))
+End Sub

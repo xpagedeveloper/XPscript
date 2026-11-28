@@ -1,0 +1,71 @@
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("XamlMcp UI property matrix", 720, 640, True)
+    Call form.AddTextField("status", "Response")
+    Call form.AddTextField("title", "Title")
+    Call form.AddNumberField("width", "Width")
+    Call form.AddNumberField("height", "Height")
+    Call form.AddCheckBox("enabled", "Enabled")
+    Call form.AddSelect("theme", "Theme")
+    Call form.AddOption("theme", "Light")
+    Call form.AddOption("theme", "Dark")
+    Call form.AddListBox("mode", "Mode")
+    Call form.AddOption("mode", "Default")
+    Call form.AddOption("mode", "Compact")
+    Call form.AddOption("mode", "Expanded")
+    Call form.AddMultiListBox("features", "Features")
+    Call form.AddOption("features", "Grid")
+    Call form.AddOption("features", "Tabs")
+    Call form.AddOption("features", "Media")
+    Call form.AddOption("features", "WebView")
+    Call form.AddButtonCallback("set-title", "Set title", "SetTitle")
+    Call form.AddButtonCallback("set-size", "Set size", "SetSize")
+    Call form.AddButtonCallback("toggle-enabled", "Toggle enabled", "ToggleEnabled")
+    Call form.AddButtonCallback("set-theme", "Set theme", "SetTheme")
+    Call form.AddButtonCallback("read-values", "Read properties", "ReadValues")
+    Call form.AddButtonCallback("close", "Close", "CloseForm")
+    Call form.Show(False)
+End Sub
+
+Sub SetTitle(evt As Variant)
+    Dim form As UIForm
+    form = evt.Form
+    form.Title = "XamlMcp updated title"
+    Call form.SetFieldValue("status", "Title=" & form.Title)
+End Sub
+
+Sub SetSize(evt As Variant)
+    Dim form As UIForm
+    form = evt.Form
+    form.Width = CInt(800)
+    form.Height = CInt(700)
+    Call form.SetFieldValue("status", "Width=" & CStr(form.Width) & ";Height=" & CStr(form.Height))
+End Sub
+
+Sub ToggleEnabled(evt As Variant)
+    Dim form As UIForm
+    form = evt.Form
+    Dim enabled As Boolean
+    enabled = Not (LCase(form.GetFieldValueString("enabled")) = "true")
+    Call form.SetFieldValue("enabled", enabled)
+    Call form.SetFieldValue("status", "Enabled=" & CStr(enabled))
+End Sub
+
+Sub SetTheme(evt As Variant)
+    Dim form As UIForm
+    form = evt.Form
+    Call form.SetFieldValue("status", "Theme=" & form.GetFieldValueString("theme"))
+End Sub
+
+Sub ReadValues(evt As Variant)
+    Dim form As UIForm
+    form = evt.Form
+    Call form.SetFieldValue("status", "Title=" & form.Title & ";Width=" & CStr(form.Width) & ";Height=" & CStr(form.Height) & ";Mode=" & form.GetFieldValueString("mode"))
+End Sub
+
+Sub CloseForm(evt As Variant)
+    Dim form As Variant
+    form = evt.Form
+    Call form.Close()
+End Sub

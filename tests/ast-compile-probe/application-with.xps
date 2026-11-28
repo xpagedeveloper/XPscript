@@ -1,0 +1,12 @@
+Sub Main()
+    With Application
+        If .ArgCount <> 0 Then Error 9922, "Implicit member lost"
+        .Title = "Implicit title"
+        If CStr(.Title) <> "Implicit title" Then Error 9923, "Implicit property write lost"
+        With .State
+            Call .Set("name", "value")
+            If CStr(.Get("name")) <> "value" Then Error 9924, "Nested implicit state lost"
+        End With
+    End With
+    Print "APPLICATION_WITH_OK"
+End Sub

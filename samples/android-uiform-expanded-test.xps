@@ -1,0 +1,68 @@
+' Android AST UIForm expanded control smoke test.
+' The emulator test fills the text field and presses OK after the app starts.
+
+Sub Main()
+    Dim data As New XPJsonObject
+    Dim form As New UIForm("Android UIForm Expanded Test")
+    Dim result As String
+    Dim progress As Variant
+    Dim activity As Variant
+    Dim slider As Variant
+    Dim toggle As Variant
+
+    Call data.Set("name", "")
+    Call data.Set("notes", "")
+    Call data.Set("enabled", False)
+    Call data.Set("choice", "Beta")
+    Call data.Set("rangeValue", 50)
+    Call data.Set("amount", 12.5)
+    Call data.Set("email", "user@example.com")
+    Call data.Set("phone", "+46 70 123 45 67")
+    Call data.Set("richText", "Android rich text")
+    Call form.BindData(data)
+    form.CornerRadius = 14
+    form.DefaultControlWidth = 320
+    form.DefaultControlHeight = 48
+    form.DefaultFontSize = 16
+
+    Call form.AddTextField("name", "Name")
+    Call form.AddTextArea("notes", "Notes")
+    Call form.AddCheckBox("enabled", "Enabled")
+    Call form.AddSelect("choice", "Choice")
+    Call form.AddOption("choice", "Alpha")
+    Call form.AddOption("choice", "Beta")
+    Call form.AddOption("choice", "Gamma")
+    Call form.AddRangeField("rangeValue", "Range")
+    Call form.SetNumberRange("rangeValue", 0, 100)
+    Call form.AddProgressBar("progress", "Progress")
+    Call form.AddActivityIndicator("activity", "Activity")
+    Call form.AddSlider("volume", "Volume")
+    Call form.AddSwitch("notifications", "Notifications")
+    Call form.AddImage("fileImage", "assets/android-ui-file.png", "File image")
+    Call form.AddNumberField("amount", "Amount")
+    Call form.AddDecimalField("decimalValue", "Decimal")
+    Call form.AddCurrencyField("currencyValue", "Currency", "SEK")
+    Call form.AddEmailField("email", "Email")
+    Call form.AddUrlField("website", "Website")
+    Call form.AddTelField("phone", "Phone")
+    Call form.AddWeekField("week", "Week")
+    Call form.AddRichTextField("richText", "Rich text")
+    Call form.AddMultiSelect("tags", "Tags")
+    Call form.AddOption("tags", "One")
+    Call form.AddOption("tags", "Two")
+    Call form.AddCheckBoxGroup("flags", "Flags")
+    Call form.AddOption("flags", "A")
+    Call form.AddOption("flags", "B")
+    Call form.AddIcon("status", "check", "Status")
+    Call form.AddCard("summary", "Summary")
+    Call form.AddPanel("details", "Details")
+    Call form.AddSeparator("separator")
+
+    Call Application.Debug.Info("ANDROID-UIFORM-EXPANDED=start")
+    result = form.ShowDialog()
+    Call Application.Debug.Info("ANDROID-UIFORM-EXPANDED=result:" & result)
+    Call Application.Debug.Info("ANDROID-UIFORM-EXPANDED-name:" & form.GetFieldValueString("name"))
+    Call Application.Debug.Info("ANDROID-UIFORM-EXPANDED-choice:" & form.GetFieldValueString("choice"))
+    Call Application.Debug.Info("ANDROID-UIFORM-EXPANDED-enabled:" & form.GetFieldValueString("enabled"))
+    Print "ANDROID-UIFORM-EXPANDED-RESULT=" & result
+End Sub

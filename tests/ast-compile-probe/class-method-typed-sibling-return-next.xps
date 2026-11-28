@@ -1,0 +1,34 @@
+Class SiblingValue
+    Public Value As Long
+End Class
+
+Class SiblingFactory
+    Public Function MakeValue() As SiblingValue
+        Dim item As New SiblingValue
+        item.Value = 17
+        Set MakeValue = item
+    End Function
+
+    Public Function ReadValue() As Long
+        ReadValue = MakeValue().Value
+    End Function
+
+    Public Function ReadMeValue() As Long
+        ReadMeValue = Me.MakeValue().Value
+    End Function
+End Class
+
+Class SiblingChild Extend SiblingFactory
+    Public Function ReadInheritedValue() As Long
+        ReadInheritedValue = MakeValue().Value
+    End Function
+End Class
+
+Sub Main()
+    Dim factory As New SiblingFactory
+    If factory.ReadValue() <> 17 Then Error 9901, "Sibling return type lost"
+    If factory.ReadMeValue() <> 17 Then Error 9902, "Me return type lost"
+    Dim child As New SiblingChild
+    If child.ReadInheritedValue() <> 17 Then Error 9903, "Inherited return type lost"
+    Print "AST_TYPED_SIBLING_RETURN_OK"
+End Sub

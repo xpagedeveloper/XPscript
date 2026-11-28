@@ -11,7 +11,7 @@ fetch() {
 
 fetch github.json "https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json"
 fetch stripe.json "https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json"
-fetch digitalocean.yaml "https://raw.githubusercontent.com/digitalocean/openapi/main/specification/DigitalOcean-public.v2.yaml"
+fetch digitalocean.yaml "https://api-engineering.nyc3.digitaloceanspaces.com/spec-ci/DigitalOcean-public.v2.yaml"
 fetch openai.yaml "https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml"
 fetch scb.json "https://statistikdatabasen.scb.se/swagger/v2/swagger.json"
 fetch skogsstyrelsen.json "https://api.skogsstyrelsen.se/sksapi/swagger/skogliga%20grunddata_v1.0/openapi.json"

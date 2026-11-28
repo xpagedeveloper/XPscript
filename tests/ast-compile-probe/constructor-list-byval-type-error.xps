@@ -1,0 +1,8 @@
+Class Record
+    Public Sub New(ByVal values List As Long)
+    End Sub
+End Class
+Sub Main()
+    Dim values List As String
+    Dim item As New Record(values)
+End Sub

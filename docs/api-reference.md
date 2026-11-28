@@ -4,6 +4,10 @@ This is the searchable runtime-object reference for XPScript. Use [commands.md](
 
 Every row contains the member title, accepted syntax, parameters and their purpose, a short behavior description, and a complete `.xps` example that can be copied and compiled. The linked topical pages provide longer explanations and security guidance.
 
+For native CSV documents and header/row/column collections, see [native-csv.md](native-csv.md). Normal and AST compilation share the same runtime; unused CSV code is omitted and CSV-only programs add no external packages. Native spreadsheet objects and CSV interoperability also compile through AST; see [xpspreadsheet.md](xpspreadsheet.md).
+
+For the native XML document/DOM/DTD API, see [native-xml.md](native-xml.md). AST and normal compilation use the same secure XML runtime, included only on actual use without external addons.
+
 ## Process execution
 
 Use `Shell` for compatibility command-string process startup and `ShellArgs` when a process should be started with structured arguments without waiting. Use `ShellExecute` when the caller needs completion, captured output, or the child exit code.
@@ -52,7 +56,7 @@ Stdout and stderr are drained concurrently to avoid pipe-buffer deadlocks. `Shel
 - [Supabase HTTP database](#supabase-http-database)
 - [Domino REST database](#domino-rest-database)
 - [XPAi](#xpai)
-- [AITool](#aitool)
+- [XPAITool](#xpaitool)
 - [UIForm](#uiform)
 - [UIListView](#uilistview)
 - [REST routes and binding](#rest-routes-and-binding)
@@ -62,6 +66,8 @@ Stdout and stderr are drained concurrently to avoid pipe-buffer deadlocks. `Shel
 - [RequestScope](#requestscope)
 
 ## Application runtime
+
+Normal and AST compilation share Application runtime, state and services. For typed AST behavior, Args snapshots, conditional inclusion, platform/host guards and executable metadata, see [application-reference.md](application-reference.md).
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
@@ -117,10 +123,15 @@ See [HTTP client](http-client.md) for request limits, UIForm helpers and securit
 
 See the runnable [native HTTP/JSON sample](../samples/native-http-json.xps).
 
+Experimental AST compilation uses the same native JSON runtime for `XPJsonDocument`, `XPJsonObject`, `XPJsonArray` and `XPJsonElement`. `New`, `Dim ... As New`, typed parameters (including ByRef replacement), `Root.AsObject()`/`Root.AsArray()`, mutation, serialization and JSON-array `ForAll` are covered by the executable `tests/ast-compile-probe/json-runtime.xps` and `json-reference.xps` regressions. Parse/depth/resource limits and invalid-index errors are shared with normal compilation; no additional package is required.
+
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `XPJsonDocument.Parse` | `XPJsonDocument.Parse(text)` | JSON `text`. | Parses JSON into a `XPJsonDocument`. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `XPJsonDocument.Stringify` | `document.Stringify()` | none | Serializes the document. | [native-http-json.xps](../samples/native-http-json.xps) |
+| `XPJsonDocument.Root` | `document.Root` | none | Returns the root as `XPJsonElement`. | [json-reference.xps](../tests/ast-compile-probe/json-reference.xps) |
+| `XPJsonElement.AsObject` | `element.AsObject()` | none | Returns an object wrapper, or Nothing for a non-object element. | [json-reference.xps](../tests/ast-compile-probe/json-reference.xps) |
+| `XPJsonElement.AsArray` | `element.AsArray()` | none | Returns an array wrapper, or Nothing for a non-array element. | [json-reference.xps](../tests/ast-compile-probe/json-reference.xps) |
 | `XPJsonObject.Get` | `obj.Get(name)` | property `name`. | Returns a property value or runtime null. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `XPJsonObject.Set` | `obj.Set(name, value)` | property `name`, JSON-compatible `value`. | Adds or replaces a property. | [native-http-json.xps](../samples/native-http-json.xps) |
 | `XPJsonObject.Remove` | `obj.Remove(name)` | property `name`. | Removes a property. | [native-http-json.xps](../samples/native-http-json.xps) |
@@ -145,7 +156,7 @@ See [Native Notes C API runtime](notes-c-api.md) for the complete Notes object m
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
 | `NotesSession.OpenDatabase` | `session.OpenDatabase(server, filePath)` | Notes server and NSF path. | Opens a native Notes/Domino database. Use an empty server for a local NSF. | [notes-c-api-v1.xps](../samples/notes-c-api-v1.xps) |
-| `NotesView.GetFirstDocumentByKey` | `view.GetFirstDocumentByKey(key [, exactMatch])` | Scalar key or one-dimensional key array; optional exact/partial mode. | Scalar text keys search the first sorted column. Array keys match successive sorted columns. Arrays containing numeric or `NotesDateTime` keys use native `NIFFindByKey`; text-only arrays use the managed comparison path. | [notes-view-native-multikey-dxl.xps](../samples/notes-view-native-multikey-dxl.xps) |
+| `NotesView.GetDocumentByKey` | `view.GetDocumentByKey(key [, exactMatch])` | Scalar key or one-dimensional key array; optional exact/partial mode. | Scalar text keys search the first sorted column. Array keys match successive sorted columns. Arrays containing numeric or `NotesDateTime` keys use native `NIFFindByKey`; text-only arrays use the managed comparison path. | [notes-view-native-multikey-dxl.xps](../samples/notes-view-native-multikey-dxl.xps) |
 | `NotesView.GetAllDocumentsByKey` | `view.GetAllDocumentsByKey(key [, exactMatch])` | Same key forms as above. | Returns all documents matching the supplied scalar or multi-column key. | [notes-view-native-multikey-dxl.xps](../samples/notes-view-native-multikey-dxl.xps) |
 | `NotesDocument.Save` | `doc.Save()` | none | Saves through the normal native update path and raises native failures as XPscript runtime errors. | [notes-c-api-v1.xps](../samples/notes-c-api-v1.xps) |
 | `NotesDocument.Save` | `doc.Save(force [, createResponse [, markRead]])` | Boolean-compatible flags. | Boolean overloads apply force-update semantics and optionally mark the saved document read. `createResponse` is currently accepted for call-shape compatibility but does not create a conflict response document. | [notes-view-native-multikey-dxl.xps](../samples/notes-view-native-multikey-dxl.xps) |
@@ -173,6 +184,7 @@ See [SQLite database](sqlite.md) for path/security rules.
 | `XPDBSQLite.BeginTransaction` | `db.BeginTransaction()` | none | Starts one transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.Commit` | `db.Commit()` | none | Commits the transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.Rollback` | `db.Rollback()` | none | Rolls back the transaction. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
+| `XPDBSQLite.Dispose` | `db.Dispose()` | none | Closes the database and releases its connection resources. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.LastInsertRowId` | `db.LastInsertRowId` | none | Returns SQLite `last_insert_rowid()` for this connection. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.DatabasePath` | `db.DatabasePath` | none | Returns resolved file path or `:memory:`. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
 | `XPDBSQLite.ReadOnly` | `db.ReadOnly` | none | Reports read-only mode. | [xpdb-sqlite.xps](../samples/xpdb-sqlite.xps) |
@@ -196,6 +208,7 @@ See [SQL Server database](mssql.md).
 | `XPDbMsSql.BeginTransaction` | `db.BeginTransaction()` | none | Starts one transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.Commit` | `db.Commit()` | none | Commits active transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.Rollback` | `db.Rollback()` | none | Rolls back active transaction. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
+| `XPDbMsSql.Dispose` | `db.Dispose()` | none | Closes the connection and releases its resources. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.DataSource` | `db.DataSource` | none | Returns connected server name while open. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.Database` | `db.Database` | none | Returns connected database name while open. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
 | `XPDbMsSql.IsOpen` | `db.IsOpen` | none | Reports open state. | [xpdb-mssql.xps](../samples/xpdb-mssql.xps) |
@@ -275,7 +288,7 @@ See [XPAi client](ai.md) and [tools/session memory](ai-tools-sessions.md).
 | `Dispose` | `ai.Dispose()` | none | Cancels active work and releases resources. | [xpai.xps](../samples/xpai.xps) |
 | `AutoExecuteTools` | `ai.AutoExecuteTools = value` | Boolean. | Enables/disables automatic non-streaming tool execution. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
 | `MaxToolIterations` | `ai.MaxToolIterations = count` | 1 through 32. | Bounds automatic tool/model continuation. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
-| `AddTool` | `ai.AddTool(tool)` | registered `AITool`. | Adds a tool to this client. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
+| `AddTool` | `ai.AddTool(tool)` | registered `XPAITool`. | Adds a tool to this client. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
 | `RemoveTool` | `ai.RemoveTool(name)` | tool name. | Removes a tool and returns whether it existed. | [xpai.xps](../samples/xpai.xps) |
 | `ClearTools` | `ai.ClearTools()` | none | Removes all registered tools. | [xpai.xps](../samples/xpai.xps) |
 | `HasTool` | `ai.HasTool(name)` | tool name. | Tests tool registration. | [xpai.xps](../samples/xpai.xps) |
@@ -288,11 +301,11 @@ See [XPAi client](ai.md) and [tools/session memory](ai-tools-sessions.md).
 | `ResetSession` | `ai.ResetSession()` | none | Clears stored session ID only. | [xpai.xps](../samples/xpai.xps) |
 | `NewRequest` | `ai.NewRequest()` | none | Clears messages/session while preserving client config/tools. | [xpai.xps](../samples/xpai.xps) |
 
-## AITool
+## XPAITool
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| `AITool` | `New AITool(name)` | logical tool name. | Creates an AI tool container. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
+| `XPAITool` | `New XPAITool(name)` | logical tool name. | Creates an AI tool container. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
 | `Description` | `tool.Description = text` | provider-visible description. | Sets tool description. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
 | `Timeout` | `tool.Timeout = seconds` | 0.1 through 3600 seconds. | Sets tool timeout metadata. | [xpai.xps](../samples/xpai.xps) |
 | `AddFunction` | `tool.AddFunction(name, description, callback [, context...])` | AI name, description, module callback, optional fixed context. | Registers allowed AI function to callback mapping. | [ai-tool-demo.xps](../demo/ai/ai-tool-demo.xps) |
@@ -308,12 +321,25 @@ See [XPAi client](ai.md) and [tools/session memory](ai-tools-sessions.md).
 | `GetRequestContext` | `tool.GetRequestContext()` | none | Returns defensive JSON context copy. | [xpai.xps](../samples/xpai.xps) |
 | `ToJsonObject` | `tool.ToJsonObject()` | none | Returns tool metadata as `XPJsonObject`. | [xpai.xps](../samples/xpai.xps) |
 | `ToJson` | `tool.ToJson()` | none | Serializes tool metadata. | [xpai.xps](../samples/xpai.xps) |
-| `AIToolFunction.AddParameter` | `fn.AddParameter(name, type, description, required)` | parameter schema fields. | Adds parameter directly to function object. | [xpai.xps](../samples/xpai.xps) |
-| `AIToolFunction.RemoveParameter` | `fn.RemoveParameter(name)` | parameter name. | Removes parameter. | [xpai.xps](../samples/xpai.xps) |
-| `AIToolFunction.HasParameter` | `fn.HasParameter(name)` | parameter name. | Tests parameter registration. | [xpai.xps](../samples/xpai.xps) |
-| `AIToolFunction.ParameterCount` | `fn.ParameterCount()` | none | Returns parameter count. | [xpai.xps](../samples/xpai.xps) |
+| `XPAIToolFunction.AddParameter` | `fn.AddParameter(name, type, description, required)` | parameter schema fields. | Adds parameter directly to function object. | [xpai.xps](../samples/xpai.xps) |
+| `XPAIToolFunction.RemoveParameter` | `fn.RemoveParameter(name)` | parameter name. | Removes parameter. | [xpai.xps](../samples/xpai.xps) |
+| `XPAIToolFunction.HasParameter` | `fn.HasParameter(name)` | parameter name. | Tests parameter registration. | [xpai.xps](../samples/xpai.xps) |
+| `XPAIToolFunction.ParameterCount` | `fn.ParameterCount()` | none | Returns parameter count. | [xpai.xps](../samples/xpai.xps) |
 
-`AIToolCall` passed to callbacks exposes `ToolName`, `FunctionName`, `CallId`, `Arguments` and `SessionId`. The compiler verifies static `AddFunction` callback names and arity.
+`XPAIToolCall` passed to callbacks exposes `ToolName`, `FunctionName`, `CallId`, `Arguments` and `SessionId`. The compiler verifies static `AddFunction` callback names and arity.
+
+## Notifications
+
+`ShowToast` displays a temporary, nonblocking notification. Its default lifetime is five seconds. WebUI, Browser-WASM,
+and Android overlay it on the current form; desktop uses a separate borderless
+window. All hosts support the four screen corners, automatic expiry, and an
+accessible close button. New notifications appear at the selected corner. Top
+stacks grow downward as older items move down; bottom stacks grow upward as
+older items move up.
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `ShowToast` | `ShowToast(message [, kind [, position [, durationSeconds]]])` | message; optional `Normal` or `Warning`; corner; 1–30 seconds. | Displays a nonblocking toast. Warning text is highlighted. | [ui-toast-notifications.xps](../samples/ui-toast-notifications.xps) |
 
 ## UIForm
 
@@ -332,6 +358,9 @@ See [UIForm](uiform.md) and [extended fields](uiform-fields.md).
 | `AddNumberField` | `form.AddNumberField(name, label)` | name and label. | Adds numeric field. | [ui-form-core.xps](../samples/ui-form-core.xps) |
 | `AddCheckBox` | `form.AddCheckBox(name, label)` | name and label. | Adds Boolean checkbox. | [ui-form-core.xps](../samples/ui-form-core.xps) |
 | `AddDateField` | `form.AddDateField(name, label)` | name and label. | Adds date field. | [ui-form-core.xps](../samples/ui-form-core.xps) |
+| `AddMap` | `form.AddMap(name, label)` | name and label. | Adds a WebView-backed OpenStreetMap control. | [android-uiform-controls-api.xps](../samples/android-uiform-controls-api.xps) |
+| `AddDocumentViewer` | `form.AddDocumentViewer(name, label, source)` | name, label and document URL. | Adds a WebView-backed document/PDF viewer. | [android-uiform-controls-api.xps](../samples/android-uiform-controls-api.xps) |
+| `AddYouTube` | `form.AddYouTube(name, videoId)` | control name and YouTube video id. | Adds a WebView-backed YouTube player; set the returned field's `RunOnLoad` property to request autoplay. | [android-uiform-controls-api.xps](../samples/android-uiform-controls-api.xps) |
 | `AddSelect` | `form.AddSelect(name, label)` | name and label. | Adds single-select control. | [ui-form-listboxes.xps](../samples/ui-form-listboxes.xps) |
 | `AddRadioGroup` | `form.AddRadioGroup(name, label)` | name and label. | Adds radio group. | [ui-form-core.xps](../samples/ui-form-core.xps) |
 | `AddListBox` | `form.AddListBox(name, label)` | name and label. | Adds single-selection list box. | [ui-form-listboxes.xps](../samples/ui-form-listboxes.xps) |
@@ -366,6 +395,7 @@ See [UIForm](uiform.md) and [extended fields](uiform-fields.md).
 | `AddLookupField` | `form.AddLookupField(name, label, url [, valueField, labelField, remote])` | field metadata, endpoint, optional property names and remote-search flag. | Adds endpoint-backed lookup field. | [ui-form-lookup-fields.xps](../samples/ui-form-lookup-fields.xps) |
 | `AddAutoCompleteField` | `form.AddAutoCompleteField(name, label, url [, valueField, labelField, remote])` | field metadata and endpoint configuration. | Adds endpoint-backed autocomplete. | [ui-form-lookup-fields.xps](../samples/ui-form-lookup-fields.xps) |
 | `SetRemoteSearchOptions` | `form.SetRemoteSearchOptions(field, searchParam, valueParam, minChars, maxResults)` | lookup field and remote-search settings. | Configures server-side lookup/autocomplete search. | [ui-form-lookup-fields.xps](../samples/ui-form-lookup-fields.xps) |
+| `SetAutoCompleteProvider` | `form.SetAutoCompleteProvider(field, handler)` | an `AutoCompleteField`/`LookupField` and a function returning `XPJsonArray`. | Calls a local provider with the current type-ahead text and replaces the field options. | [android-uiform-controls-api.xps](../samples/android-uiform-controls-api.xps) |
 | `IsDirty` | `form.IsDirty` | none | Reports whether bound field data differs from clean baseline. | [ui-form-additional-fields.xps](../samples/ui-form-additional-fields.xps) |
 | `DirtyFields` | `form.DirtyFields` | none | Returns names of currently dirty fields. | [ui-form-additional-fields.xps](../samples/ui-form-additional-fields.xps) |
 
@@ -443,7 +473,7 @@ See [REST API development](rest-api.md). The complete runnable demo is [`demo/re
 | `Unauthorized` | `Response.Unauthorized([detail])` | optional problem detail. | Returns HTTP 401. | [web-rest-api.xps](../samples/web-rest-api.xps) |
 | `Forbidden` | `Response.Forbidden([detail])` | optional problem detail. | Returns HTTP 403. | [web-rest-api.xps](../samples/web-rest-api.xps) |
 | `Conflict` | `Response.Conflict(detail)` | problem detail. | Returns HTTP 409. | [web-rest-api.xps](../samples/web-rest-api.xps) |
-| `Problem` | `Response.Problem(status, title, detail)` | HTTP error status, title, detail. | Returns RFC Problem Details. | [web-rest-api.xps](../samples/web-rest-api.xps) |
+| `Problem` | `Response.Problem(status, title, detail)` | Integer/Long HTTP error status (400–599), title, detail. | Returns RFC Problem Details; lowercase `problem` is also supported. | [web-rest-api.xps](../samples/web-rest-api.xps) |
 
 ## Session
 
@@ -518,6 +548,8 @@ Host sessions must be enabled. See [REST API development](rest-api.md).
 ## XPImage
 
 XPImage is the cross-platform raster image runtime backed internally by Magick.NET. Magick.NET types are not exposed to XPscript. The complete processing guide is in [XPImage](xpimage/index.md).
+
+AST compilation binds this same runtime directly, including constructors, loaders, read-only properties and overloaded methods. Magick.NET/native assets and third-party notices are selected on image use, not for image-free programs. See the guide for ByVal/ByRef, local ownership, return and Static behavior.
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|

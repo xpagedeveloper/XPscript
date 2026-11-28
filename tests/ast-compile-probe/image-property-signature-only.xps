@@ -1,0 +1,12 @@
+Class EmptyImageFactory
+    Public Property Get Image As XPImage
+    End Property
+End Class
+Sub Main()
+    Dim factory As New EmptyImageFactory
+    If factory.Image Is Nothing Then
+    Else
+        Error 6, "signature-only image result"
+    End If
+    Print "IMAGE_PROPERTY_SIGNATURE_ONLY_OK"
+End Sub

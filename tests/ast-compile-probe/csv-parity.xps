@@ -1,0 +1,26 @@
+Sub Main()
+    Dim table As New XPCsvDocument
+    table.Delimiter = ";"
+    table.FileEncoding = "utf-8-bom"
+    Call table.Headers.Add("id")
+    Call table.Headers.Add("name")
+    Dim row As XPCsvRow
+    Set row = table.AddRow()
+    Call row.Set("id", "001")
+    Call row.Set("name", "Åsa")
+    Call table.Save("csv-parity.csv")
+    Dim loaded As XPCsvDocument
+    Set loaded = XPCsvDocument.Load("csv-parity.csv", "auto", ";")
+    Print loaded.Encoding
+    Print loaded.Rows[0].Get("name")
+    Dim old As XPCsvDocument
+    Set old = loaded
+    Dim bytes As Variant
+    bytes = table.ToBytes("windows-1252")
+    Call loaded.FromBytes(bytes, "windows-1252")
+    Print loaded Is old
+    Print loaded.Encoding
+    Print old.Encoding
+    Print loaded.Rows[0].Get("id")
+    Print "CSV_PARITY_OK"
+End Sub

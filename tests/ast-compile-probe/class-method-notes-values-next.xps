@@ -1,0 +1,13 @@
+Option Declare
+
+Class NotesValueMethods
+    Public Function Accept(ByVal name As NotesName, ByVal item As NotesItem, ByVal dateTime As NotesDateTime) As Boolean
+        Accept = (name Is Nothing) And (item Is Nothing) And (dateTime Is Nothing)
+    End Function
+End Class
+
+Sub Main()
+    Dim methods As New NotesValueMethods
+    If Not methods.Accept(Nothing, Nothing, Nothing) Then Error 4266
+    Print "AST_NOTES_VALUES_CLASS_METHOD_OK"
+End Sub

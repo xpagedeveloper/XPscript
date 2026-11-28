@@ -79,10 +79,22 @@ if (root.GetProperty("values").GetProperty("age").ValueKind != JsonValueKind.Num
 if (root.GetProperty("values").GetProperty("enabled").ValueKind != JsonValueKind.True)
     throw new InvalidOperationException("Desktop UIForm Boolean result mismatch.");
 
+var workspace = Path.GetFullPath(Path.Combine("out", "desktop-uiform-bridge", Guid.NewGuid().ToString("N")));
+Directory.CreateDirectory(workspace);
+
+async Task<string> GenerateAsync(string sourceText, string filename)
+{
+    var path = Path.Combine(workspace, filename);
+    await File.WriteAllTextAsync(path, sourceText);
+    return await AstCompiler.GenerateSourceAsync(path, workspace);
+}
+
 var source = """
 Sub Main()
+    Dim form As New UIForm("Dialog declaration")
     Dim answer As String
     Dim fileName As String
+    Call ShowToast("Toast from compiler probe", "Warning", "TopLeft", 5)
     answer = ShowDialog("Save?", "Confirm", "YesNo")
     answer = ShowDialog("Environment", "Choose", "List", "Dev|Test|Prod")
     fileName = LoadFileDialog("Load", "", "JSON|*.json")
@@ -90,13 +102,14 @@ Sub Main()
     fileName = SaveFileDialog("Save", "report.json", "JSON|*.json")
 End Sub
 """;
-var generated = new XPScriptTranspiler().Transpile(source, "ui-dialog-smoke.xps", "win-x64");
+var generated = await GenerateAsync(source, "ui-dialog-smoke.xps");
 foreach (var expected in new[]
 {
-    "XPScriptUIDialogRuntime.ShowDialog(",
-    "XPScriptUIDialogRuntime.LoadFileDialog(",
-    "XPScriptUIDialogRuntime.OpenFileDialog(",
-    "XPScriptUIDialogRuntime.SaveFileDialog(",
+    "AstCompatibilityHelpers.ShowDialog(",
+    "AstCompatibilityHelpers.LoadFileDialog(",
+    "AstCompatibilityHelpers.OpenFileDialog(",
+    "AstCompatibilityHelpers.SaveFileDialog(",
+    "AstCompatibilityHelpers.ShowToast(",
     "internal static class XPScriptUIDialogRuntime",
     "internal static class XPScriptUIDesktopAdapter"
 })
@@ -107,6 +120,70 @@ foreach (var expected in new[]
 if (!generated.Contains("public string ShowDialog()", StringComparison.Ordinal))
     throw new InvalidOperationException("UIForm.ShowDialog method declaration was incorrectly rewritten.");
 
+var desktopDialogHostSource = File.ReadAllText(Path.Combine("src", "XPScript.UI.Desktop", "DesktopDialogHost.cs"));
+if (!desktopDialogHostSource.Contains("window.ShowDialog(owner)", StringComparison.Ordinal) ||
+    !desktopDialogHostSource.Contains("modalTask.GetAwaiter().GetResult()", StringComparison.Ordinal))
+    throw new InvalidOperationException("Desktop standalone dialogs must use a blocking owner-modal window.");
+foreach (var toastContract in new[] { "public static void ShowToast(string requestJson)", "WindowDecorations = WindowDecorations.None", "Dispatcher.UIThread.Post(() => ShowToastCore(request))", "PositionToastStack(request.Position, stack)" })
+    if (!desktopDialogHostSource.Contains(toastContract, StringComparison.Ordinal))
+        throw new InvalidOperationException("Desktop toast must be a separate nonblocking borderless window at its requested position: " + toastContract);
+if (!desktopDialogHostSource.Contains("SizeToContent = SizeToContent.Height", StringComparison.Ordinal) ||
+    !desktopDialogHostSource.Contains("RowDefinitions = new RowDefinitions(\"*,Auto\")", StringComparison.Ordinal) ||
+    !desktopDialogHostSource.Contains("public int DurationSeconds { get; set; } = 5", StringComparison.Ordinal) ||
+    !desktopDialogHostSource.Contains("foreach (var window in visible.Reverse())", StringComparison.Ordinal) ||
+    !desktopDialogHostSource.Contains("Math.Max(1, height - 10)", StringComparison.Ordinal) ||
+    !desktopDialogHostSource.Contains("area.Bottom - height - offset", StringComparison.Ordinal) ||
+    !desktopDialogHostSource.Contains("screen.Scaling", StringComparison.Ordinal))
+    throw new InvalidOperationException("Desktop dialogs must size to their content, keep actions at the bottom, and default toast duration to five seconds.");
+var androidHostSource = File.ReadAllText(Path.Combine("src", "XPScript.Compiler", "AndroidUIHostSource.cs"));
+var browserHostSource = File.ReadAllText(Path.Combine("src", "XPScript.UI.Browser", "BrowserFormHost.cs"));
+var webToastSource = File.ReadAllText(Path.Combine("src", "XPScript.Web.Runtime", "XpsUIWebRuntimeBridge.cs"));
+if (!androidHostSource.Contains("toast.ZIndex = Interlocked.Increment(ref _toastSequence)", StringComparison.Ordinal) ||
+    !androidHostSource.Contains("region.Children.Insert(0, toast)", StringComparison.Ordinal) ||
+    !androidHostSource.Contains("region.Children.Add(toast)", StringComparison.Ordinal) ||
+    !browserHostSource.Contains("PrependChild(region, toast)", StringComparison.Ordinal) ||
+    !browserHostSource.Contains("AppendChild(region, toast)", StringComparison.Ordinal) ||
+    !webToastSource.Contains("else region.prepend(toast)", StringComparison.Ordinal) ||
+    !webToastSource.Contains("region.appendChild(toast)", StringComparison.Ordinal) ||
+    !webToastSource.Contains("marginTop':'marginBottom", StringComparison.Ordinal) ||
+    !browserHostSource.Contains("margin-top:-18px", StringComparison.Ordinal) ||
+    !browserHostSource.Contains("margin-bottom:-18px", StringComparison.Ordinal) ||
+    !androidHostSource.Contains("BoxShadow = new BoxShadows", StringComparison.Ordinal) ||
+    !desktopDialogHostSource.Contains("BoxShadow = new BoxShadows", StringComparison.Ordinal))
+    throw new InvalidOperationException("Toast placement and 10-pixel overlap must use the same newest-at-corner stack order on desktop, Android, WebUI and Browser-WASM.");
+var desktopFormHostSource = File.ReadAllText(Path.Combine("src", "XPScript.UI.Desktop", "DesktopFormHost.cs"));
+var desktopRequestSource = File.ReadAllText(Path.Combine("src", "XPScript.Compiler", "UIExtensionDesktopRuntimeSource.cs"));
+var dialogRuntimeSource = File.ReadAllText(Path.Combine("src", "XPScript.Compiler", "UIDialogRuntimeSource.cs"));
+var browserToastHostSource = File.ReadAllText(Path.Combine("src", "XPScript.UI.Browser", "BrowserFormHost.cs"));
+var androidToastHostSource = File.ReadAllText(Path.Combine("src", "XPScript.Compiler", "AndroidUIHostSource.cs"));
+if (!dialogRuntimeSource.Contains("ShowToast(message, \"Normal\", \"TopRight\", 5)", StringComparison.Ordinal) ||
+    !browserToastHostSource.Contains("public int DurationSeconds { get; set; } = 5", StringComparison.Ordinal) ||
+    !androidToastHostSource.Contains("? seconds : 5", StringComparison.Ordinal))
+    throw new InvalidOperationException("Toast defaults must expire after five seconds across desktop, WebUI, Browser-WASM and Android.");
+if (!desktopFormHostSource.Contains("window.Background = Brush.Parse(request.Background)", StringComparison.Ordinal) ||
+    !desktopRequestSource.Contains("background = form.Background", StringComparison.Ordinal))
+    throw new InvalidOperationException("Desktop UIForm background must reach both the form window and active-toast runtime request.");
+
+var desktopLifecycleHostSource = File.ReadAllText(Path.Combine("src", "XPScript.UI.Desktop", "DesktopFormLifecycleHost.cs"));
+var desktopIconSource = File.ReadAllText(Path.Combine("src", "XPScript.UI.Desktop", "DesktopWindowIcon.cs"));
+if (!desktopFormHostSource.Contains("Icon = DesktopWindowIcon.Load(request.ApplicationIcon)", StringComparison.Ordinal) ||
+    !desktopLifecycleHostSource.Contains("Icon = DesktopWindowIcon.Load(Read(root, \"applicationIcon\", string.Empty))", StringComparison.Ordinal) ||
+    !desktopIconSource.Contains("new WindowIcon(candidate)", StringComparison.Ordinal))
+    throw new InvalidOperationException("Application.Icon must be applied to desktop modal and modeless UIForm windows.");
+foreach (var layoutContract in new[]
+{
+    "var formLayout = new Grid();",
+    "formLayout.RowDefinitions.Add(new RowDefinition { Height = GridLength.Star });",
+    "var scroll = new ScrollViewer { Content = panel };",
+    "Grid.SetRow(footer, 1);",
+    "Content = formLayout"
+})
+{
+    if (!desktopFormHostSource.Contains(layoutContract, StringComparison.Ordinal) ||
+        !desktopLifecycleHostSource.Contains(layoutContract, StringComparison.Ordinal))
+        throw new InvalidOperationException("Desktop UIForm must keep its action footer anchored while fields scroll: " + layoutContract);
+}
+
 var multiWindowSource = """
 Sub Main()
     Dim first As New UIForm("First", 480, 320, True)
@@ -115,7 +192,7 @@ Sub Main()
     Call second.Show(False)
 End Sub
 """;
-var generatedMultiWindow = new XPScriptTranspiler().Transpile(multiWindowSource, "uiform-multiwindow-smoke.xps", "win-x64");
+var generatedMultiWindow = await GenerateAsync(multiWindowSource, "uiform-multiwindow-smoke.xps");
 foreach (var expected in new[]
 {
     "public void Show() => Show(false);",
@@ -149,7 +226,7 @@ Sub Main()
     Call list.SetKeyField("id")
 End Sub
 """;
-var generatedList = new XPScriptTranspiler().Transpile(listSource, "ui-list-smoke.xps", "win-x64");
+var generatedList = await GenerateAsync(listSource, "ui-list-smoke.xps");
 foreach (var expected in new[]
 {
     "internal static class XPScriptUIList",

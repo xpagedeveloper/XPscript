@@ -1,0 +1,18 @@
+Class NewProbe
+    Public Label As String
+
+    Public Sub New(ByVal value As String)
+        Label = value
+        Print "CTOR=" & value
+    End Sub
+End Class
+
+Sub Main()
+    Dim first As New NewProbe("first")
+
+    Dim second As NewProbe
+    Set second = New NewProbe("second")
+
+    Print "FIRST=" & first.Label
+    Print "SECOND=" & second.Label
+End Sub

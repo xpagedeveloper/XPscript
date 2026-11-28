@@ -1,0 +1,9 @@
+Sub Main()
+    Dim x As Integer
+    x = 2
+    If x > 0 Then
+        If x = 2 Then
+            Print "NESTED_OK"
+        End If
+    End If
+End Sub

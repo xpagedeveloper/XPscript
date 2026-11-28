@@ -1,0 +1,25 @@
+Class Box
+    Public Value As Long
+End Class
+
+Class Base
+    Public stored As Box
+
+    Public Property Get Current As Box
+        Set Current = stored
+    End Property
+End Class
+
+Class Child Extend Base
+    Public Property Get Adjusted As Long
+        Adjusted = Parent.Current.Value + 1
+    End Property
+End Class
+
+Sub Main()
+    Dim item As New Child
+    Dim value As New Box
+    value.Value = 8
+    Set item.stored = value
+    Print CStr(item.Adjusted)
+End Sub

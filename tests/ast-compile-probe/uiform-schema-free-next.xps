@@ -1,0 +1,5 @@
+Sub Main()
+    Dim form As New UIForm("Schema-free form")
+    Call form.AddTextField("name")
+    If form.FieldCount = 1 Then Print "AST_UIFORM_SCHEMA_FREE_OK"
+End Sub

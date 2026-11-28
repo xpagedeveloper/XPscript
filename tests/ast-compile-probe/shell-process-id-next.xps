@@ -1,0 +1,11 @@
+Sub Main()
+    Dim shellId As Long
+    Dim shellArgsId As Long
+    Dim args(0) As String
+    args(0) = "--version"
+
+    shellId = Shell("dotnet --version")
+    shellArgsId = ShellArgs("dotnet", args)
+    If shellId <= 0 Or shellArgsId <= 0 Then Error 6340, "Shell did not return process identifiers"
+    Print "SHELL_PROCESS_IDS_OK"
+End Sub

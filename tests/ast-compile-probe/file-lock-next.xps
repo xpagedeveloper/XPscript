@@ -1,0 +1,16 @@
+Sub Main()
+    Dim fileNumber As Integer
+    Dim failure As Long
+    fileNumber = FreeFile
+    Open "ast-file-lock-next.bin" For Binary As #fileNumber
+    Put #fileNumber, 1, "ABC"
+    Lock #fileNumber, 1 To 3
+    Unlock #fileNumber, 1 To 3
+    Close #fileNumber
+    On Error Resume Next
+    Lock #fileNumber, 1 To 3
+    failure = Err
+    On Error GoTo 0
+    If failure = 0 Then Error 6341, "AST Lock accepted a closed file handle"
+    Print "FILE_LOCK_OK"
+End Sub

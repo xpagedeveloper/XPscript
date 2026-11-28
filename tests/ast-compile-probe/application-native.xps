@@ -1,0 +1,55 @@
+Option Declare
+Sub Main()
+    If aPpLiCaTiOn.aRgCoUnT <> 2 Then Error 9900, "Argument count lost"
+    If Application.Args(0) <> "Åsa" Then Error 9901, "First argument lost"
+    If Application.Args(1) <> "two words" Then Error 9901, "Second argument lost"
+    If Application.CommandLine <> "Åsa two words" Then Error 9902, "Command line lost"
+    Dim args As Variant
+    args = Application.Args
+    If UBound(args) <> 1 Then Error 9903, "Argument array bounds lost"
+    If CStr(args(0)) <> "Åsa" Then Error 9903, "Argument array lost"
+    args(0) = "changed"
+    If Application.Args(0) <> "Åsa" Then Error 9904, "Arguments are not a snapshot"
+    Dim code As Long
+    On Error Resume Next
+    Print Application.Args(-1)
+    code = Err
+    On Error GoTo 0
+    If code <> 9 Then Error 9905, "Argument error lost"
+    Application.Id = "ast-application-test"
+    Application.Title = "Native Application"
+    Application.Width = 1024
+    Application.Height = 768
+    If CStr(Application.Title) <> "Native Application" Then Error 9906, "Title lost"
+    If CLng(Application.Width) <> 1024 Then Error 9906, "Width lost"
+    If Application.ExecutablePath <> Application.Path Then Error 9907, "Path alias lost"
+    If Application.FileName <> Application.ExecutableFileName Then Error 9907, "File alias lost"
+    If Application.TempFolder <> Application.TempPath Then Error 9907, "Temp alias lost"
+    If Len(Application.ExecutableDirectory) = 0 Then Error 9907, "Directory lost"
+    If Len(Application.NewLine) = 0 Then Error 9908, "NewLine lost"
+    Call Application.State.Clear()
+    With Application.State
+        Call .Set("Name", "value")
+        Call .Add("Counter", 2)
+        If CStr(.Get("name")) <> "value" Then Error 9909, "State lost"
+        If .Count <> 2 Then Error 9909, "State count lost"
+    End With
+    Dim keys As Variant
+    keys = Application.State.Keys
+    If UBound(keys) <> 1 Then Error 9910, "State keys lost"
+    Call Process.State.Set("same", "process")
+    Call Session.State.Set("same", "session")
+    Call Request.State.Set("same", "request")
+    If CStr(Process.State.Get("same")) <> "process" Then Error 9911, "Process scope lost"
+    If CStr(Session.State.Get("same")) <> "session" Then Error 9911, "Session scope lost"
+    If CStr(Request.State.Get("same")) <> "request" Then Error 9911, "Request scope lost"
+    If Not Application.State.Remove("name") Then Error 9912, "State removal lost"
+    If Not Application.State.Unset("counter") Then Error 9912, "State unset lost"
+    On Error Resume Next
+    Call Application.State.Set("", "invalid")
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9913, "State key validation lost"
+    Application.ExitCode = 0
+    Print "APPLICATION_NATIVE_OK"
+End Sub

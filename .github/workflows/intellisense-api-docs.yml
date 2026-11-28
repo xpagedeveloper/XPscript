@@ -13,6 +13,14 @@ on:
       - '.github/workflows/intellisense-api-docs.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'src/XPScript.Compiler/**'
+      - 'docs/**'
+      - 'samples/**'
+      - 'demo/**'
+      - 'scripts/validate-intellisense-api-docs.ps1'
+      - 'scripts/validate-runtime-api-doc-sync.ps1'
+      - '.github/workflows/intellisense-api-docs.yml'
   workflow_dispatch:
 
 permissions:

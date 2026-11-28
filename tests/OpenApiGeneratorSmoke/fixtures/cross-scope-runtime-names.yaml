@@ -1,0 +1,20 @@
+openapi: 3.1.0
+info: { title: Cross Scope Runtime Names, version: 1.0.0 }
+components:
+  schemas:
+    First:
+      type: object
+      properties:
+        JsonParse: { type: string }
+    Second:
+      type: object
+      properties:
+        jsonparse: { type: string }
+paths:
+  /runtime:
+    get:
+      operationId: JsonParse
+      parameters:
+        - { name: StrLeftBack, in: query, schema: { type: string } }
+      responses:
+        '204': { description: ok }

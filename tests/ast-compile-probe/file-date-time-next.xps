@@ -1,0 +1,6 @@
+Option Explicit
+
+Sub Main()
+    If TypeName(FileDateTime("tests/ast-compile-probe/file-date-time-next.xps")) <> "DATE" Then Error 9853, "FileDateTime did not return a date/time value"
+    Print "FILE_DATETIME_OK"
+End Sub

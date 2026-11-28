@@ -1,0 +1,45 @@
+# Installera och indexera med ccindex
+
+## Installera
+
+Kräver Python 3:
+
+    git clone https://github.com/dillibabukadati/ccindex.git
+    cd ccindex
+    python3 -m venv .venv
+    .venv/bin/pip install -e .
+    .venv/bin/pip install "model2vec>=0.10"
+
+## Ladda ner embeddingsmodellen
+
+ccindex använder Potion Code 16M v2:
+
+    mkdir -p models/potion-code-16m-v2
+
+    for file in model.safetensors tokenizer.json config.json; do
+      curl -L --fail \
+        "https://huggingface.co/minishlab/potion-code-16M-v2/resolve/main/$file" \
+        -o "models/potion-code-16m-v2/$file"
+    done
+
+## Indexera ett projekt
+
+Gå till projektets rot och kör ccindex från den virtuella miljön:
+
+    cd /sökväg/till/projektet
+    /sökväg/till/ccindex/.venv/bin/ccindex index
+
+Kontrollera indexet:
+
+    /sökväg/till/ccindex/.venv/bin/ccindex status
+
+Sök efter kod:
+
+    /sökväg/till/ccindex/.venv/bin/ccindex query "Android UIForm"
+
+## Valfritt: lägg ccindex i PATH
+
+    export PATH="/sökväg/till/ccindex/.venv/bin:$PATH"
+    ccindex index
+
+Indexeringen är lokal och använder den nedladdade Potion Code 16M v2-modellen.

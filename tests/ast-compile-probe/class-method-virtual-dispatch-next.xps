@@ -1,0 +1,24 @@
+Class Base
+    Public Function Value() As Long
+        Value = 6
+    End Function
+End Class
+
+Class Child Extend Base
+    Public Function Value() As Long
+        Value = 9
+    End Function
+End Class
+
+Class Caller
+    Public Function Read(ByVal item As Base) As Long
+        Read = item.Value()
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New Child
+    Dim caller As New Caller
+    If caller.Read(item) <> 9 Then Error 6, "derived virtual method dispatch failed"
+    Print "CLASS_METHOD_VIRTUAL_DISPATCH_OK"
+End Sub

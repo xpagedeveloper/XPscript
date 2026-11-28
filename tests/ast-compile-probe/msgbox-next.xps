@@ -1,0 +1,6 @@
+Sub Main()
+    Dim answer As Long
+    answer = MsgBox("AST MsgBox", 4, "XPscript")
+    If answer <> 1 Then Error 6341, "MsgBox did not use shared runtime return contract"
+    Print "MSGBOX_RUNTIME_OK"
+End Sub

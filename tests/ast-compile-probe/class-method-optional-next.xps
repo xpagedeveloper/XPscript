@@ -1,0 +1,11 @@
+Class Calculator
+    Public Function Add(Optional ByVal value As Long = 2) As Long
+        Add = value + 3
+    End Function
+End Class
+
+Sub Main()
+    Dim calculator As New Calculator
+    Print CStr(calculator.Add())
+    Print CStr(calculator.Add(4))
+End Sub

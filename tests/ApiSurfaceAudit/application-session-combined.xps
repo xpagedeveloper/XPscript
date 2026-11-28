@@ -1,0 +1,11 @@
+Option Declare
+
+Sub Main()
+    Call Application.State.Set("scope", "application")
+    Call Session.State.Set("scope", "session")
+    If CStr(Application.State.Get("scope")) <> "application" Then Error 9901, "Application state crossed scopes"
+    If CStr(Session.State.Get("scope")) <> "session" Then Error 9902, "Session state crossed scopes"
+    Call Application.State.Clear()
+    Call Session.State.Clear()
+    Print "APPLICATION_SESSION_COMBINED=OK"
+End Sub

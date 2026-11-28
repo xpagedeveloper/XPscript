@@ -1,0 +1,66 @@
+Option Declare
+
+Sub Main()
+    Dim doc As New XPXmlDocument
+    Dim root As XPXmlElement
+    Set root = doc.AddRoot("people")
+    With root
+        Call .SetAttribute("version", 1)
+        Call .AddElement("person", "Åsa & <Anna>")
+    End With
+    If Not doc.HasRoot Then Error 9901, "XML root missing"
+    If root.childcount <> 1 Then Error 9902, "Inherited element member lost"
+    If root.Elements.Get(0).parent.name <> "people" Then Error 9903, "Parent navigation lost"
+    If root.Elements.Get(0).GetAttribute("missing") <> "" Then Error 9904, "Node element member lost"
+    Dim attribute As XPXmlAttribute
+    Set attribute = root.Attributes.Get("version")
+    attribute.value = "2"
+    If root.GetAttribute("version") <> "2" Then Error 9905, "Attribute write lost"
+    If root.Attributes["version"].Value <> "2" Then Error 9937, "Attribute index lost"
+    If root.Elements[0].Value <> "Åsa & <Anna>" Then Error 9938, "Node index lost"
+    Dim total As Long
+    ForAll entry In root.Attributes
+        If entry.Parent.Name <> "people" Then Error 9906, "Typed attribute iteration lost"
+        total = total + 1
+    End ForAll
+    If total <> 1 Then Error 9907, "Attribute collection iteration lost"
+    ForAll entry In root.Elements
+        If entry.Value <> "Åsa & <Anna>" Then Error 9908, "Typed node iteration lost"
+        Call entry.SetAttribute("id", "42")
+    End ForAll
+    Dim selected As XPXmlNode
+    Set selected = doc.SelectSingleNode("/people/person[@id='42']")
+    If selected.Value <> "Åsa & <Anna>" Then Error 9909, "XPath failed"
+    Dim cloned As XPXmlNode
+    Set cloned = selected.Clone()
+    If cloned.HasParent Then Error 9910, "Clone remained attached"
+    cloned.Value = "clone"
+    If selected.Value <> "Åsa & <Anna>" Then Error 9911, "Clone shared content"
+    Call root.AppendChild(cloned)
+    If root.ElementCount <> 2 Then Error 9912, "AppendChild failed"
+    Dim detached As New XPXmlElement("replacement")
+    detached.Value = "independent"
+    Call doc.SetRoot(detached)
+    detached.Value = "changed"
+    If doc.Root.Value <> "independent" Then Error 9913, "SetRoot did not clone"
+    Call doc.LoadXml("<root><child>ok</child></root>")
+    Dim result As XPXmlValidationResult
+    Set result = doc.ValidateDTD("<!ELEMENT root (child)><!ELEMENT child (#PCDATA)>")
+    If Not result.Valid Then Error 9914, "Valid DTD failed"
+    If result.Errors.Count <> 0 Then Error 9915, "Unexpected DTD error"
+    Set result = doc.ValidateDTD("<!ELEMENT root EMPTY>")
+    If result.Valid Then Error 9916, "Invalid DTD accepted"
+    If result.Errors[0].Severity <> "Error" Then Error 9939, "Validation index lost"
+    total = 0
+    ForAll entry In result.Errors
+        If entry.Severity <> "Error" Then Error 9917, "Typed validation iteration lost"
+        If Len(entry.Message) = 0 Then Error 9918, "Validation message lost"
+        If entry.Line < 0 Or entry.Column < 0 Then Error 9919, "Validation coordinates lost"
+        total = total + 1
+    End ForAll
+    If total <> result.Errors.Count Then Error 9920, "Validation collection lost"
+    doc.Indent = False
+    If XmlStringify(doc) <> "<root><child>ok</child></root>" Then Error 9921, "Serialization drifted"
+    If XmlEscape("<&>") <> "&lt;&amp;&gt;" Then Error 9922, "Escaping drifted"
+    Print "XML_AST_OK"
+End Sub

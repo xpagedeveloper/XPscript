@@ -1,0 +1,103 @@
+$ErrorActionPreference = 'Stop'
+$root = Resolve-Path (Join-Path $PSScriptRoot '../..')
+$compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
+$outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
+$output = Join-Path $outputRoot ('image-get-' + [Guid]::NewGuid().ToString('N'))
+function Invoke-BoundedGeneratedAssembly([string] $path, [int] $timeoutMilliseconds = 120000) {
+    $info = [System.Diagnostics.ProcessStartInfo]::new('dotnet')
+    [void]$info.ArgumentList.Add((Join-Path $path 'Generated.dll'))
+    $info.UseShellExecute = $false
+    $info.CreateNoWindow = $true
+    $info.WorkingDirectory = $path
+    $info.RedirectStandardInput = $true
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $info
+    [void]$process.Start()
+    $process.StandardInput.Close()
+    $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+    $stderrTask = $process.StandardError.ReadToEndAsync()
+    if (-not $process.WaitForExit($timeoutMilliseconds)) {
+        $process.Kill($true)
+        $process.WaitForExit()
+        return @{ TimedOut = $true; ExitCode = $null; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
+    }
+    return @{ TimedOut = $false; ExitCode = $process.ExitCode; Output = $stdoutTask.GetAwaiter().GetResult() + $stderrTask.GetAwaiter().GetResult() }
+}
+$byteTarget = Join-Path $output 'image-array-byte-interop'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'image-array-byte-interop.xps') -o $byteTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST nonzero-bound Byte array image compilation failed.' }
+$byteResult = Invoke-BoundedGeneratedAssembly $byteTarget
+if ($byteResult.TimedOut) { throw 'AST native image Byte vector runtime timed out.' }
+if ($byteResult.ExitCode -ne 0 -or $byteResult.Output.Trim() -ne 'IMAGE_ARRAY_BYTE_INTEROP_OK') { throw 'AST native image Byte vector normalization failed.' }
+Write-Host 'AST_IMAGE_ARRAY_BYTE_INTEROP_OK'
+foreach ($fixture in @('image-constructor-list', 'image-constructor-variant', 'image-constructor-optional-refref', 'image-constructor-optional-reference', 'image-constructor-reference-byref', 'image-constructor-reference', 'image-constructor-optional-byref', 'image-constructor-mixed', 'image-constructor-byref', 'image-constructor-optional', 'image-constructor-derived', 'image-constructor', 'image-destructor-derived', 'image-destructor', 'image-field-delete', 'image-property-set', 'image-property-set-byval-signature', 'image-property-set-byref-signature', 'image-property-get', 'image-property-signature-only')) {
+    Write-Host "AST_IMAGE_FIXTURE=$fixture"
+    $target = Join-Path $output $fixture
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
+    if ($LASTEXITCODE -ne 0) { throw "AST image getter compilation failed: $fixture" }
+    $result = Invoke-BoundedGeneratedAssembly $target
+    $expected = switch ($fixture) {
+        'image-constructor-list' { 'IMAGE_LIST_CONSTRUCTORS_OK' }
+        'image-constructor-variant' { 'IMAGE_VARIANT_CONSTRUCTORS_OK' }
+        'image-constructor-optional-refref' { 'IMAGE_OPTIONAL_REFREF_CONSTRUCTORS_OK' }
+        'image-constructor-optional-reference' { 'IMAGE_OPTIONAL_REFERENCE_CONSTRUCTORS_OK' }
+        'image-constructor-reference-byref' { 'IMAGE_BYREF_REFERENCE_CONSTRUCTORS_OK' }
+        'image-constructor-reference' { 'IMAGE_REFERENCE_CONSTRUCTORS_OK' }
+        'image-constructor-optional-byref' { 'IMAGE_OPTIONAL_BYREF_CONSTRUCTORS_OK' }
+        'image-constructor-mixed' { 'IMAGE_MIXED_CONSTRUCTORS_OK' }
+        'image-constructor-byref' { 'IMAGE_BYREF_CONSTRUCTORS_OK' }
+        'image-constructor-optional' { 'IMAGE_OPTIONAL_CONSTRUCTORS_OK' }
+        'image-constructor-derived' { 'IMAGE_DERIVED_CONSTRUCTORS_OK' }
+        'image-constructor' { 'IMAGE_CONSTRUCTOR_OK' }
+        'image-destructor-derived' { 'IMAGE_DERIVED_DESTRUCTORS_OK' }
+        'image-destructor' { 'IMAGE_DESTRUCTOR_OK' }
+        'image-field-delete' { 'IMAGE_FIELD_DELETE_OK' }
+        'image-property-set' { 'IMAGE_PROPERTY_SET_OK' }
+        'image-property-set-byval-signature' { 'IMAGE_SET_BYVAL_SIGNATURE_OK' }
+        'image-property-set-byref-signature' { 'IMAGE_SET_BYREF_SIGNATURE_OK' }
+        'image-property-get' { 'IMAGE_PROPERTY_GET_OK' }
+        'image-property-signature-only' { 'IMAGE_PROPERTY_SIGNATURE_ONLY_OK' }
+    }
+    if ($result.TimedOut) { throw "AST image getter runtime timed out: $fixture" }
+    if ($result.ExitCode -ne 0 -or $result.Output.Trim() -ne $expected) { throw "AST image getter lifetime regression failed: $fixture" }
+    $notice = Get-Content (Join-Path $target 'Third-party-license.txt') -Raw
+    if ($notice -notmatch 'Magick.NET-Q16-AnyCPU' -or $notice -notmatch 'Magick.NET.Core' -or $notice -match 'License text could not be resolved') { throw 'Image getter addon notices are incomplete.' }
+}
+$indexedImageTarget = Join-Path $output 'image-property-index-deferred'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'image-property-index-deferred.xps') -o $indexedImageTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST indexed image property fixture compilation failed.' }
+Write-Host 'AST_IMAGE_INDEXED_PROPERTY_OK'
+foreach ($case in @(
+    @('image-property-set-mode-error', 'XPS2001', 8),
+    @('image-property-set-type-error', 'XPS2001', 8),
+    @('image-property-readonly-error', 'XPS2001', 7),
+    @('image-property-private-error', 'XPS2009', 7),
+    @('image-property-body-error', 'XPS2008', 3)
+)) {
+    $fixture = $case[0]
+    $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Image getter/accessor diagnostic lost: $fixture" }
+}
+Write-Host 'AST_IMAGE_SETTERS_OK'
+Write-Host 'AST_IMAGE_GETTERS_OK'
+Write-Host 'AST_IMAGE_FIELD_DELETE_OK'
+Write-Host 'AST_IMAGE_DESTRUCTORS_OK'
+Write-Host 'AST_IMAGE_DERIVED_DESTRUCTORS_OK'
+Write-Host 'AST_IMAGE_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_VARIANT_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_LIST_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_DERIVED_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_OPTIONAL_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_BYREF_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_MIXED_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_OPTIONAL_BYREF_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_REFERENCE_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_BYREF_REFERENCE_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_OPTIONAL_REFERENCE_CONSTRUCTORS_OK'
+Write-Host 'AST_IMAGE_OPTIONAL_REFREF_CONSTRUCTORS_OK'
+# The final cases above intentionally expect compiler exit code 2. Clear the
+# native exit status so the successful diagnostic assertions do not make the
+# overall lifecycle probe fail during PowerShell cleanup/return.
+$global:LASTEXITCODE = 0

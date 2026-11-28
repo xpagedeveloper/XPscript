@@ -1,0 +1,10 @@
+Class Reader
+    Public Function IsNothingSchema(ByVal value As XPJsonSchema) As Boolean
+        IsNothingSchema = value Is Nothing
+    End Function
+End Class
+
+Sub Main()
+    Dim reader As New Reader
+    Print CStr(reader.IsNothingSchema(Nothing))
+End Sub

@@ -1,0 +1,29 @@
+Public observedWidth As Long
+
+Class Holder
+    Public Picture As XPImage
+
+    Public Sub New(ByRef value As XPImage)
+        If value Is Nothing Then Error 6, "ByRef XPImage was not supplied"
+        observedWidth = value.Width
+        Set Picture = value
+    End Sub
+End Class
+
+Sub Main()
+    Dim source As New XPImage(6, 4)
+    Dim item As New Holder(source)
+    If observedWidth <> 6 Then Error 6, "ByRef XPImage binding lost the caller value"
+    If item Is Nothing Or item.Picture Is Nothing Then Error 6, "ByRef XPImage constructor did not store the caller value"
+    Call source.Recycle()
+    If item.Picture.Width <> 6 Then Error 6, "ByRef XPImage constructor did not clone the caller value"
+    Dim sourceFailure As Long
+    On Error Resume Next
+    Dim discardedWidth As Long
+    discardedWidth = source.Width
+    sourceFailure = Err
+    On Error GoTo 0
+    If sourceFailure = 0 Then Error 6, "ByRef XPImage source was not recycled"
+    Print "XPIMAGE_BYREF_CONSTRUCTOR_BINDING_OK"
+    Print "XPIMAGE_BYREF_SOURCE_RECYCLED_OK"
+End Sub

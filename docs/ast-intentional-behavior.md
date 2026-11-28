@@ -1,0 +1,57 @@
+# AST compiler intentional behavior
+
+This document records compatibility boundaries that are deliberate while the
+AST compiler is being migrated. They are diagnostics or routing decisions, not
+silent changes to XPscript semantics.
+
+## Explicit legacy fallback
+
+- XPImage uses the shared native runtime through AST-bound nodes and no longer
+  causes legacy fallback. Other registry entries not yet migrated still route
+  the complete source file through the legacy compiler.
+- The legacy `NotesSAXParser`, `NotesSAXAttributeList` and `NotesSAXException`
+  compatibility surface has been removed. XML parsing must use the native
+  `XPXmlDocument`/`XPXmlNode` API; AST compilation reports `XPS1012` for the
+  removed SAX types instead of routing the program through the legacy compiler.
+- The fallback is owned by `AstObjectSupportRegistry` and is exercised by the
+  AST CLI and MCP probes.
+
+## Explicit AST diagnostics
+
+The AST path reports a mapped `XPS1012` diagnostic instead of emitting a
+partial or misleading C# program for features whose lowering is not complete:
+
+- `On Error` and `Resume` statements;
+- `With` and implicit member access;
+- entry jumps into `For`/`ForAll` blocks;
+- List-element expressions passed directly to `ByRef` parameters;
+- truly unsupported syntax is reported as `XPS1012` rather than approximated.
+
+The diagnostic keeps the XPscript filename and source span. MCP exposes the
+same structured diagnostic as the CLI.
+
+## Deliberately deferred semantics
+
+Complete error-handler transfer semantics and a small set of unknown native
+class-method signatures remain deferred until their shared bound/runtime
+representations are available. Constructors, fields, properties, methods,
+inheritance, `Parent`, arrays and supported native references are lowered by
+AST and covered by executable regressions. Unsupported signatures must not be
+silently approximated with dynamic values or generated C# behavior.
+
+AST image ownership also covers exception exits and evaluates replacements before
+recycling old images. The legacy image preprocessor's end-of-procedure cleanup
+does not guarantee cleanup on thrown errors. `xpimage-runtime.xps` tests AST cleanup
+independently; `xpimage-parity.xps` compares the shared image API and normal exits.
+# Legacy compiler disabled
+
+Legacy transpilation is disabled, including explicit legacy commands and calls
+from web/WASM paths that still reach a legacy transpiler. Such calls fail with
+XPS1012 rather than compiling through a fallback. These failures identify paths
+that still need migration; cross-platform compatibility is not yet proven.
+
+The final AST-generated C# is checked for legacy compiler and removed SAX type
+identifiers before backend compilation. Comments and string literals are ignored.
+Shared runtime implementations remain permitted. Language FullTest exercises the
+disabled-transpiler and generated-code checks through `--legacy-guards-only`.
+

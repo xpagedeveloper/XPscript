@@ -34,7 +34,7 @@ internal sealed class NetworkToolsObjectPreprocessor
                 var name = dimNew.Groups[1].Value;
                 objectVariables.Add(name);
                 output.Add(indent + $"Dim {name} As Variant");
-                output.Add(indent + $"{name} = XPScriptNetworkToolsFactory.Create()");
+                output.Add(indent + $"{name} = New NetworkTools");
                 continue;
             }
 
@@ -46,7 +46,7 @@ internal sealed class NetworkToolsObjectPreprocessor
                 continue;
             }
 
-            var rewritten = Regex.Replace(line, @"\bNew\s+NetworkTools\s*(?:\(\s*\))?", "XPScriptNetworkToolsFactory.Create()", RegexOptions.IgnoreCase);
+            var rewritten = line;
             var set = Regex.Match(rewritten, @"^Set\s+([A-Za-z_]\w*)\s*=\s*(.+)$", RegexOptions.IgnoreCase);
             if (set.Success && (objectVariables.Contains(set.Groups[1].Value) || set.Groups[2].Value.Contains("Network", StringComparison.OrdinalIgnoreCase)))
                 rewritten = set.Groups[1].Value + " = " + set.Groups[2].Value;

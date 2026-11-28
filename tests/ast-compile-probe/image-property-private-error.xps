@@ -1,0 +1,8 @@
+Class Factory
+    Private Property Get Image As XPImage
+    End Property
+End Class
+Sub Main()
+    Dim factory As New Factory
+    Print factory.Image
+End Sub

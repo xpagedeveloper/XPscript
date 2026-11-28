@@ -1,8 +1,16 @@
 using XPScript.Compiler;
 
-var transpiler = new XPScriptTranspiler();
+var workspace = Path.GetFullPath(Path.Combine("out", "archive-capability-probe", Guid.NewGuid().ToString("N")));
+Directory.CreateDirectory(workspace);
 
-ExpectExtendedFailure(
+async Task<string> GenerateAsync(string source, string filename)
+{
+    var path = Path.Combine(workspace, filename);
+    await File.WriteAllTextAsync(path, source);
+    return await AstCompiler.GenerateSourceAsync(path, workspace);
+}
+
+await ExpectExtendedFailure(
     "zip-password",
     """
 Option Declare
@@ -12,7 +20,7 @@ Sub Main()
 End Sub
 """);
 
-ExpectExtendedFailure(
+await ExpectExtendedFailure(
     "zip-encryption-detection",
     """
 Option Declare
@@ -22,7 +30,7 @@ Sub Main()
 End Sub
 """);
 
-ExpectExtendedFailure(
+await ExpectExtendedFailure(
     "zip-create-gzip",
     """
 Option Declare
@@ -32,7 +40,7 @@ Sub Main()
 End Sub
 """);
 
-ExpectSuccess(
+await ExpectSuccess(
     "extended-password",
     """
 Option Declare
@@ -43,7 +51,7 @@ Sub Main()
 End Sub
 """);
 
-ExpectUnsupportedEncryptedZipWrite(
+await ExpectUnsupportedEncryptedZipWrite(
     "extended-password-write",
     """
 Option Declare
@@ -54,7 +62,7 @@ Sub Main()
 End Sub
 """);
 
-ExpectSuccess(
+await ExpectSuccess(
     "extended-gzip",
     """
 Option Declare
@@ -66,21 +74,21 @@ End Sub
 """);
 
 foreach (var format in new[] { "rar", "bzip2", "lzip", "xz", "zstd" })
-    ExpectUnsupportedCreate(format);
+    await ExpectUnsupportedCreate(format);
 
-ExpectIteratorSuccess();
-ExpectChainedEntryAliases();
-ExpectRemovedIsDirectory();
-ExpectRemovedChainedIsDirectory();
-ExpectExtendedDiagnosticNormalization();
+await ExpectIteratorSuccess();
+await ExpectChainedEntryAliases();
+await ExpectRemovedIsDirectory();
+await ExpectRemovedChainedIsDirectory();
+await ExpectExtendedDiagnosticNormalization();
 
 Console.WriteLine("ARCHIVE-CAPABILITY-PROBE=OK");
 
-void ExpectExtendedFailure(string name, string source)
+async Task ExpectExtendedFailure(string name, string source)
 {
     try
     {
-        _ = transpiler.Transpile(source, name + ".xps", "win-x64");
+        _ = await GenerateAsync(source, name + ".xps");
         throw new Exception(name + " unexpectedly compiled without extended Archive support.");
     }
     catch (CompilerException ex)
@@ -92,11 +100,11 @@ void ExpectExtendedFailure(string name, string source)
     }
 }
 
-void ExpectUnsupportedEncryptedZipWrite(string name, string source)
+async Task ExpectUnsupportedEncryptedZipWrite(string name, string source)
 {
     try
     {
-        _ = transpiler.Transpile(source, name + ".xps", "win-x64");
+        _ = await GenerateAsync(source, name + ".xps");
         throw new Exception(name + " unexpectedly compiled password-protected ZIP writing.");
     }
     catch (CompilerException ex)
@@ -107,7 +115,7 @@ void ExpectUnsupportedEncryptedZipWrite(string name, string source)
     }
 }
 
-void ExpectUnsupportedCreate(string format)
+async Task ExpectUnsupportedCreate(string format)
 {
     var source = $$"""
 Option Declare
@@ -119,7 +127,7 @@ End Sub
 
     try
     {
-        _ = transpiler.Transpile(source, "unsupported-create-" + format + ".xps", "win-x64");
+        _ = await GenerateAsync(source, "unsupported-create-" + format + ".xps");
         throw new Exception(format + " unexpectedly compiled as a writable Archive format.");
     }
     catch (CompilerException ex)
@@ -131,14 +139,14 @@ End Sub
     }
 }
 
-void ExpectSuccess(string name, string source)
+async Task ExpectSuccess(string name, string source)
 {
-    var generated = transpiler.Transpile(source, name + ".xps", "win-x64");
+    var generated = await GenerateAsync(source, name + ".xps");
     if (!generated.Contains("XPScriptExtendedArchiveWriterFactory", StringComparison.Ordinal))
         throw new Exception(name + " did not emit extended Archive support.");
 }
 
-void ExpectIteratorSuccess()
+async Task ExpectIteratorSuccess()
 {
     const string source = """
 Option Declare
@@ -164,7 +172,7 @@ Sub Main()
 End Sub
 """;
 
-    var generated = transpiler.Transpile(source, "archive-iterator-probe.xps", "win-x64");
+    var generated = await GenerateAsync(source, "archive-iterator-probe.xps");
     if (!generated.Contains("XPScriptArchiveIteratorRuntime.GetFirstEntry", StringComparison.Ordinal)
         || !generated.Contains("XPScriptArchiveIteratorRuntime.GetNextEntry", StringComparison.Ordinal)
         || !generated.Contains("ConditionalWeakTable<object, IteratorState>", StringComparison.Ordinal))
@@ -176,7 +184,7 @@ End Sub
         throw new Exception("Existing Archive.Entries surface disappeared while enabling iterator aliases.");
 }
 
-void ExpectChainedEntryAliases()
+async Task ExpectChainedEntryAliases()
 {
     const string source = """
 Option Declare
@@ -190,7 +198,7 @@ Sub Main()
 End Sub
 """;
 
-    var generated = transpiler.Transpile(source, "archive-entry-chained-aliases.xps", "win-x64");
+    var generated = await GenerateAsync(source, "archive-entry-chained-aliases.xps");
     if (generated.Contains(".IsFile", StringComparison.OrdinalIgnoreCase)
         || generated.Contains(".IsFolder", StringComparison.OrdinalIgnoreCase))
         throw new Exception("Chained ArchiveEntry IsFile/IsFolder aliases were not lowered.");
@@ -198,7 +206,7 @@ End Sub
         throw new Exception("Chained ArchiveEntry aliases did not lower to the internal directory flag.");
 }
 
-void ExpectRemovedIsDirectory()
+async Task ExpectRemovedIsDirectory()
 {
     const string source = """
 Option Declare
@@ -212,10 +220,10 @@ Sub Main()
 End Sub
 """;
 
-    ExpectRemovedIsDirectoryDiagnostic("archive-entry-isdirectory.xps", source);
+    await ExpectRemovedIsDirectoryDiagnostic("archive-entry-isdirectory.xps", source);
 }
 
-void ExpectRemovedChainedIsDirectory()
+async Task ExpectRemovedChainedIsDirectory()
 {
     const string source = """
 Option Declare
@@ -227,14 +235,14 @@ Sub Main()
 End Sub
 """;
 
-    ExpectRemovedIsDirectoryDiagnostic("archive-entry-chained-isdirectory.xps", source);
+    await ExpectRemovedIsDirectoryDiagnostic("archive-entry-chained-isdirectory.xps", source);
 }
 
-void ExpectRemovedIsDirectoryDiagnostic(string fileName, string source)
+async Task ExpectRemovedIsDirectoryDiagnostic(string fileName, string source)
 {
     try
     {
-        _ = transpiler.Transpile(source, fileName, "win-x64");
+        _ = await GenerateAsync(source, fileName);
         throw new Exception("ArchiveEntry.IsDirectory unexpectedly remained public.");
     }
     catch (CompilerException ex)
@@ -246,7 +254,7 @@ void ExpectRemovedIsDirectoryDiagnostic(string fileName, string source)
     }
 }
 
-void ExpectExtendedDiagnosticNormalization()
+async Task ExpectExtendedDiagnosticNormalization()
 {
     const string source = """
 Option Declare
@@ -256,7 +264,7 @@ Sub Main()
 End Sub
 """;
 
-    var generated = transpiler.Transpile(source, "archive-diagnostic-normalization.xps", "win-x64");
+    var generated = await GenerateAsync(source, "archive-diagnostic-normalization.xps");
     if (!generated.Contains("return new XPScriptExtendedArchiveV5(value);", StringComparison.Ordinal)
         || !generated.Contains("return new XPScriptExtendedMemoryArchiveV4(value);", StringComparison.Ordinal)
         || !generated.Contains("message.Contains(\"SharpCompress\"", StringComparison.Ordinal)

@@ -1,0 +1,4 @@
+Sub Main()
+    Dim book As New XPSpreadsheet
+    Call book.Worksheet()
+End Sub

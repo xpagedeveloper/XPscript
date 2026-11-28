@@ -2,6 +2,16 @@
 
 Desktop UIForms also support an embedded native browser control. See [UIForm WebView](uiform-webview.md).
 
+`form.AddMap(name, label)` is a portable WebView-backed map control. It opens
+`https://www.openstreetmap.org/` by default and therefore uses the existing
+WebView backend on desktop, server-rendered web and Browser-WASM. Use the
+returned field's `Source` property when a different map URL is required.
+
+`form.AddDocumentViewer(name, label, source)` is likewise WebView-backed. For
+PDF sources, the client WebView's built-in PDF support is used when available;
+otherwise the client may hand the URL to its default PDF viewer. No additional
+PDF NuGet package is required.
+
 `UIForm` is the shared XPScript form model for desktop, server-rendered web and browser WebAssembly applications. Fields can bind to a `XPJsonObject` or object-root `XPJsonDocument`. The same form definition is rendered by the active UI backend.
 
 ## Basic form
@@ -21,6 +31,121 @@ result = form.ShowDialog()
 ```
 
 The form title belongs to the top-level form container. On the web it is rendered before the field grid.
+
+Desktop forms keep their action buttons in a fixed footer while long field lists
+scroll independently. This keeps the primary actions visible at the bottom of
+resizable forms.
+
+`UIForm` inherits `Background` from `UIComponent`. Set it to a color such
+as `"#E8F0FF"` to change the form surface. A `ShowToast` call uses the active
+form's background color on every host, including the separate desktop toast
+window.
+
+## Clearing fields and forcing a refresh
+
+Every `UIFormField` has `Clear()`, which removes its current value. Controls that support choices also expose `AddOption(value)` and `ClearOptions()`. These methods change the shared AST form model; call `RefreshForm()` when an already displayed form must be rendered again immediately with the new value or option list.
+
+```xps
+Dim country As UIFormField
+Set country = form.AddSelect("country", "Country")
+Call country.AddOption("SE")
+Call country.AddOption("NO")
+country.SelectedValue = "SE"
+Call country.Clear()
+Call country.ClearOptions()
+Call country.AddOption("DK")
+Call form.RefreshForm()
+```
+
+`RefreshForm()` is available through the AST UIForm route on Android, desktop, server-rendered web and browser-WASM. It only re-renders the current model. Android applications can call `ShowDialog()` from the script entry point to wait for `OK`, `Cancel`, or a custom action. Custom actions return the button name passed to `AddButton`; registered handlers run before the result is returned. Submitted field values are applied before a desktop or Android modal call returns. Browser-WASM publishes the result and values through the `xpscript:form-result` event after its handler runs. Server-rendered web returns the button name from the form POST. Use the modeless `Show(False)` path from Android UI callbacks. See the [Android modal form regression](../samples/android-uiform-modal-regression.xps) for a runnable example with validation.
+
+## Shared control appearance
+
+### Tab containers and tab appearance
+
+Use a tab container when a form has tabbed content. `TabPlacement` belongs to
+the container, not the form. `VisibleTab` reads the active tab and
+`SetVisibleTab(name)` selects one. The object returned by `AddTab` exposes
+`Background`, `FontColor`, `Font`, `FontSize`, and `Bold` for the tab header.
+Each has a selected-state counterpart: `SelectedBackground`,
+`SelectedFontColor`, `SelectedFont`, `SelectedFontSize`, and `SelectedBold`.
+These settings are rendered by desktop, Android, server-rendered web, and
+Browser-WASM hosts.
+
+```xpscript
+Dim form As New UIForm("Settings")
+Dim tabs As Variant
+Dim generalTab As Variant
+Set tabs = form.AddTabContainer("settingsTabs")
+Set generalTab = tabs.AddTab("general", "General")
+generalTab.Background = "#E8F0FF"
+    generalTab.FontColor = "#111111"
+generalTab.Font = "Arial"
+generalTab.FontSize = 14
+generalTab.Bold = True
+    generalTab.SelectedBackground = "#3366CC"
+    generalTab.SelectedFontColor = "#FFFFFF"
+    generalTab.SelectedFontSize = 16
+    generalTab.SelectedBold = True
+Call tabs.AddTab("advanced", "Advanced")
+tabs.TabPlacement = "Bottom"
+Call tabs.SetVisibleTab("general")
+```
+
+### Component identity and hierarchy
+
+Every UI component exposes a writable `Id`, a read-only `Type`, and a read-only `Parent`. IDs are optional but must be unique within the form. `UIForm.Components` returns all controls registered on the form, while `GetComponentById(id)` returns one component (or `Nothing`) and `GetComponentsByType(type)` returns an array of matching components. A field assigned to a named grid has that grid as its parent; the grid's parent is the form.
+
+An application can create multiple forms. On mobile, web, and browser-WASM AST targets, `Show` activates the form and hides the other registered forms; the most recently shown form is the top form, and hiding it reveals the previous form. On Windows, Linux, and macOS, each `Show` opens/activates its own window and other forms remain visible.
+
+```xps
+Dim form As New UIForm("Example")
+Dim grid As UIFormGrid
+Set grid = form.AddGrid("main", 2)
+Dim nameField As UIFormField
+Set nameField = form.AddTextField("name", "Name")
+nameField.Id = "customer-name"
+Call form.SetFieldGrid("name", "main")
+Print nameField.Parent.Type       ' Grid
+Print nameField.Parent.Parent.Type ' UIForm
+Print form.GetComponentById("customer-name").Type
+```
+
+Container controls can own other components through the same object model. The
+child remains in `UIForm.Components`, while `Parent` points to the container.
+Only components from the same form may be attached, and cycles are rejected.
+
+```xps
+Dim panel As UIFormField
+Dim title As UIFormField
+Set panel = form.AddPanel("details", "Details")
+Set title = form.AddTextField("title", "Title")
+Call panel.AddChild(title)
+Print title.Parent.Id       ' details
+Print panel.Children(0).Id  ' title
+```
+
+Appearance properties are read/write and are applied consistently on Windows, Linux, macOS, server-rendered web and browser-WASM. Set defaults on the form before adding controls; a value assigned directly to a field or button overrides the form default.
+
+```xpscript
+Dim nameField As UIFormField
+Dim saveButton As UIButton
+Dim form As New UIForm("Customer")
+
+form.CornerRadius = 12
+form.DefaultControlWidth = 320
+form.DefaultControlHeight = 48
+form.DefaultFont = "Arial"
+form.DefaultFontSize = 16
+
+Set nameField = form.AddTextField("name", "Name")
+nameField.CornerRadius = 20
+nameField.Width = 400
+Set saveButton = form.AddButton("save", "Save", "Save")
+saveButton.Height = 56
+```
+
+`UIForm.CornerRadius` is propagated to existing and subsequently added fields and buttons. `DefaultControlWidth`, `DefaultControlHeight`, `DefaultFont` and `DefaultFontSize` work the same way. `UIFormField` and `UIButton` expose `CornerRadius`, `Width`, `Height`, `Font` and `FontSize` as read/write properties. Dimensions and font sizes must be greater than 0 and no greater than 10000; `CornerRadius` must be between 0 and 1000. `Nothing` clears an optional dimension or font size.
 
 ## Fields
 
@@ -60,7 +185,9 @@ values = form.GetFieldValues("markets")
 Print CStr(values.Count)
 ```
 
-`AddOption` and `ClearOptions` work with `Select`, `RadioGroup`, `ListBox` and `MultiListBox`. Submitted values are checked against the configured option list before they are written to bound data.
+`AddOption` and `ClearOptions` work with `Select`, `RadioGroup`, `ListBox`, `ListView`, `MultiListBox`, `MultiSelect`, `CheckBoxGroup`, `LookupField` and `AutoCompleteField`. Submitted values are checked against the configured option list before they are written to bound data. Initial/default values are read from the form's bound data for every control type that exposes a value.
+
+Prefer configuring the returned control object directly. `UIFormField.AddOption(value)`, `UIFormField.ClearOptions()` and the read/write `UIFormField.SelectedValue` property keep options and selection attached to the control. The form-level `AddOption(name, value)` and `SetFieldValue(name, value)` calls remain available for compatibility.
 
 The same ListBox APIs are used on desktop, server-rendered web and browser-wasm. Desktop uses native Avalonia list controls. Server-rendered web uses HTML `select` controls. Browser-wasm uses DOM `select` controls and returns multiple selections as an array.
 
@@ -188,6 +315,8 @@ End Sub
 ```
 
 ## Web rendering
+
+Desktop UIForms support `Top`, `Left`, `Right` and `Bottom` positions in pixels. Each defaults to `-1` (ignored); setting both edges of one axis is rejected. Use `Call form.Center()` to center a form, and `Call form.BringToFront()` to activate and raise it above other UIForm windows.
 
 Web UIForm uses Bootstrap 5.3.8 styling. The runtime loads the Bootstrap stylesheet once per response and applies Bootstrap form, grid and button classes. The title is outside the field grid so explicit field layout cannot move it below the controls.
 

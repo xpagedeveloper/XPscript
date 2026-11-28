@@ -6,6 +6,11 @@ internal static class NotesViewNavigationV3PostProcessor
     {
         ArgumentNullException.ThrowIfNull(source);
 
+        source = source.Replace(
+            "public bool IsConflict { get { EnsureAlive(); return Row.IsConflict; } }",
+            "public bool IsConflict { get { EnsureAlive(); return false; } }",
+            StringComparison.Ordinal);
+
         source = ReplaceRequired(
             source,
             "    public XPScriptNotesViewEntryCollection AllEntries => CreateViewEntryCollection();",
@@ -17,6 +22,11 @@ internal static class NotesViewNavigationV3PostProcessor
             "    public bool IsConflict { get { EnsureAlive(); return false; } }",
             "    public bool IsConflict { get { EnsureAlive(); return false; } }\n    public bool GetRead() => GetRead(Session.Username);\n    public bool GetRead(object? userNameValue)\n    {\n        EnsureAlive();\n        return !Row.IsDocument || !Session.Api.IsDocumentUnread(Database.Handle, Row.NoteId, XPScriptRuntime.CStr(userNameValue));\n    }",
             "entry-read");
+
+        source = source.Replace(
+            "public bool IsConflict { get { EnsureAlive(); return false; } }",
+            "public bool IsConflict { get { EnsureAlive(); return Row.IsConflict; } }",
+            StringComparison.Ordinal);
 
         source = ReplaceRequired(
             source,

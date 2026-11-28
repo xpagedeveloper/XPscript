@@ -1,0 +1,14 @@
+Class Box
+End Class
+Class Record
+    Public Sub New(ByRef value As Box)
+        Set value = New Box()
+    End Sub
+End Class
+Sub Main()
+    Dim value As New Box
+    Dim original As Box = value
+    Dim item As New Record(value)
+    If value Is original Then Error 6, "ByRef class replacement lost"
+    Print "CONSTRUCTOR_REFERENCE_BYREF_OK"
+End Sub

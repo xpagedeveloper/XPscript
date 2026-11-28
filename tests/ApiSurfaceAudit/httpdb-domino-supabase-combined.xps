@@ -1,0 +1,13 @@
+Option Declare
+
+Sub Main()
+    Dim domino As New XPHttpDbDominoRest("http://127.0.0.1:18082", "token", "demo")
+    Dim supabase As New XPDBSupabase("http://127.0.0.1:18082", "api-key")
+    Dim payload As New XPJsonObject
+    Dim result As XPJsonDocument
+
+    Call payload.Set("name", "Ada")
+    Set result = domino.CreateDocument(payload)
+    Set result = supabase.Insert("people", payload)
+    Print "HTTPDB_DOMINO_SUPABASE_COMBINED=OK"
+End Sub

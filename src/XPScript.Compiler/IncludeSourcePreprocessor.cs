@@ -10,11 +10,17 @@ internal sealed class IncludeSourcePreprocessor
     private static readonly Regex IncludePattern = new(
         "^Include\\s+\"([^\"]+)\"\\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex UsePattern = new(
+        "^Use\\s+\"([^\"]+)\"\\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex WebPlatformPattern = new(
         @"^\[\s*Platform\s*:\s*browser-wasm\s*\]$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private static readonly Regex ServerSidePattern = new(
         @"^\[\s*ServerSide\s*\]$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex CompileDirectivePattern = new(
+        @"^\[\s*Compile\s*:",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public Result Transform(string rootSource, string rootSourcePath)
@@ -27,10 +33,6 @@ internal sealed class IncludeSourcePreprocessor
             return new Result(rootSource, prepared.Map, [Path.GetFullPath(rootSourcePath)]);
 
         var rootPath = Path.GetFullPath(rootSourcePath);
-        var compileEnabled = IsBrowserWasmSource(rootSource) || CompileFolderSourcePreprocessor.IsDesktopProject(rootSource, rootPath);
-        var compileResult = new CompileFolderSourcePreprocessor().Transform(rootSource, rootPath, compileEnabled);
-        rootSource = compileResult.Source;
-
         IncludeSecurityContext.Current?.EnsureAllowed(rootPath, rootPath);
 
         var pathIdentity = new FileSystemPathIdentity();
@@ -40,12 +42,6 @@ internal sealed class IncludeSourcePreprocessor
         var output = new List<string>();
         var map = new List<SourceMap.Location>();
         Expand(rootPath, rootSource, pathIdentity, included, dependencies, stack, output, map, []);
-
-        foreach (var dependency in compileResult.Dependencies)
-        {
-            var full = Path.GetFullPath(dependency);
-            if (!dependencies.Contains(full, StringComparer.OrdinalIgnoreCase)) dependencies.Add(full);
-        }
 
         var expanded = new Result(string.Join(Environment.NewLine, output), new SourceMap(map), dependencies.ToArray());
         var specifications = SourcePreprocessorConfigurationContext.Current;
@@ -101,21 +97,45 @@ internal sealed class IncludeSourcePreprocessor
                     AddLine(output, map, string.Empty, sourcePath, i + 1, includeTrace);
                     continue;
                 }
+                if (CompileDirectivePattern.IsMatch(code))
+                    throw IncludeError(sourcePath, i + 1, "[Compile:folder] is not supported. Use Include \"file.xps\" to combine source files.");
 
                 var match = IncludePattern.Match(code);
+                var useMatch = UsePattern.Match(code);
+                var isUse = useMatch.Success;
                 if (!match.Success)
                 {
+                    if (isUse)
+                    {
+                        match = useMatch;
+                    }
+                    else
+                    {
                     if (Regex.IsMatch(code, @"^Include\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                         throw IncludeError(sourcePath, i + 1, "Invalid Include directive. Expected Include \"file.xps\".");
+                    if (Regex.IsMatch(code, @"^Use\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+                        throw IncludeError(sourcePath, i + 1, "Invalid Use directive. Expected Use \"file\".");
 
                     AddLine(output, map, raw, sourcePath, i + 1, includeTrace);
                     continue;
+                    }
                 }
 
                 var declaredPath = match.Groups[1].Value.Trim();
                 if (declaredPath.Length == 0)
-                    throw IncludeError(sourcePath, i + 1, "Include requires an .xps source path.");
-                if (!Path.GetExtension(declaredPath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+                    throw IncludeError(sourcePath, i + 1, isUse ? "Use requires a source name." : "Include requires an .xps source path.");
+                if (isUse)
+                {
+                    if (Path.IsPathRooted(declaredPath) || declaredPath.Contains(':', StringComparison.Ordinal))
+                        throw IncludeError(sourcePath, i + 1, "Use paths must be relative to the containing file.");
+                    if (Path.GetExtension(declaredPath).Length > 0)
+                        throw IncludeError(sourcePath, i + 1, "Use names must omit the .xps extension: " + SafePath(declaredPath));
+                    var segments = declaredPath.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+                    if (segments.Any(segment => segment is "." or ".."))
+                        throw IncludeError(sourcePath, i + 1, "Use paths may only target the containing directory or a subdirectory.");
+                    declaredPath += ".xps";
+                }
+                else if (!Path.GetExtension(declaredPath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
                     throw IncludeError(sourcePath, i + 1, "Include source files must use the .xps extension: " + SafePath(declaredPath));
 
                 string includePath;
@@ -146,7 +166,7 @@ internal sealed class IncludeSourcePreprocessor
                 }
 
                 if (!File.Exists(includePath))
-                    throw IncludeError(sourcePath, i + 1, "Included source file was not found: " + SafePath(declaredPath));
+                        throw IncludeError(sourcePath, i + 1, (isUse ? "Used" : "Included") + " source file was not found: " + SafePath(declaredPath));
 
                 string includeSource;
                 try { includeSource = File.ReadAllText(includePath); }
@@ -164,9 +184,6 @@ internal sealed class IncludeSourcePreprocessor
             stack.RemoveAt(stack.Count - 1);
         }
     }
-
-    private static bool IsBrowserWasmSource(string source)
-        => NormalizeLines(source).Any(line => WebPlatformPattern.IsMatch(StripComment(line).Trim()));
 
     private static void AddLine(
         List<string> output,

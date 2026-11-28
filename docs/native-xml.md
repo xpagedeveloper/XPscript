@@ -4,6 +4,16 @@ XPscript provides a native XML DOM-style API backed by .NET `System.Xml.Linq`. I
 
 The XML runtime is cross-platform and is only included when an application uses the XML API.
 
+## AST compilation
+
+The AST compiler directly binds `XPXmlDocument` and all documented XML node, element, attribute, collection and validation types to the same native runtime used by normal compilation. It preserves secure parsing/DTD limits, inherited element/node members, case-insensitive names, typed parameters/results, shared ByVal references, ByRef replacement, Static references and typed collection iteration. `LoadXml` mutates the existing document; aliases retain that document reference.
+
+An `XPXmlNode` obtained through XPath or collections can expose element-specific members when its actual node is an element, matching existing DOM usage. AST checks that case at runtime and otherwise raises error 13 with an XPScript message. Unknown members, invalid constructor/overload use and writes to read-only properties/collection slots are source-mapped compilation errors in CLI and MCP. XML collections also accept zero-based bracket reads (`nodes[0]`, `attributes["id"]`), delegating to the same `Get` methods.
+
+Unused XML runtime code is omitted. XML names in strings or comments do not activate it; `XmlEscape` alone includes only the existing escape method, not the DOM or DTD engine. No external NuGet addon or new third-party notice is required for XML. Existing addon selection and notices remain unchanged.
+
+Executable AST regressions live in `tests/ast-compile-probe/xml-*.xps`. The `xml-full-surface.xps` fixture exercises every documented document, node, element, attribute, collection and validation property/method through AST execution. The Language FullTest compiles/executes them, checks unused-runtime exclusion and compares real normal/AST output for the existing DOM/DTD samples and dedicated parity fixtures. The Runtime FullTest retains normal XML coverage.
+
 ## Create a document
 
 Create an empty document with either form:
@@ -70,7 +80,7 @@ Dim doc As New XPXmlDocument("<root><child /></root>")
 Call doc.LoadXml("<newroot><item>1</item></newroot>")
 ```
 
-Normal parsing requires well-formed XML. DTD processing is prohibited, `XmlResolver` is disabled, and external entities are not resolved. XML input is limited to 8 MiB.
+Normal parsing requires well-formed XML. DTD processing is prohibited, `XmlResolver` is disabled, and external entities are not resolved. XML input is limited to 8 MiB. Text input is parsed as a .NET Unicode string. A `Byte()`/byte-array input is parsed from its XML encoding/BOM, including UTF-8 and UTF-16. `Stringify()` returns a .NET string; when XML declaration output is enabled, the generated declaration is UTF-8 without a BOM. Use `ToBytes(encoding [, includeBom])` for byte output: `doc.ToBytes("utf-8", False)` creates UTF-8 without a BOM and `doc.ToBytes("utf-8", True)` creates UTF-8 with a BOM. `utf-16` and `utf-16be` are also supported.
 
 ## Build XML
 
@@ -422,4 +432,4 @@ Validation objects expose:
 - DTD validation rejects `SYSTEM` and `PUBLIC` external identifiers.
 - The API does not fetch external entities or schemas.
 
-See `samples/native-xml-dom-regression.xps` for executable creation, navigation, attributes, insertion, replacement, deletion, parsing and clearing coverage.
+See [`samples/native-xml-dom-regression.xps`](../samples/native-xml-dom-regression.xps) for executable creation, navigation, attributes, insertion, replacement, deletion, parsing and clearing coverage.

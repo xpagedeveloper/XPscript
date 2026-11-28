@@ -1,0 +1,35 @@
+name: OpenAPI CLI Investigation
+
+on:
+  push:
+    branches: [test-openapi-import-class-skeletons]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openapi-cli-investigation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  openapi-cli:
+    name: OpenAPI CLI REST server and client
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore CLI and compiler
+        run: |
+          dotnet restore ./src/XPScript.Cli/XPScript.Cli.csproj
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+      - name: Build CLI and compiler
+        run: |
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+          dotnet build ./src/XPScript.Cli/XPScript.Cli.csproj -c Release -p:SkipUnifiedPublish=true --no-restore
+      - name: Verify OpenAPI REST server and client in CLI mode
+        shell: bash
+        run: bash ./tests/OpenApiGeneratorSmoke/run-rest-host-ci.sh

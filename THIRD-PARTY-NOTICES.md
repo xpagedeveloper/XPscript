@@ -1,5 +1,7 @@
 # Third party reference notices
 
+Generated AST and normal SDK builds select addon packages through the shared `ApplicationDependencyCatalog`. The compiler produces `Third-party-license.txt` from the exact restored direct/transitive package graph, including persistent-cache builds. SDK runtime identifiers select the required native assets. Package-free programs do not restore addon packages; adding future addons requires reviewing their package licenses/notices and updating this document.
+
 XPscript uses the following open source projects as implementation references when mapping the HCL Notes/Domino API. Their source code is not copied into XPscript and neither project is a runtime dependency of an XPscript application.
 
 HCL's open source catalog identifies the Domino C API documentation, Domino JNX, and related Domino open source repositories as Apache License 2.0 projects. XPscript keeps the attribution below and links to the full license text. The HCL Notes and Domino products and native runtime libraries remain commercial HCL software and are not redistributed by XPscript.
@@ -20,7 +22,7 @@ The [Domino JNX project](https://github.com/HCL-TECH-SOFTWARE/domino-jnx) is lic
 
 Copyright Klehmann and contributors.
 
-The [Domino JNA project](https://github.com/klehmann/domino-jna) is licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). XPscript uses its public implementation as a reference for MIME stream serialization and Notes item writeback behavior.
+The [Domino JNA project](https://github.com/klehmann/domino-jna) is licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). XPscript uses its public implementation as a reference for MIME stream serialization, Notes item writeback, and DXL result-log MEMHANDLE ownership. JNX's `AbstractDxlProcessor` and Domino JNA's `AbstractDXLTransfer` confirm that DXL string-property copies use `OSMemoryLock`, `OSMemoryUnlock`, and `OSMemoryFree`; no Java code or runtime dependency is included.
 
 ## NuGet dependencies
 
@@ -30,22 +32,23 @@ XPscript also uses the following open source NuGet packages. The versions below 
 
 The following packages are distributed under the MIT License:
 
-- [Avalonia](https://github.com/AvaloniaUI/Avalonia), including `Avalonia.Desktop`, `Avalonia.FreeDesktop`, `Avalonia.FreeDesktop.AtSpi`, `Avalonia.HarfBuzz`, `Avalonia.Native`, `Avalonia.Remote.Protocol`, `Avalonia.Skia`, `Avalonia.Themes.Fluent`, `Avalonia.Win32`, and `Avalonia.X11` (`12.0.3`)
-- [Avalonia.Controls.WebView](https://github.com/AvaloniaUI/Avalonia.Controls.WebView) (`12.0.1`)
+- [Avalonia](https://github.com/AvaloniaUI/Avalonia), including `Avalonia.Desktop`, `Avalonia.FreeDesktop`, `Avalonia.FreeDesktop.AtSpi`, `Avalonia.HarfBuzz`, `Avalonia.Native`, `Avalonia.Remote.Protocol`, `Avalonia.Skia`, `Avalonia.Themes.Fluent`, `Avalonia.Win32`, and `Avalonia.X11` (`12.1.4`)
+- `Avalonia.Android` (`12.1.4`), distributed under the MIT License as part of Avalonia.
+- [Avalonia.Controls.WebView](https://github.com/AvaloniaUI/Avalonia.Controls.WebView) (`12.1.1`)
 - [BouncyCastle.Cryptography](https://github.com/bcgit/bc-csharp) (`2.6.2`)
 - [HarfBuzzSharp](https://github.com/mono/SkiaSharp), including its platform native asset packages (`8.3.1.3`)
 - [MicroCom.Runtime](https://github.com/AvaloniaUI/MicroCom) (`0.11.4`)
 - [Microsoft.Data.Sqlite](https://github.com/dotnet/efcore), including `Microsoft.Data.Sqlite.Core` (`10.0.11`)
-- [Microsoft.Data.SqlClient](https://github.com/dotnet/SqlClient), including its abstractions and logging packages (`7.0.2`)
+- [Microsoft.Data.SqlClient](https://github.com/dotnet/SqlClient), including its abstractions and logging packages (`7.1.1`)
 - [Microsoft.Extensions](https://github.com/dotnet/runtime) caching, dependency injection, logging, options, and primitives packages (`9.0.13` and `10.0.0`)
 - [Microsoft.IdentityModel](https://github.com/AzureAD/identitymodel-extensions-for-dotnet) packages (`8.16.0`)
 - [Microsoft.CodeAnalysis](https://github.com/dotnet/roslyn), including `Microsoft.CodeAnalysis.CSharp`, `Common`, and `Analyzers` (`4.14.0` and `3.11.0`)
 - [Microsoft.SqlServer.Server](https://github.com/dotnet/SqlClient) (`1.0.0`)
 - [MimeKit](https://github.com/jstedfast/MimeKit) (`4.17.0`)
 - [MySqlConnector](https://github.com/mysql-net/MySqlConnector) (`2.6.2`)
-- [SharpCompress](https://github.com/adamhathcock/sharpcompress) (`0.50.4`)
+- [SharpCompress](https://github.com/adamhathcock/sharpcompress) (`0.50.7`)
 - [SkiaSharp](https://github.com/mono/SkiaSharp), including its platform native asset packages (`3.119.4-preview.1.1`)
-- [System.Configuration.ConfigurationManager](https://github.com/dotnet/runtime), `System.Diagnostics.EventLog`, `System.IdentityModel.Tokens.Jwt`, `System.Security.Cryptography.Pkcs`, and `System.Security.Cryptography.ProtectedData` (`9.0.13` or `10.0.0`)
+- [System.Configuration.ConfigurationManager](https://github.com/dotnet/runtime), `System.Diagnostics.EventLog`, `System.IdentityModel.Tokens.Jwt`, `System.Security.Cryptography.Pkcs`, and `System.Security.Cryptography.ProtectedData` (`9.0.13` or `10.0.13`)
 - [Tmds.DBus.Protocol](https://github.com/tmds/Tmds.DBus) (`0.92.0`)
 - [YamlDotNet](https://github.com/aaubry/YamlDotNet) (`18.1.0`)
 
@@ -57,7 +60,11 @@ The MIT license text is available at [opensource.org/licenses/MIT](https://opens
 
 ### Apache License 2.0
 
+- `XamlMcp.Avalonia` (`1.0.0-preview.3`) is an in-process Avalonia inspection tool distributed under the Apache License 2.0. It is used only by desktop smoke-test projects and is not included in compiler-generated applications.
+- `Xamarin.AndroidX.Camera.Camera2`, `Xamarin.AndroidX.Camera.Core`, `Xamarin.AndroidX.Camera.View`, `Xamarin.AndroidX.Lifecycle.LiveData.Core`, `Xamarin.AndroidX.Media3.ExoPlayer`, and `Xamarin.AndroidX.Media3.Ui` are AndroidX binding packages distributed under the Apache License 2.0. Release packages must preserve their NuGet-generated license and notice files.
+
 - `Magick.NET-Q16-AnyCPU` — [Magick.NET](https://github.com/dlemstra/Magick.NET) (`14.17.1`) is the XPImage runtime backend and is distributed under the Apache License 2.0. Magick.NET packages include the ImageMagick native runtime used for image decoding, encoding, metadata, drawing and image processing. Applications that use XPImage include the applicable Magick.NET/ImageMagick package license and notice material in the compiler-generated `Third-party-license.txt`.
+  AST-generated code that includes the XPImage runtime uses the same generated-project dependency configuration. The SDK resolves Magick.NET and its transitive packages, selects native assets for the build runtime identifier, and stages them with the application. The accompanying `Third-party-license.txt` is generated from the exact restored package graph, including when the build uses the persistent restore cache. Programs without XPImage do not acquire this dependency.
 - [SQLitePCLRaw](https://github.com/ericsink/SQLitePCL.raw), including `bundle_e_sqlite3`, `core`, `lib.e_sqlite3`, and `provider.e_sqlite3` (`2.1.12`)
 
 The Apache License 2.0 text is available at [apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0). SQLite itself is a separate public-domain work; the SQLitePCLRaw package notices apply to the managed package and its native distribution.
@@ -85,6 +92,10 @@ Distributors of compiled XPScript applications must keep `Third-party-license.tx
 XPscript is built on the [.NET platform](https://github.com/dotnet/runtime) and uses the .NET SDK, runtime libraries, ASP.NET Core components, and standard library implementations supplied by Microsoft. These components are generally distributed under the [MIT License](https://github.com/dotnet/runtime/blob/main/LICENSE.TXT), with additional third-party notices included in the .NET installation and publish output. Self-contained applications must retain the notices shipped with the corresponding .NET runtime used to build them.
 
 The .NET runtime is supplied by the .NET distribution and is not source code copied into this repository. This notice does not grant rights to redistribute HCL Notes/Domino binaries, which remain subject to HCL's commercial product terms.
+
+## AndroidX ViewPager2
+
+Android UIForm Carousel support uses the `Xamarin.AndroidX.ViewPager2` binding and its AndroidX dependencies. The underlying AndroidX ViewPager2 library is distributed by the Android Open Source Project under the Apache License 2.0. Release packages must preserve the NuGet-generated license and notice files for this dependency graph.
 
 ## Trademarks and third-party brands
 

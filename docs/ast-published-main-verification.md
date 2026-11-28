@@ -1,0 +1,83 @@
+# AST verification against published main
+
+The published main binary is a compatibility baseline alongside the branch's disabled legacy entry points and production AST compiler. Do not rebuild or replace it while collecting comparison results.
+
+## Baseline recorded on 2026-10-08
+
+- Executable: `publish/xpscript/win-x64/xpscript.exe` in the original checkout.
+- Reported version: `0.9.3 Beta`, build `2026-10-08`.
+- SHA-256: `DDDB44347DD55800E38F158988A671F053CB45A4C02CF1F712D69870E637FA27`.
+- Fixture: `tests/ast-compile-probe/optional-byref-compatibility.xps`.
+
+| Compiler | Compilation | Execution |
+| --- | --- | --- |
+| Published main baseline | Succeeded | Failed: `'long' does not contain a definition for 'Value'` |
+| Corrected branch legacy compiler | Succeeded | `OPTIONAL_BYREF_COMPATIBILITY_OK` |
+| Experimental AST compiler | Succeeded | `OPTIONAL_BYREF_COMPATIBILITY_OK` |
+
+The fixture exercises supplied ByRef aliases, repeated omitted numeric defaults, mutation of an explicit optional argument, and string/Boolean defaults. The branch fixes a baseline defect by allocating fresh scalar reference storage for literal defaults and preserving it through generic ByRef lowering. MCP validation accepts the same fixture; MCP validation alone does not prove runtime execution.
+
+Compile the fixture with the preserved published executable using `compile <fixture> -o <baseline-output> --runtime=false --single-file=false`, then execute the generated output and record its exit status and text. The branch's `tests/ast-compile-probe/run-ast-cli.ps1` executes the same fixture through legacy and AST paths before broader regressions. Repeat this comparison for subsequent migrated behavior and record the published executable's hash whenever the baseline changes.
+
+These results verify this fixture only. Full Optional semantics, shared AST machine integration and the broader migration remain open in `todo/ast-compiler-migration-todo.md`.
+
+## Explicit Optional slots
+
+`tests/ast-compile-probe/optional-omitted-slots.xps` passed compilation and execution against the preserved published main binary, producing `OPTIONAL_OMITTED_SLOTS_OK`. Experimental AST execution also passed. The fixture covers leading, middle, trailing and all-empty positions, omitted trailing arguments, and a required parameter following an Optional parameter. Required positions still need supplied arguments; focused AST binder tests retain XPS2004 and the full call span for invalid omissions, argument types, arity and ByRef modes.
+
+## Default evaluation order
+
+The optional-default-order.xps fixture matches published main with the trace EVAL_FIRST, EVAL_LAST, EVAL_BODY, 123; EVAL_LAST, EVAL_BODY, 943; EVAL_FIRST, EVAL_BODY, 128. Before correction AST produced 193 for the first case. Default evaluators now run in argument position, preserving side effects before later supplied expressions. Main accepts executable function-call defaults, including nested omitted defaults.
+
+Saved follow-up fixtures: optional-nested-supplied-call.xps passes branch legacy/AST but published main still fails compilation. optional-bare-procedure-argument.xps is rejected by both published main and the branch AST/MCP surfaces with XPS2003; the branch no longer falls through to InvalidCastException.
+The baseline SHA-256 was rechecked during this audit and remains unchanged. Production MCP validation accepts the default-order fixture; AST machine exposure remains pending.
+
+## Preserved published baseline
+
+The compatibility executable is the `main`-branch build preserved at `publish/xpscript/win-x64/xpscript.exe`. Its SHA-256 is `7380df231689fe1645b96a91bb4c7baffc16e3b167d01df19cc277e38d6b3bcf`. The AST branch keeps this artifact unchanged while AST fixtures are compiled and compared against it; it is not rebuilt by the AST workflow.
+
+## Linux main reference
+
+The `main` branch also defines a `linux-x64` distribution target. A framework-dependent Linux reference was built from main commit `deb33819` in `publish/xpscript/linux-x64`; its `xpscript.dll` SHA-256 is `cda7258576b70322c86f5b358551c2c7b894f12122f7e9837c215d76594088c8`. The preserved `static-local-baseline.xps` fixture was compiled and executed through this Linux reference and the AST compiler with identical output: `1`, `2`. The published directory remains ignored/generated; rebuild it from main when the baseline changes.
+
+The `static-initializer-error.xps` fixture exposes an existing static-compiler quirk: Linux static compilation succeeds but execution emits only an empty line, while AST binds the scalar initializer and prints `3`. This is recorded as an intentional AST extension, not treated as a missing feature.
+
+## Nested supplied Optional arguments
+
+Published main still rejects the expanded optional-nested-supplied-call.xps fixture with missing-argument and invalid closing-parenthesis errors. Token-based compatibility preprocessing replaces the flat regex; branch legacy and AST cover nested calls to the same Optional procedure, inner argument commas and multiple calls on a line. Expected output is 123, 1333, 246 and the unchanged string Choose(, Provided(),).
+
+The saved print-parentheses-literal.xps follow-up originally exposed an AST-only mismatch: the file-output regex captured a comma inside the literal and routed it to the AstPrintFile placeholder. The baseline hash remains unchanged.
+
+The print-parentheses-literal.xps follow-up is fixed: published main and AST both print Choose(, Provided(),). The AST file-output rewrite now uses lexer tokens and no longer treats literal commas as file syntax.
+
+The reserved-compiler-identifier.xps fixture now produces the same reserved-identifier rejection through AST CLI and MCP as the legacy rule for `__xps` user names. The published executable remains unchanged.
+
+For `unsupported-goto.xps`, published main compiles and runs with output `done`. AST now emits real GoTo transfers. GoSub is also supported through AST-generated local helpers; see the current GoSub results below. The following removal/rejection notes describe an intermediate implementation and are superseded by the current support.
+
+This GoTo comparison was repeated with a fixture that did not use GoSub: both preserved published main (framework-dependent output) and AST compiled and executed the fixture with exit code 0 and output `done`.
+
+The broader audit identified additional AST-only semantic loss: Resume/On Error and implicit member statements are rewritten to no-op calls, while XPImage operations are replaced with object construction. These are recorded as separate open parity tasks rather than treated as equivalent behavior.
+
+The original `gosub-parity-audit.xps` comparison produced `worker` then `after` with published main and only `after` with AST. That AST gap was fixed: `gosub-parity-audit.xps`, sequential/nested/error-flow GoSub fixtures and the nested GoSub CLI/MCP regression now execute through generated local helpers. The full Windows Language FullTest passed on 2026-11-28, including the nested GoSub CLI and MCP checks.
+
+## Nested GoSub continuations
+
+During the 2026-10-08 investigation, a temporary six-call GoSub fixture (ElseIf, While, post-test Do and Select, followed by a nested GoTo) failed compilation with the preserved published executable: CS0159 reported missing `__ls_gosub_return_*` labels and CS0163 reported case fall-through. That historical failure concerns the old published baseline, not current branch support. AST GoSub lowering uses local helper functions, and the permanent CLI/MCP regressions protect nested calls and source-mapped emission. The published executable's SHA-256 remains unchanged.
+
+## Static procedure-local lifetime
+
+`static-local-baseline.xps` calls the same Sub twice. Published main compiles and executes it with output `1`, `2`; AST previously produced `1`, `1` because preprocessing changed Static to Dim. Structural scalar Static binding and persistent fields now produce `1`, `2` with exit code 0. The expanded `static-local-lifetime.xps` also passes AST execution with independent procedures/overloads, string/Boolean defaults and ByRef mutation. Published main rejects that expanded fixture's numeric overload calls with XPS2003 (it selects the String overload); this limits the baseline comparison to the minimal fixture, not the expanded overload regression. Static collections, objects and explicit initialization remain open.
+
+## ForAll List aliases
+
+`forall-list-alias.xps` now compiles and executes with matching output in published main and AST: `a`, `b`, `11`, `12`, `one:BLUE`, `two:GREEN`, `a`, `a`, `b`, `b`, `12`, `13`, `5`, `1`, `2`, `2`. It exercises typed write-through aliases, ListTag, nested aliases and insertion during snapshot iteration. Before this fix AST passed KeyValuePair values into arithmetic and threw a RuntimeBinderException.
+
+A separate ByRef alias audit remains open: calling a Long ByRef Sub with the alias is rejected by AST-generated C# because Value is a property. Published main compiles that audit but prints the unchanged value `1`, losing the intended mutation to `11`. This is distinct from assignment directly to a List alias, which matches the baseline regression above. Published main also rejects reuse of the same alias name in nested loops; the permanent comparison fixture uses different names.
+
+## List membership
+
+Published main and corrected AST output `True`, `False` for `list-membership-baseline.xps`. Before correction AST read the missing entry first and threw KeyNotFoundException. The expanded `list-membership.xps` verifies that a function-valued tag prints its side-effect marker once and that the stored value remains 3. AST passes that expanded fixture; published main rejects its nested tag function call with unresolved IsElement/method-name diagnostics. Baseline parity therefore applies to the saved minimal fixture, with stronger expression evaluation covered in AST.
+
+## List Erase
+
+`list-erase.xps` compiles and executes in preserved published main with `False`, `True`, `False`, `first`, `1`, `False`, `False`, `LIST_ERASE_OK`. It covers a missing tag, single-tag removal, clearing and removal of current/future tags during iteration. AST previously returned `True`, `True`, `True` in the minimal audit because Erase was a no-op; it now calls the shared List runtime's Erase/Clear operations. Array Erase remains separate migration work.

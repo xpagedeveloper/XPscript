@@ -1,0 +1,15 @@
+Class Record
+    Public Value As Long
+    Public Sub New(ByRef seed As Long)
+        seed = seed + 2
+        Value = seed
+    End Sub
+End Class
+Sub Main()
+    Dim seed As Long
+    seed = 3
+    Dim item As New Record(seed)
+    Print seed
+    Print item.Value
+    Print "BYREF_CONSTRUCTOR_SIMPLE_OK"
+End Sub

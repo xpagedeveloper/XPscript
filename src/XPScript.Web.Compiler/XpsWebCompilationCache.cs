@@ -11,7 +11,8 @@ public sealed class XpsWebCompilationCacheOptions
     public long MaxSourceBytes { get; init; } = 4 * 1024 * 1024;
     public TimeSpan IdleTtl { get; init; } = TimeSpan.FromMinutes(20);
     public TimeSpan FailureBackoff { get; init; } = TimeSpan.FromSeconds(2);
-    public string ConfigurationIdentity { get; init; } = "default";
+    public int MaxConcurrentCompilations { get; init; } = 4;
+    public string ConfigurationIdentity { get; init; } = "ast-compiler-2026-10-20";
     public bool EnablePersistentCache { get; init; } = true;
     public string? PersistentCacheDirectory { get; init; }
 
@@ -25,6 +26,8 @@ public sealed class XpsWebCompilationCacheOptions
             throw new ArgumentOutOfRangeException(nameof(IdleTtl), "IdleTtl must be between 1 second and 1 day.");
         if (FailureBackoff < TimeSpan.FromMilliseconds(100) || FailureBackoff > TimeSpan.FromMinutes(5))
             throw new ArgumentOutOfRangeException(nameof(FailureBackoff), "FailureBackoff must be between 100 ms and 5 minutes.");
+        if (MaxConcurrentCompilations is < 1 or > 256)
+            throw new ArgumentOutOfRangeException(nameof(MaxConcurrentCompilations), "MaxConcurrentCompilations must be between 1 and 256.");
         if (string.IsNullOrWhiteSpace(ConfigurationIdentity) || ConfigurationIdentity.Length > 512)
             throw new ArgumentException("ConfigurationIdentity must contain 1 to 512 characters.", nameof(ConfigurationIdentity));
         if (PersistentCacheDirectory is not null && string.IsNullOrWhiteSpace(PersistentCacheDirectory))
@@ -44,6 +47,8 @@ public sealed record XpsWebCompilationCacheMetrics(
 public sealed class XpsWebCompilationCache : IAsyncDisposable
 {
     public const string CacheDirectoryEnvironmentVariable = "XPSCRIPT_WEB_CACHE_DIRECTORY";
+    private const int GlobalMaxConcurrentCompilations = 16;
+    private static readonly SemaphoreSlim GlobalCompilationGate = new(GlobalMaxConcurrentCompilations, GlobalMaxConcurrentCompilations);
 
     private sealed class Entry
     {
@@ -60,9 +65,11 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
     }
 
     private readonly object _gate = new();
+    private readonly CancellationTokenSource _compilationCancellation = new();
     private readonly Dictionary<string, Entry> _entries;
     private readonly XpsWebCompiler _compiler;
     private readonly XpsWebCompilationCacheOptions _options;
+    private readonly SemaphoreSlim _compilationGate;
     private long _cacheHits;
     private long _cacheMisses;
     private long _compilationStarts;
@@ -76,6 +83,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         _compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
         _options = options ?? new XpsWebCompilationCacheOptions();
         _options.Validate();
+        _compilationGate = new SemaphoreSlim(_options.MaxConcurrentCompilations, _options.MaxConcurrentCompilations);
         _entries = new Dictionary<string, Entry>(StringComparer.Ordinal);
     }
 
@@ -152,7 +160,7 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
                     Identity = snapshot.Identity,
                     LastAccessUtc = now,
                     Compilation = new Lazy<Task<XpsCompiledWebUnit>>(
-                        () => CompileMeasuredAsync(fullPath, fullSiteRoot, runtimeIdentifier, snapshot),
+                        () => CompileMeasuredAsync(fullPath, fullSiteRoot, runtimeIdentifier, snapshot, _compilationCancellation.Token),
                         LazyThreadSafetyMode.ExecutionAndPublication)
                 };
                 _entries.Add(key, entry);
@@ -188,13 +196,15 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
     {
         try
         {
+            var configurationIdentity = BuildEffectiveConfigurationIdentity();
             return await XPScriptCompilationSnapshotBuilder.CreateAsync(
                 fullPath,
                 fullSiteRoot,
                 runtimeIdentifier,
-                _options.ConfigurationIdentity,
+                configurationIdentity,
                 _options.MaxSourceBytes,
-                cancellationToken).ConfigureAwait(false);
+                includeExternalInputs: true,
+                cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (CompilerException ex)
         {
@@ -202,18 +212,25 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         }
     }
 
+    private string BuildEffectiveConfigurationIdentity()
+    {
+        var preprocessors = string.Join("\u001f", SourcePreprocessorConfigurationContext.Current);
+        return _options.ConfigurationIdentity + "\u001epreprocessors=" + preprocessors;
+    }
+
     private async Task<XpsCompiledWebUnit> CompileMeasuredAsync(
         string fullPath,
         string fullSiteRoot,
         string runtimeIdentifier,
-        XPScriptCompilationSnapshot expectedSnapshot)
+        XPScriptCompilationSnapshot expectedSnapshot,
+        CancellationToken cancellationToken)
     {
         var persistentCacheDirectory = ResolvePersistentCacheDirectory(fullSiteRoot);
         DebugStep($"compile:start persistent={(persistentCacheDirectory is not null)}", fullPath);
         if (persistentCacheDirectory is not null)
         {
             var persisted = await _compiler.TryLoadPersistentAsync(
-                fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, CancellationToken.None).ConfigureAwait(false);
+                fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
             if (persisted is not null)
             {
                 DebugStep("persistent-cache:hit", fullPath);
@@ -222,23 +239,33 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
             DebugStep("persistent-cache:miss", fullPath);
         }
 
-        Interlocked.Increment(ref _compilationStarts);
-        var started = Stopwatch.GetTimestamp();
+        await GlobalCompilationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var unit = await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot, persistentCacheDirectory).ConfigureAwait(false);
-            DebugStep("compile:done", fullPath);
-            return unit;
-        }
-        catch
-        {
-            Interlocked.Increment(ref _compilationFailures);
-            throw;
+            await _compilationGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            Interlocked.Increment(ref _compilationStarts);
+            var started = Stopwatch.GetTimestamp();
+            try
+            {
+                var unit = await CompileAndVerifyAsync(fullPath, fullSiteRoot, runtimeIdentifier, expectedSnapshot, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
+                DebugStep("compile:done", fullPath);
+                return unit;
+            }
+            catch
+            {
+                Interlocked.Increment(ref _compilationFailures);
+                throw;
+            }
+            finally
+            {
+                _compilationGate.Release();
+                var elapsed = Stopwatch.GetElapsedTime(started);
+                Interlocked.Add(ref _compilationDurationTicks, Math.Max(0, elapsed.Ticks));
+            }
         }
         finally
         {
-            var elapsed = Stopwatch.GetElapsedTime(started);
-            Interlocked.Add(ref _compilationDurationTicks, Math.Max(0, elapsed.Ticks));
+            GlobalCompilationGate.Release();
         }
     }
 
@@ -259,7 +286,10 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
             return Path.GetFullPath(environmentCache, fullSiteRoot);
 
         var localData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        if (string.IsNullOrWhiteSpace(localData)) localData = Path.GetTempPath();
+        var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        if (!string.IsNullOrWhiteSpace(configuredTempRoot))
+            localData = Path.GetFullPath(configuredTempRoot);
+        else if (string.IsNullOrWhiteSpace(localData)) localData = Path.GetTempPath();
         var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(fullSiteRoot)).Replace('\\', '/');
         var siteHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalizedRoot))).ToLowerInvariant();
         return Path.Combine(localData, "XPScript", "web-cache", siteHash);
@@ -270,14 +300,15 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
         string fullSiteRoot,
         string runtimeIdentifier,
         XPScriptCompilationSnapshot expectedSnapshot,
-        string? persistentCacheDirectory)
+        string? persistentCacheDirectory,
+        CancellationToken cancellationToken)
     {
         var unit = persistentCacheDirectory is null
-            ? await _compiler.CompileAsync(fullPath, fullSiteRoot, CancellationToken.None).ConfigureAwait(false)
-            : await _compiler.CompileAndPersistAsync(fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, CancellationToken.None).ConfigureAwait(false);
+            ? await _compiler.CompileAsync(fullPath, fullSiteRoot, cancellationToken).ConfigureAwait(false)
+            : await _compiler.CompileAndPersistAsync(fullPath, fullSiteRoot, expectedSnapshot.Identity, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
         try
         {
-            var actualSnapshot = await CreateSnapshotAsync(fullPath, fullSiteRoot, runtimeIdentifier, CancellationToken.None).ConfigureAwait(false);
+            var actualSnapshot = await CreateSnapshotAsync(fullPath, fullSiteRoot, runtimeIdentifier, cancellationToken).ConfigureAwait(false);
             if (!string.Equals(expectedSnapshot.Identity, actualSnapshot.Identity, StringComparison.Ordinal))
                 throw new XpsWebCompilationException("Web source changed while compilation was in progress. Retry the request.");
             return unit;
@@ -397,7 +428,9 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
             }
             _entries.Clear();
         }
+        _compilationCancellation.Cancel();
         await DisposeRetiredAsync(retired).ConfigureAwait(false);
+        _compilationCancellation.Dispose();
     }
 }
 

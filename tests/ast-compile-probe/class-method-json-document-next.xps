@@ -1,0 +1,12 @@
+Class Reader
+    Public Function RootType(ByVal value As XPJsonDocument) As String
+        RootType = value.Root.Type
+    End Function
+End Class
+
+Sub Main()
+    Dim value As XPJsonDocument
+    Set value = XPJsonDocument.Parse("[1]")
+    Dim reader As New Reader
+    Print reader.RootType(value)
+End Sub

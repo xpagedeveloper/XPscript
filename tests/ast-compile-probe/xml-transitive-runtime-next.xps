@@ -1,0 +1,9 @@
+Sub Main()
+    Dim doc As New XPXmlDocument
+    Dim root As XPXmlElement
+    Set root = doc.AddRoot("root")
+    Call root.AddElement("child", "Åsa")
+    If doc.HasRoot And root.Elements[0].Value = "Åsa" Then
+        Print "AST_XML_TRANSITIVE_RUNTIME_OK"
+    End If
+End Sub

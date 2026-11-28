@@ -1,0 +1,24 @@
+Class DeleteProbe
+    Public Id As String
+
+    Public Sub New(ByVal value As String)
+        Id = value
+    End Sub
+
+    Public Sub Delete()
+        Print "DELETE_CALLED=" & Id
+    End Sub
+End Class
+
+Sub Main()
+    Dim first As DeleteProbe
+    Dim second As DeleteProbe
+
+    Set first = New DeleteProbe("one")
+    Set second = first
+
+    Delete first
+
+    If first Is Nothing Then Print "FIRST_NOTHING=YES"
+    If second Is Nothing Then Print "SECOND_NOTHING=YES"
+End Sub

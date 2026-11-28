@@ -24,6 +24,35 @@ await File.WriteAllTextAsync(sourcePath, """
 Sub WebMain()
 End Sub
 
+[Anonymous]
+[Get]
+Sub WebRequestResponseSurface()
+    If False Then
+        Dim path As String = Request.Path
+        Dim query As String = Request.Query("id")
+        Dim header As String = Request.Header("X-Test")
+        Dim cookie As String = Request.Cookie("session")
+        Dim form As String = Request.Form("name")
+        Dim bodyText As String = Request.BodyText()
+        Dim bodyBytes As Variant = Request.BodyBytes()
+        Dim bearer As String = Request.BearerToken
+        Response.AppendHeader("X-Test", "ok")
+        Call Response.RemoveHeader("X-Old")
+        Call Response.SetCookie("session", "value")
+        Call Response.DeleteCookie("old")
+        Call Response.Json("ok")
+        Call Response.OK("ok")
+        Call Response.Created("/created", "ok")
+        Call Response.NoContent()
+        Call Response.Unauthorized()
+        Call Response.Forbidden()
+        Call Response.BadRequest("bad")
+        Call Response.NotFound("missing")
+        Call Response.Conflict("conflict")
+        Call Response.Problem(400, "Bad Request", "bad")
+    End If
+End Sub
+
 [Authenticated]
 [Post]
 [Rule:admin]
@@ -148,7 +177,40 @@ End Sub
     if (!capturedError.ToString().Contains("Unsupported web route attribute '[Unknown]'", StringComparison.Ordinal))
         throw new Exception("Unknown web route attribute did not produce a console error.");
 
-    await using var unit = await new XpsWebCompiler().CompileAsync(sourcePath);
+    capturedError.GetStringBuilder().Clear();
+    try
+    {
+        Console.SetError(capturedError);
+        var serverSide = parser.Parse("""
+[Platform:browser-wasm]
+[ServerSide]
+[Get]
+Function ReadServerValue()
+    ReadServerValue = "server"
+End Function
+""");
+        if (!serverSide.Routes.ContainsKey("ReadServerValue"))
+            throw new Exception("[ServerSide] metadata prevented route parsing.");
+    }
+    finally
+    {
+        Console.SetError(originalError);
+    }
+    if (capturedError.ToString().Contains("Unsupported web route attribute '[ServerSide]'", StringComparison.Ordinal))
+        throw new Exception("[ServerSide] was incorrectly treated as a web route attribute.");
+
+    var previousLegacySetting = Environment.GetEnvironmentVariable("XPSCRIPT_WEB_LEGACY");
+    XpsCompiledWebUnit compiledUnit;
+    try
+    {
+        Environment.SetEnvironmentVariable("XPSCRIPT_WEB_LEGACY", "1");
+        compiledUnit = await new XpsWebCompiler().CompileAsync(sourcePath);
+    }
+    finally
+    {
+        Environment.SetEnvironmentVariable("XPSCRIPT_WEB_LEGACY", previousLegacySetting);
+    }
+    await using var unit = compiledUnit;
     if (!unit.Routes.ContainsKey("WebMain") || !unit.Routes.ContainsKey("Save") || !unit.Routes.ContainsKey("Sqlite") || !unit.Routes.ContainsKey("MsSqlCompileOnly") || !unit.Routes.ContainsKey("AiCompileOnly"))
         throw new Exception("Compiled route table is incomplete.");
 

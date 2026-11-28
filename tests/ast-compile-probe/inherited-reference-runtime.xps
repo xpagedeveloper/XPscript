@@ -1,0 +1,95 @@
+Class Root
+    Public Value As Long
+End Class
+Class Middle Extend rOoT
+    Public MiddleValue As Long
+End Class
+Class Leaf Extend mIdDlE
+    Public LeafValue As Long
+End Class
+Class Holder
+    Public Item As Root
+End Class
+Class Store
+    Private backing As rOoT
+    Public Property Get Current As Root
+        Set Current = backing
+    End Property
+    Public Property Set Current(ByVal incoming As Root)
+        Set backing = incoming
+        Set incoming = Nothing
+    End Property
+    Public Property Get Fresh As Root
+        Set Fresh = New Leaf()
+    End Property
+    Public Property Get Item(ByRef index As Long, Optional ByVal extra As Long = 2) As Root
+        index = index + extra
+        Set Item = backing
+    End Property
+    Public Property Set Item(ByRef index As Long, Optional ByVal extra As Long = 2, ByRef incoming As Root)
+        index = index + extra
+        Set backing = incoming
+        Set incoming = Nothing
+    End Property
+    Public Property Set Failing(ByRef index As Long, ByVal incoming As Root)
+        Set backing = incoming
+        index = index + 1
+        Error 3301, "upcast setter failed"
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    Dim leaf As New Leaf
+    Dim holder As New Holder
+    Dim view As Root = leaf
+    Dim index As Long
+    Dim failure As Long
+    leaf.Value = 7
+    leaf.MiddleValue = 8
+    leaf.LeafValue = 9
+    Set store.Current = leaf
+    If store.Current Is leaf Then
+    Else
+        Error 6, "transitive upcast identity"
+    End If
+    If view Is leaf Then
+    Else
+        Error 6, "initializer conversion"
+    End If
+    Set holder.Item = leaf
+    holder.Item.Value = 11
+    If leaf.Value <> 11 Or store.Current.Value <> 11 Then Error 6, "shared base field"
+    If store.Fresh Is Nothing Then Error 6, "getter result upcast"
+    index = 1
+    Set store.Item(index) = leaf
+    If index <> 3 Or leaf Is Nothing Then Error 6, "Optional setter and source snapshot"
+    If store.Item(index) Is leaf Then
+    Else
+        Error 6, "indexed getter identity"
+    End If
+    If index <> 5 Then Error 6, "getter ByRef index"
+    With store
+        Set .cUrReNt = leaf
+    End With
+    If store.Current Is leaf Then
+    Else
+        Error 6, "With upcast"
+    End If
+    Dim nextLeaf As New Leaf
+    nextLeaf.Value = 17
+    On Error Resume Next
+    Set store.Failing(index) = nextLeaf
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3301 Or index <> 6 Or store.Current.Value <> 17 Then Error 6, "exception preserves upcast state"
+    If store.Current Is nextLeaf Then
+    Else
+        Error 6, "exception preserves identity"
+    End If
+    Set store.Current = Nothing
+    If store.Current Is Nothing Then
+    Else
+        Error 6, "clear base reference"
+    End If
+    Print "INHERITED_REFERENCE_RUNTIME_OK"
+End Sub

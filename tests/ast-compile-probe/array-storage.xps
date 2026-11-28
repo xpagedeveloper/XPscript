@@ -1,0 +1,13 @@
+Sub Main()
+    Dim numbers(1) As Long
+    numbers(0) = 7
+    Print UBound(numbers)
+    Erase numbers
+    Print numbers(0)
+    Dim text(1) As String
+    Print UBound(text)
+    Print text(0) = ""
+    text(0) = "x"
+    Erase text
+    Print text(0) = ""
+End Sub

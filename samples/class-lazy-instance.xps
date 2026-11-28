@@ -1,0 +1,27 @@
+Class LazyProbe
+    Public Marker As String
+
+    Public Sub New()
+        Me.Marker = "ready"
+    End Sub
+End Class
+
+Private sharedProbe As LazyProbe
+
+Sub EnsureProbe()
+    If sharedProbe Is Nothing Then
+        Set sharedProbe = New LazyProbe()
+    End If
+End Sub
+
+Sub Main()
+    Print "BEFORE=" & CStr(sharedProbe Is Nothing)
+
+    Call EnsureProbe()
+    sharedProbe.Marker = "reused"
+    Print "AFTER=" & CStr(sharedProbe Is Nothing)
+    Print "FIRST=" & sharedProbe.Marker
+
+    Call EnsureProbe()
+    Print "SECOND=" & sharedProbe.Marker
+End Sub

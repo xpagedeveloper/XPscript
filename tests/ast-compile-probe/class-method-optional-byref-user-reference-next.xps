@@ -1,0 +1,21 @@
+Class Box
+    Public Value As Long
+End Class
+
+Class Holder
+    Public Function Read(Optional ByRef value As Box = Nothing) As Long
+        If value Is Nothing Then
+            Read = 0
+        Else
+            Read = value.Value
+        End If
+    End Function
+End Class
+
+Sub Main()
+    Dim holder As New Holder
+    Dim value As New Box
+    value.Value = 15
+    Print CStr(holder.Read())
+    Print CStr(holder.Read(value))
+End Sub

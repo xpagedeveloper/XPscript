@@ -1,0 +1,41 @@
+Option Declare
+
+Class ParserProbe
+    Public JsonParse As String
+
+    Public Function JsonParse(Optional ByRef value As Long = 7) As Long
+        value = value + 1
+        JsonParse = value
+    End Function
+
+    Public Function ReadField() As String
+        Return JsonParse
+    End Function
+
+    Public Function CallMethod(ByRef value As Long) As Long
+        Return JsonParse(value)
+    End Function
+End Class
+
+Class DerivedParser Extend ParserProbe
+    Public Function JsonParse(Optional ByRef value As Long = 7) As Long
+        Return Parent.JsonParse(value) + 100
+    End Function
+End Class
+
+Sub Main()
+    Dim probe As New ParserProbe
+    Dim value As Long = 9
+    probe.jsonparse = "field"
+    If probe.JSONPARSE <> "field" Or probe.ReadField() <> "field" Then Error 4, "Field access failed"
+    If probe.JsonParse() <> 8 Then Error 1, "Optional member dispatch failed"
+    If probe.JsonParse(value) <> 10 Or value <> 10 Then Error 2, "ByRef member dispatch failed"
+    If probe.CallMethod(value) <> 11 Or value <> 11 Then Error 6, "Unqualified member dispatch failed"
+    Dim parsed As Variant = JsonParse("{}")
+    If parsed Is Nothing Then Error 3, "Global JsonParse failed"
+    Dim derived As New DerivedParser
+    Dim baseProbe As ParserProbe
+    Set baseProbe = derived
+    If baseProbe.JsonParse() <> 108 Then Error 5, "Inherited member dispatch failed"
+    Print "JSONPARSE_MEMBER_SCOPE_OK"
+End Sub

@@ -1,0 +1,9 @@
+Class Probe
+    Public Value As Long
+End Class
+
+Sub Main()
+    Dim item As Probe
+    Set item = New Probe()
+    Print item.Value
+End Sub

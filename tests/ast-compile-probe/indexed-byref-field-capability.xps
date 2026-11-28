@@ -1,0 +1,23 @@
+Class Holder
+    Public Index As Long
+End Class
+Class Counter
+    Public Property Get Item(ByRef index As Long) As Long
+        index = index + 1
+        Item = index
+    End Property
+    Public Property Let Item(ByRef index As Long, ByVal incoming As Long)
+        index = index + incoming
+    End Property
+End Class
+Sub Main()
+    Dim holder As New Holder
+    Dim counter As New Counter
+    Dim result As Long
+    holder.Index = 1
+    result = counter.Item(holder.Index)
+    If result <> 2 Or holder.Index <> 2 Then Error 6, "field getter"
+    counter.Item(holder.Index) = 3
+    If holder.Index <> 5 Then Error 6, "field setter"
+    Print "INDEXED_BYREF_FIELD_OK"
+End Sub

@@ -1,0 +1,22 @@
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("Customer")
+    Dim list As New UIListView("Customers")
+    Dim json As New XPJsonObject
+    Dim rows As New XPJsonArray
+    Dim item As New XPJsonObject
+
+    Call item.Set("id", 1)
+    Call item.Set("name", "Ada")
+    Call rows.Add(item)
+    Call json.Set("name", "Ada")
+    Call form.BindData(json)
+    Call form.AddTextField("name", "Name")
+    Call form.SetValidationSchema(XPJsonSchema.Parse("{""type"":""object""}"))
+    Call list.BindData(rows)
+    Call list.AddColumn("name", "Name")
+    If list.RowCount <> 1 Then Error 9901, "UIListView/XPJson relation failed"
+    If form.GetFieldValueString("name") <> "Ada" Then Error 9902, "UIForm/XPJson relation failed"
+    Print "UIFORM_UILISTVIEW_XPJSON_COMBINED=OK"
+End Sub

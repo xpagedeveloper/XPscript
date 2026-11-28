@@ -57,6 +57,9 @@ internal static class NotesDxlImportResultPostProcessor
 
     private const string DxlResultHelpers = """
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint XPScriptDxlOSMemGetSizeDelegate(uint handle);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate nint XPScriptDxlOSMemoryLockDelegate(uint handle);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate int XPScriptDxlOSMemoryUnlockDelegate(uint handle);
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate void XPScriptDxlOSMemoryFreeDelegate(uint handle);
     [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Winapi)] internal delegate uint XPScriptDxlIDEntriesDelegate(uint table);
 
     internal string GetDxlImporterLog(uint importer)
@@ -69,12 +72,16 @@ internal static class NotesDxlImportResultPostProcessor
             Check(Resolve<DXLGetImporterPropertyDelegate>("DXLGetImporterProperty")(importer, 11, value), "DXLGetImporterProperty(iResultLog)");
             var handle = unchecked((uint)System.Runtime.InteropServices.Marshal.ReadInt32(value));
             if (handle == 0) return string.Empty;
-            var size = Resolve<XPScriptDxlOSMemGetSizeDelegate>("OSMemGetSize")(handle);
-            if (size == 0) return string.Empty;
-            var pointer = Resolve<OSLockObjectDelegate>("OSLockObject")(handle);
-            if (pointer == 0) return string.Empty;
-            try { return FromLmbcsZeroTerminated(pointer, checked((int)Math.Min(size, int.MaxValue))); }
-            finally { Resolve<OSUnlockObjectDelegate>("OSUnlockObject")(handle); }
+            try
+            {
+                var size = Resolve<XPScriptDxlOSMemGetSizeDelegate>("OSMemoryGetSize")(handle);
+                if (size == 0) return string.Empty;
+                var pointer = Resolve<XPScriptDxlOSMemoryLockDelegate>("OSMemoryLock")(handle);
+                if (pointer == 0) return string.Empty;
+                try { return FromLmbcsZeroTerminated(pointer, checked((int)Math.Min(size, int.MaxValue))); }
+                finally { Resolve<XPScriptDxlOSMemoryUnlockDelegate>("OSMemoryUnlock")(handle); }
+            }
+            finally { Resolve<XPScriptDxlOSMemoryFreeDelegate>("OSMemoryFree")(handle); }
         }
         finally { System.Runtime.InteropServices.Marshal.FreeHGlobal(value); }
     }

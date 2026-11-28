@@ -1,0 +1,11 @@
+Class Reader
+    Public Function Timeout(ByVal value As XPHttpClient) As Double
+        Timeout = value.Timeout
+    End Function
+End Class
+
+Sub Main()
+    Dim value As New XPHttpClient
+    Dim reader As New Reader
+    Print CStr(reader.Timeout(value))
+End Sub

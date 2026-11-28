@@ -11,7 +11,6 @@
   <Project Path="src/XPScript.Web.Compiler/XPScript.Web.Compiler.csproj" />
   <Project Path="tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj" />
   <Project Path="tests/WebRestApiSmoke/WebRestApiSmoke.csproj" />
-  <Project Path="tests/CompileFolderProbe/CompileFolderProbe.csproj" />
   <Project Path="tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj" />
   <Project Path="tests/StateScopeObjectProbe/StateScopeObjectProbe.csproj" />
   <Project Path="tests/DebuggerCoreProbe/DebuggerCoreProbe.csproj" />

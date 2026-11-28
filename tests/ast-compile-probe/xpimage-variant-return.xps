@@ -1,0 +1,24 @@
+Function MakeValue() As Variant
+    Dim owned As New XPImage(3, 4)
+    MakeValue = owned
+End Function
+
+Sub ReplaceCopy(ByVal image As XPImage, alias As Variant)
+    Set image = New XPImage(1, 1)
+    alias = image
+End Sub
+
+Sub Main()
+    Dim image As XPImage
+    Set image = MakeValue()
+    Print image.Width
+    Print image.Height
+    Dim alias As Variant
+    Call ReplaceCopy(image, alias)
+    Dim expired As XPImage
+    Set expired = alias
+    On Error Resume Next
+    Print expired.Width
+    Print Err <> 0
+    On Error GoTo 0
+End Sub

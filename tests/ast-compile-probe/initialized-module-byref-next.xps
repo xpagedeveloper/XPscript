@@ -1,0 +1,12 @@
+Public moduleValue As Long = 7
+
+Class Counter
+    Public Sub New(ByRef value As Long)
+        value = value + 1
+    End Sub
+End Class
+
+Sub Main()
+    Dim item As New Counter(moduleValue)
+    Print CStr(moduleValue)
+End Sub

@@ -22,6 +22,16 @@ public static class XPScriptCompilationSnapshotBuilder
         string configurationIdentity = "default",
         long maxDependencyBytes = long.MaxValue,
         CancellationToken cancellationToken = default)
+        => CreateAsync(sourcePath, allowedSourceRoot, runtimeIdentifier, configurationIdentity, maxDependencyBytes, false, cancellationToken);
+
+    public static Task<XPScriptCompilationSnapshot> CreateAsync(
+        string sourcePath,
+        string allowedSourceRoot,
+        string runtimeIdentifier,
+        string configurationIdentity,
+        long maxDependencyBytes,
+        bool includeExternalInputs,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(allowedSourceRoot);
         return CreateCoreAsync(
@@ -30,7 +40,7 @@ public static class XPScriptCompilationSnapshotBuilder
             configurationIdentity,
             maxDependencyBytes,
             [Path.GetFullPath(allowedSourceRoot)],
-            includeExternalInputs: false,
+            includeExternalInputs,
             cancellationToken);
     }
 
@@ -99,6 +109,7 @@ public static class XPScriptCompilationSnapshotBuilder
         var identityText = new StringBuilder()
             .Append("compiler=").AppendLine(compilerIdentity)
             .Append("runtime=").AppendLine(runtimeIdentifier)
+            .Append("framework=").AppendLine(DotNetVersionSelection.NormalizeTargetFramework(Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK")))
             .Append("config=").AppendLine(configurationIdentity);
         foreach (var dependency in dependencies)
             identityText.Append(dependency.Path).Append('=').AppendLine(dependency.Sha256);

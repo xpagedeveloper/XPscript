@@ -48,6 +48,15 @@ internal static class XPScriptArchiveIteratorRuntime
         return __xpsIteratorState.Entries[__xpsIteratorNextOrdinal];
     }
 
+    public static System.Collections.IEnumerable EnumerateEntries(object? __xpsIteratorOwner) =>
+        GetEntries(__xpsIteratorOwner ?? throw new XPScriptRuntimeException(5, "Archive entries are unavailable."));
+
+    public static System.Collections.IEnumerable EnumerateFiles(object? __xpsIteratorOwner) =>
+        EnumerateEntries(__xpsIteratorOwner).Cast<object>().Where(x => !IsDirectory(x));
+
+    public static System.Collections.IEnumerable EnumerateFolders(object? __xpsIteratorOwner) =>
+        EnumerateEntries(__xpsIteratorOwner).Cast<object>().Where(IsDirectory);
+
     private static object? GetNextWithoutState(object __xpsIteratorOwner, object __xpsIteratorPrevious)
     {
         var __xpsIteratorEntries = GetEntries(__xpsIteratorOwner);
@@ -81,6 +90,9 @@ internal static class XPScriptArchiveIteratorRuntime
 
     private static string? GetFullName(object __xpsIteratorEntry) =>
         __xpsIteratorEntry.GetType().GetProperty("FullName")?.GetValue(__xpsIteratorEntry)?.ToString();
+
+    private static bool IsDirectory(object __xpsIteratorEntry) =>
+        Convert.ToBoolean(__xpsIteratorEntry.GetType().GetProperty("IsDirectory")?.GetValue(__xpsIteratorEntry) ?? false);
 }
 """;
 }

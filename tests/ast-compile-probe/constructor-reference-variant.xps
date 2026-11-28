@@ -1,0 +1,14 @@
+Class Record
+    Public Value As Variant
+    Public Sub New(ByVal value As Variant)
+        Me.Value = value
+        value = "snapshot"
+    End Sub
+End Class
+Sub Main()
+    Dim value As Long
+    value = 7
+    Dim item As New Record(value)
+    If CLng(item.Value) <> 7 Or value <> 7 Then Error 4250
+    Print "CONSTRUCTOR_VARIANT_OK"
+End Sub

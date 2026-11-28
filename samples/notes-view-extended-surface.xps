@@ -1,0 +1,20 @@
+' Compile-only coverage for the remaining NotesView surface.
+Option Declare
+
+Sub CompileNotesViewSurface()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim view As NotesView
+
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", "apps\customers.nsf")
+    Set view = db.GetView("Customers")
+    Print view.Columns
+    Call view.CreateViewEntryCollection()
+    Call view.CreateViewNavFrom(Nothing)
+    Call view.CreateViewNavMaxLevel(2)
+End Sub
+
+Sub Main()
+    Print "NOTES-VIEW-EXTENDED-SURFACE=COMPILED"
+End Sub

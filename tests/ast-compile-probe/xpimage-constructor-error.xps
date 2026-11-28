@@ -1,0 +1,4 @@
+Sub Main()
+    Dim picture As XPImage
+    Set picture = New XPImage(2)
+End Sub

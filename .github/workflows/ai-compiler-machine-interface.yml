@@ -25,6 +25,9 @@ jobs:
       - name: Build
         run: dotnet build XPScriptCompiler.slnx -c Release --no-restore -m:1
 
+      - name: Build compiler runtime artifacts
+        run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore -m:1 -p:GenerateRuntimeConfigurationFiles=true -p:UseAppHost=true
+
       - name: Benchmark run cache and debug fresh build
         run: dotnet run --project tests/CompilerRunWarmBenchmark/CompilerRunWarmBenchmark.csproj -c Release -- .
 
@@ -64,7 +67,12 @@ jobs:
           if ($p2.ExitCode -ne 0) { throw "Second concurrent run failed: $out2 $err2" }
           if ($out1 -notmatch 'DEBUGGING=False' -or $out2 -notmatch 'DEBUGGING=False') { throw "Concurrent runs did not both execute successfully" }
 
-          $status1 = Invoke-XPScript @('daemon','status')
+          $status1 = ''
+          for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            $status1 = Invoke-XPScript @('daemon','status')
+            if ($status1 -match 'PID ([0-9]+)') { break }
+            Start-Sleep -Milliseconds 250
+          }
           if ($status1 -notmatch 'PID ([0-9]+)') { throw "Concurrent cold start did not leave a daemon running: $status1" }
           $pid1 = $Matches[1]
           Start-Sleep -Milliseconds 250
@@ -487,12 +495,35 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - name: Build compiler runtime artifacts
+        run: dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -p:GenerateRuntimeConfigurationFiles=true -p:UseAppHost=true
       - name: Restore machine-interface probe
         run: dotnet restore tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj
       - name: Build machine-interface probe
         run: dotnet build tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release --no-restore
       - name: Machine interface probe
         run: dotnet run --project tests/CompilerMachineInterfaceProbe/CompilerMachineInterfaceProbe.csproj -c Release --no-build -- .
+
+  mcp-xpimage-linux:
+    name: MCP XPImage matrix (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore MCP probe
+        run: |
+          dotnet restore src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet restore tests/CompilerMcpProtocolProbe/CompilerMcpProtocolProbe.csproj
+      - name: Build compiler and MCP probe
+        run: |
+          dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore -p:GenerateRuntimeConfigurationFiles=true -p:UseAppHost=true
+          dotnet build tests/CompilerMcpProtocolProbe/CompilerMcpProtocolProbe.csproj -c Release --no-restore
+      - name: Run MCP XPImage matrix
+        run: dotnet run --project tests/CompilerMcpProtocolProbe/CompilerMcpProtocolProbe.csproj -c Release --no-build -- .
 
   mcp-installer:
     strategy:

@@ -1,0 +1,19 @@
+Class Writer
+    Public Function Update(Optional ByRef values List As Long = Nothing) As Long
+        If values Is Nothing Then
+            Update = 0
+        Else
+            values("updated") = values("value") + 8
+            Update = values("updated")
+        End If
+    End Function
+End Class
+
+Sub Main()
+    Dim writer As New Writer
+    Dim values List As Long
+    values("value") = 4
+    Print CStr(writer.Update())
+    Print CStr(writer.Update(values))
+    Print CStr(values("updated"))
+End Sub

@@ -1,0 +1,4 @@
+Sub Main()
+    Dim document As New XPXmlDocument
+    Call document.LoadXml()
+End Sub

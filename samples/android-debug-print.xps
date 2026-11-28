@@ -1,0 +1,4 @@
+Sub Main()
+    Print "Hello from XPScript on Android"
+    Print "PLATFORM=" & Platform()
+End Sub

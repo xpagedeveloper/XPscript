@@ -6,6 +6,9 @@ internal sealed class UIFormWebWindowLifecyclePostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
 
+        if (generated.Contains("private string RenderWebForm() => RenderWebForm(true);", StringComparison.Ordinal))
+            return generated;
+
         const string signature = "    private string RenderWebForm()\n    {";
         var signatureIndex = generated.IndexOf(signature, StringComparison.Ordinal);
         if (signatureIndex < 0)

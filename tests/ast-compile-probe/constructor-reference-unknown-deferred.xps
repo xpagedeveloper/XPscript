@@ -1,0 +1,6 @@
+Class Record
+    Public Sub New(ByVal value As Missing)
+    End Sub
+End Class
+Sub Main()
+End Sub

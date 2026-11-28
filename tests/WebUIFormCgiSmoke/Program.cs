@@ -29,7 +29,9 @@ End Sub
 
 try
 {
+    Console.WriteLine("UIFORM_CGI_GET_BEGIN");
     var get = await RunCgiAsync(root, scriptPath, "GET", null);
+    Console.WriteLine("UIFORM_CGI_GET_END");
     if (!get.Contains("Content-Type: text/html; charset=utf-8\r\n", StringComparison.Ordinal))
         throw new Exception("UIForm CGI GET did not return HTML: " + get);
     if (!get.Contains(">Contact form</h1>", StringComparison.Ordinal))
@@ -40,7 +42,9 @@ try
         throw new Exception("UIForm CGI GET did not render a missing JSON field as empty: " + get);
 
     var postBody = "existing=Changed+value&missing=Created+by+user";
+    Console.WriteLine("UIFORM_CGI_POST_BEGIN");
     var post = await RunCgiAsync(root, scriptPath, "POST", postBody);
+    Console.WriteLine("UIFORM_CGI_POST_END");
     if (!post.Contains("Content-Type: application/json; charset=utf-8\r\n", StringComparison.Ordinal))
         throw new Exception("UIForm CGI POST did not return JSON: " + post);
     if (!post.Contains("\"existing\":\"Changed value\"", StringComparison.Ordinal))

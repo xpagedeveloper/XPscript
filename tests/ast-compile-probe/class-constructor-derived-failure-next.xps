@@ -1,0 +1,26 @@
+Public trace As String
+
+Class Root
+    Public Sub New(ByVal fail As Boolean)
+        trace = trace & "R"
+        If fail Then Error 4711, "constructor failed"
+    End Sub
+
+    Public Sub Delete()
+        trace = trace & "D"
+    End Sub
+End Class
+
+Sub Main()
+    Dim target As New Root(False)
+    trace = ""
+    Dim failure As Long
+    On Error Resume Next
+    Set target = New Root(True)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4711 Then Error 4712, "constructor error was lost"
+    If trace <> "R" Then Error 4713, "failed construction invoked user Delete"
+    If target Is Nothing Then Error 4714, "failed construction replaced caller target"
+    Print "CLASS_DERIVED_CONSTRUCTOR_FAILURE_OK"
+End Sub

@@ -1,0 +1,36 @@
+Function CreatePicture() As XPImage
+    Dim localImage As XPImage
+    Set localImage = New XPImage(5, 4, "#abcdef")
+    Set CreatePicture = localImage
+End Function
+
+Sub ResizeCopy(ByVal value As XPImage)
+    value.Resize(1, 1)
+End Sub
+
+Sub ReplacePicture(value As XPImage)
+    Set value = New XPImage(3, 2, "#123456")
+End Sub
+
+Sub Main()
+    Dim picture As New XPImage(4, 3, "#ff0000")
+    Call ResizeCopy(picture)
+    Print picture.Width
+    Call ReplacePicture(picture)
+    Print picture.PixelCount
+    Dim returned As XPImage
+    Set returned = CreatePicture()
+    Dim encoded As Variant
+    encoded = returned.ToBytes("png", 90)
+    Dim loaded As XPImage
+    Set loaded = XPImage.FromBytes(encoded)
+    Print loaded.Compare(returned)
+    loaded.Save("ast-image-parity.png")
+    Dim fromFile As XPImage
+    Set fromFile = XPImage.Load("ast-image-parity.png")
+    Print fromFile.Compare(returned)
+    fromFile.Resize(3, 2)
+    Print fromFile.Width
+    Print fromFile.Height
+    Print "XPIMAGE_PARITY_OK"
+End Sub

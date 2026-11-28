@@ -1,0 +1,15 @@
+Class Box
+End Class
+Class Holder
+    Public Property Get Current As Box
+        Set Current = New Box()
+    End Property
+End Class
+Class Record
+    Public Sub New(ByRef value As Box)
+    End Sub
+End Class
+Sub Main()
+    Dim holder As New Holder
+    Dim item As New Record(holder.Current)
+End Sub

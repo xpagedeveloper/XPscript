@@ -1,7 +1,9 @@
 using XPScript.Compiler;
 
-var source = Path.GetFullPath("application-debug.xps");
-var generated = new XPScriptTranspiler().Transpile(
+var workspace = Path.GetFullPath(Path.Combine("out", "application-debug-probe", Guid.NewGuid().ToString("N")));
+Directory.CreateDirectory(workspace);
+var source = Path.Combine(workspace, "application-debug.xps");
+await File.WriteAllTextAsync(source,
     """
 Sub Main()
     If Application.Debug.Enabled Then
@@ -12,9 +14,8 @@ Sub Main()
         Call Application.Debug.Error("error")
     End If
 End Sub
-""",
-    source,
-    CompilerDriver.CurrentRuntimeIdentifier());
+""");
+var generated = await AstCompiler.GenerateSourceAsync(source, workspace);
 
 foreach (var expected in new[]
 {

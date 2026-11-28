@@ -1,0 +1,74 @@
+Sub Main()
+    Dim table As New XPCsvDocument("id;name;note" & Application.NewLine & "002;Åsa;""a;b""" & Application.NewLine & "001;李;", ";")
+    Print table.RowCount
+    Print table.ColumnCount
+    Print table.Headers[1]
+    Dim selected As XPCsvRow
+    Set selected = table.Rows[0]
+    Print selected["NAME"]
+    selected[1] = "Fredrik"
+    selected.Columns[2].value = "quoted ""value"""
+    Print selected.Get("name")
+    Print selected.Columns[2].Value
+    ForAll header In table.Headers
+        Print header
+    End ForAll
+    ForAll record In table.Rows
+        ForAll field In record.Columns
+            If field.Index = 0 Then Print field.Value
+        End ForAll
+    End ForAll
+    Call table.Headers.Add("extra")
+    Print selected.Count
+    Call table.Sort("id")
+    Print table.Rows[0].Get(0)
+    Dim json As XPJsonArray
+    Set json = table.ToJson()
+    Dim restored As New XPCsvDocument
+    Call restored.FromJson(json)
+    Print restored.Rows[1].Get("name")
+    restored.Delimiter = ";"
+    restored.FileEncoding = "windows-1252"
+    Call restored.Rows[0].Set("name", "Anna")
+    Dim bytes As Variant
+    bytes = restored.ToBytes()
+    Dim parsed As XPCsvDocument
+    Set parsed = CsvParseBytes(bytes, "windows-1252", ";")
+    Print parsed.Encoding
+    Print parsed.Rows[1]["id"]
+    Call parsed.SaveFile("csv-ast-runtime.csv", "utf-8-bom")
+    Set parsed = XPCsvDocument.Load("csv-ast-runtime.csv", "auto", ";")
+    Print parsed.Rows[1]["name"]
+    Print parsed.Encoding
+    Call parsed.Save("csv-ast-runtime.csv", "utf-16be")
+    Set parsed = xpcsvdocument.load("csv-ast-runtime.csv", "auto", ";", True)
+    Print parsed.Rows[1]["name"]
+    Print parsed.Encoding
+    Dim before As XPCsvDocument
+    Set before = parsed
+    parsed.FromBytes(bytes, "windows-1252")
+    Print parsed Is before
+    Print parsed.Encoding
+    Print before.Encoding
+    parsed.HasHeaders = False
+    Print parsed.RowCount
+    parsed.HasHeaders = True
+    Print parsed.RowCount
+    On Error Resume Next
+    Print parsed.Rows[0].Get("missing")
+    Print Err
+    Print Error()
+    On Error GoTo 0
+    On Error Resume Next
+    Print parsed.Rows[99]
+    Print Err
+    Print Error$
+    On Error GoTo 0
+    On Error Resume Next
+    Call parsed.AddHeader("ID")
+    Print Err
+    Print Error()
+    On Error GoTo 0
+    Print CsvEscape("a;b", ";")
+    Print "CSV_AST_OK"
+End Sub

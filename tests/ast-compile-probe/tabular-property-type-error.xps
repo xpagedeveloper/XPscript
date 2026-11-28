@@ -1,0 +1,9 @@
+Class Store
+    Public Property Set Item(ByVal incoming As XPCsvDocument)
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    Dim value As New XPSpreadsheet
+    Set store.Item = value
+End Sub

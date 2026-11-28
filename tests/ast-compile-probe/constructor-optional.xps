@@ -1,0 +1,8 @@
+Class Record
+    Public Sub New(Optional ByVal value As Long = 1)
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Record
+    Print "CONSTRUCTOR_OPTIONAL_OK"
+End Sub

@@ -1,0 +1,8 @@
+Class Box
+End Class
+Class Record
+    Public Sub New(Optional ByVal value As Box = later, Optional ByVal later As Box = Nothing)
+    End Sub
+End Class
+Sub Main()
+End Sub

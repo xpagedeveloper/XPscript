@@ -1,0 +1,11 @@
+Public sharedJson As XPJsonDocument = New XPJsonDocument()
+
+Sub Touch(ByRef value As XPJsonDocument)
+    Set value = XPJsonDocument.Parse("[1]")
+End Sub
+
+Sub Main()
+    Call Touch(sharedJson)
+    If sharedJson.Root.Type <> "Array" Then Error 6, "initialized JSON module ByRef storage failed"
+    Print "INITIALIZED_MODULE_JSON_BYREF_OK"
+End Sub

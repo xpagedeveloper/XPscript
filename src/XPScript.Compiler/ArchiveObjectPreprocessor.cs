@@ -20,7 +20,7 @@ internal sealed class ArchiveObjectPreprocessor
         "Name", "FullName", "Extension", "Size", "CompressedSize", "CompressionRatio", "Created", "Modified", "IsEncrypted", "CRC"
     ];
 
-    public string Transform(string source, string sourceName = "input.xps")
+    public string Transform(string source, string sourceName = "input.xps", bool preserveTypes = false)
     {
         var codeOnly = PreprocessorFeatureGate.CodeOnly(source);
         if (!PreprocessorFeatureGate.ContainsTypeReference(codeOnly, "Archive", "ArchiveEntry")) return source;
@@ -43,7 +43,7 @@ internal sealed class ArchiveObjectPreprocessor
             {
                 var name = dimNew.Groups[1].Value;
                 archiveVariables.Add(name);
-                output.Add(indent + $"Dim {name} As Variant");
+                output.Add(indent + $"Dim {name} As {(preserveTypes ? "Archive" : "Variant")}");
                 var args = dimNew.Groups[2].Value.Trim();
                 output.Add(indent + $"{name} = {CreateArchiveExpression(args, sourceName, lineIndex + 1, raw)}");
                 continue;
@@ -61,10 +61,20 @@ internal sealed class ArchiveObjectPreprocessor
 
             var forAll = Regex.Match(line, @"^ForAll\s+([A-Za-z_]\w*)\s+In\s+([A-Za-z_]\w*)\s*\.\s*(?:Entries|Files\s*\(\s*\)|Folders\s*\(\s*\))\s*$", RegexOptions.IgnoreCase);
             if (forAll.Success && archiveVariables.Contains(forAll.Groups[2].Value))
+            {
                 archiveEntryVariables.Add(forAll.Groups[1].Value);
+                var collectionMember = Regex.Match(line, @"\.\s*(Entries|Files|Folders)", RegexOptions.IgnoreCase).Groups[1].Value;
+                var helper = collectionMember.Equals("Files", StringComparison.OrdinalIgnoreCase)
+                    ? "EnumerateFiles"
+                    : collectionMember.Equals("Folders", StringComparison.OrdinalIgnoreCase)
+                        ? "EnumerateFolders"
+                        : "EnumerateEntries";
+                output.Add(indent + $"ForAll {forAll.Groups[1].Value} In XPScriptArchiveIteratorRuntime.{helper}({forAll.Groups[2].Value})");
+                continue;
+            }
 
-            var rewritten = Regex.Replace(line, @"\bNew\s+Archive\s*(?:\(\s*\))?", "XPScriptArchiveFactory.Create()", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+Archive\s*\((.*)\)", m => CreateArchiveExpression(m.Groups[1].Value, sourceName, lineIndex + 1, raw), RegexOptions.IgnoreCase);
+            var rewritten = Regex.Replace(line, @"\bNew\s+Archive\b\s*(?:\(\s*\))?", "XPScriptArchiveFactory.Create()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+Archive\b\s*\((.*)\)", m => CreateArchiveExpression(m.Groups[1].Value, sourceName, lineIndex + 1, raw), RegexOptions.IgnoreCase);
 
             foreach (var archiveName in archiveVariables.OrderByDescending(x => x.Length))
             {

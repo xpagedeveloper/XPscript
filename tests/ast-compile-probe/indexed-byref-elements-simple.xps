@@ -1,0 +1,35 @@
+Class Counter
+    Public Property Get Both(ByRef left As Long, ByRef right As Long) As Long
+        left = left + 1
+        right = right + 2
+        Both = left + right
+    End Property
+End Class
+Sub Flat(ByVal entries List As Long)
+    Dim counter As New Counter
+    Dim result As Long
+    ForAll item In entries
+        result = counter.Both(item, entries("x"))
+        GoTo CheckValue
+CheckValue:
+        If result <> 8 Or item <> 4 Then Error 6, "flat shared alias"
+    End ForAll
+End Sub
+Sub Main()
+    Dim counter As New Counter
+    Dim values(1) As Long
+    Dim entries List As Long
+    Dim result As Long
+    values(0) = 1
+    result = counter.Both(values(0), values(0))
+    If result <> 8 Or values(0) <> 4 Then Error 6, "ordinary array aliases"
+    entries("x") = 1
+    ForAll item In entries
+        result = counter.Both(item, entries("x"))
+    End ForAll
+    If result <> 8 Or entries("x") <> 4 Then Error 6, "ordinary List aliases"
+    entries("x") = 1
+    Call Flat(entries)
+    If entries("x") <> 4 Then Error 6, "flat List aliases"
+    Print "INDEXED_BYREF_ELEMENTS_SIMPLE_OK"
+End Sub

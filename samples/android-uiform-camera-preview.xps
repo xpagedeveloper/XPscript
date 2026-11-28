@@ -1,0 +1,7 @@
+' CameraPreview capability/fallback sample.
+Sub Main()
+    Dim form As New UIForm("Camera preview", 480, 320, True)
+    Dim preview = form.AddCameraPreview("camera", "Camera")
+    Call Application.Debug.Info("ANDROID-CAMERA-STATE=ready")
+    form.ShowDialog()
+End Sub

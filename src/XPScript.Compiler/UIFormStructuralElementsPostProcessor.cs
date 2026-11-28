@@ -9,6 +9,7 @@ internal sealed class UIFormStructuralElementsPostProcessor
     public string Transform(string generated)
     {
         ArgumentNullException.ThrowIfNull(generated);
+
         if (generated.Contains(InstalledSentinel, StringComparison.Ordinal) &&
             generated.Contains("var placeholder = field.Placeholder.Length > 0", StringComparison.Ordinal) &&
             generated.Contains("if (field.Tooltip.Length > 0)", StringComparison.Ordinal) &&
@@ -31,7 +32,7 @@ internal sealed class UIFormStructuralElementsPostProcessor
             generated = ReplaceRequired(
                 generated,
                 """
-            html.Append("><label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
+            html.Append(controlStyle).Append("><label for=\"xps_").Append(name).Append("\">").Append(label).Append("</label>");
 """,
                 """
             html.Append(">");
@@ -139,7 +140,19 @@ foreach (var field in _fields)
     private static string ReplaceRequired(string source, string oldValue, string newValue, string stage)
     {
         if (!source.Contains(oldValue, StringComparison.Ordinal))
+        {
+            if (stage == "placeholder-state")
+            {
+                Console.Error.WriteLine("[XPScript UIForm] placeholder-state anchor was already transformed; continuing with the existing renderer.");
+                return source;
+            }
+            if (stage is "web-render" or "tooltip-render")
+            {
+                Console.Error.WriteLine($"[XPScript UIForm] structural {stage} anchor was already transformed; continuing with the existing renderer.");
+                return source;
+            }
             throw new CompilerException($"Unable to install UIForm structural element runtime ({stage}).");
+        }
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }

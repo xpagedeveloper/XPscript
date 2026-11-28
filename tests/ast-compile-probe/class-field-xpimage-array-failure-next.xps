@@ -1,0 +1,22 @@
+Class ImageArrayOwner
+    Public stored() As XPImage
+
+    Public Sub New(ByVal incoming() As XPImage)
+        Set stored = incoming
+    End Sub
+End Class
+
+Sub Main()
+    Dim incoming(1 To 2) As XPImage
+    Set incoming(1) = New XPImage(2, 2)
+    Set incoming(2) = New XPImage()
+
+    On Error Resume Next
+    Dim owner As New ImageArrayOwner(incoming)
+    If Err.Number = 0 Then Error 6, "XPImage array clone failure was not raised"
+    Err.Clear
+    On Error GoTo 0
+
+    If incoming(1) Is Nothing Or incoming(2) Is Nothing Then Error 6, "XPImage array caller storage was changed"
+    Print "XPIMAGE_ARRAY_FAILURE_CLEANUP_OK"
+End Sub

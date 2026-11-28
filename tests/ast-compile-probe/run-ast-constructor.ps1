@@ -1,0 +1,295 @@
+# Native compiler diagnostics are expected for negative fixtures; inspect
+# $LASTEXITCODE and captured output explicitly instead of stopping on stderr.
+$ErrorActionPreference = 'Continue'
+$PSNativeCommandUseErrorActionPreference = $false
+$root = Resolve-Path (Join-Path $PSScriptRoot '../..')
+$compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
+$outputRoot = if ($env:XPSCRIPT_TEST_OUTPUT_ROOT) { $env:XPSCRIPT_TEST_OUTPUT_ROOT } else { Join-Path $root 'out' }
+$output = Join-Path $outputRoot ('constructor-' + [Guid]::NewGuid().ToString('N'))
+
+function Invoke-NormalArtifact([string]$path) {
+    dotnet (Join-Path $path 'Generated.dll')
+}
+
+$imageParameterTarget = Join-Path $output 'constructor-xpimage-parameter-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-parameter-next.xps') -o $imageParameterTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST scalar XPImage constructor parameter compilation failed.' }
+$imageParameterResult = dotnet (Join-Path $imageParameterTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -notmatch '^5$') { throw 'AST scalar XPImage constructor parameter regression failed.' }
+Write-Host 'AST_XPIMAGE_PARAMETER_OK'
+$optionalImageTarget = Join-Path $output 'constructor-xpimage-optional-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-optional-next.xps') -o $optionalImageTarget
+if ($LASTEXITCODE -ne 0) { throw 'Optional XPImage constructor compilation failed.' }
+$optionalImageResult = dotnet (Join-Path $optionalImageTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($optionalImageResult -join "`n") -ne "XPIMAGE_OPTIONAL_CONSTRUCTOR_OK`nXPIMAGE_OPTIONAL_SOURCE_RECYCLED_OK") { throw 'Optional XPImage constructor regression failed.' }
+Write-Host 'AST_XPIMAGE_OPTIONAL_CONSTRUCTOR_OK'
+$optionalImageFailureTarget = Join-Path $output 'constructor-xpimage-optional-failure-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-optional-failure-next.xps') -o $optionalImageFailureTarget
+if ($LASTEXITCODE -ne 0) { throw 'Optional XPImage constructor failure fixture compilation failed.' }
+$optionalImageFailureResult = dotnet (Join-Path $optionalImageFailureTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($optionalImageFailureResult -join "`n") -ne 'XPIMAGE_OPTIONAL_CONSTRUCTOR_FAILURE_OK') { throw 'Optional XPImage constructor failure cleanup regression failed.' }
+Write-Host 'AST_XPIMAGE_OPTIONAL_CONSTRUCTOR_FAILURE_OK'
+$imageByRefBindingTarget = Join-Path $output 'constructor-xpimage-byref-binding-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-byref-binding-next.xps') -o $imageByRefBindingTarget
+if ($LASTEXITCODE -ne 0) { throw 'XPImage ByRef constructor binding compilation failed.' }
+$imageByRefBindingResult = dotnet (Join-Path $imageByRefBindingTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageByRefBindingResult -join "`n") -ne "XPIMAGE_BYREF_CONSTRUCTOR_BINDING_OK`nXPIMAGE_BYREF_SOURCE_RECYCLED_OK") { throw 'XPImage ByRef constructor binding regression failed.' }
+Write-Host 'AST_XPIMAGE_BYREF_CONSTRUCTOR_BINDING_OK'
+$imageByRefFailureTarget = Join-Path $output 'constructor-xpimage-byref-failure-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-byref-failure-next.xps') -o $imageByRefFailureTarget
+if ($LASTEXITCODE -ne 0) { throw 'XPImage ByRef constructor failure compilation failed.' }
+$imageByRefFailureResult = dotnet (Join-Path $imageByRefFailureTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageByRefFailureResult -join "`n") -ne 'XPIMAGE_BYREF_CONSTRUCTOR_FAILURE_OK') { throw 'XPImage ByRef constructor failure cleanup regression failed.' }
+Write-Host 'AST_XPIMAGE_BYREF_CONSTRUCTOR_FAILURE_OK'
+$imageByRefTypeFailure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-xpimage-byref-type-error-next.xps') -o (Join-Path $output 'constructor-xpimage-byref-type-error-next') 2>&1
+if ($LASTEXITCODE -ne 2 -or ($imageByRefTypeFailure -join "`n") -notmatch 'constructor-xpimage-byref-type-error-next\.xps:8:\d+: XPS2003:') { throw 'XPImage ByRef constructor type diagnostic regression failed.' }
+Write-Host 'AST_XPIMAGE_BYREF_CONSTRUCTOR_TYPE_ERROR_OK'
+$scalarArrayTarget = Join-Path $output 'constructor-scalar-array-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-scalar-array-next.xps') -o $scalarArrayTarget
+if ($LASTEXITCODE -ne 0) { throw 'Scalar array constructor compilation failed.' }
+$scalarArrayResult = dotnet (Join-Path $scalarArrayTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($scalarArrayResult -join "`n") -ne 'SCALAR_ARRAY_CONSTRUCTOR_BOUNDS_OK') { throw 'Scalar array constructor bounds regression failed.' }
+Write-Host 'AST_SCALAR_ARRAY_CONSTRUCTOR_BOUNDS_OK'
+$optionalArrayTarget = Join-Path $output 'constructor-array-optional-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-array-optional-next.xps') -o $optionalArrayTarget
+if ($LASTEXITCODE -ne 0) { throw 'Optional array constructor compilation failed.' }
+$optionalArrayResult = dotnet (Join-Path $optionalArrayTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($optionalArrayResult -join "`n") -ne 'OPTIONAL_ARRAY_OMISSION_NOTHING_OK') { throw 'Optional array omission regression failed.' }
+Write-Host 'AST_OPTIONAL_ARRAY_OMISSION_OK'
+$imageArrayTarget = Join-Path $output 'constructor-xpimage-array-next'
+$imageArraySource = Join-Path $PSScriptRoot 'class-field-xpimage-array-next.xps'
+$imageArrayCompile = dotnet $compiler ast-compile $imageArraySource -o $imageArrayTarget 2>&1
+if ($LASTEXITCODE -ne 0) {
+    $imageArrayDebug = dotnet $compiler ast-compile $imageArraySource -o $imageArrayTarget --debug 2>&1
+    throw "XPImage array constructor compilation failed: $($imageArrayDebug -join "`n")"
+}
+$imageArrayResult = dotnet (Join-Path $imageArrayTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageArrayResult -join "`n") -ne 'XPIMAGE_ARRAY_CLONE_OK') { throw 'XPImage array constructor clone regression failed.' }
+Write-Host 'AST_XPIMAGE_ARRAY_CLONE_OK'
+$imageArrayFailureTarget = Join-Path $output 'constructor-xpimage-array-failure-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-field-xpimage-array-failure-next.xps') -o $imageArrayFailureTarget
+if ($LASTEXITCODE -ne 0) { throw 'XPImage array constructor failure fixture compilation failed.' }
+$imageArrayFailureResult = dotnet (Join-Path $imageArrayFailureTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageArrayFailureResult -join "`n") -ne 'XPIMAGE_ARRAY_FAILURE_CLEANUP_OK') { throw 'XPImage array constructor failure cleanup regression failed.' }
+Write-Host 'AST_XPIMAGE_ARRAY_FAILURE_CLEANUP_OK'
+$imageByRefProcedureTarget = Join-Path $output 'initialized-module-xpimage-byref-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'initialized-module-xpimage-byref-next.xps') -o $imageByRefProcedureTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST XPImage ByRef procedure compilation failed.' }
+$imageByRefProcedureResult = dotnet (Join-Path $imageByRefProcedureTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageByRefProcedureResult -join "`n") -ne 'INITIALIZED_MODULE_XPIMAGE_BYREF_OK') { throw 'AST XPImage ByRef procedure replacement regression failed.' }
+Write-Host 'AST_XPIMAGE_BYREF_PROCEDURE_REPLACEMENT_OK'
+$imageParameterTarget = Join-Path $output 'xpimage-parameter-runtime-next'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'xpimage-parameter-runtime-next.xps') -o $imageParameterTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST XPImage parameter failure fixture compilation failed.' }
+$imageParameterResult = dotnet (Join-Path $imageParameterTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($imageParameterResult -join "`n") -notmatch 'XPIMAGE_OPTIONAL_PARAMETER_NOTHING_OK' -or ($imageParameterResult -join "`n") -notmatch 'XPIMAGE_OPTIONAL_PARAMETER_CLONE_OK' -or ($imageParameterResult -join "`n") -notmatch 'XPIMAGE_OPTIONAL_FAILURE_CLEAR_OK') { throw 'AST XPImage Optional parameter regression failed.' }
+Write-Host 'AST_XPIMAGE_BYREF_FAILURE_CLEAR_OK'
+$listMethodDeferredTarget = Join-Path $output 'constructor-list-method-deferred'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodDeferredTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST List class-method constructor fixture compilation failed.' }
+Write-Host 'AST_LIST_CLASS_METHOD_CONSTRUCTOR_OK'
+$moduleStorageByRefTarget = Join-Path $output 'constructor-byref-module-storage-error'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-byref-module-storage-error.xps') -o $moduleStorageByRefTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST initialized module ByRef constructor fixture compilation failed.' }
+Write-Host 'AST_INITIALIZED_MODULE_BYREF_CONSTRUCTOR_OK'
+$nativeReferenceDeferredTarget = Join-Path $output 'constructor-reference-native-deferred'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-reference-native-deferred.xps') -o $nativeReferenceDeferredTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST native reference constructor fixture compilation failed.' }
+$nativeReferenceResult = dotnet (Join-Path $nativeReferenceDeferredTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($nativeReferenceResult -join "`n") -ne '5') { throw 'AST XPImage constructor reference execution failed.' }
+Write-Host 'AST_NATIVE_REFERENCE_CONSTRUCTOR_OK'
+$methodReferenceDeferredTarget = Join-Path $output 'constructor-reference-method-deferred'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-reference-method-deferred.xps') -o $methodReferenceDeferredTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST method reference constructor fixture compilation failed.' }
+$methodReferenceResult = dotnet (Join-Path $methodReferenceDeferredTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($methodReferenceResult -join "`n") -ne '7') { throw 'AST user-reference class-method execution failed.' }
+Write-Host 'AST_METHOD_REFERENCE_CONSTRUCTOR_OK'
+$listMethodTarget = Join-Path $output 'constructor-list-method-deferred'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'constructor-list-method-deferred.xps') -o $listMethodTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST List class-method fixture compilation failed.' }
+$listMethodResult = dotnet (Join-Path $listMethodTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($listMethodResult -join "`n") -ne "8`n8") { throw 'AST List class-method execution failed.' }
+Write-Host 'AST_LIST_CLASS_METHOD_OK'
+foreach ($fixture in @('class-constructor-list', 'constructor-reference-list', 'class-constructor-variant', 'class-constructor-native', 'constructor-reference-variant', 'class-constructor-overloads', 'constructor-refref-module', 'class-constructor-reference-storage', 'class-constructor-optional-refref', 'constructor-refref-array', 'constructor-refref-list', 'constructor-refref-forall', 'constructor-refref-optional', 'class-constructor-optional-reference', 'constructor-reference-optional', 'class-constructor-reference-byref', 'constructor-reference-byref-simple', 'constructor-reference-byref', 'constructor-reference-implicit', 'class-constructor-reference', 'constructor-reference-byval', 'class-constructor-reference-parity', 'constructor-optional-byref-zero', 'class-constructor-optional-byref', 'constructor-byref-optional', 'constructor-optional-byref', 'class-constructor-mixed', 'class-constructor-byref', 'class-constructor-byref-simple', 'constructor-byref', 'class-constructor-optional', 'class-constructor-optional-parity', 'constructor-optional', 'class-constructor-derived', 'class-constructor-derived-parity', 'constructor-parent-forwarding', 'class-constructor', 'class-constructor-parity')) {
+    $target = Join-Path $output $fixture
+    dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o $target
+    if ($LASTEXITCODE -ne 0) { throw "AST constructor compilation failed: $fixture" }
+    $result = dotnet (Join-Path $target 'Generated.dll')
+    $expected = switch ($fixture) {
+        'class-constructor-list' { 'LIST_CONSTRUCTORS_OK' }
+        'constructor-reference-list' { 'CONSTRUCTOR_LIST_OK' }
+        'class-constructor-native' { 'NATIVE_CONSTRUCTORS_OK' }
+        'class-constructor-variant' { 'VARIANT_CONSTRUCTORS_OK' }
+        'constructor-reference-variant' { 'CONSTRUCTOR_VARIANT_OK' }
+        'class-constructor-overloads' { 'OVERLOAD_CONSTRUCTORS_OK' }
+        'class-constructor-reference-storage' { 'REFERENCE_STORAGE_CONSTRUCTORS_OK' }
+        'class-constructor-optional-refref' { 'OPTIONAL_REFREF_CONSTRUCTORS_OK' }
+        'constructor-refref-array' { 'REFREF_ARRAY_OK' }
+        'constructor-refref-list' { 'REFREF_LIST_OK' }
+        'constructor-refref-forall' { 'REFREF_FORALL_OK' }
+        'constructor-refref-module' { 'REFREF_MODULE_OK' }
+        'constructor-refref-optional' { 'REFREF_OPTIONAL_OK' }
+        'class-constructor-optional-reference' { 'OPTIONAL_REFERENCE_CONSTRUCTORS_OK' }
+        'constructor-reference-optional' { 'CONSTRUCTOR_REFERENCE_OPTIONAL_OK' }
+        'class-constructor-reference-byref' { 'BYREF_REFERENCE_CONSTRUCTORS_OK' }
+        'constructor-reference-byref-simple' { "7`nREFERENCE_BYREF_SIMPLE_OK" }
+        'constructor-reference-byref' { 'CONSTRUCTOR_REFERENCE_BYREF_OK' }
+        'constructor-reference-implicit' { 'CONSTRUCTOR_REFERENCE_IMPLICIT_OK' }
+        'class-constructor-reference' { 'REFERENCE_CONSTRUCTORS_OK' }
+        'constructor-reference-byval' { 'CONSTRUCTOR_REFERENCE_BYVAL_OK' }
+        'class-constructor-reference-parity' { "5`n5`nREFERENCE_CONSTRUCTOR_PARITY_OK" }
+        'constructor-optional-byref-zero' { 'OPTIONAL_BYREF_ZERO_OK' }
+        'class-constructor-optional-byref' { 'OPTIONAL_BYREF_CONSTRUCTORS_OK' }
+        'constructor-byref-optional' { 'CONSTRUCTOR_BYREF_OPTIONAL_OK' }
+        'constructor-optional-byref' { 'CONSTRUCTOR_OPTIONAL_BYREF_OK' }
+        'class-constructor-mixed' { 'MIXED_CONSTRUCTORS_OK' }
+        'class-constructor-byref' { 'BYREF_CONSTRUCTORS_OK' }
+        'class-constructor-byref-simple' { "5`n5`nBYREF_CONSTRUCTOR_SIMPLE_OK" }
+        'constructor-byref' { 'CONSTRUCTOR_BYREF_OK' }
+        'class-constructor-optional' { 'OPTIONAL_CONSTRUCTORS_OK' }
+        'class-constructor-optional-parity' { "5`ndefault`n9`nsupplied`nOPTIONAL_CONSTRUCTOR_PARITY_OK" }
+        'constructor-optional' { 'CONSTRUCTOR_OPTIONAL_OK' }
+        'class-constructor-derived' { 'CLASS_DERIVED_CONSTRUCTORS_OK' }
+        'class-constructor-derived-parity' { "root`nchild`n5`n6`nDERIVED_CONSTRUCTOR_PARITY_OK" }
+        'constructor-parent-forwarding' { 'PARENT_FORWARDING_OK' }
+        'class-constructor' { 'CLASS_CONSTRUCTOR_OK' }
+        'class-constructor-parity' { "5`nfirst`n9`nsecond`nCONSTRUCTOR_PARITY_OK" }
+    }
+    if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne $expected) { throw "AST constructor execution failed: $fixture" }
+}
+$failureFixture = 'class-constructor-derived-failure-next'
+$failureNormal = Join-Path $output ($failureFixture + $(if ($IsWindows) { '-normal.exe' } else { '-normal' }))
+dotnet $compiler compile (Join-Path $PSScriptRoot "$failureFixture.xps") -o $failureNormal --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal constructor-failure parity compilation failed.' }
+$failureNormalResult = Invoke-NormalArtifact $failureNormal
+if ($LASTEXITCODE -ne 0 -or ($failureNormalResult -join "`n") -ne 'CLASS_DERIVED_CONSTRUCTOR_FAILURE_OK') { throw 'Normal/AST constructor-failure parity failed.' }
+Write-Host 'AST_CONSTRUCTOR_FAILURE_COMPILE_OK'
+$normalList = Join-Path $output $(if ($IsWindows) { 'normal-list.exe' } else { 'normal-list' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'constructor-reference-list.xps') -o $normalList --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal List constructor compilation failed.' }
+$result = Invoke-NormalArtifact $normalList
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne 'CONSTRUCTOR_LIST_OK') { throw 'Normal/AST ByVal List constructor parity failed.' }
+$normalVariant = Join-Path $output $(if ($IsWindows) { 'normal-variant.exe' } else { 'normal-variant' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'constructor-reference-variant.xps') -o $normalVariant --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal Variant constructor compilation failed.' }
+$result = Invoke-NormalArtifact $normalVariant
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne 'CONSTRUCTOR_VARIANT_OK') { throw 'Normal/AST ByVal Variant constructor parity failed.' }
+$overloadTarget = Join-Path $output 'overload-parity'
+dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-constructor-overload-parity.xps') -o $overloadTarget
+if ($LASTEXITCODE -ne 0) { throw 'AST overload parity compilation failed.' }
+$result = dotnet (Join-Path $overloadTarget 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "number`ntext") { throw 'AST overload parity execution failed.' }
+$normalOverload = Join-Path $output $(if ($IsWindows) { 'normal-overload.exe' } else { 'normal-overload' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-overload-parity.xps') -o $normalOverload --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal overload parity compilation failed.' }
+$result = Invoke-NormalArtifact $normalOverload
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "number`ntext") { throw 'Normal/AST overload parity failed.' }
+$normal = Join-Path $output $(if ($IsWindows) { 'normal.exe' } else { 'normal' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-parity.xps') -o $normal --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal constructor parity compilation failed.' }
+$result = Invoke-NormalArtifact $normal
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`nfirst`n9`nsecond`nCONSTRUCTOR_PARITY_OK") { throw 'Normal/AST constructor parity failed.' }
+$normalDerived = Join-Path $output $(if ($IsWindows) { 'normal-derived.exe' } else { 'normal-derived' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-derived-parity.xps') -o $normalDerived --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal derived constructor parity compilation failed.' }
+$result = Invoke-NormalArtifact $normalDerived
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "root`nchild`n5`n6`nDERIVED_CONSTRUCTOR_PARITY_OK") { throw 'Normal/AST derived constructor parity failed.' }
+$normalOptional = Join-Path $output $(if ($IsWindows) { 'normal-optional.exe' } else { 'normal-optional' })
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-optional-parity.xps') -o $normalOptional --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal Optional constructor parity compilation failed.' }
+$result = Invoke-NormalArtifact $normalOptional
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`ndefault`n9`nsupplied`nOPTIONAL_CONSTRUCTOR_PARITY_OK") { throw 'Normal/AST Optional constructor parity failed.' }
+$normalReference = Join-Path $output $(if ($IsWindows) { 'normal-reference.exe' } else { 'normal-reference' })
+# Concrete-class parameter mutation/snapshot parity; broader Object/default/error cases are AST capability tests.
+dotnet $compiler compile (Join-Path $PSScriptRoot 'class-constructor-reference-parity.xps') -o $normalReference --single-file=false --runtime=false
+if ($LASTEXITCODE -ne 0) { throw 'Normal reference constructor parity compilation failed.' }
+$result = Invoke-NormalArtifact $normalReference
+if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -ne "5`n5`nREFERENCE_CONSTRUCTOR_PARITY_OK") { throw 'Normal/AST concrete-reference constructor parity failed.' }
+foreach ($case in @(
+    @('constructor-list-byref-type-error', 'XPS2003', 7),
+    @('constructor-list-byval-type-error', 'XPS2004', 7),
+    @('constructor-list-default-type-error', 'XPS2001', 2),
+    @('constructor-list-default-name-error', 'XPS2008', 2),
+    @('constructor-list-reference-type-error', 'XPS2003', 11),
+    @('constructor-list-unknown-type-error', 'XPS3001', 2),
+    @('constructor-native-byref-type-error', 'XPS2003', 7),
+    @('constructor-native-optional-type-error', 'XPS2001', 2),
+    @('constructor-variant-byref-type-error', 'XPS2003', 7),
+    @('constructor-overloads-ambiguous-error', 'XPS2005', 8),
+    @('constructor-overloads-name-error', 'XPS2006', 2),
+    @('constructor-overloads-no-match-error', 'XPS2004', 8),
+    @('constructor-overloads-private-error', 'XPS2009', 8),
+    @('constructor-mixed-literal-error', 'XPS2001', 6),
+    @('constructor-mixed-type-error', 'XPS2003', 7),
+    @('constructor-mixed-default-error', 'XPS2008', 2),
+    @('constructor-arity-error', 'XPS2004', 6),
+    @('constructor-type-error', 'XPS2004', 6),
+    @('constructor-private-error', 'XPS2009', 6),
+    @('constructor-body-error', 'XPS2008', 3),
+    @('constructor-byref-literal-error', 'XPS2001', 6),
+    @('constructor-byref-type-error', 'XPS2003', 7),
+    @('constructor-byref-property-error', 'XPS3001', 11),
+    @('constructor-byref-indexed-property-error', 'XPS3001', 11),
+    @('constructor-byref-module-storage-error', 'XPS3001', 7),
+    @('constructor-byref-parent-literal-error', 'XPS2001', 7),
+    @('constructor-byref-parent-type-error', 'XPS2003', 7),
+    @('constructor-optional-byref-literal-error', 'XPS2001', 6),
+    @('constructor-optional-byref-type-error', 'XPS2003', 7),
+    @('constructor-optional-byref-default-error', 'XPS2008', 2),
+    @('constructor-optional-byref-default-type-error', 'XPS2001', 2),
+    @('constructor-optional-byref-parent-literal-error', 'XPS2001', 7),
+    @('constructor-optional-order-error', 'XPS1012', 2),
+    @('constructor-optional-marker-error', 'XPS1012', 2),
+    @('constructor-optional-type-error', 'XPS2001', 2),
+    @('constructor-optional-name-error', 'XPS2008', 2),
+    @('constructor-optional-later-error', 'XPS2008', 2),
+    @('constructor-optional-self-error', 'XPS2008', 2),
+    @('constructor-optional-instance-error', 'XPS2008', 3),
+    @('constructor-optional-required-error', 'XPS2004', 6),
+    @('constructor-optional-slot-error', 'XPS1012', 6),
+    @('constructor-optional-private-error', 'XPS2009', 6),
+    @('constructor-refref-element-type-error', 'XPS2003', 11),
+    @('constructor-refref-upcast-error', 'XPS2003', 11),
+    @('constructor-refref-object-error', 'XPS2003', 9),
+    @('constructor-refref-temporary-error', 'XPS2001', 8),
+    @('constructor-refref-variant-error', 'XPS2003', 7),
+    @('constructor-refref-property-error', 'XPS3001', 14),
+    @('constructor-refref-parent-error', 'XPS2003', 11),
+    @('constructor-optional-reference-type-error', 'XPS2001', 2),
+    @('constructor-optional-reference-name-error', 'XPS2008', 4),
+    @('constructor-reference-unknown-deferred', 'XPS3001', 2),
+    @('constructor-reference-scalar-error', 'XPS2004', 6),
+    @('constructor-reference-class-error', 'XPS2004', 11),
+    @('constructor-reference-downcast-error', 'XPS2004', 11),
+    @('constructor-parent-late-error', 'XPS1012', 6),
+    @('constructor-parent-duplicate-error', 'XPS1012', 6),
+    @('constructor-parent-root-error', 'XPS1012', 3),
+    @('constructor-parent-type-error', 'XPS2004', 7),
+    @('constructor-parent-private-error', 'XPS2009', 7),
+    @('constructor-parent-instance-error', 'XPS2008', 8),
+    @('constructor-parent-nested-error', 'XPS1012', 6),
+    @('constructor-private-base-field-error', 'XPS2008', 6),
+    @('constructor-required-base-deferred', 'XPS2004', 5),
+    @('constructor-overloads-duplicate-error', 'XPS2006', 4)
+)) {
+    $fixture = $case[0]
+    if ($fixture -in @('constructor-byref-module-storage-error')) { continue }
+    $failure = dotnet $compiler ast-compile (Join-Path $PSScriptRoot "$fixture.xps") -o (Join-Path $output $fixture) 2>&1
+    if ($LASTEXITCODE -ne 2 -or ($failure -join "`n") -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") { throw "Constructor diagnostic lost: $fixture`n$failure" }
+}
+Write-Host 'AST_OVERLOAD_CONSTRUCTORS_OK'
+Write-Host 'AST_NATIVE_CONSTRUCTORS_OK'
+Write-Host 'AST_LIST_CONSTRUCTORS_OK'
+Write-Host 'AST_VARIANT_CONSTRUCTORS_OK'
+Write-Host 'AST_CONSTRUCTORS_OK'
+Write-Host 'AST_REFERENCE_CONSTRUCTORS_OK'
+Write-Host 'AST_BYREF_REFERENCE_CONSTRUCTORS_OK'
+Write-Host 'AST_OPTIONAL_REFERENCE_CONSTRUCTORS_OK'
+Write-Host 'AST_OPTIONAL_REFREF_CONSTRUCTORS_OK'
+Write-Host 'AST_REFERENCE_STORAGE_CONSTRUCTORS_OK'
+Write-Host 'AST_MIXED_CONSTRUCTORS_OK'
+Write-Host 'AST_OPTIONAL_BYREF_CONSTRUCTORS_OK'
+Write-Host 'AST_DERIVED_CONSTRUCTORS_OK'
+Write-Host 'AST_OPTIONAL_CONSTRUCTORS_OK'
+Write-Host 'AST_BYREF_CONSTRUCTORS_OK'
+$global:LASTEXITCODE = 0

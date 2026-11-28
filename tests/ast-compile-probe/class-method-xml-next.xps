@@ -1,0 +1,12 @@
+Class Reader
+    Public Function Name(ByVal value As XPXmlNode) As String
+        Name = value.Name
+    End Function
+End Class
+
+Sub Main()
+    Dim document As XPXmlDocument
+    Set document = XmlParse("<root />")
+    Dim reader As New Reader
+    Print reader.Name(document.Root)
+End Sub

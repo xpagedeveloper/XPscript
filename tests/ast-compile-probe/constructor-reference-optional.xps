@@ -1,0 +1,11 @@
+Class Record
+    Public Stored As Object
+    Public Sub New(Optional ByVal value As Object = Nothing)
+        Set Stored = value
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Record()
+    If Not (item.Stored Is Nothing) Then Error 6, "Optional Nothing"
+    Print "CONSTRUCTOR_REFERENCE_OPTIONAL_OK"
+End Sub

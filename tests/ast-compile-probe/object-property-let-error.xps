@@ -1,0 +1,8 @@
+Class Store
+    Public Property Let Item(ByVal index As Long, ByVal incoming As Long)
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    Set store.Item(1) = 42
+End Sub

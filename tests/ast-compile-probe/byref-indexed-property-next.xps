@@ -1,0 +1,85 @@
+Option Declare
+
+Class Box
+    Private stored As Long
+
+    Public Property Get Value As Long
+        Value = stored
+    End Property
+
+    Public Property Let Value(ByVal incoming As Long)
+        stored = incoming
+    End Property
+
+    Public Property Get Item(ByVal index As Long) As Long
+        Item = stored
+    End Property
+
+    Public Property Let Item(ByVal index As Long, ByVal incoming As Long)
+        stored = incoming
+    End Property
+End Class
+
+Class Methods
+    Public Sub Increment(ByRef value As Long)
+        value = value + 1
+    End Sub
+
+    Public Function IncrementAndReturn(ByRef value As Long) As Long
+        value = value + 1
+        IncrementAndReturn = value
+    End Function
+
+    Public Sub IncrementTwice(ByRef first As Long, ByRef second As Long)
+        first = first + 1
+        second = second + 1
+    End Sub
+
+    Public Sub IncrementAndFail(ByRef value As Long)
+        value = value + 1
+        Error 4351, "failed indexed property update"
+    End Sub
+End Class
+
+Public sharedBox As Box
+Public receiverCalls As Long
+Public indexCalls As Long
+
+Function GetBox() As Box
+    receiverCalls = receiverCalls + 1
+    Set GetBox = sharedBox
+End Function
+
+Function NextIndex() As Long
+    indexCalls = indexCalls + 1
+    NextIndex = 1
+End Function
+
+Sub Main()
+    Set sharedBox = New Box
+    sharedBox.Item(1) = 10
+    Dim methods As New Methods
+
+    Call methods.Increment(GetBox().Item(NextIndex()))
+    If sharedBox.Item(1) <> 11 Or receiverCalls <> 1 Or indexCalls <> 1 Then Error 4352, "Sub indexed property copy-back/evaluation failed"
+
+    If methods.IncrementAndReturn(GetBox().Item(NextIndex())) <> 12 Or sharedBox.Item(1) <> 12 Then Error 4353, "Function indexed property copy-back failed"
+    If receiverCalls <> 2 Or indexCalls <> 2 Then Error 4354, "Function receiver/index was evaluated more than once"
+
+    Call methods.IncrementTwice(sharedBox.Item(1), sharedBox.Item(1))
+    If sharedBox.Item(1) <> 14 Then Error 4359, "duplicate indexed property arguments did not share one ByRef location"
+    Call methods.IncrementTwice(sharedBox.Value, sharedBox.Value)
+    If sharedBox.Value <> 16 Then Error 4360, "duplicate scalar property arguments did not share one ByRef location"
+
+    Call methods.Increment(GetBox().Value)
+    If sharedBox.Value <> 17 Or receiverCalls <> 3 Then Error 4358, "scalar property receiver was evaluated more than once"
+
+    On Error GoTo ExpectedFailure
+    Call methods.IncrementAndFail(GetBox().Item(NextIndex()))
+    Error 4355, "expected indexed property method failure missing"
+    Exit Sub
+ExpectedFailure:
+    If Err <> 4351 Or sharedBox.Item(1) <> 17 Then Error 4356, "failed call copied an indexed property value back"
+    If receiverCalls <> 4 Or indexCalls <> 3 Then Error 4357, "failing receiver/index was evaluated more than once"
+    Print "AST_BYREF_INDEXED_PROPERTY_OK"
+End Sub

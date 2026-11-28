@@ -20,9 +20,28 @@ When syntax or behavior is uncertain, consult these files in this order:
 
 Do not invent a built-in or class member because it exists in a related language.
 
+On Android, call `UIForm.ShowDialog()` from the script entry point to wait for `OK` or `Cancel`. Read submitted fields after `OK`. From an Android UI callback, use `Show(False)` for a modeless form.
+
+Use `ShowToast(message [, kind [, position [, durationSeconds]]])` for a
+nonblocking notification. `kind` is `Normal` or `Warning`; `position` is
+`TopLeft`, `TopRight`, `BottomLeft` or `BottomRight`; duration defaults to
+5 seconds and is limited to 1–30 seconds. The toast includes a close button.
+WebUI, Browser-WASM and Android overlay the current form; desktop opens a
+separate borderless window at the requested screen corner.
+
+Use a receiver to call a class member that shares a built-in name. For example, `item.JsonParse()` calls the class method and uses its Optional defaults. The unqualified `JsonParse(text)` can resolve to the global parser.
+
+When a declared class has a field and method with the same name, `item.JsonParse` accesses the field and `item.JsonParse(...)` calls the method. Use `Me.JsonParse` to access the field from within the same-named function.
+
+The normal CLI `compile` and `run` commands use the AST compiler. Use `ast-compile` or `ast-run` to make that selection explicit. The legacy command aliases `legacy-compile`, `compilev1`, `legacy-run` and `runv1` are disabled.
+
+Combine source files with `Include "path.xps"`. Absolute paths are accepted; otherwise the path is relative to the file containing the directive. A bare filename means that file's directory, and `../` may appear one or more times at the start to move up directories. Prefer relative paths for cross-platform projects. `[Compile:folder]` is unsupported.
+
 ## Core language model
 
 XPscript is case-insensitive and VB/LotusScript-like, but it has its own runtime and compatibility rules.
+
+Integer size literals support case-insensitive `kb`, `mb`, and `gb` suffixes. They use powers of 1024 and produce a `Long` (`100mb` is `104857600`); decimal values and overflowing results are invalid. Use the documented language reference as the source of truth.
 
 Prefer explicit declarations in generated programs:
 
@@ -38,7 +57,13 @@ End Sub
 
 Use `Sub ... End Sub` for procedures without a result and `Function ... End Function` for value-returning procedures.
 
+Procedure parameters default to `ByRef`. Passing writable storage aliases the caller's value; passing an expression uses temporary storage and does not copy changes back. Declare `ByVal` when the procedure should receive a value copy. See `docs/language-reference.md` and `samples/function-not-byref-regression.xps`.
+
 Functions return values by assigning to the function name:
+
+Use `Static name As Type` inside a procedure when a local must retain its value across calls. The current compiler supports scalar storage, initializer-free arrays, Lists, Variant, Object and user-class references. `Static item As Object` starts as Nothing; use `Set item = New Object()` to create it once and retain it across calls. Strings begin empty and numeric/Boolean values begin at zero/false. Scalar explicit initializers are supported; complete initializer semantics remain pending. See `docs/ast-csharp-emitter.md`. This concerns procedure locals; classes and class members remain instance-based.
+
+That assignment stores the current result and execution continues. `Exit Function` returns the stored result immediately; reaching `End Function` also returns it. Do not treat assigning the function name as an early return.
 
 ```xpscript
 Function Add(a As Integer, b As Integer) As Integer
@@ -48,6 +73,8 @@ End Function
 
 Optional parameters are supported:
 
+For the experimental `ast-compile` path, omitted trailing Optional parameters execute real procedure bodies with fresh storage for omitted ByRef defaults. Explicit empty argument slots and complete constant/default validation remain pending; see `docs/ast-csharp-emitter.md`. Do not assume full Optional compatibility from this experimental subset.
+
 ```xpscript
 Function Greeting(name As String, Optional prefix As String = "Hello") As String
     Greeting = prefix & " " & name
@@ -55,6 +82,18 @@ End Function
 ```
 
 Use block control flow unless a repository sample proves a shorter form is supported:
+
+`GoTo label` targets a case-insensitive label in the same Sub or Function. The AST compiler supports top-level `GoSub label` / `Return` blocks, sequential GoSubs, nested control-flow calls, loop calls and error handling inside extracted helpers, including `On Error GoTo` with `Resume label`. Prefer a Sub or Function for new code. See `docs/ast-gosub-lowering.md` and the executable GoSub fixtures in `tests/ast-compile-probe`.
+
+For a declared List, `ForAll alias In values` exposes a writable element alias: assignment to the alias updates the List, and `ListTag(alias)` returns its tag. Prefer different alias names in nested loops for compatibility with published 0.9.3. The current compiler covers typed List declarations without initializers, alias reads/writes, tags, iteration snapshots and ByRef copy-back through supported procedure/method calls. The complete List API remains tracked separately. See `docs/forall-iteration.md` and `tests/ast-compile-probe/forall-list-alias.xps`.
+
+Use `IsElement(values(tag))` to test for a List tag before reading its value. The current compiler supports declared and dynamically supplied Lists, returns False for a missing tag, and evaluates the tag expression once. See the executable List membership regressions for argument validation behavior.
+
+Current compiler supports Sub and Function calls with matching typed ByRef List elements or ForAll aliases. It evaluates each List/tag once in argument order and copies changed values back, including if the called procedure throws. Named Function wrappers also support forwarding ordinary ByRef parameters. Declare List parameters as `ByVal values List As Long` or `ByRef values List As Long`: ByVal shares the List object, while ByRef also allows replacing the caller's List reference. Functions can return Lists through `As Variant`; initialize a typed List with that result, for example `Dim values List As Long = MakeValues()`. IsElement accepts one keyed List access and checks dynamically supplied Lists without reading a missing element.
+
+Current compiler procedures and class methods accept writable scalar and indexed Get/Let properties as ByRef arguments. Each receiver and index is evaluated once, and the accessor value is copied back after a successful call; a call that raises an error does not copy the property value back. Side-effecting receivers are supported. Read-only properties are rejected, and duplicate stable property locations share one alias. See `tests/ast-compile-probe/byref-property-next.xps` and `tests/ast-compile-probe/byref-indexed-property-next.xps`.
+
+Use `Erase values(tag)` to remove one List entry or `Erase values` to clear all entries. Current compiler supports these forms for declared Lists, including safe removal of a missing tag and removals during ForAll snapshot iteration. It also supports fixed one-dimensional declared arrays; dynamic and multidimensional array lifecycle remains migration work.
 
 ```xpscript
 If value > 0 Then
@@ -67,6 +106,52 @@ End If
 ```
 
 ## Classes and object lifetime
+
+AST constructors accept `ByVal values List As Long` or `ByRef values List As Box`, including implicit ByRef and trailing Optional Lists. ByVal shares elements but replacing the parameter stays local; ByRef can replace the caller's List slot, with duplicate aliases and writes preserved on errors. Pass the exact declared element type: Lists are not covariant. Omitted Lists default to Nothing, with fresh omitted ByRef slots; a factory returning Variant can provide a fresh typed List and later defaults may read it. Lists do not own their images/objects; typed image field stores clone as usual. Class-method List forms also have focused runtime coverage. See `class-constructor-list.xps`, `image-constructor-list.xps` and the typed List constructor contract.
+
+AST constructors accept Variant, XPImage, array and JSON/XML/CSV/spreadsheet/HTTP references in the supported required and Optional ByVal/ByRef forms. ByVal is a snapshot but native mutations are shared; ByRef must receive exact-type writable storage and changes remain visible on failure. Omitted native references start as Nothing, omitted Variant as Empty, with fresh omitted ByRef cells and sequential dependent defaults. An explicit `Nothing` default is valid for Variant parameters. Variant-held images remain borrowed; Delete/failure only clears the instance's owned typed image fields. Dispose HTTP clients explicitly. See `class-constructor-native.xps`, `class-constructor-variant.xps` and the image constructor fixtures.
+
+Current compiler supports multiple `Sub New` signatures, including Optional parameters and Parent.New forwarding. Use distinct parameter types/modes; parameter names/default values do not distinguish signatures. ByRef requires exact-type writable storage. Identity and more specific reference conversions win; equivalent matches prefer fewer omitted arguments. Ambiguous calls are errors, not declaration-order choices. See `class-constructor-overloads.xps` and the constructor overload contract in `docs/ast-csharp-emitter.md`.
+
+Current compiler constructors accept Optional ByRef Object/user-class parameters, including implicit ByRef. `Sub New(Optional value As Box = New Box())` gets fresh typed omitted storage; no initializer means Nothing. A later default may read/mutate earlier references. Supplied exact-type locals/parameters/fields, initializer-free typed module references, array/List elements and writable List ForAll aliases stay live through replacement and errors; ByVal is a snapshot. Array bounds and concrete class types are preserved. Do not infer writable array ForAll aliases or ordinary List-call alias changes. Borrowed/default user objects keep their own image fields until explicitly cleaned. See `class-constructor-optional-refref.xps`, `class-constructor-reference-storage.xps` and `image-constructor-optional-refref.xps`.
+
+Current compiler supports `Sub New(Optional ByVal value As Box = New Box())` and Optional ByVal Object references. Omit a trailing suffix with `New Record()` / `Parent.New()`; no initializer means Nothing. Defaults run once in order before bodies, can read earlier parameters/module routines and create fresh objects per call, but cannot read instance state or later parameters. Use explicit ByVal: Optional ByRef references are also supported as described above. Clearing a parameter stays local, while object mutations are shared. Default-created user objects and their image fields are not automatically owned or Deleted; retain their owners for explicit cleanup. Required scalar/reference ByRef parameters may precede these defaults. See `class-constructor-optional-reference.xps`, `image-constructor-optional-reference.xps` and the Optional reference constructor contract.
+
+Current compiler supports required `Sub New(ByRef value As Box)` or `As Object`, including implicit ByRef. Pass an exact-type writable local/parameter/user-class field, not a New expression, accessor, Variant or differently declared ancestor/subclass/Object slot. A correctly declared variable holding Nothing is valid. `New Record(value)` / `Parent.New(value)` can replace or clear the caller's reference; passing the same slot twice preserves live aliases, even on error. Required references can precede scalar Optional parameters. A child's ByVal reference forwarded to a ByRef base remains only a child snapshot. Replacement does not Delete old or replacement objects or their images; retain old owners for explicit cleanup. Initialized compatibility module storage remains deferred. See `class-constructor-reference-byref.xps` and `image-constructor-reference-byref.xps`; this behavior extends beyond the published 0.9.3 baseline, while ordinary method/module signatures are covered separately.
+
+Current compiler constructors accept required `ByVal value As Object` or `ByVal value As Box` for a declared user class. Call `New Record(box)` or `Call Parent.New(box)`. Object mutations are shared, but replacing the parameter with Nothing does not replace the caller's reference. User-class upcasts, Nothing and existing Variant conversions are supported; unrelated classes/downcasts and statically scalar Object arguments are invalid. Required reference parameters can precede scalar Optional parameters, whose defaults can read earlier reference members. Use Set for reference assignment. The input object is borrowed, including its XPImage fields; construction failure/Delete must not dispose it. Class-method object signatures are also covered by their dedicated regressions. See `class-constructor-reference.xps` and `image-constructor-reference.xps`.
+
+Current compiler supports `Sub New(Optional ByRef value As Long = 1)` and implicit ByRef `Optional value As Long = 1`. `New Record()` gives fresh omitted storage; `New Record(value)` aliases exact-type writable caller storage. Later defaults may mutate earlier omitted/supplied references; repeated calls never share omitted cells. Required parameters may precede the Optional suffix, and ByRef/ByVal may mix. The same applies to Parent.New and implicit all-Optional bases. Omit a trailing suffix, not empty slots; use explicit ByVal for snapshots. Default errors reach the caller before body entry and preserve old targets while retaining supplied reference writes. These Optional ByRef rules extend beyond the published 0.9.3 baseline. See `class-constructor-optional-byref.xps`, `constructor-optional-byref-zero.xps` and `image-constructor-optional-byref.xps`.
+
+Current compiler also allows required scalar ByRef parameters followed by Optional ByVal: `Sub New(ByRef seed As Long, Optional ByVal extra As Long = NextValue(seed))`. Use `New Record(seed)` or `Call Parent.New(seed)`. Defaults execute once after supplied arguments and can read/change earlier required references; duplicate aliases and writes survive default errors. Supplied ByVal values remain snapshots. Optional ByRef (including implicit ByRef) is also supported as described above. See `class-constructor-mixed.xps`, `image-constructor-mixed.xps` and the mixed-constructor contract in `docs/ast-csharp-emitter.md`.
+
+Current compiler supports required scalar ByRef constructors: `Sub New(ByRef seed As Long)` and `Dim item As New Record(seed)`. Required parameters without a modifier are also ByRef. Supply exact-type writable storage: locals, parameters, user-class fields, typed initializer-free Private/Public module scalars or typed array/List elements/ForAll aliases. Duplicate arguments share the same location, with once-only ordered receiver/index/tag evaluation; changes survive errors in constructors/base arguments. Parent.New forwards references directly; passing a child's ByVal parameter by reference changes only that child's snapshot. Failed construction preserves an old target and cleans image fields/locals without user Delete. Do not pass literals/accessor results or assume type coercion for ByRef. These constructor semantics extend beyond the published 0.9.3 baseline. See `class-constructor-byref.xps`, `image-constructor-byref.xps` and the AST constructor contract.
+
+Current compiler supports trailing Optional scalar ByVal constructor parameters: `Sub New(ByVal seed As Long, Optional ByVal label As String = "default")`, called with `New Record(4)` or `Call Parent.New(4)`. Omit a trailing suffix, not explicit empty slots. Defaults run once in order after supplied arguments, before bodies, and may read earlier parameters/module routines, not Me, fields, self/later parameters or locals. Missing scalar defaults are zero/False/empty String. An all-Optional base can be called implicitly. Handle default errors in the caller, not the not-yet-entered constructor body; an old target survives. Image-owning routines called by defaults keep ordinary local cleanup. Optional omission extends beyond the published 0.9.3 baseline. See `class-constructor-optional.xps`, `image-constructor-optional.xps` and the Optional constructor contract in `docs/ast-csharp-emitter.md`.
+
+Current compiler also supports scalar ByVal constructors with required or trailing Optional parameters in derived classes. Put `Call Parent.New(...)` first in a derived Sub New when passing base arguments; otherwise the base must have an accessible parameterless constructor. Forwarding arguments can use constructor parameters/module routines, not Me, fields or body locals. Late/nested/duplicate Parent.New and root-class use are invalid; private base constructors remain inaccessible. Base bodies run before derived bodies, once, and bodies support own private fields and inherited public helpers/fields. A failure cleans typed image fields at all completed levels without user Delete and preserves an existing target. Ordinary derived methods/accessors remain deferred. See `class-constructor-derived.xps` and `image-constructor-derived.xps`.
+
+Current compiler supports root-class `Sub New(ByVal value As Long)` (or parameterless New), with required or trailing Optional scalar ByRef/ByVal parameters. Write `Dim item As New Record(4)` or `Set item = New Record(4)` to construct it; plain `Dim item As Record` starts as Nothing. Unmodified required constructor parameters are ByRef; these references can precede trailing Optional ByVal parameters. Me, private helper calls, Exit Sub and On Error work in the body. On construction failure typed image fields are cleaned without calling user Delete, and a previous assignment target survives. Successful objects still need explicit Delete/field cleanup. See the root-constructor contract in `docs/ast-csharp-emitter.md` and `class-constructor.xps`/`image-constructor.xps`.
+
+Current compiler supports one parameterless `Sub Delete()` per class, including private declarations and derived classes. Use `Delete item` explicitly: the most-derived body runs first, its typed image fields are cleared, then the base chain runs automatically, even after Exit Sub or an error. Do not add Parent.Delete forwarding. Each class's body runs at most once per instance, including re-entry and surviving aliases. Derived bodies can use their own private fields and inherited public fields/properties/helpers, including Me/With and scalar ByRef; base-private members remain inaccessible. Ordinary methods/accessors declared in derived classes are still deferred. Caller storage is cleared and images are recycled even on error. Standard finally precedence applies: a later base error replaces an earlier derived error. Other AST aliases still reference the object; do not assume LSRef alias invalidation or reuse deleted objects. GC/scope-exit cleanup remains pending. See `class-destructor-derived.xps`, `class-destructor-derived-parity.xps`, `image-destructor-derived.xps` and `docs/ast-csharp-emitter.md`.
+
+AST indexed Get/Let also accepts matching typed array/List elements and List ForAll aliases as ByRef indexes, for example `counter.Item(values(0))`. Passing the same element twice preserves one shared location; mutations remain visible when the accessor raises an error. Each receiver/index/tag is evaluated once in order. Declared fixed/dynamic/multidimensional arrays and non-zero lower bounds are supported. A missing List tag or out-of-range array subscript fails before later arguments execute. If an entry is erased and recreated after its reference is captured, the old reference remains detached; it does not recreate the deleted entry by copy-back. This is indexed-accessor support, not a promise of shared aliases in all ordinary procedure call wrappers.
+
+Typed AST module storage currently supports Boolean, Byte, String, Integer/Long and Single/Double/Currency. Date and other module types are not yet supported as indexed ByRef targets.
+
+For AST indexed properties, an explicit `ByRef index As Long` can alias a matching scalar local, parameter, user-class field or scalar module variable declared with Private/Public without an initializer. Module scalars start at zero/False/empty String. Qualified fields such as `holder.Index` and implicit With field access are supported. Getter and setter declarations must use the same index mode. Changes are visible in the caller, including when the accessor raises an error; passing the same field or variable to two indexes preserves one shared location. Pass writable storage, not a literal or accessor-backed property. Initialized/reference-type module targets remain unsupported. ByVal and unmodified indexes retain snapshot behavior.
+
+Current compiler supports scalar indexed Get/Let: `store.Item(index) = value` and `Print store.Item(index)`, including multiple typed indexes, internal access and With. Trailing Optional indexes can be omitted, including `store.Item()` when all are Optional. The setter's final incoming-value parameter remains required. Paired accessors must agree on index types, modes and Optional positions. Defaults run once, left to right at accessor entry, after supplied arguments and setter RHS; they may read instance members and earlier indexes. Omitted ByRef defaults get fresh storage; supplied ByRef locations remain aliases. Missing scalar defaults use zero/False/empty String. Use parentheses for an all-Optional indexed call. Explicit empty argument slots, accessor-backed ByRef locations, other native-family accessors and derived accessor bodies remain deferred. Private/read-only/write-only restrictions are enforced. See `indexed-optional-runtime.xps` and `docs/ast-csharp-emitter.md`.
+
+Current compiler executes scalar Property Get/Let and Object/user-class Property Get/Set, including indexed reference values. Get returns the stored property-name result after the entire body runs; an unassigned reference result is Nothing. Parameterless `Property Let Name As String` exposes the incoming value as `Name`; parameterless `Property Set Name As Box` exposes the incoming reference the same way. Use `Set store.Item(index) = value` for Set accessors and ordinary assignment for Let; wrong modes and scalar/incompatible class values are diagnosed. Getter types are preserved, allowing `store.Item(index).Value`. Supplied ByRef scalar indexes remain aliases; the assigned value is a snapshot reference, so replacing an incoming ByRef value parameter does not replace the source variable. Object mutation remains shared. Read-only/write-only and private accessor permissions are enforced. Typed JSON/XML/CSV/spreadsheet/HTTP reference accessors and snapshot-owned XPImage accessors are supported; other native families, derived accessor bodies and complete lifecycle dispatch remain deferred. See `indexed-object-runtime.xps` and `docs/ast-csharp-emitter.md`.
+
+Current compiler executes scalar typed instance Sub/Function bodies, private sibling calls, Me, recursion and scalar ByRef, preserving per-instance fields and parameter shadowing. Initialize class objects with parameterless New as supported; String fields start empty. Names are case-insensitive. Private fields and methods are not externally accessible. Object, array and List method signatures have focused runtime coverage; Optional/Static method-local storage and method bodies authored in derived classes remain deferred. Accessor and lifecycle limits are documented separately. See docs/ast-csharp-emitter.md and class-methods-native.xps fixtures.
+
+For current compiler procedure and class-method calls, a named Variant-backed caller slot passed ByRef to an XPscript parameter uses a typed temporary and copies back on return or error. Duplicate arguments share one temporary. Archive and ArchiveEntry cover matching and differing generated CLR representations. See `class-method-archive-next.xps`.
+
+`Dim value As Object` inside a procedure starts as Nothing on every call. `Static value As Object` starts as Nothing once and keeps its reference between calls. Neither declaration creates an object; use `Set value = New Object()` explicitly.
+
+Current compiler also supports `Dim value As Object = New Object()` and `Static value As Object = New Object()`. Dim executes the initializer each time the declaration is reached; Static executes it once at the first reached declaration, using that call's parameters and earlier locals. Clearing a Static reference does not rerun its initializer. To recreate an object after clearing it, use `Static value As Object` without an initializer and `If value Is Nothing Then` with an explicit Set. Recursive initialization and simultaneous first calls are not covered by the current contract.
 
 All XPscript classes are instance-based. Create class objects with `New`.
 
@@ -88,11 +173,24 @@ second = New SomeClass(...)
 
 Each instance must keep its own state.
 
+For class inheritance, use `Class Child Extend ParentType`. When a child constructor must initialize a base class that requires constructor arguments, put `Call Parent.New(...)` first in the child `Sub New`. Do not invent C#-style `: base(...)` syntax in XPscript.
+
+Current compiler supports implicit user-class reference upcasts through direct/transitive ancestry in supported value assignments, initializers, properties and ByVal calls. A property declared As Root can store a Leaf instance when Leaf Extends Root; the reference still shares identity and mutations. This does not make ByRef parameters covariant: pass an exact declared type to ByRef parameters, and do not assume array/List covariance. Implicit downcasts and sibling conversions remain invalid. Unknown bases and inheritance cycles are diagnosed early. Ordinary method/accessor bodies authored in derived classes, advanced constructor signatures and complete lifecycle dispatch remain deferred in AST; do not infer full inheritance migration from reference conversion support. See `inherited-reference-runtime.xps` and `docs/ast-csharp-emitter.md`.
+
+
 When using XPDB or XPAI, follow the exact constructor/member names shown by the current database/AI docs and samples. Never infer those signatures from older examples or another language.
 
 For XPAi structured output, prefer defining the desired result shape as an XPscript class and passing an instance to `SetResultClass` when the contract maps naturally to a class. Public fields and public readable properties form the generated schema; private backing state is excluded. Use `SystemPrompt` and `UserPrompt` for the common two-part prompt shape. Use `SetJsonSchema` for an explicit schema; it accepts `XPJsonSchema` directly as well as `XPJsonObject` or `XPJsonDocument` with an object root. Prefer `XPJsonSchema` over hand-building raw JSON when XPscript's schema API can express the required contract. See `docs/xpai-structured-output.md` and `samples/xpai-structured-output.xps`.
 
+## Native JSON in current compiler
+
+AST properties may use XPJsonDocument, XPJsonObject, XPJsonArray, XPJsonElement and XPXml reference types as Get results and Set incoming values, including indexed accessors with scalar Optional/ByRef indexes. Use `Set store.Current = value`; getter member chains keep their native type. References and mutations are shared, while replacing the setter's incoming parameter does not replace the caller's variable. XML element-to-node conversion is allowed for values, not ordinary ByRef storage. Do not generalize shared-reference Get/Set to XPImage: image Get factories transfer ownership, while image Set uses snapshot-owned field storage. See `native-reference-properties.xps`, `native-reference-signatures.xps` and `docs/ast-csharp-emitter.md`.
+
+Use `New XPJsonObject` or `New XPJsonArray`, and `XPJsonDocument.Parse(text)` or `JsonParse`/`JsonDecode` to read JSON. Obtain an object or array from a document using `document.Root.AsObject()` or `document.Root.AsArray()`. Use `Get`, `Set`, `Add`, `Remove`/`RemoveAt`, `Contains` and `Count` as documented in `docs/api-reference.md`. JSON arrays support `ForAll`. `JsonEncode` and `JsonStringify` use the shared native serializer; invalid JSON and array indexes raise XPscript errors. JSON references can be typed parameters and function results, including ByRef replacement. `Dim value As New XPJsonObject` constructs the object; `Dim value As XPJsonObject` starts as Nothing.
+
 ## Native XML
+
+The XML API also compiles directly through AST using the existing native runtime, with no XML NuGet addon. XML code is emitted only on actual use; `XmlEscape` alone does not include the DOM/DTD engine. Typed XML parameters/results, Static references and ByRef replacement are supported. ByVal shares the object; `LoadXml` mutates that document and remains visible through existing aliases. `XPXmlElement` can flow into a ByVal `XPXmlNode` parameter. XML nodes containing elements support runtime-checked element operations; other node kinds raise error 13. Use documented native methods, not arbitrary dynamic members. Both `Call .Method(...)` and `.Method(...)` work inside With.
 
 Use the native XML classes documented in `docs/native-xml.md`; do not infer MSXML, browser DOM, or .NET `XPXmlDocument` members that XPscript does not expose.
 
@@ -128,7 +226,23 @@ Normal XML parsing prohibits DTD processing and external entity resolution. Do n
 
 For native Notes/Domino code, use `docs/notes-c-api.md` as the primary object-model reference and `docs/notes-mime-entity.md` for MIME. Do not infer undocumented LotusScript compatibility merely because a method has the same name.
 
+Notes objects require the native Notes runtime and are server-side capabilities. Do
+not execute them directly in browser WebAssembly; place Notes operations in
+`[ServerSide]` procedures so the generated server companion executes them. A
+core-only Notes declaration may compile without MIME dependencies, but that does
+not make native Notes execution available in the browser.
+
 Only `NotesSession` is constructed with `New`. Obtain databases, views, documents, items, names, date/time values, MIME entities, collections and agent results from their owning Notes objects.
+
+Use `New NotesSession()` for platform autodetection. On Windows it resolves the HCL Notes/Domino installer registry entries for the program directory, then the shared runtime resolves `notes.ini` and its `Directory=` data path. Pass an explicit program directory only when the documented installation is intentionally outside that configuration.
+
+`NotesSession.EffectiveUserName` returns the active native session user name, and `NotesSession.UserNameObject` creates a `NotesName` wrapper for that value. Recycle the returned `NotesName` when it is no longer needed.
+
+Run agents through `db.GetAgent(name)`, then `agent.Run()` or `agent.RunWithDocumentContext(document)`. Read `agent.ReturnMessage` for captured output and recycle the agent afterwards. `NotesDatabase.RunAgent` and `NotesAgentResult` were removed; do not generate those obsolete forms.
+
+Use `item.Values = Array("one", "two")` for a Notes text list; homogeneous numeric and NotesDateTime arrays are also supported through AST and legacy. Mixed-type arrays raise error 13. Empty arrays write empty text. See `samples/notes-item-array-runtime-test.xps`.
+
+Rich-text numeric properties such as `style.FontSize` accept ordinary XPscript numeric values through Variant references. Overflow is checked before assignment; retain the existing property value after handling an overflow error. See `samples/notes-richtext-numeric-setters-runtime-test.xps`.
 
 `NotesDocument.Save()` is a void native save that raises failures. Boolean overloads are also available:
 
@@ -145,6 +259,10 @@ View key lookup supports scalar keys and one-dimensional arrays. An array key ta
 `NotesName` exposes canonical/abbreviated forms, hierarchical components, RFC821/RFC822 address fields and comments. `NotesDateTime` supports wildcard date/time values, `SetNow`, adjustments, `TimeDifference`/`TimeDifferenceDouble`, and `ConvertToZone`. Do not call `TimeDifference` with wildcard date/time values.
 
 ## Notes MIME
+
+NotesStream relative file paths remain based on the application's initial working directory after Notes initialization. Use `stream.Open(path, "readonly")` for read-only file access; `Close()` closes a file without recycling the stream. See `samples/notes-stream-runtime-test.xps`.
+
+For DXL, obtain the importer with `session.CreateDXLImporter()` and call `importer.Import(path, database)` with an open NotesDatabase (a Variant-held reference is accepted). Read `importer.Log` after import or a handled error; repeated reads leave the importer alive. Recycle the importer explicitly when finished. See `samples/notes-dxl-log-runtime-test.xps`.
 
 Use `NotesMIMEEntity` only with the currently documented native MIME subset in `docs/notes-mime-entity.md`.
 
@@ -187,6 +305,10 @@ Root, direct-child and nested `GetNthHeader(name, occurrence)` support standard 
 
 ## HTTP client security
 
+AST user-class properties support Get/Set with XPHttpClient, XPHttpRequest, XPHttpResponse, XPHttpPart, XPHttpFile, XPHttpPartCollection and XPHttpFileCollection. Use Set for reference assignment. Typed getter chains call the real native API; scalar Optional/ByRef indexes keep their usual aliases, and replacing the incoming setter parameter does not replace the caller's reference. Reference results default to Nothing. Clients are shared, not cloned or automatically disposed by accessors: Dispose explicitly after all users are finished, and never use any alias afterward. Security/read-only guards remain active. GetFile returns XPHttpPart; the distinct static XPHttpFile name needs an existing Variant runtime cast when bridging that value, not a new implicit Part-to-File conversion. Do not use HTTP references as indexes or apply HTTP shared-reference ownership to XPImage. See `http-reference-properties.xps`, `http-property-signature-only.xps` and `docs/http-client.md`.
+
+Native HTTP client/request/response APIs compile through the AST pipeline and use the shared secure transport/TLS runtime. `CertificateValidation` defaults to `Strict`; `AllowSelfSigned` is only for deliberately trusted self-signed endpoints and still validates hostname and expiry. Keep `Insecure` out of production code. Fractional `Timeout` values are supported. ByVal shares HTTP references; ByRef can replace them. Call `Dispose()` when a client is no longer needed. HTTP code is included only on actual use without external NuGet addons. Async callbacks and HTTP/UIForm helpers retain compatibility transformations until migrated. See `docs/http-client.md`.
+
 `XPHttpClient` blocks private and local network destinations by default. Leave this protection enabled when a URL may contain request data or other untrusted input.
 
 For a trusted application-controlled intranet or local endpoint, opt in on that client instance:
@@ -202,6 +324,10 @@ Do not enable `AllowPrivateNetwork` merely to make a user-supplied URL work. Req
 ## Arrays, Lists, and ForAll
 
 XPscript arrays use XPscript array semantics and support helpers such as `Array`, `ReDim`, `LBound`, `UBound`, `Join`, `Explode`, and array helper functions documented in the language reference.
+
+The compiler supports ranked whole-array parameters (`values()` / `values(,)`) in procedures, class methods and constructors. Ranks 1–8 preserve element type, bounds and ByRef replacement; ranks above eight and combined array/List declarations are rejected. See `array-parameter-runtime-next.xps`, `method-array-runtime-next.xps`, constructor array regressions and `docs/ast-csharp-emitter.md#array-parameter-signatures`.
+
+AST fixed bounds accept signed constants (`Dim values(-3 To -1) As Long`). Variant sharing and matching typed-array assignments preserve physical bounds and shared element mutations; ask LBound/UBound after replacement rather than assuming the original declaration's bounds. Typed Variant array conversion requires exact element type/rank and leaves an old target unchanged on error. String arrays and Erase retain empty-string defaults, including nonzero/multidimensional bounds. These storage rules do not enable whole-array constructor parameters.
 
 `ForAll` is the single first-class iteration model for supported iterable values. Use the same syntax for one-dimensional arrays, Lists, JSON arrays/enumerables, XML collections, database row/result collections, filesystem arrays, other runtime enumerable values, and XPscript classes that expose an iterator.
 
@@ -343,6 +469,8 @@ WriteFile "config.json", content, "utf-8"
 AppendFile "app.log", "done"
 ```
 
+Reads and file metadata/hash/equality operations raise a runtime error when their required file is missing. Writes, appends, line/byte output, and copy/move destinations raise a runtime error when the destination directory is missing; create the directory explicitly before writing.
+
 Supported charset names include `utf-8`, UTF-16 variants, ISO encodings, and code-page names supported by the runtime encoding provider. UTF-8 is the normal default.
 
 ### Lines
@@ -441,7 +569,21 @@ Print "Error " & CStr(Err) & ": " & Error$
 
 Use `On Error Resume Next` only when the program intentionally handles an expected failure immediately afterward.
 
+Experimental `ast-compile` supports `On Error Resume Next`, `On Error GoTo label`, `On Error GoTo 0`, `Resume`, `Resume Next` and `Resume label`. Handling applies after activation in the current procedure. `Resume` retries the failing statement; repair its cause first. `Resume Next` continues after that statement, including a failing procedure call. `Resume label` continues at a label in the same procedure. A failure in an active handler propagates to the caller; `Resume` without a handled error fails at runtime. CLI and MCP share this compilation path.
+
 ## Cross-platform rules
+
+Configure UIForm controls through the object returned by `Add...`: `Set field = form.AddSelect("mode", "Mode")`, then use `field.AddOption("Standard")` and `field.SelectedValue = "Standard"`. Form-level option/value helpers remain compatibility APIs. See `docs/uiform.md` for the supported control-object properties and platform behavior.
+
+For tabbed forms, create a `form.AddTabContainer(name)`, add tabs to that
+container, and set `container.TabPlacement` to `Top` or `Bottom`. The returned
+tab supports `Background`, `FontColor`, `Font`, `FontSize`, and `Bold`, plus
+`SelectedBackground`, `SelectedFontColor`, `SelectedFont`, `SelectedFontSize`,
+and `SelectedBold` for the active tab state; use
+`VisibleTab`/`SetVisibleTab` for selection. This API is shared by desktop,
+Android, server-rendered web, and Browser-WASM.
+
+The compiler uses shared runtime implementations for `CStr`, `CInt`, `CLng`, `CDbl`, `CBool`, byte/single/currency/date conversions, printing, Null/Empty, string helpers and `Environ`. `CInt` checks the Integer range; overflow can be handled with ordinary XPscript `On Error` handling. `XPScriptRuntime` is internal generated support, not a user-facing XPscript object.
 
 XPscript targets Windows, Linux, and macOS. When writing portable programs:
 
@@ -470,6 +612,15 @@ When asked to write an XPscript program:
 
 ## Verification checklist
 
+When consuming generated OpenAPI models, copy type names from the generated
+declarations. Do not Pascalize schema keys yourself. Server generation preserves
+valid keys such as `clear_actor_limits` and maps converted names consistently
+across `$ref` uses. See `docs/rest-api.md` for generation and initial import.
+Generated model array fields use `XPJsonArray`; do not replace them with
+`Public items() As Model`, which the CLI class parser does not support.
+Copy enum member names from the generated declaration too; collisions can add
+an enum-name prefix or numeric suffix.
+
 Before presenting code as valid XPscript, check:
 
 - Every variable required by `Option Declare` is declared.
@@ -495,11 +646,42 @@ Keep this skill concise and operational. Link to authoritative docs for exhausti
 
 ## Structured web logging
 
+Application is built in: do not create it with New. Use Application.ArgCount and Application.Args(index) for arguments; bare Application.Args returns an independent one-dimensional snapshot. The property is read-only; indexes outside the process arguments raise error 9. Use Application.NewLine for platform line endings. Application.State and Process/Session/Request.State preserve their separate scopes. With Application and With Application.State are supported. Debug is activated by --appdebug/--debug; Log/Audit require the web host and Secrets requires Application.Id plus the OS credential store. Linux Registry.User respects an absolute XDG_CONFIG_HOME, otherwise ~/.config. Literal Application.Executable metadata goes through the existing build/packaging backend. See docs/application-reference.md.
+
 Web hosts always emit protected JSONL access, security and error logs. Use `Application.Log.Trace/Debug/Info/Warning/Error/Critical(eventName, message [, attributes])` for application events and `Application.Audit.Write(eventName, message [, attributes])` for security/audit events. The optional attributes value must be an `XPJsonObject`. Never place credentials, tokens, cookies, session identifiers, personal data or request bodies in log messages or attributes. The runtime rejects sensitive attribute names and reserves protocol fields. Log directories must remain outside the web root. See `docs/web-logging.md` and `samples/application-web-logging.xps`.
 
 For targeted web troubleshooting, set `Application.Log.CaptureExchange = True` only in the affected request. It writes a redacted, 256 KiB-per-body exchange record. Use the automatic hashed `session.id` to group requests from one browser or client and `request.id` for one request. Never log the raw `XPSLOGID` cookie.
 
 
+## Native CSV in AST
+
+AST user properties can declare XPCsvDocument, CSV header/row/column collection/item types, XPSpreadsheet, XPWorksheet, XPCell and XPRange as Get results and Set values. Use `Set store.Csv = csv` or `Set store.Book(index) = book`; native member chains stay typed and share mutations. Scalar Optional/ByRef indexes retain aliases and incoming setter references are snapshots, even on error. Unassigned results are Nothing. FromBytes still requires a document variable, not `store.Csv.FromBytes(...)`: read the property into a local, call FromBytes, then Set the property to that replacement. Prior aliases keep the old document. XPImage uses snapshot-owned field storage instead of shared-reference storage. See `tabular-reference-properties.xps`, `tabular-reference-signatures.xps` and `docs/ast-csharp-emitter.md`.
+
+`XPCsvDocument` and its header/row/column types use the shared native CSV engine in AST. ByVal shares the document; ByRef and `FromBytes` can replace the reference. `FromBytes` leaves existing aliases pointing to the previous document. Use `Load`, `Save` or `SaveFile` for encoded files, and `Get`/`Set` or row indexes for cells. CSV implementation code is selected only on use; `CsvEscape` alone does not include document/file runtime. CSV-to-spreadsheet interop compiles directly through AST using the shared helpers. See `docs/native-csv.md` and `tests/ast-compile-probe/csv-*.xps`.
+
+`XPSpreadsheet`, `XPWorksheet`, `XPCell` and `XPRange` compile directly through AST without external packages. Construct the workbook only; obtain worksheets/cells/ranges from its methods. ByVal shares references and ByRef can replace them; worksheet Name/Index are read-only (use RenameWorksheet). XLSX relative paths are script-relative. External/unmarked workbooks cannot be overwritten; SaveAsSimple explicitly converts them. Formulas are stored, not evaluated. Range.Values currently returns a rank-one LSArray; use LBound/UBound and ForAll. Use csv.ToSpreadsheet, sheet.ToCsv or XPCsvDocument.FromWorksheet for native conversion. Only actual use includes the relevant engines. See `docs/xpspreadsheet.md`.
+
+For XPSpreadsheet in `browser-wasm`, work with workbook bytes through `ToBytes()` and `FromBytes(data)`. File-path operations raise a runtime error.
+
 ## XPImage
 
+In current compiler, `Delete owner` releases typed XPImage fields, including private and inherited fields, through the existing Delete chain. It clears the named caller variable; other aliases still see the object but its image fields are Nothing. Source images copied into fields and borrowed Variant fields remain untouched. Repeated Delete is safe. Use `Set backing = Nothing` for early field release or Delete the owner when finished. Merely leaving scope or assigning owner Nothing does not invoke cleanup; GC finalizers are not enabled. See `image-field-delete.xps`.
+
+AST Property Set supports XPImage with snapshot-owned typed fields. A setter can use `Set backing = incoming` where backing is declared As XPImage: storage receives an independent clone. ByVal incoming values clone at entry; ByRef incoming values borrow a reference snapshot. Replacing or clearing the ByRef parameter cannot replace/recycle the caller's variable, but explicit mutation or Recycle still affects the shared source. Replacing a field recycles the old field image; Nothing clears it and failed cloning preserves its old value. Clear fields with `Set backing = Nothing` for early release, or Delete their owner when finished; GC/scope-exit cleanup is not implemented. Variant fields are not owned image storage. Getters exposing retained backing images must return `backing.Clone()` (guard Nothing); capture returned getters in typed locals. See `image-property-set.xps` and the XPImage documentation. Do not apply the ordinary shared-reference native property contract to images.
+
+AST supports XPImage Property Get factories with scalar Optional/ByRef indexes. Capture the owning result in a typed local, for example `Dim picture As XPImage = factory.Fresh`; do not discard it in a member chain. Returned images survive accessor exit; unused locals, replaced results and failed results are recycled by the existing image scope. An unassigned getter returns Nothing. There is no automatic getter clone: Clone explicitly before returning a borrowed field/static image when the original owner must keep it. XPImage Property Set uses snapshot-owned typed fields; GC/scope-exit cleanup is not added; do not treat image getters as shared-reference Get/Set. See `image-property-get.xps`, `image-property-signature-only.xps` and `docs/xpimage/index.md`.
+
+XPImage also compiles directly through AST, without legacy fallback. `Dim image As New XPImage(...)` retains its constructor arguments; member names are case-insensitive and information properties are read-only. ByVal parameters clone the image; ByRef can replace it. AST recycles local images on normal, early and exceptional exits, while preserving returned images, including Variant returns. Static images survive across calls. Use `Recycle()` for explicit disposal; do not keep a borrowed alias to a procedure-local image after that procedure exits. Image dependencies/native assets and notices are included only when image support is used.
+
 Use `XPImage` for cross-platform raster creation and processing. Construct images with `New XPImage(width, height [, background])`, or use the documented file/byte/base64 loaders. Editing methods mutate the current image unless documented otherwise; `Clone()` creates independent mutable state and `Difference(other)` returns a new image. Use `ChangeGamma(value)` to modify gamma and the read-only `Gamma` property to inspect it. `Compare(other)` returns normalized RMS difference from 0 through 100 and is not a literal percentage of changed pixels. `Statistics()` and `Histogram([maxColors])` return XPJson values and describe pixel/channel data, not semantic objects. Keep Magick.NET types out of XPscript code. See `docs/xpimage/index.md` and `docs/api-reference.md`; the executable regression is `samples/xpimage-runtime.xps`.
+
+Initialized `XPImage` and native JSON module variables are typed ByRef storage in the current compiler. Other initialized compatibility-module forms remain deferred.
+
+Derived public methods and properties dispatch virtually through base-typed references in the current compiler, including scalar and indexed getter/setter accessors. Keep base and derived accessor signatures compatible.
+
+Class methods may call a sibling or inherited Function returning a declared user class and access the returned object's members directly, for example `MakeValue().Value` or `Me.MakeValue().Value`. The declared return type is preserved. See `class-method-typed-sibling-return-next.xps`.
+
+For REST error responses, use `Response.Problem(status, title, detail)` or `Response.problem(status, title, detail)`. The status can be a literal, Integer or Long variable and must be 400–599. Invalid or overflowing status values are rejected before the response is changed. Response helpers write to the active response and are called as statements. See `docs/rest-api.md` and `samples/web-rest-api.xps`.
+
+In an AST web route, store `Request.FileFirst(name)` in a `Variant` and check `Is Nothing` before calling `Bytes()` or `Text()` on the upload. Use `ForAll` with `Request.Files()` for all uploads or `Request.Files(name)` for one form field. See `docs/web.md`.
+UIForm controls also share a component model on every platform: set a unique `Id`, read `Type`, and traverse `Parent`. Use `form.Components`, `form.GetComponentById(id)`, and `form.GetComponentsByType(type)` to inspect the control tree. A field placed in a named grid has that grid as `Parent`, and the grid's parent is the form.

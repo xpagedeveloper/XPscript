@@ -1,0 +1,4 @@
+Sub Main()
+    Dim f As Long
+    Print #f, MissingValue
+End Sub

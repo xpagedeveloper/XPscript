@@ -1,0 +1,8 @@
+Class Root
+    Public Sub New(ByVal value As Long)
+    End Sub
+End Class
+Class Child Extend Root
+End Class
+Sub Main()
+End Sub

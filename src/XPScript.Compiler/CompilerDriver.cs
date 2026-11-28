@@ -6,8 +6,10 @@ namespace XPScript.Compiler;
 
 public sealed class CompilerDriver
 {
-    private const string MimeKitVersion = "4.17.0";
-    private const long MaximumSourceBytes = 1024L * 1024L;
+    private const string MimeKitVersion = ApplicationDependencyCatalog.MimeKitVersion;
+    // Large generated API clients are still bounded, while allowing a complete
+    // OpenAPI definition to remain one compilable source unit.
+    private const long MaximumSourceBytes = 16L * 1024L * 1024L;
     private static readonly TimeSpan ValidationBuildTimeout = TimeSpan.FromMinutes(2);
     private const int MaximumBuildDiagnosticChars = 256 * 1024;
     private sealed record StagedManagedReference(string Name, string Path);
@@ -17,7 +19,8 @@ public sealed class CompilerDriver
         "win-x64", "win-arm64",
         "linux-x64", "linux-arm64",
         "osx-x64", "osx-arm64",
-        "browser-wasm"
+        "browser-wasm",
+        "android-arm64", "android-x64"
     };
 
     public static IReadOnlyCollection<string> SupportedRuntimes => SupportedRuntimeIdentifiers;
@@ -40,7 +43,10 @@ public sealed class CompilerDriver
     public async Task<CompileResult> CompileWithResultAsync(string sourcePath, string outputPath, bool selfContained) =>
         await CompileWithResultAsync(sourcePath, outputPath, selfContained, CurrentRuntimeIdentifier());
 
-    public async Task<CompileResult> CompileWithResultAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
+    public async Task<CompileResult> CompileWithResultAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier) =>
+        await CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier, embedAssets: false);
+
+    public async Task<CompileResult> CompileWithResultAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier, bool embedAssets)
     {
         string source = "";
         try
@@ -53,7 +59,7 @@ public sealed class CompilerDriver
 
             EnsureSourceSize(sourcePath);
             source = await File.ReadAllTextAsync(sourcePath);
-            await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier);
+            await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier, embedAssets);
             return CompileResult.Ok(outputPath).WithContext(sourcePath, runtimeIdentifier);
         }
         catch (CompilerException ex)
@@ -67,9 +73,10 @@ public sealed class CompilerDriver
                 diagnostics.AddRange(ex.GeneratedDiagnostics);
             return CompileResult.Error(diagnostics).WithContext(sourcePath, runtimeIdentifier);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return CompileResult.Error([CreateDiagnostic(0, 0, "Compilation failed.", "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithContext(sourcePath, runtimeIdentifier);
+            var description = CompilerDiagnosticMode.Debug ? ex.ToString() : "Compilation failed.";
+            return CompileResult.Error([CreateDiagnostic(0, 0, description, "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithContext(sourcePath, runtimeIdentifier);
         }
     }
 
@@ -144,11 +151,18 @@ public sealed class CompilerDriver
             ValidateNativeDependencies(sourcePath, nativeDependencies);
             ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
-            var transpiler = new XPScriptTranspiler();
-            sourceContext = ExpandedSourceContext.Begin(expandedSource, sourcePath, includeResult.Map);
-            var generatedSource = transpiler.Transpile(expandedSource, sourcePath, rid);
+            var astWorkspace = CreateCompilerTempRoot();
+            string generatedSource;
+            try
+            {
+                generatedSource = await AstCompiler.GenerateSourceAsync(sourcePath, astWorkspace, rid, allowDynamicMembers: false);
+            }
+            finally
+            {
+                if (Directory.Exists(astWorkspace)) Directory.Delete(astWorkspace, recursive: true);
+            }
             await ValidateGeneratedCodeAsync(sourcePath, rid, generatedSource, managedReferences);
-            sourceContext.Dispose();
+            sourceContext?.Dispose();
             sourceContext = null;
             return CompileResult.Valid().WithContext(sourcePath, rid);
         }
@@ -163,9 +177,9 @@ public sealed class CompilerDriver
                 diagnostics.AddRange(ex.GeneratedDiagnostics);
             return CompileResult.Error(diagnostics).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            const string description = "Validation failed.";
+            var description = CompilerDiagnosticMode.Debug ? exception.ToString() : "Validation failed.";
             return CompileResult.Error([CreateDiagnostic(0, 0, description, "", "", DiagnosticFileName(sourcePath), CompilerDiagnosticCodes.InternalCompilationFailed, "compiler")]).WithOperation("validate").WithContext(sourcePath, runtimeIdentifier);
         }
         finally
@@ -177,9 +191,17 @@ public sealed class CompilerDriver
     public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained) =>
         await CompileAsync(sourcePath, outputPath, selfContained, CurrentRuntimeIdentifier());
 
-    public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier)
+    public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier) =>
+        await CompileAsync(sourcePath, outputPath, selfContained, runtimeIdentifier, embedAssets: false);
+
+    public async Task CompileAsync(string sourcePath, string outputPath, bool selfContained, string runtimeIdentifier, bool embedAssets)
     {
+        var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? Environment.CurrentDirectory;
+        using var outputLock = CompilerDirectoryLock.Acquire(outputDirectory);
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
+        if (IsAndroidRuntime(rid) && !outputPath.EndsWith(".apk", StringComparison.OrdinalIgnoreCase))
+            outputPath += ".apk";
+        TargetPrerequisiteValidator.Validate(rid);
         var originalSource = await File.ReadAllTextAsync(sourcePath);
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
         var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
@@ -189,12 +211,29 @@ public sealed class CompilerDriver
         ValidateNativeDependencies(sourcePath, nativeDependencies);
         ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
-        var transpiler = new XPScriptTranspiler();
         string generatedSource;
-        using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
-            generatedSource = transpiler.Transpile(source, sourcePath, rid);
+        var astWorkspace = CreateCompilerTempRoot();
+        try
+        {
+            generatedSource = await AstCompiler.GenerateSourceAsync(sourcePath, astWorkspace, rid);
+        }
+        finally
+        {
+            if (Directory.Exists(astWorkspace)) Directory.Delete(astWorkspace, recursive: true);
+        }
+        using (UIFormAssetCompileContext.Push(embedAssets))
+            generatedSource = UIFormAppAssets.InstallEmbeddedAssets(generatedSource, sourcePath);
+        // Native database providers expose the shared attachment collection
+        // surface even when the source does not call Attachments directly.
+        // Keep generated database-only applications self-contained or they
+        // reference XPScriptAttachmentCollectionV3 without emitting its runtime.
+        generatedSource = AstCompiler.EnsureAttachmentRuntime(generatedSource);
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
+        var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var tempBase = string.IsNullOrWhiteSpace(configuredTempRoot)
+            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            : Path.Combine(Path.GetFullPath(configuredTempRoot), "XPScript");
+        var tempRoot = Path.Combine(tempBase, Guid.NewGuid().ToString("N")[..12]);
         Directory.CreateDirectory(tempRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
 
@@ -214,8 +253,16 @@ public sealed class CompilerDriver
                 assemblyName: OutputAssemblyName(outputPath));
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
+            await WriteSelectedSdkGlobalJsonAsync(tempRoot);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
+            CompilerSourceDocuments.Stage(sourcePath, includeResult.Map, tempRoot);
+            if (IsAndroidRuntime(rid))
+            {
+                var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
+                await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
+                CompilerPathSecurity.HardenTemporaryFile(androidHostPath);
+            }
 
             var psi = new ProcessStartInfo
             {
@@ -227,7 +274,9 @@ public sealed class CompilerDriver
             psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(publishDir); psi.ArgumentList.Add("--nologo");
             psi.ArgumentList.Add("-r"); psi.ArgumentList.Add(rid);
             psi.ArgumentList.Add("--self-contained"); psi.ArgumentList.Add(selfContained ? "true" : "false");
+            psi.ArgumentList.Add("-p:BuildInParallel=false");
             CompilerBuildEnvironment.Configure(psi, tempRoot);
+            using var publishGate = CompilerBuildEnvironment.EnterDesktopPublishGate(psi);
 
             using var process = Process.Start(psi) ?? throw new InvalidOperationException("Unable to start dotnet publish.");
             var stdoutTask = process.StandardOutput.ReadToEndAsync();
@@ -239,6 +288,7 @@ public sealed class CompilerDriver
             if (process.ExitCode != 0)
             {
                 var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
+                var generatedDiagnostics = ParseGeneratedCompilerDiagnostics(stdout + Environment.NewLine + stderr, sourcePath, tempRoot);
                 if (CompilerDiagnosticMode.Debug)
                 {
                     var numberedSource = string.Join(Environment.NewLine,
@@ -248,10 +298,10 @@ public sealed class CompilerDriver
                     Console.Error.WriteLine(numberedSource);
                     Console.Error.WriteLine("--- end generated C# ---");
                 }
-                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
+                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText, generatedDiagnostics);
             }
 
-            var generatedExecutable = FindPublishedExecutable(publishDir, rid, OutputAssemblyName(outputPath));
+            var generatedExecutable = FindPublishedExecutable(tempRoot, publishDir, rid, OutputAssemblyName(outputPath));
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no executable was produced for runtime " + rid + ".");
 
@@ -290,7 +340,9 @@ public sealed class CompilerDriver
 
     private async Task<string> CompileForRunAsync(string sourcePath, string outputDirectory, string runtimeIdentifier)
     {
+        using var outputLock = CompilerDirectoryLock.Acquire(outputDirectory);
         var rid = NormalizeRuntimeIdentifier(runtimeIdentifier);
+        TargetPrerequisiteValidator.Validate(rid);
         var originalSource = await File.ReadAllTextAsync(sourcePath);
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
         var managedReferences = new ManagedAssemblyReferencePreprocessor(rid).Transform(includeResult.Source, includeResult.Map, sourcePath);
@@ -300,17 +352,24 @@ public sealed class CompilerDriver
         ValidateNativeDependencies(sourcePath, nativeDependencies);
         ValidateManagedReferences(sourcePath, managedReferences, nativeDependencies);
 
-        var transpiler = new XPScriptTranspiler();
         string generatedSource;
-        using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
-            generatedSource = transpiler.Transpile(source, sourcePath, rid);
+        var astWorkspace = CreateCompilerTempRoot();
+        try
+        {
+            generatedSource = await AstCompiler.GenerateSourceAsync(sourcePath, astWorkspace, rid);
+        }
+        finally
+        {
+            if (Directory.Exists(astWorkspace)) Directory.Delete(astWorkspace, recursive: true);
+        }
+        generatedSource = AstCompiler.EnsureAttachmentRuntime(generatedSource);
 
         var runOutputDirectory = Path.GetFullPath(outputDirectory);
         if (!Directory.Exists(runOutputDirectory))
             throw new CompilerException("Run output directory does not exist.");
         CompilerPathSecurity.HardenTemporaryDirectory(runOutputDirectory);
 
-        var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
+        var tempRoot = CreateCompilerTempRoot();
         Directory.CreateDirectory(tempRoot);
         CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
 
@@ -329,8 +388,15 @@ public sealed class CompilerDriver
                 assemblyName: "Generated");
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
+            await WriteSelectedSdkGlobalJsonAsync(tempRoot);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
+            if (IsAndroidRuntime(rid))
+            {
+                var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
+                await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
+                CompilerPathSecurity.HardenTemporaryFile(androidHostPath);
+            }
 
             var psi = new ProcessStartInfo
             {
@@ -354,7 +420,8 @@ public sealed class CompilerDriver
             if (process.ExitCode != 0)
             {
                 var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
-                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
+                var generatedDiagnostics = ParseGeneratedCompilerDiagnostics(stdout + Environment.NewLine + stderr, sourcePath, tempRoot);
+                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText, generatedDiagnostics);
             }
 
             StageRunNativeDependencies(sourcePath, runOutputDirectory, nativeDependencies, managedReferences.Native);
@@ -368,7 +435,7 @@ public sealed class CompilerDriver
             if (File.Exists(managedAssembly))
                 return managedAssembly;
 
-            var generatedExecutable = FindPublishedExecutable(runOutputDirectory, rid, "Generated");
+            var generatedExecutable = FindPublishedExecutable(runOutputDirectory, runOutputDirectory, rid, "Generated");
             if (generatedExecutable is null)
                 throw new CompilerException("Compilation succeeded, but no runnable executable was produced for runtime " + rid + ".");
 
@@ -531,14 +598,30 @@ public sealed class CompilerDriver
         return rid;
     }
 
+    private static bool IsAndroidRuntime(string runtimeIdentifier) =>
+        runtimeIdentifier.Equals("android-arm64", StringComparison.OrdinalIgnoreCase) ||
+        runtimeIdentifier.Equals("android-x64", StringComparison.OrdinalIgnoreCase);
+
+    private static string CreateCompilerTempRoot()
+    {
+        var configuredRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var defaultRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        if (string.IsNullOrWhiteSpace(defaultRoot)) defaultRoot = Path.GetTempPath();
+        var baseRoot = string.IsNullOrWhiteSpace(configuredRoot)
+            ? Path.Combine(defaultRoot, "XPScript")
+            : Path.Combine(Path.GetFullPath(configuredRoot), "XPScript");
+        var tempRoot = Path.Combine(baseRoot, Guid.NewGuid().ToString("N")[..12]);
+        Directory.CreateDirectory(tempRoot);
+        return tempRoot;
+    }
+
     private async Task ValidateGeneratedCodeAsync(
         string sourcePath,
         string runtimeIdentifier,
         string generatedSource,
         ManagedAssemblyReferencePreprocessor.Result managedReferences)
     {
-        var tempRoot = Path.Combine(Path.GetTempPath(), "XPScript", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempRoot);
+        var tempRoot = CreateCompilerTempRoot();
         CompilerPathSecurity.HardenTemporaryDirectory(tempRoot);
 
         try
@@ -556,8 +639,21 @@ public sealed class CompilerDriver
 
             await File.WriteAllTextAsync(projectPath, csproj);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
+            await WriteSelectedSdkGlobalJsonAsync(tempRoot);
             await File.WriteAllTextAsync(programPath, generatedSource);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
+            var stagedSourcePath = Path.Combine(tempRoot, Path.GetFileName(sourcePath));
+            if (!Path.GetFullPath(sourcePath).Equals(Path.GetFullPath(stagedSourcePath), StringComparison.OrdinalIgnoreCase))
+            {
+                CompilerSecureFileCopy.CopyValidatedRegularFile(sourcePath, stagedSourcePath, "XPScript source");
+                CompilerPathSecurity.HardenTemporaryFile(stagedSourcePath);
+            }
+            if (IsAndroidRuntime(runtimeIdentifier))
+            {
+                var androidHostPath = Path.Combine(tempRoot, "AndroidHost.cs");
+                await File.WriteAllTextAsync(androidHostPath, AndroidHostSource.Code);
+                CompilerPathSecurity.HardenTemporaryFile(androidHostPath);
+            }
 
             var psi = new ProcessStartInfo
             {
@@ -612,7 +708,8 @@ public sealed class CompilerDriver
             if (process.ExitCode != 0)
             {
                 var diagnosticText = SanitizeBuildDiagnostics(stdout + Environment.NewLine + stderr, tempRoot, sourcePath);
-                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText);
+                var generatedDiagnostics = ParseGeneratedCompilerDiagnostics(stdout + Environment.NewLine + stderr, sourcePath, tempRoot);
+                throw new CompilerException("Generated code failed to compile." + Environment.NewLine + diagnosticText, generatedDiagnostics);
             }
         }
         finally
@@ -629,7 +726,7 @@ public sealed class CompilerDriver
         var diagnostic = new CompileDiagnostic
         {
             File = DiagnosticFileName(sourcePath),
-            Description = "XPScript source exceeds the 1 MiB compiler source-size limit.",
+            Description = "XPScript source exceeds the 16 MiB compiler source-size limit.",
             DiagnosticCode = CompilerDiagnosticCodes.SourceTooLarge,
             Severity = "error",
             Category = "input",
@@ -640,6 +737,15 @@ public sealed class CompilerDriver
             ]
         };
         throw new CompilerException(diagnostic.Description, [diagnostic]);
+    }
+
+    private static async Task WriteSelectedSdkGlobalJsonAsync(string tempRoot)
+    {
+        var targetFramework = Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK");
+        if (string.IsNullOrWhiteSpace(targetFramework)) return;
+        var path = Path.Combine(tempRoot, "global.json");
+        await File.WriteAllTextAsync(path, DotNetVersionSelection.CreateGlobalJson(targetFramework));
+        CompilerPathSecurity.HardenTemporaryFile(path);
     }
 
     private static string BuildGeneratedProject(
@@ -670,33 +776,100 @@ public sealed class CompilerDriver
             itemGroup.AppendLine("  </ItemGroup>");
         }
 
-        var publishProperties = publishSingleFile
+        var isAndroid = IsAndroidRuntime(runtimeIdentifier);
+        var publishProperties = publishSingleFile && !isAndroid
             ? $"""
     <PublishSingleFile>true</PublishSingleFile>
     <EnableCompressionInSingleFile>{selfContained.ToString().ToLowerInvariant()}</EnableCompressionInSingleFile>
 """
             : string.Empty;
+        var targetFramework = isAndroid ? "net10.0-android" :
+            (Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selected ? selected : "net10.0");
+        var startupObject = isAndroid ? string.Empty : "    <StartupObject>Program</StartupObject>\n";
+        var androidProperties = isAndroid
+            ? $"""
+    <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>
+    <TargetPlatformVersion>36.1</TargetPlatformVersion>
+    <AndroidApplication>true</AndroidApplication>
+    <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidUseAapt2FromPackage>false</AndroidUseAapt2FromPackage>
+    <PublishTrimmed>false</PublishTrimmed>
+    <AndroidLinkMode>None</AndroidLinkMode>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <ApplicationId>eu.xpscript.app</ApplicationId>
+"""
+            : string.Empty;
+
+        var projectSdk = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase)
+            ? "Microsoft.NET.Sdk.WebAssembly"
+            : "Microsoft.NET.Sdk";
+        var wasmProperties = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase)
+            ? "    <UseMonoRuntime>true</UseMonoRuntime>\n"
+            : string.Empty;
 
         return $"""
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="{projectSdk}">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <StartupObject>Program</StartupObject>
-    <TargetFramework>net10.0</TargetFramework>
+{startupObject}
+    <TargetFramework>{targetFramework}</TargetFramework>
     <AssemblyName>{EscapeXml(assemblyName)}</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <Features>$(Features);experimental-data-section-string-literals=100</Features>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Features>$(Features);experimental-data-section-string-literals=100</Features>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
     <NuGetAudit>{(ApplicationSecurityModeContext.Current != ApplicationSecurityMode.Off).ToString().ToLowerInvariant()}</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;$(WarningsNotAsErrors)</WarningsNotAsErrors>
+    <NoWarn>CA1416;NU1608;CS8618;CS8601;CA2255;$(NoWarn)</NoWarn>
     <RuntimeIdentifier>{runtimeIdentifier}</RuntimeIdentifier>
     <SelfContained>{selfContained.ToString().ToLowerInvariant()}</SelfContained>
     <UseAppHost>true</UseAppHost>
-{publishProperties}  </PropertyGroup>
+{wasmProperties}
+{androidProperties}{publishProperties}  </PropertyGroup>
 {itemGroup}</Project>
 """;
+    }
+
+    private static string AddAndroidUIFormDependencies(string project)
+    {
+        project = project.Replace("<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>",
+            "<CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>", StringComparison.Ordinal);
+        project = project.Replace("    <SelfContained>false</SelfContained>\r\n", string.Empty, StringComparison.Ordinal)
+            .Replace("    <SelfContained>false</SelfContained>\n", string.Empty, StringComparison.Ordinal);
+        project = project.Replace("    <NoWarn>CA1416;NU1608;CS8618;CS8601;CA2255;$(NoWarn)</NoWarn>",
+            "    <NoWarn>CA1416;NU1605;NU1608;CS8618;CS8601;CA2255;$(NoWarn)</NoWarn>", StringComparison.Ordinal);
+        project = project.Replace("    <UseAppHost>true</UseAppHost>\r\n",
+            "    <AndroidLinkMode>None</AndroidLinkMode>\r\n", StringComparison.Ordinal)
+            .Replace("    <UseAppHost>true</UseAppHost>\n",
+                "    <AndroidLinkMode>None</AndroidLinkMode>\n", StringComparison.Ordinal)
+            .Replace("    <UseAppHost>true</UseAppHost>\r\n", string.Empty, StringComparison.Ordinal)
+            .Replace("    <UseAppHost>true</UseAppHost>\n", string.Empty, StringComparison.Ordinal);
+
+        var packages = $"""
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="{ApplicationDependencyCatalog.AvaloniaVersion}" />
+    <PackageReference Include="Avalonia.Android" Version="{ApplicationDependencyCatalog.AvaloniaVersion}" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="{ApplicationDependencyCatalog.AvaloniaVersion}" />
+    <PackageReference Include="Avalonia.Controls.WebView" Version="{ApplicationDependencyCatalog.AvaloniaWebViewVersion}" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.ExoPlayer" Version="1.11.1" />
+    <PackageReference Include="Xamarin.AndroidX.Media3.Ui" Version="1.11.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.Core" Version="1.4.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.Camera2" Version="1.4.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Camera.View" Version="1.4.2.1" />
+    <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core" Version="2.10.0.2" />
+    <PackageReference Include="Xamarin.AndroidX.Tracing.Tracing" Version="1.3.0.4" />
+    <PackageReference Include="Xamarin.AndroidX.Tracing.Tracing.Ktx" Version="1.2.0.10" ExcludeAssets="all" />
+    <PackageReference Include="Xamarin.Kotlin.StdLib" Version="2.0.21.3" />
+  </ItemGroup>
+""";
+        return project.Replace("</Project>", packages + "</Project>", StringComparison.Ordinal);
     }
 
     private static string OutputAssemblyName(string outputPath)
@@ -712,8 +885,24 @@ public sealed class CompilerDriver
         .Replace("\"", "&quot;", StringComparison.Ordinal)
         .Replace("'", "&apos;", StringComparison.Ordinal);
 
-    private static string? FindPublishedExecutable(string publishDirectory, string rid, string assemblyName)
+    private static string? FindPublishedExecutable(string buildDirectory, string publishDirectory, string rid, string assemblyName)
     {
+        if (IsAndroidRuntime(rid))
+        {
+            var apkCandidates = Directory.EnumerateFiles(buildDirectory, "*.apk", SearchOption.AllDirectories).ToArray();
+            var publishApks = Directory.Exists(publishDirectory)
+                ? Directory.EnumerateFiles(publishDirectory, "*.apk", SearchOption.TopDirectoryOnly).ToArray()
+                : Array.Empty<string>();
+            var publishSignedApks = publishApks.Where(path => Path.GetFileName(path).EndsWith("-Signed.apk", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (publishSignedApks.Length == 1) return publishSignedApks[0];
+            var signedApks = apkCandidates.Where(path => Path.GetFileName(path).EndsWith("-Signed.apk", StringComparison.OrdinalIgnoreCase)).ToArray();
+            var signedApk = signedApks.SingleOrDefault(path => Path.GetFileName(path).Equals(assemblyName + "-Signed.apk", StringComparison.OrdinalIgnoreCase));
+            if (signedApk is not null) return signedApk;
+            if (signedApks.Length == 1) return signedApks[0];
+            var namedApks = apkCandidates.Where(path => Path.GetFileName(path).StartsWith(assemblyName, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (namedApks.Length == 1) return namedApks[0];
+            return apkCandidates.Length == 1 ? apkCandidates[0] : null;
+        }
         var expectedName = rid.StartsWith("win-", StringComparison.OrdinalIgnoreCase)
             ? assemblyName + ".exe"
             : assemblyName;
@@ -751,6 +940,132 @@ public sealed class CompilerDriver
         if (value.Length <= MaximumBuildDiagnosticChars) return value;
         return value[..MaximumBuildDiagnosticChars] + Environment.NewLine +
                "[compiler output truncated after " + MaximumBuildDiagnosticChars + " characters]";
+    }
+
+    private sealed class PublishProgressState
+    {
+        private int _percent = 40;
+        private string _lastPhase = string.Empty;
+        private int _phaseActivity;
+
+        public void Report(string phase)
+        {
+            lock (this)
+            {
+                var mapped = phase switch
+                {
+                    "Restoring dependencies" => 42,
+                    "Dependencies restored" => 45,
+                    "Resolving Android libraries" => 48,
+                    "Resolving Android assemblies" => 51,
+                    "Generating Android Java stubs" => 54,
+                    "Generating Android package metadata" => 56,
+                    "Compiling generated project" => 61,
+                    "Linking application" => 68,
+                    "Compiling native code" => 72,
+                    "Compiling Android native assemblies" => 75,
+                    "Compiling Android bytecode" => 79,
+                    "Packaging Android APK" => 82,
+                    "Signing Android APK" => 84,
+                    _ => -1
+                };
+                if (mapped < 0) return;
+                if (phase.Equals(_lastPhase, StringComparison.Ordinal))
+                {
+                    _phaseActivity++;
+                    var nextMilestone = new[] { 42, 45, 48, 51, 54, 56, 61, 68, 72, 75, 79, 82, 84, 85 }.Where(value => value > mapped).DefaultIfEmpty(85).Min();
+                    _percent = Math.Min(nextMilestone - 1, Math.Max(_percent, mapped) + 1);
+                }
+                else
+                {
+                    _percent = Math.Max(_percent, mapped);
+                    _lastPhase = phase;
+                    _phaseActivity = 1;
+                }
+                var visiblePhase = _phaseActivity > 1 ? phase + " (step " + _phaseActivity + ")" : phase;
+                CompilerProgressContext.Report(_percent, visiblePhase);
+            }
+        }
+    }
+
+    private static IReadOnlyList<CompileDiagnostic> ParseGeneratedCompilerDiagnostics(string text, string sourcePath, string tempRoot)
+    {
+        var diagnostics = new List<CompileDiagnostic>();
+        var pattern = new System.Text.RegularExpressions.Regex(
+            @"^(?<file>.*)\((?<line>\d+),(?<column>\d+)\):\s*(?<severity>error|warning)\s+(?<code>[A-Z]+\d+)\s*:\s*(?<message>.*)$",
+            System.Text.RegularExpressions.RegexOptions.Multiline | System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        foreach (System.Text.RegularExpressions.Match match in pattern.Matches(text))
+        {
+            var file = match.Groups["file"].Value.Trim();
+            var line = int.TryParse(match.Groups["line"].Value, out var parsedLine) ? parsedLine : 0;
+            var column = int.TryParse(match.Groups["column"].Value, out var parsedColumn) ? parsedColumn : 0;
+            var severity = match.Groups["severity"].Value.Equals("error", StringComparison.OrdinalIgnoreCase) ? "error" : "warning";
+            var code = match.Groups["code"].Value;
+            var message = match.Groups["message"].Value.Trim();
+            if (!string.IsNullOrWhiteSpace(tempRoot) && file.StartsWith(tempRoot, StringComparison.OrdinalIgnoreCase))
+                file = Path.GetRelativePath(tempRoot, file);
+
+            var classification = CompilerDiagnosticClassifier.ClassifyUpstream(code, sourceMapped: true);
+            var properties = new List<CompileDiagnosticProperty>();
+            var symbolMatch = code.Equals("CS0103", StringComparison.OrdinalIgnoreCase)
+                ? System.Text.RegularExpressions.Regex.Match(message, @"name '(?<symbol>[^']+)' does not exist", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+                : System.Text.RegularExpressions.Regex.Match(message, @"definition for '(?<symbol>[^']+)'", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if ((code.Equals("CS0103", StringComparison.OrdinalIgnoreCase) || code.Equals("CS1061", StringComparison.OrdinalIgnoreCase) || code.Equals("CS0117", StringComparison.OrdinalIgnoreCase)) && symbolMatch.Success)
+            {
+                var symbol = symbolMatch.Groups["symbol"].Value;
+                properties.Add(new CompileDiagnosticProperty
+                {
+                    Name = code.Equals("CS0103", StringComparison.OrdinalIgnoreCase) ? "symbol" : "member",
+                    Value = symbol
+                });
+                foreach (var candidate in CompilerSymbolCatalog.Candidates(symbol))
+                {
+                    properties.Add(new CompileDiagnosticProperty { Name = "candidate", Value = candidate.Name });
+                    properties.Add(new CompileDiagnosticProperty { Name = "candidateKind", Value = candidate.Kind });
+                    properties.Add(new CompileDiagnosticProperty { Name = "candidateSignature", Value = candidate.Signature });
+                }
+            }
+
+            var sourceCode = CompilerDiagnosticMode.Debug ? "Generated C#" : "";
+            if (Path.GetExtension(file).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var diagnosticPath = Path.IsPathRooted(file)
+                        ? file
+                        : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory, file);
+                    if (!File.Exists(diagnosticPath) && Path.GetFileName(diagnosticPath).Equals(Path.GetFileName(sourcePath), StringComparison.OrdinalIgnoreCase))
+                        diagnosticPath = sourcePath;
+                    var lines = File.Exists(diagnosticPath) ? File.ReadAllLines(diagnosticPath) : [];
+                    if (line > 0 && line <= lines.Length)
+                        sourceCode = lines[line - 1];
+                    if (properties.FirstOrDefault(p => p.Name is "symbol" or "member")?.Value is { Length: > 0 } unresolvedSymbol)
+                    {
+                        var matchingLine = lines.FirstOrDefault(value => value.Contains(unresolvedSymbol, StringComparison.Ordinal));
+                        if (!string.IsNullOrWhiteSpace(matchingLine))
+                            sourceCode = matchingLine;
+                    }
+                }
+                catch { }
+            }
+
+            diagnostics.Add(new CompileDiagnostic
+            {
+                File = Path.GetFileName(file),
+                Line = line,
+                Position = column,
+                Description = message,
+                DiagnosticCode = classification.DiagnosticCode ?? code,
+                UpstreamCode = code,
+                Severity = severity,
+                Category = classification.Category ?? "compiler",
+                Properties = properties,
+                SourceCode = sourceCode
+            });
+        }
+
+        return diagnostics;
     }
 
     private static string SanitizeBuildDiagnostics(string text, string tempRoot, string sourcePath)

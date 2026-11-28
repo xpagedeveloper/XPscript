@@ -1,0 +1,6 @@
+Option Explicit
+
+Sub Main()
+    If GetFileAttr("tests/ast-compile-probe/file-attributes-next.xps") < 0 Then Error 9856, "GetFileAttr returned an invalid value"
+    Print "FILE_ATTRIBUTES_AST_OK"
+End Sub

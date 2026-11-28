@@ -1,0 +1,11 @@
+Static Function ProcedureCounter() As Long
+    Static calls As Long
+    calls = calls + 1
+    ProcedureCounter = calls
+End Function
+
+Sub Main()
+    If ProcedureCounter() <> 1 Then Error 5, "Static function first call"
+    If ProcedureCounter() <> 2 Then Error 5, "Static function second call"
+    Print "STATIC_MODULE_FUNCTION_OK"
+End Sub

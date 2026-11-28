@@ -9,7 +9,7 @@ internal sealed class NotesRuntimePreprocessor
     private static readonly Dictionary<string, string[]> NothingReturningMethods = new(StringComparer.OrdinalIgnoreCase)
     {
         ["NotesDatabase"] = ["OpenView", "GetDocumentByNoteId", "OpenDocumentByNoteId", "GetDocumentByUNID", "OpenDocumentByUNID", "Search", "FTSearch", "RunAgent", "GetAgent"],
-        ["NotesView"] = ["GetFirstDocumentByKey", "GetFirstDocument", "GetNextDocument"],
+        ["NotesView"] = ["GetDocumentByKey", "GetFirstDocument", "GetNextDocument"],
         ["NotesDocumentCollection"] = ["GetFirstDocument", "GetNextDocument", "GetDocument"],
         ["NotesDocument"] = ["GetFirstItem"]
     };
@@ -20,7 +20,15 @@ internal sealed class NotesRuntimePreprocessor
         ["NotesRichTextItem"] = ["DateTimeValue"]
     };
 
-    public string Transform(string source)
+    private static readonly IReadOnlyDictionary<string, int> AstConstants = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["REPLICA_CANDIDATE"] = 1245, ["TEMPLATE_CANDIDATE"] = 1246, ["DATABASE"] = 1247, ["TEMPLATE"] = 1248,
+        ["DBMOD_DOC_DATA"] = 1, ["FORM"] = 4, ["VIEW"] = 8, ["ICON"] = 16, ["ACL"] = 64,
+        ["HELP"] = 256, ["AGENT"] = 512, ["SHAREDFIELD"] = 1024, ["REPLFORMULA"] = 2048, ["DBMOD_DOC_ALL"] = 32767,
+        ["DATA"] = 1, ["ALL"] = 32767, ["SEARCH_BREADTH"] = 1723, ["SEARCH_DEPTH"] = 1724
+    };
+
+    public string Transform(string source, bool preserveAstConstants = false)
     {
         ArgumentNullException.ThrowIfNull(source);
         if (!source.Contains("Notes", StringComparison.OrdinalIgnoreCase)) return source;
@@ -61,22 +69,40 @@ internal sealed class NotesRuntimePreprocessor
                 continue;
             }
 
-            var rewritten = Regex.Replace(line, @"\bNotesConst\s*\.", "XPScriptNotesConst.", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_DEPTH\b", "XPScriptNotesConst.SEARCH_DEPTH", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_BREADTH\b", "XPScriptNotesConst.SEARCH_BREADTH", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+NotesSession\s*\((.*)\)", "XPScriptNotes.CreateSession($1)", RegexOptions.IgnoreCase);
+            var rewritten = preserveAstConstants
+                ? Regex.Replace(line, @"\bNotesConst\s*\.\s*([A-Za-z_]\w*)", match =>
+                    AstConstants.TryGetValue(match.Groups[1].Value, out var value) ? value.ToString(System.Globalization.CultureInfo.InvariantCulture) : match.Value,
+                    RegexOptions.IgnoreCase)
+                : Regex.Replace(line, @"\bNotesConst\s*\.", "XPScriptNotesConst.", RegexOptions.IgnoreCase);
+            if (!preserveAstConstants)
+            {
+                rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_DEPTH\b", "XPScriptNotesConst.SEARCH_DEPTH", RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(rewritten, @"(?<![\w.])SEARCH_BREADTH\b", "XPScriptNotesConst.SEARCH_BREADTH", RegexOptions.IgnoreCase);
+            }
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+NotesSession\b(?:\s*\(([^()]*)\))?", match =>
+                $"XPScriptNotes.CreateSession({(match.Groups[1].Success ? match.Groups[1].Value : string.Empty)})",
+                RegexOptions.IgnoreCase);
+
+            var convertMimeAssignment = Regex.Match(rewritten, @"^([A-Za-z_]\w*)\.ConvertMIME\s*=\s*(.+)$", RegexOptions.IgnoreCase);
+            if (convertMimeAssignment.Success && notesVariables.Contains(convertMimeAssignment.Groups[1].Value) &&
+                notesVariableTypes.TryGetValue(convertMimeAssignment.Groups[1].Value, out var convertMimeType) &&
+                convertMimeType.Equals("NotesSession", StringComparison.OrdinalIgnoreCase))
+            {
+                output.Add(indent + $"Call XPScriptNotes.SetConvertMIME({convertMimeAssignment.Groups[1].Value}, {convertMimeAssignment.Groups[2].Value})");
+                continue;
+            }
 
             if (Regex.IsMatch(rewritten, @"\.GetFirstDocumentByKey\s*\(", RegexOptions.IgnoreCase))
                 throw new CompilerException("NotesView.GetFirstDocumentByKey has been renamed to NotesView.GetDocumentByKey.");
-
-            rewritten = Regex.Replace(rewritten, @"\.GetDocumentByKey\s*\(", ".GetFirstDocumentByKey(", RegexOptions.IgnoreCase);
 
             var recycle = Regex.Match(rewritten, @"^(?:Call\s+)?([A-Za-z_]\w*)\.Recycle\s*\(\s*\)\s*$", RegexOptions.IgnoreCase);
             if (recycle.Success && notesVariables.Contains(recycle.Groups[1].Value))
             {
                 var name = recycle.Groups[1].Value;
                 output.Add(indent + $"Call XPScriptNotes.RecycleValue({name})");
-                output.Add(indent + $"{name} = XPScriptNotes.NothingValue");
+                if (!notesVariableTypes.TryGetValue(name, out var recycledType) ||
+                    !recycledType.Equals("NotesSession", StringComparison.OrdinalIgnoreCase))
+                    output.Add(indent + $"{name} = XPScriptNotes.NothingValue");
                 continue;
             }
 
@@ -100,6 +126,13 @@ internal sealed class NotesRuntimePreprocessor
             foreach (var documentName in notesDocuments.OrderByDescending(value => value.Length)) rewritten = RewriteDocumentItemValues(rewritten, documentName);
             foreach (var itemName in notesItems.OrderByDescending(value => value.Length)) rewritten = RewriteNotesItemValues(rewritten, itemName);
             rewritten = RewriteNothingReturningMembers(rewritten, notesVariableTypes);
+            foreach (var notesVariable in notesVariables.OrderByDescending(value => value.Length))
+            {
+                var escaped = Regex.Escape(notesVariable);
+                rewritten = Regex.Replace(rewritten, $@"\bNot\s+{escaped}\s+Is\s+Nothing\b", $"XPScriptNotes.IsNotNothing({notesVariable})", RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s+Is\s+Not\s+Nothing\b", $"XPScriptNotes.IsNotNothing({notesVariable})", RegexOptions.IgnoreCase);
+                rewritten = Regex.Replace(rewritten, $@"\b{escaped}\s+Is\s+Nothing\b", $"XPScriptNotes.IsNothing({notesVariable})", RegexOptions.IgnoreCase);
+            }
 
             foreach (var collectionName in notesDocumentCollections)
             {
@@ -199,7 +232,12 @@ internal sealed class NotesRuntimePreprocessor
     {
         var args = rawArguments.Trim();
         if (!type.Equals("NotesSession", StringComparison.OrdinalIgnoreCase)) throw new CompilerException($"{type} objects must be created from NotesSession, NotesDatabase, NotesView, or NotesDocument.");
-        if (string.IsNullOrWhiteSpace(args)) throw new CompilerException("NotesSession requires the Notes/Domino runtime directory argument.");
-        return $"XPScriptNotes.CreateSession({args})";
+        // A parameterless NotesSession follows the legacy runtime contract: the
+        // generated runtime resolves Notes/Domino from the registry and notes.ini.
+        // Keep explicit runtime/ini arguments supported for callers that need to
+        // override autodetection.
+        return string.IsNullOrWhiteSpace(args)
+            ? "XPScriptNotes.CreateSession()"
+            : $"XPScriptNotes.CreateSession({args})";
     }
 }

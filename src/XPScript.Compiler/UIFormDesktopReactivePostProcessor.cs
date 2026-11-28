@@ -6,7 +6,7 @@ internal sealed class UIFormDesktopReactivePostProcessor
     private const string InvokeSentinel = "new Func<string, string, string>(form.DispatchRegisteredEvent)";
     private const string ModernLookupSentinel = "ResolveShowDialog(Type type)";
     private const string ModernDispatchSentinel = "RegisterEventDispatcher(type, form);";
-    private const string ModernCallbackSentinel = "form.DispatchRegisteredEvent(eventToken, submittedValue)";
+    private const string ModernCallbackSentinel = "private static void RegisterEventDispatcher(Type type, XPScriptUIForm form)";
 
     public string Transform(string generated)
     {

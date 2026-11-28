@@ -1,5 +1,11 @@
+using System.Globalization;
 using System.Reflection;
 using XPScript.Compiler;
+
+// Compiler syntax and generated C# must be culture-invariant. Runtime programs
+// execute in their own process and retain the caller's locale semantics.
+CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.CurrentUICulture = CultureInfo.InvariantCulture;
 
 var buildDate = Assembly.GetExecutingAssembly()
     .GetCustomAttributes<AssemblyMetadataAttribute>()
@@ -11,7 +17,15 @@ ConfigureRuntimeDiagnosticEnvironment(args);
 if (ShouldWriteBanner(args))
     Console.WriteLine($"XPScript version 0.9.3 Beta - build {buildDate} - XPageDeveloper.com (c)");
 
-return await XPScriptCompilerCommandLine.RunAsync(NormalizeArguments(args));
+try
+{
+    return await XPScriptCompilerCommandLine.RunAsync(NormalizeArguments(args));
+}
+catch (ArgumentException exception)
+{
+    Console.Error.WriteLine(exception.Message);
+    return 2;
+}
 
 static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
 {

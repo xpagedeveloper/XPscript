@@ -1,0 +1,113 @@
+Function MakeClient() As XPHttpClient
+    Set MakeClient = New XPHttpClient
+End Function
+
+Sub Configure(ByVal client As XPHttpClient)
+    client.AllowPrivateNetwork = True
+End Sub
+
+Sub ReplaceRequest(ByRef request As XPHttpRequest)
+    Set request = New XPHttpRequest
+    request.Method = "POST"
+End Sub
+
+Sub Main()
+    Dim client As XPHttpClient
+    Set client = MakeClient()
+    If client.CertificateValidation <> "Strict" Then Error 9950, "TLS default lost"
+    If client.AllowPrivateNetwork Then Error 9951, "Private network default lost"
+    Dim code As Long
+    Dim response As XPHttpResponse
+    On Error Resume Next
+    client.CertificateValidation = "unsupported"
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9974, "Invalid TLS mode accepted"
+    On Error Resume Next
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/get")
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9952, "Private endpoint was not blocked"
+    Call Configure(client)
+    client.Timeout = 5
+    Call client.SetHeader("X-XPScript-Test", "alpha")
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/get")
+    If response.StatusCode <> 200 Or Not response.IsSuccess Then Error 9953, "GET failed"
+    If response.Body <> "GET|alpha" Then Error 9954, "GET body lost"
+    If response.Headers["X-Regression"] <> "native-http" Then Error 9955, "Header access lost"
+    Set response = client.Send("PATCH", Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/patch", "Åsa")
+    If response.Body <> "PATCH|alpha|Åsa" Then Error 9956, "Generic Send lost body"
+    Dim request As New XPHttpRequest
+    Dim alias As XPHttpRequest
+    Set alias = request
+    Call ReplaceRequest(request)
+    If request Is alias Then Error 9957, "ByRef request replacement lost"
+    request.Url = Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/post"
+    request.Body = "body"
+    Call request.SetHeader("X-XPScript-Test", "request")
+    Set response = client.Send(request)
+    If response.Body <> "POST|request|body" Then Error 9958, "Request override lost"
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/fail")
+    If response.IsSuccess Or response.StatusCode <> 418 Then Error 9959, "HTTP failure status lost"
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/redirect")
+    If response.StatusCode <> 302 Or response.Body <> "redirect-not-followed" Then Error 9960, "Redirect followed"
+    Dim data As New XPJsonObject
+    Call data.Set("name", "Åsa")
+    Set response = client.PostJson(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/json", data)
+    If response.Json().Root.AsObject().Get("name") <> "Åsa" Then Error 9961, "JSON helpers lost"
+    If client.EncodePath("a/b") <> "a%2Fb" Then Error 9962, "Path escaping lost"
+    If client.AddQuery(Environ("XPSCRIPT_HTTP_TEST_HTTP"), "q", "a b") <> Environ("XPSCRIPT_HTTP_TEST_HTTP") & "?q=a%20b" Then Error 9963, "Query escaping lost"
+    On Error Resume Next
+    Call client.SetHeader("Host", "forbidden")
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9964, "Framing header accepted"
+    On Error Resume Next
+    Call request.SetHeader("X-Test", "bad" & Chr(10))
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9965, "Header injection accepted"
+    On Error Resume Next
+    Set response = client.Post(Environ("XPSCRIPT_HTTP_TEST_HTTP"), Space(8388609))
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9966, "Request size limit lost"
+    On Error Resume Next
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/declared-oversized")
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9967, "Response size limit lost"
+    client.Timeout = 0.1
+    If client.Timeout <> 0.1 Then Error 9975, "Fractional timeout was rounded"
+    On Error Resume Next
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_HTTP") & "/slow")
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9968, "Timeout lost"
+    client.Timeout = 5
+    On Error Resume Next
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_TLS"))
+    code = Err
+    On Error GoTo 0
+    If code <> 1201 Then Error 9969, "Strict TLS accepted a self-signed certificate"
+    client.CertificateValidation = "AllowSelfSigned"
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_TLS"))
+    If response.StatusCode <> 200 Then Error 9970, "Explicit self-signed mode failed"
+    On Error Resume Next
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_MISMATCH"))
+    code = Err
+    On Error GoTo 0
+    If code <> 1201 Then Error 9971, "Hostname mismatch accepted"
+    On Error Resume Next
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_EXPIRED"))
+    code = Err
+    On Error GoTo 0
+    If code <> 1201 Then Error 9972, "Expired certificate accepted"
+    Call client.Dispose()
+    On Error Resume Next
+    Set response = client.Get(Environ("XPSCRIPT_HTTP_TEST_HTTP"))
+    code = Err
+    On Error GoTo 0
+    If code <> 5 Then Error 9973, "Disposed client used"
+    Print "HTTP_AST_OK"
+End Sub

@@ -306,4 +306,8 @@ internal static class XPScriptDatabaseAttachmentApi
     }
 }
 """;
+
+    public static string ApiCode => Code[Code.IndexOf(
+        "internal static class XPScriptDatabaseAttachmentApi",
+        StringComparison.Ordinal)..];
 }

@@ -1,0 +1,107 @@
+Class Bump
+    Sub New(ByRef first As Long, ByRef second As Long)
+        first = first + 1
+        second = second + 10
+    End Sub
+End Class
+Function Fresh() As Variant
+    Dim values(-3 To -1) As Long
+    values(-3) = 7
+    Fresh = values
+End Function
+Sub Persistent()
+    Static values(4 To 5) As String
+    If values(4) = "" Then
+        values(4) = "saved"
+    ElseIf values(4) <> "saved" Then
+        Error 5, "Static array storage changed"
+    End If
+    If LBound(values) <> 4 Or UBound(values) <> 5 Then
+        Error 5, "Static bounds changed"
+    End If
+End Sub
+Sub FlatStorage()
+    Dim values(-2 To -1) As Long
+    values(-2) = 11
+    GoTo Check
+Check:
+    Dim shared As Variant
+    shared = values
+    If LBound(shared) <> -2 Or shared(-2) <> 11 Then
+        Error 5, "Flat array storage lost physical bounds"
+    End If
+End Sub
+Sub Main()
+    Dim original(3 To 4) As Long
+    original(3) = 2
+    Dim shared As Variant
+    shared = original
+    If LBound(shared) <> 3 Or UBound(shared) <> 4 Then
+        Error 5, "Variant lost physical bounds"
+    End If
+    shared(3) = 5
+    If original(3) <> 5 Then
+        Error 5, "Variant lost shared storage"
+    End If
+    Dim bump As New Bump(original(3), original(3))
+    If original(3) <> 16 Then
+        Error 5, "Duplicate lower-bound aliases diverged"
+    End If
+    Dim replacement(0) As Long
+    replacement = Fresh()
+    If LBound(replacement) <> -3 Or UBound(replacement, 1) <> -1 Then
+        Error 5, "Replaced array retained declaration bounds"
+    End If
+    replacement(-1) = replacement(-3) + 1
+    If replacement(-1) <> 8 Then
+        Error 5, "Replacement indexing used declaration offsets"
+    End If
+    Dim words(2 To 3, -1 To 0) As String
+    shared = words
+    If words(2, -1) <> "" Then
+        Error 5, "String array did not start empty"
+    End If
+    If LBound(words, 1) <> 2 Or UBound(words, 2) <> 0 Then
+        Error 5, "Multidimensional bounds changed"
+    End If
+    words(2, -1) = "changed"
+    Erase words
+    If words(2, -1) <> "" Or LBound(words, 1) <> 2 Then
+        Error 5, "Erase lost String defaults or bounds"
+    End If
+    Dim text(4 To 5) As String
+    text(4) = "changed"
+    Erase text
+    If text(4) <> "" Then
+        Error 5, "Erase assumed a zero-based String vector"
+    End If
+    Call Persistent()
+    Call Persistent()
+    Call FlatStorage()
+    Dim errorCode As Long
+    On Error Resume Next
+    Print original(2)
+    errorCode = Err
+    On Error GoTo 0
+    If errorCode <> 9 Then
+        Error 5, "Out-of-range index did not fail"
+    End If
+    shared = text
+    On Error Resume Next
+    replacement = shared
+    errorCode = Err
+    On Error GoTo 0
+    If errorCode <> 13 Or replacement(-3) <> 7 Then
+        Error 5, "Wrong element conversion changed old storage"
+    End If
+    Dim matrix(-1 To 0, 2 To 3) As Long
+    shared = matrix
+    On Error Resume Next
+    replacement = shared
+    errorCode = Err
+    On Error GoTo 0
+    If errorCode <> 13 Or replacement(-3) <> 7 Then
+        Error 5, "Wrong rank conversion changed old storage"
+    End If
+    Print "ARRAY_STORAGE_BOUNDS_OK"
+End Sub

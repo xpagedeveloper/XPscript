@@ -1,0 +1,19 @@
+Class RefTarget
+    Public Name As String
+End Class
+
+Class RefHolder
+    Public Item As RefTarget
+
+    Public Function ItemIsNothing() As Boolean
+        ItemIsNothing = Me.Item Is Nothing
+    End Function
+End Class
+
+Sub Main()
+    Dim localItem As RefTarget
+    If localItem Is Nothing Then Print "LOCAL_NOTHING=OK"
+
+    Dim holder As New RefHolder()
+    If holder.ItemIsNothing() Then Print "FIELD_NOTHING=OK"
+End Sub

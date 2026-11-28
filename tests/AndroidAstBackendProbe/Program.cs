@@ -1,0 +1,36 @@
+using XPScript.Compiler;
+
+var root = Path.Combine(Path.GetTempPath(), "xpscript-android-ast-probe-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(root);
+try
+{
+    var source = Path.Combine(root, "android-ast-probe.xps");
+    await File.WriteAllTextAsync(source, "Sub Main()\n    Dim form As New UIForm(\"Android AST lifecycle\")\n    Call form.AddTextField(\"name\", \"Name\")\n    Call form.AddButton(\"close\", \"Close\", \"CloseForm\")\n    Call form.AddTab(\"details\", \"Details\")\n    Dim grid As Variant\n    Set grid = form.AddGrid(\"detailsGrid\", 2)\n    Call grid.SetTab(\"details\")\n    Call form.Show(False)\n    Call form.Hide()\n    Print \"ANDROID_AST_UIFORM_CONTROLS_OK\"\nEnd Sub\n\nSub CloseForm()\nEnd Sub\n");
+
+    foreach (var rid in new[] { "android-x64", "android-arm64" })
+    {
+        var output = Path.Combine(root, rid);
+        var assembly = await AstCompiler.CompileAsync(source, output, rid);
+        if (!File.Exists(assembly))
+            throw new Exception($"AST {rid} compilation did not produce Generated.dll.");
+        var apk = Directory.EnumerateFiles(output, "*.apk", SearchOption.TopDirectoryOnly).FirstOrDefault();
+        if (apk is null)
+            throw new Exception($"AST {rid} compilation did not produce an APK.");
+        Console.WriteLine($"ANDROID_AST_APK_OK rid={rid} apk={Path.GetFileName(apk)}");
+    }
+
+    Console.WriteLine("ANDROID_AST_BACKEND_OK");
+}
+catch (CompilerException ex) when (ex.Message.Contains("Android SDK was not found", StringComparison.OrdinalIgnoreCase)
+    || ex.Message.Contains(".NET workload is required", StringComparison.OrdinalIgnoreCase)
+    || ex.Message.Contains(".NET 10 SDK", StringComparison.OrdinalIgnoreCase)
+    || ex.Message.Contains("Required Android tool", StringComparison.OrdinalIgnoreCase)
+    || ex.Message.Contains("Android SDK Platform 36", StringComparison.OrdinalIgnoreCase)
+    || ex.Message.Contains("Android SDK Build Tools", StringComparison.OrdinalIgnoreCase))
+{
+    Console.WriteLine("ANDROID_AST_BACKEND_SKIPPED=ANDROID_PREREQUISITES_NOT_AVAILABLE");
+}
+finally
+{
+    try { Directory.Delete(root, recursive: true); } catch { }
+}

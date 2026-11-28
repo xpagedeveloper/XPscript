@@ -1,0 +1,13 @@
+Class Reader
+    Public Function Count(ByVal value As XPJsonArray) As Long
+        Count = value.Count
+    End Function
+End Class
+
+Sub Main()
+    Dim value As New XPJsonArray
+    Call value.Add(4)
+    Call value.Add(5)
+    Dim reader As New Reader
+    Print CStr(reader.Count(value))
+End Sub

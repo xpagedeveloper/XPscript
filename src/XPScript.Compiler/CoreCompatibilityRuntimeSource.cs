@@ -3,7 +3,18 @@ namespace XPScript.Compiler;
 public static class CoreCompatibilityRuntimeSource
 {
     public const string Code = """
-internal sealed class LSArray
+internal interface IXPScriptArrayStorage
+{
+    int Rank { get; }
+    bool IsAllocated { get; }
+    object? Get(params object?[] indices);
+    void Set(object? value, params object?[] indices);
+    int LBound(int dimension = 1);
+    int UBound(int dimension = 1);
+    void Erase();
+}
+
+internal sealed class LSArray : IXPScriptArrayStorage
 {
     private object?[] _data = [];
 
@@ -192,6 +203,85 @@ internal sealed class LSArray
 
 internal static class LSArrayRuntime
 {
+    public static byte[]? ByteVector(object? value)
+    {
+        if (value is null) return null;
+        if (value is IXPScriptArrayStorage storage)
+        {
+            if (storage.Rank != 1) throw new InvalidCastException("Byte vector requires a one-dimensional array.");
+            var bytes = new List<byte>();
+            for (var index = storage.LBound(); index <= storage.UBound(); index++)
+                bytes.Add(XPScriptRuntime.CByte(storage.Get(index)));
+            return bytes.ToArray();
+        }
+        if (value is not Array array || array.Rank != 1)
+            throw new InvalidCastException("Byte vector requires a one-dimensional array.");
+        if (array is byte[] vector) return vector;
+        var bytesFromArray = new byte[array.GetLength(0)];
+        var lower = array.GetLowerBound(0);
+        for (var offset = 0; offset < bytesFromArray.Length; offset++)
+            bytesFromArray[offset] = XPScriptRuntime.CByte(array.GetValue(lower + offset));
+        return bytesFromArray;
+    }
+
+    public static Array? RequireArray<T>(object? value, int rank)
+    {
+        if (value is null) return null;
+        if (value is not Array array || array.Rank != rank || array.GetType().GetElementType() != typeof(T))
+            throw new InvalidCastException("Array element type and rank must match the declared type.");
+        return array;
+    }
+
+    public static Array CreateManaged<T>(int[] lengths, int[] lower)
+    {
+        var array = Array.CreateInstance(typeof(T), lengths, lower);
+        if (typeof(T) == typeof(string)) ClearManaged(array);
+        return array;
+    }
+
+    private static void ClearManaged(Array array)
+    {
+        if (array.GetType().GetElementType() == typeof(string) && array.Length > 0)
+        {
+            var lower = Enumerable.Range(0, array.Rank).Select(array.GetLowerBound).ToArray();
+            var indices = (int[])lower.Clone();
+            for (var item = 0; item < array.Length; item++)
+            {
+                array.SetValue(string.Empty, indices);
+                for (var dimension = array.Rank - 1; dimension >= 0; dimension--)
+                {
+                    if (indices[dimension] < array.GetUpperBound(dimension))
+                    {
+                        indices[dimension]++;
+                        break;
+                    }
+                    indices[dimension] = lower[dimension];
+                }
+            }
+        }
+        else Array.Clear(array);
+    }
+
+    public static ref T Reference<T>(object? value, params object?[] indices)
+    {
+        if (value is not Array array || array.GetType().GetElementType() != typeof(T))
+            throw new InvalidCastException("ByRef requires an array with the matching element type.");
+        if (indices.Length != array.Rank)
+            throw new IndexOutOfRangeException("Wrong number of array subscripts.");
+        long offset = 0;
+        for (var dimension = 0; dimension < indices.Length; dimension++)
+        {
+            var index = XPScriptRuntime.CInt(indices[dimension]);
+            var lower = array.GetLowerBound(dimension);
+            if (index < lower || index > array.GetUpperBound(dimension))
+                throw new IndexOutOfRangeException("Subscript out of range.");
+            offset = checked(offset * array.GetLength(dimension) + ((long)index - lower));
+        }
+        return ref System.Runtime.CompilerServices.Unsafe.Add(
+            ref System.Runtime.CompilerServices.Unsafe.As<byte, T>(
+                ref System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(array)), checked((nint)offset));
+    }
+
     public static LSArray Fixed(string type, int[] lower, int[] upper) => new(type, false, lower, upper);
     public static LSArray Dynamic(string type) => new(type, true);
     public static LSArray Dynamic(string type, int[] lower, int[] upper) => new(type, true, lower, upper);
@@ -203,72 +293,104 @@ internal static class LSArrayRuntime
         return array;
     }
 
+    public static Array ReDimManaged(object? value, bool preserve, int lower, int upper)
+        => ReDimManaged(value, preserve, [lower], [upper]);
+
+    public static Array ReDimManaged(object? value, bool preserve, int[] lower, int[] upper)
+    {
+        if (lower.Length == 0 || lower.Length != upper.Length || lower.Length > 8)
+            throw new InvalidOperationException("Arrays must have between one and eight dimensions.");
+        var source = value as Array;
+        if (preserve && source is not null)
+        {
+            if (source.Rank != lower.Length)
+                throw new InvalidOperationException("ReDim cannot change the number of dimensions.");
+            for (var i = 0; i < lower.Length; i++)
+            {
+                if (source.GetLowerBound(i) != lower[i])
+                    throw new InvalidOperationException("ReDim Preserve cannot change lower bounds.");
+                if (i < lower.Length - 1 && source.GetUpperBound(i) != upper[i])
+                    throw new InvalidOperationException("ReDim Preserve can change only the upper bound of the last dimension.");
+            }
+        }
+        var elementType = source?.GetType().GetElementType() ?? typeof(object);
+        var lengths = lower.Select((bound, i) => checked(upper[i] - bound + 1)).ToArray();
+        if (lengths.Any(length => length < 0))
+            throw new IndexOutOfRangeException("Invalid XPScript array bounds.");
+        var result = Array.CreateInstance(elementType, lengths, lower);
+        if (elementType == typeof(string)) ClearManaged(result);
+        if (preserve && source is not null)
+        {
+            var indices = new int[lower.Length];
+            CopyDimension(0);
+
+            void CopyDimension(int dimension)
+            {
+                var low = Math.Max(source.GetLowerBound(dimension), result.GetLowerBound(dimension));
+                var high = Math.Min(source.GetUpperBound(dimension), result.GetUpperBound(dimension));
+                for (var index = low; index <= high; index++)
+                {
+                    indices[dimension] = index;
+                    if (dimension + 1 < indices.Length)
+                        CopyDimension(dimension + 1);
+                    else
+                        result.SetValue(source.GetValue(indices), indices);
+                }
+            }
+        }
+        return result;
+    }
+
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2)
+        => ReDimManaged(value, preserve, [lower1, lower2], [upper1, upper2]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3], [upper1, upper2, upper3]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4], [upper1, upper2, upper3, upper4]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4, lower5], [upper1, upper2, upper3, upper4, upper5]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5, int upper6, int lower6)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4, lower5, lower6], [upper1, upper2, upper3, upper4, upper5, upper6]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5, int upper6, int lower6, int upper7, int lower7)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4, lower5, lower6, lower7], [upper1, upper2, upper3, upper4, upper5, upper6, upper7]);
+    public static Array ReDimManaged(object? value, bool preserve, int upper1, int lower1, int upper2, int lower2, int upper3, int lower3, int upper4, int lower4, int upper5, int lower5, int upper6, int lower6, int upper7, int lower7, int upper8, int lower8)
+        => ReDimManaged(value, preserve, [lower1, lower2, lower3, lower4, lower5, lower6, lower7, lower8], [upper1, upper2, upper3, upper4, upper5, upper6, upper7, upper8]);
+
     public static object? Get(object? value, params object?[] indices)
     {
-        if (IsNothing(value)) return NothingArray().Get(indices);
-        if (value is LSArray array) return array.Get(indices);
-        if (value is Array managed) return managed.GetValue(ToManagedIndices(managed, indices));
-        throw new InvalidOperationException("Value is not an XPScript array.");
+        return Storage(value).Get(indices);
+    }
+
+    public static object? Index(object? value, object? index)
+    {
+        if (value is IXPScriptArrayStorage or Array) return Get(value, index);
+        return ((dynamic)value!)[(dynamic)index!];
+    }
+
+    public static void SetIndex(object? value, object? index, object? newValue)
+    {
+        if (value is IXPScriptArrayStorage or Array) Set(value, newValue, index);
+        else ((dynamic)value!)[(dynamic)index!] = newValue;
     }
 
     public static void Set(object? value, object? newValue, params object?[] indices)
     {
-        if (IsNothing(value))
-        {
-            NothingArray().Set(newValue, indices);
-            return;
-        }
-        if (value is LSArray array)
-        {
-            array.Set(newValue, indices);
-            return;
-        }
-        if (value is Array managed)
-        {
-            managed.SetValue(newValue, ToManagedIndices(managed, indices));
-            return;
-        }
-        throw new InvalidOperationException("Value is not an XPScript array.");
+        Storage(value).Set(newValue, indices);
     }
 
     public static int LBound(object? value, int dimension = 1)
     {
-        if (IsNothing(value)) return NothingArray().LBound(dimension);
-        if (value is LSArray array) return array.LBound(dimension);
-        if (value is Array managed)
-        {
-            ValidateManagedDimension(managed, dimension);
-            return managed.GetLowerBound(dimension - 1);
-        }
-        throw new InvalidOperationException("Value is not an XPScript array.");
+        return Storage(value).LBound(dimension);
     }
 
     public static int UBound(object? value, int dimension = 1)
     {
-        if (IsNothing(value)) return NothingArray().UBound(dimension);
-        if (value is LSArray array) return array.UBound(dimension);
-        if (value is Array managed)
-        {
-            ValidateManagedDimension(managed, dimension);
-            return managed.GetUpperBound(dimension - 1);
-        }
-        throw new InvalidOperationException("Value is not an XPScript array.");
+        return Storage(value).UBound(dimension);
     }
 
     public static void Erase(object? value)
     {
-        if (IsNothing(value)) return;
-        if (value is LSArray array)
-        {
-            array.Erase();
-            return;
-        }
-        if (value is Array managed)
-        {
-            Array.Clear(managed, 0, managed.Length);
-            return;
-        }
-        throw new InvalidOperationException("Value is not an XPScript array.");
+        if (!IsNothing(value)) Storage(value).Erase();
     }
 
     public static bool IsNothing(object? value) =>
@@ -281,15 +403,36 @@ internal static class LSArrayRuntime
         return array;
     }
 
-    private static int[] ToManagedIndices(Array array, object?[] indices)
+    private static IXPScriptArrayStorage Storage(object? value) => value switch
     {
-        if (indices.Length != array.Rank) throw new IndexOutOfRangeException("Wrong number of array subscripts.");
-        return indices.Select(XPScriptRuntime.CInt).ToArray();
-    }
+        null => NothingArray(),
+        ILSObjectReference reference when reference.IsNothing => NothingArray(),
+        IXPScriptArrayStorage storage => storage,
+        Array managed => new ManagedArrayStorage(managed),
+        _ => throw new InvalidOperationException("Value is not an XPScript array.")
+    };
 
-    private static void ValidateManagedDimension(Array array, int dimension)
+    private sealed class ManagedArrayStorage(Array array) : IXPScriptArrayStorage
     {
-        if (dimension < 1 || dimension > array.Rank) throw new IndexOutOfRangeException("Invalid array dimension.");
+        public int Rank => array.Rank;
+        public bool IsAllocated => true;
+        public object? Get(params object?[] indices) => array.GetValue(Indices(indices));
+        public void Set(object? value, params object?[] indices) => array.SetValue(value, Indices(indices));
+        public int LBound(int dimension = 1) { ValidateDimension(dimension); return array.GetLowerBound(dimension - 1); }
+        public int UBound(int dimension = 1) { ValidateDimension(dimension); return array.GetUpperBound(dimension - 1); }
+        public void Erase()
+        {
+            ClearManaged(array);
+        }
+        private int[] Indices(object?[] indices)
+        {
+            if (indices.Length != array.Rank) throw new IndexOutOfRangeException("Wrong number of array subscripts.");
+            return indices.Select(XPScriptRuntime.CInt).ToArray();
+        }
+        private void ValidateDimension(int dimension)
+        {
+            if (dimension < 1 || dimension > array.Rank) throw new IndexOutOfRangeException("Invalid array dimension.");
+        }
     }
 }
 
@@ -485,6 +628,16 @@ internal static class LSFileRuntime
 
     private static readonly Dictionary<int, State> Files = new();
     private static readonly object Sync = new();
+    private const int DarwinUnlockFunction = 0;
+    private const int DarwinTryLockFunction = 2;
+    private const int DarwinSeekSet = 0;
+    private const int DarwinSeekCurrent = 1;
+
+    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "lockf", SetLastError = true)]
+    private static extern int DarwinLockf(int fd, int function, long size);
+
+    [System.Runtime.InteropServices.DllImport("libSystem.B.dylib", EntryPoint = "lseek", SetLastError = true)]
+    private static extern long DarwinSeek(int fd, long offset, int whence);
 
     public static int FreeFile()
     {
@@ -582,6 +735,35 @@ internal static class LSFileRuntime
         return sb.ToString().Trim();
     }
 
+    public static string InputChars(int number, int count)
+    {
+        if (count < 0) throw new XPScriptRuntimeException(5, "Input$ count must be zero or greater.");
+        if (count == 0) return string.Empty;
+        var state = Get(number);
+        if (state.Reader is not null)
+        {
+            var buffer = new char[count];
+            var total = 0;
+            while (total < count)
+            {
+                var read = state.Reader.Read(buffer, total, count - total);
+                if (read <= 0) throw new EndOfStreamException("Input$ requested more characters than remain in the file.");
+                total += read;
+            }
+            return new string(buffer);
+        }
+        if (state.Mode is not ("binary" or "random")) throw new IOException("File is not open for Input or Binary access.");
+        var bytes = new byte[count];
+        var offset = 0;
+        while (offset < count)
+        {
+            var read = state.Stream.Read(bytes, offset, count - offset);
+            if (read <= 0) throw new EndOfStreamException("Input$ requested more characters than remain in the file.");
+            offset += read;
+        }
+        return Encoding.Latin1.GetString(bytes);
+    }
+
     public static bool EOF(int number)
     {
         var state = Get(number);
@@ -615,6 +797,95 @@ internal static class LSFileRuntime
             "binary" => state.LastLoc,
             _ => state.SequentialBytes / 128
         };
+    }
+
+    public static void LockBytes(int number, long start, long end)
+    {
+        if (start < 1 || end < start) throw new IOException("Lock range must be a valid one-based interval.");
+        var stream = Get(number).Stream;
+        var offset = checked(start - 1);
+        var length = checked(end - start + 1);
+        if (OperatingSystem.IsMacOS())
+        {
+            DarwinSetRegionLock(stream, offset, length, DarwinTryLockFunction, "lock");
+            return;
+        }
+        stream.Lock(offset, length);
+    }
+
+    public static void UnlockBytes(int number, long start, long end)
+    {
+        if (start < 1 || end < start) throw new IOException("Unlock range must be a valid one-based interval.");
+        var stream = Get(number).Stream;
+        var offset = checked(start - 1);
+        var length = checked(end - start + 1);
+        if (OperatingSystem.IsMacOS())
+        {
+            DarwinSetRegionLock(stream, offset, length, DarwinUnlockFunction, "unlock");
+            return;
+        }
+        stream.Unlock(offset, length);
+    }
+
+    private static void DarwinSetRegionLock(FileStream stream, long offset, long length, int function, string operation)
+    {
+        var handle = stream.SafeFileHandle;
+        var addedRef = false;
+        long nativePosition = -1;
+        try
+        {
+            handle.DangerousAddRef(ref addedRef);
+            var rawValue = handle.DangerousGetHandle().ToInt64();
+            if (rawValue < int.MinValue || rawValue > int.MaxValue)
+                throw new IOException("macOS file descriptor is outside the supported integer range.");
+
+            var fd = (int)rawValue;
+            nativePosition = DarwinSeek(fd, 0, DarwinSeekCurrent);
+            if (nativePosition < 0)
+            {
+                var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+                throw new IOException("Unable to read macOS file descriptor position before " + operation + ". errno=" + error.ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (DarwinSeek(fd, offset, DarwinSeekSet) < 0)
+            {
+                var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+                throw new IOException("Unable to position macOS file descriptor for " + operation + " at offset " + offset.ToString(CultureInfo.InvariantCulture) + ". errno=" + error.ToString(CultureInfo.InvariantCulture));
+            }
+
+            if (DarwinLockf(fd, function, length) != 0)
+            {
+                var error = System.Runtime.InteropServices.Marshal.GetLastPInvokeError();
+                throw new IOException("Unable to " + operation + " macOS file region offset " + offset.ToString(CultureInfo.InvariantCulture) + " length " + length.ToString(CultureInfo.InvariantCulture) + ". errno=" + error.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+        finally
+        {
+            try
+            {
+                if (addedRef && nativePosition >= 0)
+                {
+                    var rawValue = handle.DangerousGetHandle().ToInt64();
+                    if (rawValue >= int.MinValue && rawValue <= int.MaxValue)
+                        DarwinSeek((int)rawValue, nativePosition, DarwinSeekSet);
+                }
+            }
+            finally
+            {
+                if (addedRef) handle.DangerousRelease();
+            }
+        }
+    }
+
+    public static void ChDrive(object? driveValue)
+    {
+        if (!OperatingSystem.IsWindows()) throw new XPScriptRuntimeException(5, "ChDrive is supported only on Windows.");
+        var drive = XPScriptRuntime.CStr(driveValue).Trim();
+        if (!System.Text.RegularExpressions.Regex.IsMatch(drive, "^[A-Za-z]:$"))
+            throw new XPScriptRuntimeException(5, "ChDrive requires a drive letter.");
+        var root = drive + "\\";
+        if (!Directory.Exists(root)) throw new DirectoryNotFoundException("Drive not found: " + drive);
+        Environment.CurrentDirectory = root;
     }
 
     public static void Put(int number, object? recordNumber, object? value, string xpscriptType)
@@ -735,12 +1006,12 @@ internal static class LSFileRuntime
 
     private static State BinaryState(string path, string mode, int recordLength)
     {
-        var stream = new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+        var stream = XPScriptFileSystemRuntime.OpenBinaryStream(path);
         return new State { Stream = stream, Mode = mode, RecordLength = recordLength };
     }
 }
 
-// Marker calls are removed by CoreCompatibilityTranspiler after the normal transpiler emits C#.
+// Legacy marker helpers are retained for runtime-source parity; AST compilation does not emit them.
 internal static class LSCoreMarker
 {
     public static void Label(string name) { }

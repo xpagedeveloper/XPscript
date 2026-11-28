@@ -1,4 +1,12 @@
 # Machine-readable IntelliSense API reference
+## Notes DXL import and result logs
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `NotesDXLImporter.Import` | `importer.Import(path, database)` | `path`: DXL filename; `database`: open NotesDatabase, including a Variant-held reference. | Imports DXL into the supplied database; Nothing raises error 91 and an incompatible database value raises error 13. | [notes-dxl-log-runtime-test.xps](../samples/notes-dxl-log-runtime-test.xps) |
+| `NotesDXLImporter.Log` | `importer.Log` | none | Returns the import result log; repeated reads release each native log copy without recycling the importer. | [notes-dxl-log-runtime-test.xps](../samples/notes-dxl-log-runtime-test.xps) |
+| `NotesDXLExporter.Log` | `exporter.Log` | none | Returns the export result log and releases its native log copy. | [notes-dxl-import-export-surface.xps](../samples/notes-dxl-import-export-surface.xps) |
+
 ## Native JSON conversion
 
 | Member | Syntax | Parameters | Description | Example |
@@ -56,6 +64,16 @@ The required columns are `Member`, `Syntax`, `Parameters`, `Description`, and `E
 | `NotesSession.GetEnvironmentString` | `session.GetEnvironmentString(name [, system])` | `name`: environment variable; optional `system`: use exact system name. | Reads a string from the active Notes/Domino environment. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
 | `NotesSession.GetEnvironmentValue` | `session.GetEnvironmentValue(name [, system])` | `name`: environment variable; optional `system`: use exact system name. | Reads a numeric Notes/Domino environment value. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
 | `NotesSession.SetEnvironmentVar` | `session.SetEnvironmentVar(name, value [, system])` | `name`, `value`, optional `system`. | Creates or updates a Notes/Domino environment variable. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
+| `NotesSession.EffectiveUserName` | `session.EffectiveUserName` | none | Returns the effective native Notes user name. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
+| `NotesSession.UserNameObject` | `session.UserNameObject` | none | Returns a `NotesName` wrapper for the active user name. Recycle the returned object when finished. | [notes-session-full-runtime-test.xps](../samples/notes-session-full-runtime-test.xps) |
+| `NotesSession.ConvertMIME` | `session.ConvertMIME = value` | `value`: Boolean. | Controls conversion of MIME parts to rich text for Notes documents opened afterward. Defaults to `True`. | [notes-richtext-mime-surface.xps](../samples/notes-richtext-mime-surface.xps) |
+
+## Application runtime additions
+
+| Member | Syntax | Parameters | Description | Example |
+|---|---|---|---|---|
+| `Application.NewLine` | `Application.NewLine` | none | Returns the platform's line ending. | [application-runtime.xps](../samples/application-runtime.xps) |
+| `Application.Executable.Comments` | `Application.Executable.Comments = value` | `value`: comments text. | Sets generated executable metadata comments. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
 
 ## Notes MIME
 

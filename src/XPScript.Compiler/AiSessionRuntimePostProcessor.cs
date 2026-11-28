@@ -211,8 +211,8 @@ internal sealed class AiSessionRuntimePostProcessor
     public bool ThrowOnHttpError { get; set; } = true;
     public bool AutoExecuteTools { get; set; } = true;
 
-    private int _maxToolIterations = 8;
-    public int MaxToolIterations
+    private long _maxToolIterations = 8;
+    public long MaxToolIterations
     {
         get => _maxToolIterations;
         set

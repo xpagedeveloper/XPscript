@@ -18,6 +18,8 @@ public sealed record DesktopFormField(
     decimal? Maximum,
     IReadOnlyList<string> Options)
 {
+    public string Id { get; init; } = string.Empty;
+    public string ParentId { get; init; } = string.Empty;
     public int LayoutRow { get; init; }
     public int LayoutColumn { get; init; }
     public int ColumnSpan { get; init; } = 1;
@@ -29,8 +31,15 @@ public sealed record DesktopFormField(
     public bool Visible { get; init; } = true;
     public bool Enabled { get; init; } = true;
     public bool ReadOnly { get; init; }
+    public double CornerRadius { get; init; }
+    public double? Width { get; init; }
+    public double? Height { get; init; }
+    public string Font { get; init; } = string.Empty;
+    public double? FontSize { get; init; }
     public string Placeholder { get; init; } = string.Empty;
     public string Tooltip { get; init; } = string.Empty;
+    public string TabName { get; init; } = string.Empty;
+    public string GridName { get; init; } = string.Empty;
     public string RegexPattern { get; init; } = string.Empty;
     public string DateMinimum { get; init; } = string.Empty;
     public string DateMaximum { get; init; } = string.Empty;
@@ -44,10 +53,16 @@ public sealed record DesktopFormField(
     public string ImageSource { get; init; } = string.Empty;
     public string ImageAltText { get; init; } = string.Empty;
     public string ImageCertificateValidation { get; init; } = "Strict";
+    public string Source { get; init; } = string.Empty;
+    public string Icon { get; init; } = string.Empty;
     public string WebViewSource { get; init; } = "about:blank";
     public string WebViewHtml { get; init; } = string.Empty;
     public string WebViewUserAgent { get; init; } = string.Empty;
     public string WebViewBackground { get; init; } = string.Empty;
+    public IReadOnlyList<string> CarouselSources { get; init; } = Array.Empty<string>();
+    public int CarouselIndex { get; init; }
+    public bool CarouselLoop { get; init; }
+    public int? CarouselAutoAdvance { get; init; }
     public string AccessibleName { get; init; } = string.Empty;
     public string AccessibleDescription { get; init; } = string.Empty;
     public string AccessibleHelpText { get; init; } = string.Empty;
@@ -60,6 +75,13 @@ public sealed record DesktopFormField(
     public string HotKey { get; init; } = string.Empty;
     public string ValidationError { get; init; } = string.Empty;
     public string SchemaValidationError { get; init; } = string.Empty;
+    public double? Step { get; init; }
+    public double? ProgressValue { get; init; }
+    // These fields are omitted/null for non-progress controls because the shared
+    // bridge serializes them as nullable values. Keep the contract nullable so
+    // desktop deserialization accepts the same payload emitted by the compiler.
+    public bool? ProgressIndeterminate { get; init; }
+    public bool? ActivityRunning { get; init; }
 }
 
 public sealed record DesktopFormButton(
@@ -71,7 +93,18 @@ public sealed record DesktopFormButton(
     int ColumnSpan,
     int RowSpan,
     bool Visible,
-    bool Enabled);
+    bool Enabled)
+{
+    public string Result { get; init; } = string.Empty;
+    public double CornerRadius { get; init; }
+    public double? Width { get; init; }
+    public double? Height { get; init; }
+    public string Font { get; init; } = string.Empty;
+    public double? FontSize { get; init; }
+}
+
+public sealed record DesktopFormTab(string Name, string Label, string Background = "", string FontColor = "", string Font = "", double FontSize = 16, bool Bold = false, string SelectedBackground = "", string SelectedFontColor = "", string SelectedFont = "", double SelectedFontSize = 16, bool SelectedBold = false);
+public sealed record DesktopFormGrid(string Name, int Columns, string TabName);
 
 public sealed record DesktopFormRequest(
     string Title,
@@ -80,12 +113,25 @@ public sealed record DesktopFormRequest(
     bool Resizable,
     IReadOnlyList<DesktopFormField> Fields)
 {
+    public int Top { get; init; } = -1;
+    public int Left { get; init; } = -1;
+    public int Right { get; init; } = -1;
+    public int Bottom { get; init; } = -1;
+    public bool Center { get; init; }
     public string Theme { get; init; } = "System";
+    public string Background { get; init; } = string.Empty;
+    public string BootText { get; init; } = string.Empty;
+    public string BootImage { get; init; } = string.Empty;
     public bool ShowValidationErrors { get; init; } = true;
     public bool HasValidationSchema { get; init; }
     public bool ShowDefaultButtons { get; init; } = true;
+    public double? DefaultButtonCornerRadius { get; init; }
     public int GridColumns { get; init; } = 1;
     public IReadOnlyList<DesktopFormButton> Buttons { get; init; } = Array.Empty<DesktopFormButton>();
+    public IReadOnlyList<DesktopFormTab> Tabs { get; init; } = Array.Empty<DesktopFormTab>();
+    public IReadOnlyList<DesktopFormGrid> Grids { get; init; } = Array.Empty<DesktopFormGrid>();
+    public string ActiveTab { get; init; } = string.Empty;
+    public string TabPlacement { get; init; } = "Top";
     public string ApplicationTitle { get; init; } = string.Empty;
     public string ApplicationIcon { get; init; } = string.Empty;
     public string InstanceId { get; init; } = string.Empty;
@@ -117,7 +163,6 @@ public static class XpsUIDesktopRuntimeBridge
         var request = JsonSerializer.Deserialize<DesktopFormRequest>(json, JsonOptions)
             ?? throw new InvalidOperationException("Desktop UIForm request is empty.");
 
-        ApplyTheme(request.Theme);
         DesktopAccessibilityHost.ConfigureDefaultButtons(request.InstanceId, request.ShowDefaultButtons);
 
         var fields = request.Fields.Select(field => field.Type switch
@@ -147,13 +192,33 @@ public static class XpsUIDesktopRuntimeBridge
                 WebViewSource = "about:blank",
                 WebViewHtml = "<html><body style=\"margin:0;display:flex;align-items:center;justify-content:center;background:transparent\"><img src=\"" + System.Net.WebUtility.HtmlEncode(DesktopImageHost.ToWebSource(field.ImageSource, field.ImageCertificateValidation)) + "\" alt=\"" + System.Net.WebUtility.HtmlEncode(field.ImageAltText) + "\" style=\"max-width:100%;max-height:100%;object-fit:contain\"></body></html>"
             },
+            "Carousel" => field with
+            {
+                Type = "WebView",
+                Label = string.Empty,
+                Required = false,
+                ReadOnly = true,
+                WebViewSource = "about:blank",
+                WebViewHtml = CreateCarouselHtml(field)
+            },
             _ => field
         }).ToArray();
 
         return request with { Fields = fields };
     }
 
-    private static void ApplyTheme(string theme)
+    private static string CreateCarouselHtml(DesktopFormField field)
+    {
+        var sources = field.CarouselSources.Count == 0
+            ? "<div style=\"padding:1rem\">No carousel items</div>"
+            : string.Join("", field.CarouselSources.Select((source, index) =>
+                "<img class=\"slide\" src=\"" + System.Net.WebUtility.HtmlEncode(DesktopImageHost.ToWebSource(source, "Strict")) + "\" style=\"display:" + (index == field.CarouselIndex ? "block" : "none") + ";max-width:100%;max-height:100%;object-fit:contain\" alt=\"" + System.Net.WebUtility.HtmlEncode(field.Label.Length > 0 ? field.Label : field.Name) + "\">"));
+        var interval = field.CarouselAutoAdvance is int milliseconds && milliseconds > 0 ? milliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture) : "0";
+        var loop = field.CarouselLoop ? "true" : "false";
+        return "<html><body style=\"margin:0;display:flex;align-items:center;justify-content:center;background:transparent\"><div id=\"carousel\" style=\"width:100%;height:100%;text-align:center\">" + sources + "<button onclick=\"move(-1)\">‹</button><button onclick=\"move(1)\">›</button></div><script>let i=" + field.CarouselIndex + ", slides=[...document.querySelectorAll('.slide')], loop=" + loop + ";function move(d){let n=i+d;if(n<0)n=loop?slides.length-1:0;if(n>=slides.length)n=loop?0:slides.length-1;slides[i].style.display='none';i=n;slides[i].style.display='block'}let ms=" + interval + ";if(ms>0)setInterval(()=>move(1),ms);</script></body></html>";
+    }
+
+    internal static void ApplyTheme(string theme)
     {
         if (!IsSupportedPlatform()) return;
 

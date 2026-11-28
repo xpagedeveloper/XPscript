@@ -87,7 +87,12 @@ using (XpsWebContextAccessor.Push(otherSiteContext))
     Assert((string?)XpsWebRuntimeObjects.Process.State.Get("shared") == "process-from-b", "Process.State was not shared across applications in the same process.");
 }
 
-var desktopSource = """
+var webRoot = Path.Combine(Path.GetTempPath(), "XPScript-state-scope-probe-" + Guid.NewGuid().ToString("N"));
+Directory.CreateDirectory(webRoot);
+try
+{
+var desktopSourcePath = Path.Combine(webRoot, "state-desktop.xps");
+await File.WriteAllTextAsync(desktopSourcePath, """
 Sub Main()
     Application.State.Set("app", "value")
     Process.State.Set("proc", "value")
@@ -98,17 +103,13 @@ Sub Main()
     Print Session.State.Get("session")
     Print Request.State.Get("request")
 End Sub
-""";
-var desktopGenerated = new XPScriptTranspiler().Transpile(desktopSource, "state-desktop.xps", CompilerDriver.CurrentRuntimeIdentifier());
+""");
+var desktopGenerated = await AstCompiler.GenerateSourceAsync(desktopSourcePath, Path.Combine(webRoot, "desktop-generated"));
 Assert(desktopGenerated.Contains("XPScriptApplicationRuntime.State", StringComparison.Ordinal), "Application.State was not mapped to the application runtime.");
 Assert(desktopGenerated.Contains("XPScriptProcessRuntime.State", StringComparison.Ordinal), "Process.State was not mapped to the process runtime.");
 Assert(desktopGenerated.Contains("XPScriptSessionRuntime.State", StringComparison.Ordinal), "Session.State was not mapped for desktop/WASM local state.");
 Assert(desktopGenerated.Contains("XPScriptRequestRuntime.State", StringComparison.Ordinal), "Request.State was not mapped for desktop/WASM local state.");
 
-var webRoot = Path.Combine(Path.GetTempPath(), "XPScript-state-scope-probe-" + Guid.NewGuid().ToString("N"));
-Directory.CreateDirectory(webRoot);
-try
-{
     var writerPath = Path.Combine(webRoot, "writer.xps");
     var readerPath = Path.Combine(webRoot, "reader.xps");
 

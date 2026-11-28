@@ -226,6 +226,14 @@ internal sealed class XPScriptAi : IDisposable
         lock (_sync) _activeRequest?.Cancel();
     }
 
+    public void AddTool(object? tool) => XPScriptAiToolRegistry.AddTool(this, tool);
+    public bool RemoveTool(object? name) => XPScriptAiToolRegistry.RemoveTool(this, name);
+    public void ClearTools() => XPScriptAiToolRegistry.ClearTools(this);
+    public bool HasTool(object? name) => XPScriptAiToolRegistry.HasTool(this, name);
+    public XPScriptAiTool GetTool(object? name) => XPScriptAiToolRegistry.GetTool(this, name);
+    public XPScriptJsonArray GetToolNames() => XPScriptAiToolRegistry.GetToolNames(this);
+    public int ToolCount() => XPScriptAiToolRegistry.ToolCount(this);
+
     public void Dispose()
     {
         lock (_sync)
@@ -274,10 +282,11 @@ internal sealed class XPScriptAi : IDisposable
                 throw new XPScriptRuntimeException(5, "XPAi request was cancelled or timed out.");
             throw new XPScriptRuntimeException(5, "XPAi request was cancelled.");
         }
-        catch (System.Net.Http.HttpRequestException)
+        catch (System.Net.Http.HttpRequestException ex)
         {
             if (_tls.LastError.Length > 0) throw _tls.Failure("XPAi request");
-            throw new XPScriptRuntimeException(5, "XPAi HTTP request failed.");
+            var detail = string.IsNullOrWhiteSpace(ex.Message) ? "unknown transport error" : ex.Message;
+            throw new XPScriptRuntimeException(5, "XPAi HTTP request failed: " + detail);
         }
         catch (IOException)
         {

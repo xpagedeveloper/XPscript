@@ -1,0 +1,3 @@
+Sub Main()
+    Lock #MissingFile, 1 To 2
+End Sub

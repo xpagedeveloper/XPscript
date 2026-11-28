@@ -1,0 +1,16 @@
+Class Resource
+    Private Sub Delete()
+        Print "DESTRUCTOR_CALLED"
+        Exit Sub
+        Print "UNREACHABLE"
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Resource
+    Delete item
+    If item Is Nothing Then
+        Print "DESTRUCTOR_PARITY_OK"
+    Else
+        Error 6, "Delete did not clear reference"
+    End If
+End Sub

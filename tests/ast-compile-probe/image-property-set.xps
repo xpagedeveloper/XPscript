@@ -1,0 +1,184 @@
+Public trace As String
+Class ImageStore
+    Private backing As XPImage
+    Public DirectImage As XPImage
+    Public Seen As Variant
+    Public Temporary As Variant
+    Public Stored As Variant
+    Public Property Get Receiver As ImageStore
+        trace = trace & "R"
+        Set Receiver = Me
+    End Property
+    Public Property Get Copy As XPImage
+        If Not (backing Is Nothing) Then
+            Set Copy = backing.Clone()
+        End If
+    End Property
+    Public Property Set Copy(ByVal incoming As XPImage)
+        Seen = incoming
+        Set backing = incoming
+        Stored = backing
+        Set incoming = Nothing
+    End Property
+    Public Property Get Item(Optional ByRef index As Long = 2) As XPImage
+        index = index + 1
+        If Not (backing Is Nothing) Then
+            Set Item = backing.Clone()
+        End If
+    End Property
+    Public Property Set Item(Optional ByRef index As Long = 2, ByRef incoming As XPImage)
+        index = index + 1
+        Seen = incoming
+        Dim alias As XPImage = incoming
+        Set alias = Nothing
+        Set backing = incoming
+        Stored = backing
+        Set incoming = New XPImage(1, 1)
+        Temporary = incoming
+        Set incoming = Nothing
+    End Property
+    Public Property Set Mutating(ByRef incoming As XPImage)
+        Call incoming.Resize(6, 2, "stretch")
+        Set backing = incoming
+        Stored = backing
+    End Property
+    Public Property Set MutatingCopy(ByVal incoming As XPImage)
+        Call incoming.Resize(9, 2, "stretch")
+        Set backing = incoming
+        Stored = backing
+    End Property
+    Public Property Set Failing(ByRef index As Long, ByVal incoming As XPImage)
+        Seen = incoming
+        Set backing = incoming
+        Stored = backing
+        index = index + 1
+        Error 3801, "image setter failed"
+    End Property
+    Public Property Set Protected(Optional ByRef index As Long = 2, ByVal incoming As XPImage)
+        On Error Resume Next
+        Error 3802, "handled setter failure"
+        On Error GoTo 0
+        Set backing = incoming
+        Stored = backing
+        index = index + 1
+    End Property
+    Public Sub Clear()
+        Set backing = Nothing
+        Set DirectImage = Nothing
+    End Sub
+End Class
+Function MakeTemporary(ByVal value As Variant) As XPImage
+    Dim store As ImageStore = value
+    trace = trace & "V"
+    Dim image As New XPImage(8, 2)
+    store.Temporary = image
+    Set MakeTemporary = image
+End Function
+Sub PutTemporary(ByVal value As Variant)
+    Dim store As ImageStore = value
+    Set store.Receiver.DirectImage = MakeTemporary(store)
+End Sub
+Sub PutFailingTemporary(ByVal value As Variant, ByRef index As Long)
+    Dim store As ImageStore = value
+    Set store.Failing(index) = MakeTemporary(store)
+End Sub
+Sub AssertExpired(ByVal value As Variant)
+    Dim image As XPImage = value
+    If image Is Nothing Then Error 6, "missing image cleanup observation"
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = image.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 6, "image was not recycled"
+End Sub
+Sub Main()
+    Dim store As New ImageStore
+    Dim other As New ImageStore
+    Dim source As New XPImage(4, 3)
+    Set store.Copy = source
+    If source.Width <> 4 Then Error 6, "ByVal setter disposed source"
+    Call AssertExpired(store.Seen)
+    Dim copy As XPImage = store.Copy
+    If copy.Width <> 4 Or copy Is source Then Error 6, "ByVal field snapshot"
+    Set store.MutatingCopy = source
+    If source.Width <> 4 Then Error 6, "ByVal body mutated source"
+    Dim changed As XPImage = store.Copy
+    If changed.Width <> 9 Then Error 6, "ByVal body copy was not retained"
+    Call source.Resize(5, 3, "stretch")
+    If copy.Width <> 4 Then Error 6, "returned copy alias"
+    Dim previous As Variant = store.Stored
+    Dim index As Long = 3
+    Set store.Item(index) = source
+    If index <> 4 Or source.Width <> 5 Then Error 6, "ByRef source or index"
+    If store.Seen Is source Then
+    Else
+        Error 6, "ByRef setter did not borrow source"
+    End If
+    Call AssertExpired(previous)
+    Call AssertExpired(store.Temporary)
+    Dim indexed As XPImage = store.Item(index)
+    If indexed.Width <> 5 Or index <> 5 Then Error 6, "image indexed getter"
+    Set store.Item() = source
+    If source.Width <> 5 Then Error 6, "Optional setter disposed source"
+    Set store.Mutating = source
+    If source.Width <> 6 Then Error 6, "ByRef body mutation"
+    Dim mutated As XPImage = store.Copy
+    If mutated.Width <> 6 Then Error 6, "field did not copy mutated source"
+    Call source.Resize(7, 2, "stretch")
+    Dim isolated As XPImage = store.Copy
+    If isolated.Width <> 6 Then Error 6, "stored snapshot followed source"
+    Set store.Protected() = source
+    Dim protectedCopy As XPImage = store.Copy
+    If protectedCopy.Width <> 7 Or source.Width <> 7 Then Error 6, "protected Optional setter ownership"
+    trace = ""
+    Call PutTemporary(store)
+    If trace <> "RV" Then Error 6, "field receiver/value evaluation order"
+    Call AssertExpired(store.Temporary)
+    If store.DirectImage.Width <> 8 Then Error 6, "field died with temporary caller scope"
+    Dim fieldAlias As Variant = store.DirectImage
+    Set store.DirectImage = store.DirectImage
+    If store.DirectImage.Width <> 8 Then Error 6, "field self assignment"
+    Dim failure As Long
+    On Error Resume Next
+    Call PutFailingTemporary(store, index)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3801 Or index <> 6 Then Error 6, "failed setter alias"
+    Call AssertExpired(store.Seen)
+    Call AssertExpired(store.Temporary)
+    Dim afterFailure As XPImage = store.Copy
+    If afterFailure.Width <> 8 Then Error 6, "failed setter lost stored snapshot"
+    Dim dead As New XPImage(1, 1)
+    Call dead.Recycle()
+    On Error Resume Next
+    Set store.DirectImage = dead
+    On Error GoTo 0
+    If store.DirectImage.Width <> 8 Then Error 6, "failed clone replaced old field"
+    Dim beforeNull As Variant = store.Stored
+    Set store.Item() = Nothing
+    Call AssertExpired(beforeNull)
+    If store.Copy Is Nothing Then
+    Else
+        Error 6, "Nothing setter did not clear snapshot"
+    End If
+    Set store.Copy = Nothing
+    With store
+        Set .Copy = source
+    End With
+    If other.Copy Is Nothing Then
+    Else
+        Error 6, "image storage crossed instances"
+    End If
+    Dim lastStored As Variant = store.Stored
+    Call store.Clear()
+    Call AssertExpired(fieldAlias)
+    Call AssertExpired(lastStored)
+    If store.Copy Is Nothing And store.DirectImage Is Nothing Then
+    Else
+        Error 6, "clear did not remove image fields"
+    End If
+    If source.Width <> 7 Then Error 6, "field cleanup disposed caller source"
+    Print "IMAGE_PROPERTY_SET_OK"
+End Sub

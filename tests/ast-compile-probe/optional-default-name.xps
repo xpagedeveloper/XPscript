@@ -1,0 +1,7 @@
+Function Compute(Optional seed As Long = 4, Optional nextValue As Long = seed + 1) As Long
+    Compute = nextValue
+End Function
+
+Sub Main()
+    Print Compute()
+End Sub

@@ -1,0 +1,95 @@
+Public defaultMode As Long
+Public trace As String
+Public defaultImage As Variant
+Public rootImage As Variant
+Public childImage As Variant
+Public escaped As Variant
+Public deletes As Long
+Class Root
+    Public Picture As XPImage
+    Public Sub New(ByRef value As Long, Optional ByVal mode As Long = DefaultValue(value))
+        trace = trace & "R"
+        value = value + 1
+        escaped = Me
+        Dim local As New XPImage(4, 3)
+        Set Picture = local
+        rootImage = Picture
+        If mode = 1 Then Error 3891, "root failed"
+    End Sub
+    Public Sub Delete()
+        deletes = deletes + 1
+    End Sub
+End Class
+Class Child Extend Root
+    Public Other As XPImage
+    Public Sub New(ByRef value As Long, Optional ByVal mode As Long = DefaultValue(value))
+        Call Parent.New(value)
+        trace = trace & "C"
+        value = value + 100
+        Dim local As New XPImage(5, 3)
+        Set Other = local
+        childImage = Other
+        If mode = 2 Then Error 3892, "child failed"
+    End Sub
+    Public Sub Delete()
+        deletes = deletes + 1
+    End Sub
+End Class
+Function DefaultValue(ByRef value As Long) As Long
+    trace = trace & "D"
+    value = value + 10
+    Dim local As New XPImage(3, 2)
+    defaultImage = local
+    If defaultMode = 3 Then Error 3893, "default failed"
+    DefaultValue = defaultMode
+End Function
+Sub AssertExpired(ByVal value As Variant)
+    If value Is Nothing Then
+        Exit Sub
+    End If
+    Dim image As XPImage = value
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = image.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 6, "mixed construction image leaked"
+End Sub
+Sub Main()
+    Dim value As Long = 1
+    Dim item As New Child(value)
+    Dim original As Child = item
+    If value <> 122 Or trace <> "DDRC" Then Error 6, "mixed image success failed"
+    Call AssertExpired(defaultImage)
+    Dim mode As Long
+    For mode = 1 To 3
+        defaultMode = mode
+        trace = ""
+        escaped = Nothing
+        rootImage = Nothing
+        childImage = Nothing
+        value = 1
+        Dim failure As Long
+        On Error Resume Next
+        Set item = New Child(value)
+        failure = Err
+        On Error GoTo 0
+        If failure <> 3890 + mode Or Not (item Is original) Or deletes <> 0 Then Error 6, "mixed error target or Delete failed"
+        If mode = 1 And (value <> 22 Or trace <> "DDR") Then Error 6, "mixed root reference lost"
+        If mode = 2 And (value <> 122 Or trace <> "DDRC") Then Error 6, "mixed child reference lost"
+        If mode = 3 Then
+            If value <> 11 Or trace <> "D" Or Not (escaped Is Nothing) Then Error 6, "mixed default entered body"
+        Else
+            Dim failed As Child = escaped
+            If Not (failed.Picture Is Nothing) Or Not (failed.Other Is Nothing) Then Error 6, "mixed fields not cleared"
+        End If
+        Call AssertExpired(defaultImage)
+        Call AssertExpired(rootImage)
+        Call AssertExpired(childImage)
+    Next
+    If item.Picture.Width <> 4 Or item.Other.Width <> 5 Then Error 6, "mixed old target damaged"
+    Delete item
+    If deletes <> 2 Then Error 6, "mixed explicit Delete chain"
+    Print "IMAGE_MIXED_CONSTRUCTORS_OK"
+End Sub

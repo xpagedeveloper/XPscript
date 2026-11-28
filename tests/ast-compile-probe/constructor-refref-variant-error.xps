@@ -1,0 +1,8 @@
+Class Record
+    Public Sub New(ByRef value As Object)
+    End Sub
+End Class
+Sub Main()
+    Dim value As Variant = New Object()
+    Dim item As New Record(value)
+End Sub

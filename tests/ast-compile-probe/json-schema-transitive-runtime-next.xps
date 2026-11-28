@@ -1,0 +1,11 @@
+Sub Main()
+    Dim schema As XPJsonSchema
+    Dim result As XPJsonValidationResult
+    Set schema = XPJsonSchema.Parse("true")
+    Set result = schema.Validate(123)
+    If result.Valid Then
+        Print "AST_JSON_SCHEMA_TRANSITIVE_RUNTIME_OK"
+    Else
+        Print "AST_JSON_SCHEMA_TRANSITIVE_RUNTIME_INVALID"
+    End If
+End Sub

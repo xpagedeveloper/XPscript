@@ -1,0 +1,12 @@
+Sub Main()
+    Dim document As New XPXmlDocument
+    With document
+        Call .AddRoot("root")
+        With .Root
+            Call .SetAttribute("id", 42)
+            .AddElement("child", "ok")
+        End With
+    End With
+    Print document.Root.GetAttribute("id")
+    Print document.Root.GetElement("child").Value
+End Sub

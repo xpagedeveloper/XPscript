@@ -1,0 +1,126 @@
+Option Declare
+Private evaluations As Long
+Private latest As Variant
+Class Box
+    Public Value As Long
+End Class
+Class Leaf Extend Box
+End Class
+Class Holder
+    Public Slot As Box
+    Public Property Get Current As Holder
+        evaluations = evaluations + 1
+        Set Current = Me
+    End Property
+End Class
+Class Switcher
+    Public Stored As Box
+    Public Sub New(ByRef left As bOx, ByRef right As Box, Optional ByVal fail As Boolean = False, Optional ByRef count As Long = 2)
+        Set left = New Box()
+        left.Value = 10
+        right.Value = right.Value + 1
+        If left.Value <> 11 Then Error 3980, "reference slots do not alias"
+        Set right = Nothing
+        If Not (left Is Nothing) Then Error 3981, "clear did not reach shared slot"
+        Set left = New Leaf()
+        left.Value = 20 + count
+        count = count + 1
+        Set Stored = right
+        If fail Then Error 3982, "reference replacement failed"
+    End Sub
+End Class
+Class Root
+    Public Stored As Box
+    Public Sub New(ByRef value As Box)
+        Set value = New Box()
+        value.Value = 40
+        Set Stored = value
+    End Sub
+End Class
+Class Child Extend Root
+    Public Sub New(ByRef value As Box)
+        Call Parent.New(value)
+        value.Value = value.Value + 100
+    End Sub
+End Class
+Class Snapshot Extend Root
+    Public Sub New(ByVal value As Box)
+        Call Parent.New(value)
+        value.Value = value.Value + 100
+    End Sub
+End Class
+Class Forward
+    Public Stored As Box
+    Public Sub New(ByRef value As Box)
+        Dim item As New Child(value)
+        Set Stored = value
+    End Sub
+End Class
+Class Implicit
+    Public Sub New(value As Object)
+        Set value = New Object()
+    End Sub
+End Class
+Class ObjectSwitcher
+    Public Before As Object
+    Public Stored As Object
+    Public Sub New(ByRef left As Object, ByRef right As Object, Optional ByVal count As Long = ReplaceObject(left))
+        Set Before = right
+        Set left = Nothing
+        If Not (right Is Nothing) Then Error 3983, "Object aliases copied"
+        Set right = New Object()
+        Set Stored = left
+    End Sub
+End Class
+Function ReplaceObject(ByRef value As Object) As Long
+    Set value = New Object()
+    latest = value
+    ReplaceObject = 1
+End Function
+Sub Main()
+    Dim value As New Box
+    Dim original As Box = value
+    Dim item As New Switcher(value, value)
+    If value.Value <> 22 Or value Is original Or Not (item.Stored Is value) Then Error 3984, "class reference replacement lost"
+    Dim count As Long = 3
+    Set item = New Switcher(value, value, False, count)
+    If value.Value <> 23 Or count <> 4 Or Not (item.Stored Is value) Then Error 3985, "mixed scalar/reference aliases lost"
+    Dim holder As New Holder
+    Set holder.Slot = value
+    evaluations = 0
+    Set item = New Switcher(holder.Current.Slot, holder.Current.Slot)
+    If evaluations <> 2 Or holder.Slot.Value <> 22 Or Not (item.Stored Is holder.Slot) Then Error 3986, "field addresses evaluated twice or copied"
+    With holder
+        Set item = New Switcher(.Slot, .Slot)
+    End With
+    If Not (item.Stored Is holder.Slot) Then Error 3994, "With reference field lost"
+    Dim child As New Child(value)
+    If value.Value <> 140 Or Not (child.Stored Is value) Then Error 3987, "Parent.New reference forwarding failed"
+    Set original = value
+    Dim snapshot As New Snapshot(value)
+    If Not (value Is original) Or value Is snapshot.Stored Or snapshot.Stored.Value <> 140 Then Error 3988, "ByVal child leaked base replacement"
+    Dim forward As New Forward(value)
+    If value.Value <> 140 Or Not (forward.Stored Is value) Then Error 3989, "constructor parameter forwarding failed"
+    Dim vacant As Box
+    Dim initialized As New Root(vacant)
+    If vacant.Value <> 40 Or Not (initialized.Stored Is vacant) Then Error 3995, "Nothing-valued typed slot rejected"
+    Dim emptyObject As Object
+    Dim initializedObject As New Implicit(emptyObject)
+    If emptyObject Is Nothing Then Error 3996, "Nothing-valued Object slot rejected"
+    Dim objectValue As New Object
+    Dim oldObject As Object = objectValue
+    Dim implicitItem As New Implicit(objectValue)
+    If objectValue Is oldObject Then Error 3990, "implicit ByRef ignored"
+    Dim objects As New ObjectSwitcher(objectValue, objectValue)
+    If Not (objects.Before Is latest) Or Not (objects.Stored Is objectValue) Then Error 3991, "default lost Object reference"
+    Set objects = New ObjectSwitcher(objectValue, objectValue, ReplaceObject(objectValue))
+    If Not (objects.Before Is latest) Or Not (objects.Stored Is objectValue) Then Error 3992, "later argument lost live reference"
+    Dim old As Switcher = item
+    Dim failure As Long
+    On Error Resume Next
+    Set item = New Switcher(value, value, True)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3982 Or value.Value <> 22 Or Not (item Is old) Then Error 3993, "error lost reference writes or old target"
+    Print "BYREF_REFERENCE_CONSTRUCTORS_OK"
+End Sub

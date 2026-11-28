@@ -1,0 +1,49 @@
+Sub Failing()
+    Error 7001, "inner failure"
+End Sub
+
+Sub Retry()
+    Dim values(0) As Long
+    Dim index As Long
+    Dim result As Long
+    index = 1
+    On Error GoTo handler
+    result = values(index)
+    Print "RETRY_OK"
+    Exit Sub
+handler:
+    index = 0
+    Resume
+End Sub
+
+Sub NextStatement()
+    On Error GoTo handler
+    Call Failing()
+    Print "NEXT_OK"
+    Exit Sub
+handler:
+    Print Err
+    Print Error$
+    Resume Next
+End Sub
+
+Sub LabelTarget()
+    On Error GoTo handler
+    Error 7003, "label"
+    Print "BAD"
+finished:
+    Print "LABEL_OK"
+    Exit Sub
+handler:
+    Resume finished
+End Sub
+
+Sub Main()
+    On Error Resume Next
+    Error 7000, "ignored"
+    Print "AUTOMATIC_NEXT_OK"
+    On Error GoTo 0
+    Call Retry()
+    Call NextStatement()
+    Call LabelTarget()
+End Sub

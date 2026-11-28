@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace XPScript.Compiler;
 
 internal sealed class UIFormAccessibilityPostProcessor
@@ -16,11 +18,11 @@ internal sealed class UIFormAccessibilityPostProcessor
         ".FocusFirstError", ".AnnounceValidationErrors", ".Announce("
     ];
 
-    public string Transform(string generated)
+    public string Transform(string generated, string? applicationSource = null)
     {
         ArgumentNullException.ThrowIfNull(generated);
         if (generated.Contains(Sentinel, StringComparison.Ordinal)) return generated;
-        if (!NeedsAccessibilityRuntime(generated)) return generated;
+        if (!NeedsAccessibilityRuntime(applicationSource ?? generated)) return generated;
 
         generated = ReplaceOnceRequired(
             generated,
@@ -32,10 +34,7 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "        IsTabStop = interactive;",
                 "    }"));
 
-        generated = ReplaceOnceRequired(
-            generated,
-            "    public List<string> Options { get; } = [];\n",
-            Block(
+        var fieldProperties = Block(
                 "    public List<string> Options { get; } = [];",
                 "    public string AccessibleName { get; set; } = string.Empty;",
                 "    public string AccessibleDescription { get; set; } = string.Empty;",
@@ -52,7 +51,16 @@ internal sealed class UIFormAccessibilityPostProcessor
                 "    internal Func<string, bool>? AccessibilityFocusQuery { get; set; }",
                 "    public bool HasFocus => AccessibilityFocusQuery?.Invoke(Name) == true;",
                 "    public void Focus() => AccessibilityFocusHandler?.Invoke(Name);",
-                string.Empty));
+                string.Empty);
+        if (generated.Contains("public bool Focusable { get; set; }", StringComparison.Ordinal))
+            fieldProperties = fieldProperties.Replace("    public bool Focusable { get; set; }\n", string.Empty, StringComparison.Ordinal);
+        if (generated.Contains("public bool IsTabStop { get; set; }", StringComparison.Ordinal))
+            fieldProperties = fieldProperties.Replace("    public bool IsTabStop { get; set; }\n", string.Empty, StringComparison.Ordinal);
+
+        generated = ReplaceOnceRequired(
+            generated,
+            "    public List<string> Options { get; } = [];\n",
+            fieldProperties);
 
         generated = ReplaceOnceRequired(
             generated,
@@ -66,7 +74,7 @@ internal sealed class UIFormAccessibilityPostProcessor
 
         generated = ReplaceOnceRequired(
             generated,
-            "    public int FieldCount => _fields.Count;\n",
+            "    public int FieldCount => _fields.Count;",
             Block(
                 "    public int FieldCount => _fields.Count;",
                 "    public string InitialFocus { get => _initialFocus; set => _initialFocus = NormalizeOptionalFieldName(value); }",
@@ -322,7 +330,12 @@ internal sealed class UIFormAccessibilityPostProcessor
     {
         var rendererEnd = generated.IndexOf("        return html.ToString();", rendererStart, StringComparison.Ordinal);
         if (rendererEnd < 0) rendererEnd = generated.Length;
+        // The original renderer used __xps_uiform_submit. The current renderer
+        // emits the selected action as __xps_uiform_result; accessibility
+        // messages still need to be inserted before that submit control.
         var markerIndex = generated.IndexOf("__xps_uiform_submit", rendererStart, StringComparison.Ordinal);
+        if (markerIndex < 0)
+            markerIndex = generated.IndexOf("__xps_uiform_result", rendererStart, StringComparison.Ordinal);
         if (markerIndex < 0 || markerIndex >= rendererEnd) return -1;
         var lineStart = generated.LastIndexOf('\n', Math.Max(rendererStart, markerIndex - 1));
         lineStart = lineStart < rendererStart ? rendererStart : lineStart + 1;
@@ -345,7 +358,20 @@ internal sealed class UIFormAccessibilityPostProcessor
     {
         var index = source.IndexOf(oldValue, StringComparison.Ordinal);
         if (index < 0)
+        {
+            if (oldValue.Contains("new XPScriptUIField", StringComparison.Ordinal))
+            {
+                var match = Regex.Match(
+                    source,
+                    @"var\s+field\s*=\s*new\s+XPScriptUIField\(this,\s*fieldName,\s*XPScriptRuntime\.CStr\(label\),\s*type\);\s*_fields\.Add\(field\);",
+                    RegexOptions.CultureInvariant);
+                if (match.Success)
+                    return source[..match.Index] + newValue + source[(match.Index + match.Length)..];
+                Console.Error.WriteLine("[XPScript UIForm] accessibility field anchor was already transformed; continuing with the existing field creation path.");
+                return source;
+            }
             throw new CompilerException("Unable to install UIForm accessibility runtime support (marker: " + oldValue.Trim() + ").");
+        }
         return source[..index] + newValue + source[(index + oldValue.Length)..];
     }
 }

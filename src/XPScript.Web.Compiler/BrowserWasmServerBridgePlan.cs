@@ -130,7 +130,7 @@ internal sealed record BrowserWasmServerBridgePlan(
                 continue;
             }
 
-            browser.AppendLine(lines[i]);
+            browser.AppendLine(Regex.Replace(lines[i], @"(?<prefix>[(,]\s*)(?!ByVal\b)(?<name>[A-Za-z_]\w*)\s+As\b", "${prefix}ByVal ${name} As", RegexOptions.IgnoreCase));
             AppendStub(browser, manifest.Values.Single(x => x.Name.Equals(procedure.Name, StringComparison.OrdinalIgnoreCase)));
             browser.AppendLine(lines[procedure.EndLine]);
             i = procedure.EndLine;
@@ -341,7 +341,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         output.AppendLine();
         output.AppendLine("Private " + CapabilityVariable + " As String");
         output.AppendLine();
-        output.AppendLine("Private Function " + CapabilityFunction + "(spinnerDelay As Integer) As String");
+        output.AppendLine("Private Function " + CapabilityFunction + "(ByVal spinnerDelay As Long) As String");
         output.AppendLine("    Dim http As New XPHttpClient");
         output.AppendLine("    Dim document As XPJsonDocument");
         output.AppendLine("    Dim root As Variant");
@@ -356,7 +356,7 @@ internal sealed record BrowserWasmServerBridgePlan(
         output.AppendLine("    " + CapabilityFunction + " = " + CapabilityVariable);
         output.AppendLine("End Function");
         output.AppendLine();
-        output.AppendLine("Private Function " + InvokeFunction + "(procedureId As String, arguments As Variant, spinnerDelay As Integer) As Variant");
+        output.AppendLine("Private Function " + InvokeFunction + "(ByVal procedureId As String, ByVal bridgeArgs As XPJsonArray, ByVal spinnerDelay As Long) As Variant");
         output.AppendLine("    Dim http As New XPHttpClient");
         output.AppendLine("    Dim payload As New XPJsonObject");
         output.AppendLine("    Dim response As XPHttpResponse");
@@ -366,11 +366,16 @@ internal sealed record BrowserWasmServerBridgePlan(
         output.AppendLine("    Call http.SetHeader(\"X-XPS-WASM-Spinner-Delay\", CStr(spinnerDelay))");
         output.AppendLine("    Call http.SetHeader(\"X-XPS-WASM-Capability\", " + CapabilityFunction + "(spinnerDelay))");
         output.AppendLine("    Call payload.Set(\"procedure\", procedureId)");
-        output.AppendLine("    Call payload.Set(\"arguments\", arguments)");
+        output.AppendLine("    Call payload.Set(\"arguments\", bridgeArgs)");
         output.AppendLine("    Set response = http.PostJson(\"__xpscript_bridge\", payload)");
         output.AppendLine("    Set document = response.Json()");
         output.AppendLine("    root = document.Root.AsObject()");
-        output.AppendLine("    " + InvokeFunction + " = root.Get(\"result\")");
+        output.AppendLine("    Dim bridgeResult As Variant");
+        output.AppendLine("    bridgeResult = root.Get(\"result\")");
+        output.AppendLine("    If TypeName(bridgeResult) = \"XPScriptJsonArray\" Then");
+        output.AppendLine("        If bridgeResult.Count = 1 Then bridgeResult = bridgeResult.Get(0)");
+        output.AppendLine("    End If");
+        output.AppendLine("    " + InvokeFunction + " = bridgeResult");
         output.AppendLine("    Call http.Dispose()");
         output.AppendLine("End Function");
     }

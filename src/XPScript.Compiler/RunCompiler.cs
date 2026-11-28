@@ -66,6 +66,7 @@ internal static class RunCompiler
         var rid = runtimeIdentifier.Trim().ToLowerInvariant();
         if (!CompilerDriver.SupportedRuntimes.Contains(rid, StringComparer.OrdinalIgnoreCase))
             throw new CompilerException("Unsupported runtime identifier '" + runtimeIdentifier + "'.", CompilerDiagnosticCodes.RuntimeIdentifierUnsupported, "configuration");
+        TargetPrerequisiteValidator.Validate(rid);
 
         var originalSource = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
@@ -73,10 +74,17 @@ internal static class RunCompiler
         var source = managedReferences.Source;
         var nativeDependencies = new NativeDependencyPackager(rid).Collect(source, includeResult.Map, sourcePath);
 
-        var transpiler = new XPScriptTranspiler();
         string generatedSource;
-        using (ExpandedSourceContext.Begin(source, sourcePath, includeResult.Map))
-            generatedSource = transpiler.Transpile(source, sourcePath, rid);
+        var astWorkspace = Path.Combine(Path.GetTempPath(), "XPScript", "ast-run-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(astWorkspace);
+        try
+        {
+            generatedSource = await AstCompiler.GenerateSourceAsync(sourcePath, astWorkspace, rid, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (Directory.Exists(astWorkspace)) Directory.Delete(astWorkspace, recursive: true);
+        }
 
         var outputRoot = Path.GetFullPath(outputDirectory);
         Directory.CreateDirectory(outputRoot);
@@ -101,6 +109,23 @@ internal static class RunCompiler
             cancellationToken).ConfigureAwait(false);
     }
 
+    internal static Task<string> CompileGeneratedWithDependenciesAsync(
+        string generatedSource,
+        string outputDirectory,
+        bool debug,
+        CancellationToken cancellationToken,
+        string? runtimeIdentifier = null,
+        IReadOnlyList<ManagedAssemblyReferencePreprocessor.ManagedReference>? managedReferences = null,
+        string? referenceSourcePath = null,
+        string? startupObject = null)
+    {
+        var outputRoot = Path.GetFullPath(outputDirectory);
+        Directory.CreateDirectory(outputRoot);
+        CompilerPathSecurity.HardenTemporaryDirectory(outputRoot);
+        return CompileWithMsBuildAsync(referenceSourcePath ?? Path.Combine(outputRoot, "Program.cs"), outputRoot, generatedSource,
+            new ManagedAssemblyReferencePreprocessor.Result(generatedSource, managedReferences ?? [], []), [], debug, cancellationToken, runtimeIdentifier, startupObject);
+    }
+
     private static async Task<string> CompileWithMsBuildAsync(
         string sourcePath,
         string outputRoot,
@@ -108,7 +133,9 @@ internal static class RunCompiler
         ManagedAssemblyReferencePreprocessor.Result managedReferences,
         IReadOnlyList<NativeDependencyPackager.Dependency> nativeDependencies,
         bool debug,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? runtimeIdentifier = null,
+        string? startupObject = null)
     {
         var tempRoot = CompilerPathSecurity.CreateOwnedTemporaryDirectory("run-build-");
         try
@@ -116,23 +143,77 @@ internal static class RunCompiler
             var projectPath = Path.Combine(tempRoot, "Generated.csproj");
             var programPath = Path.Combine(tempRoot, "Program.cs");
             var references = StageManagedReferences(sourcePath, tempRoot, managedReferences.Managed);
-            var usesMimeKit = generatedSource.Contains("MimeKit.", StringComparison.Ordinal);
-            await File.WriteAllTextAsync(projectPath, BuildProject(references, usesMimeKit), cancellationToken).ConfigureAwait(false);
-            await File.WriteAllTextAsync(programPath, generatedSource, cancellationToken).ConfigureAwait(false);
+            var dependencies = ApplicationDependencyCatalog.Detect(generatedSource).ToList();
+            if ((generatedSource.Contains("XPScriptExtendedMemoryArchive", StringComparison.Ordinal) ||
+                 generatedSource.Contains("XPScriptExtendedArchiveWriterFactory", StringComparison.Ordinal) ||
+                 generatedSource.Contains("SharpCompress", StringComparison.Ordinal)) &&
+                !dependencies.Any(package => package.Name.Equals("SharpCompress", StringComparison.OrdinalIgnoreCase)))
+            {
+                dependencies.Add(new ApplicationPackageReference(
+                    "SharpCompress",
+                    ApplicationDependencyCatalog.ResolveVersion("SharpCompress", ApplicationDependencyCatalog.SharpCompressVersion),
+                    "Extended Archive runtime"));
+            }
+            var isAndroid = IsAndroidRuntime(runtimeIdentifier);
+            var androidUi = isAndroid && UIFormAppAssets.UsesUIForm(sourcePath);
+            if (androidUi)
+            {
+                foreach (var package in new[] { "Avalonia", "Avalonia.Android", "Avalonia.Themes.Fluent" })
+                    dependencies.Add(new ApplicationPackageReference(package, "12.1.4", "Android UIForm host"));
+                foreach (var package in new[] { "Xamarin.AndroidX.Media3.ExoPlayer", "Xamarin.AndroidX.Media3.Ui" })
+                    dependencies.Add(new ApplicationPackageReference(package, "1.11.1", "Android UIForm media"));
+                foreach (var package in new[] { "Xamarin.AndroidX.Camera.Core", "Xamarin.AndroidX.Camera.Camera2", "Xamarin.AndroidX.Camera.View" })
+                    dependencies.Add(new ApplicationPackageReference(package, "1.4.2.1", "Android UIForm camera"));
+                dependencies.Add(new ApplicationPackageReference("Xamarin.AndroidX.Lifecycle.LiveData.Core", "2.10.0.2", "Android UIForm lifecycle"));
+                var host = AndroidUIHostSource.Build(debug)
+                    .Replace("Console.AndroidLog =", "Program.Console.AndroidLog =", StringComparison.Ordinal)
+                    .Replace("Program.Main(Array.Empty<string>())", "Program.__xps_android_entry(Array.Empty<string>())", StringComparison.Ordinal);
+                await File.WriteAllTextAsync(Path.Combine(tempRoot, "AndroidUIHost.cs"), host, cancellationToken).ConfigureAwait(false);
+                var values = Path.Combine(tempRoot, "Resources", "values");
+                Directory.CreateDirectory(values);
+                await File.WriteAllTextAsync(Path.Combine(values, "styles.xml"), "<resources><style name=\"Theme.AppCompat.DayNight.NoActionBar\" parent=\"Theme.AppCompat.Light.NoActionBar\" /></resources>", cancellationToken).ConfigureAwait(false);
+            }
+            dependencies = dependencies
+                .GroupBy(package => package.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .ToList();
+            await File.WriteAllTextAsync(projectPath, BuildProject(references, dependencies, runtimeIdentifier, startupObject), cancellationToken).ConfigureAwait(false);
+            // Pin every generated project to the compiler-selected SDK. Without
+            // this, browser-WASM builds can be picked up by a newer machine-wide
+            // SDK (for example .NET 11), which may invoke a different workload
+            // resolver and fail while copying transient workload metadata such as
+            // msi.json. Android already required this pin; browser and desktop
+            // generated projects need the same deterministic boundary.
+            var generatedFramework = Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selectedFramework
+                ? selectedFramework
+                : "net10.0";
+            var generatedSdk = DotNetVersionSelection.SelectSdk(generatedFramework);
+            await File.WriteAllTextAsync(
+                Path.Combine(tempRoot, "global.json"),
+                DotNetVersionSelection.CreateGlobalJson(generatedFramework),
+                cancellationToken).ConfigureAwait(false);
+            await File.WriteAllTextAsync(programPath,
+                isAndroid && !androidUi ? CombineGeneratedSources(generatedSource, AndroidHostSource.Code) : generatedSource,
+                cancellationToken).ConfigureAwait(false);
             CompilerPathSecurity.HardenTemporaryFile(projectPath);
             CompilerPathSecurity.HardenTemporaryFile(programPath);
 
-            var build = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken).ConfigureAwait(false);
+            var build = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken, runtimeIdentifier, generatedSdk).ConfigureAwait(false);
             ApplicationSecurityAudit.Report(build.Stdout + Environment.NewLine + build.Stderr);
             if (build.ExitCode != 0)
             {
-                var diagnosticText = build.Stdout + Environment.NewLine + build.Stderr;
+                var debugDiagnostics = debug || CompilerDiagnosticMode.Debug;
+                var diagnosticText = (build.Stdout + Environment.NewLine + build.Stderr).Trim();
+                if (debugDiagnostics && diagnosticText.Length == 0)
+                    diagnosticText = $".NET SDK build exited with code {build.ExitCode} without reporting a diagnostic.";
                 IReadOnlyList<CompileDiagnostic> generatedDiagnostics = [];
-                if (debug)
+                if (debugDiagnostics)
                 {
                     await File.WriteAllTextAsync(programPath, DisableSourceMappings(generatedSource), cancellationToken).ConfigureAwait(false);
                     CompilerPathSecurity.HardenTemporaryFile(programPath);
-                    var generatedBuild = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken).ConfigureAwait(false);
+                    var generatedBuild = await ExecuteBuildAsync(tempRoot, projectPath, outputRoot, cancellationToken, runtimeIdentifier, generatedSdk).ConfigureAwait(false);
+                    if (diagnosticText.Length == 0)
+                        diagnosticText = (generatedBuild.Stdout + Environment.NewLine + generatedBuild.Stderr).Trim();
                     generatedDiagnostics = ParseGeneratedBuildDiagnostics(generatedBuild.Stdout + Environment.NewLine + generatedBuild.Stderr);
                 }
 
@@ -141,13 +222,33 @@ internal static class RunCompiler
                     generatedDiagnostics);
             }
 
-            var assemblyPath = Path.Combine(outputRoot, "Generated.dll");
+            if (IsAndroidRuntime(runtimeIdentifier))
+            {
+                var apkPath = Directory.EnumerateFiles(outputRoot, "*.apk", SearchOption.AllDirectories)
+                    .OrderBy(path => path.EndsWith("-Signed.apk", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                    .FirstOrDefault();
+                if (apkPath is null)
+                    throw new CompilerException("Android compilation succeeded, but no APK artifact was produced.");
+                return apkPath;
+            }
+
+            var browserWasm = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase);
+            var assemblyPath = CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile && !browserWasm
+                ? Path.Combine(outputRoot, IsWindowsRuntime(runtimeIdentifier) ? "Generated.exe" : "Generated")
+                : Path.Combine(outputRoot, "Generated.dll");
             if (!File.Exists(assemblyPath))
-                throw new CompilerException("Run compilation succeeded, but Generated.dll was not produced.");
+                throw new CompilerException("Run compilation succeeded, but the requested generated artifact was not produced.");
 
             StageNativeDependencies(sourcePath, outputRoot, nativeDependencies, managedReferences.Native);
-            if (generatedSource.Contains("MimeKit.", StringComparison.Ordinal))
-                StageMimeKit(outputRoot);
+            if (ApplicationDependencyCatalog.Detect(generatedSource).Count > 0)
+            {
+                if (!File.Exists(build.AssetsPath))
+                    throw new CompilerException("Dependency license metadata was not produced by the build.");
+                var noticePath = Path.Combine(tempRoot, ThirdPartyLicenseNoticeGenerator.OutputFileName);
+                await File.WriteAllTextAsync(noticePath,
+                    ThirdPartyLicenseNoticeGenerator.Generate(tempRoot, false, build.AssetsPath), cancellationToken).ConfigureAwait(false);
+                ThirdPartyLicenseNoticeGenerator.PublishSidecar(noticePath, assemblyPath);
+            }
             return assemblyPath;
         }
         finally
@@ -156,11 +257,40 @@ internal static class RunCompiler
         }
     }
 
-    private static async Task<(int ExitCode, string Stdout, string Stderr)> ExecuteBuildAsync(
+    private static string CombineGeneratedSources(string generatedSource, string hostSource)
+    {
+        var usings = new List<string>();
+        var body = new StringBuilder();
+
+        foreach (var source in new[] { generatedSource, hostSource })
+        {
+            foreach (var line in source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+            {
+                var trimmed = line.TrimStart();
+                if (line.Length == trimmed.Length &&
+                    (trimmed.StartsWith("using ", StringComparison.Ordinal) ||
+                     trimmed.StartsWith("global using ", StringComparison.Ordinal)) &&
+                    trimmed.EndsWith(';'))
+                {
+                    if (!usings.Contains(trimmed, StringComparer.Ordinal))
+                        usings.Add(trimmed);
+                    continue;
+                }
+
+                body.AppendLine(line);
+            }
+        }
+
+        return string.Join(Environment.NewLine, usings) + Environment.NewLine + body;
+    }
+
+    private static async Task<(int ExitCode, string Stdout, string Stderr, string AssetsPath)> ExecuteBuildAsync(
         string tempRoot,
         string projectPath,
         string outputRoot,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? runtimeIdentifier = null,
+        Version? selectedSdk = null)
     {
         var psi = new ProcessStartInfo
         {
@@ -171,22 +301,56 @@ internal static class RunCompiler
             CreateNoWindow = true,
             WorkingDirectory = tempRoot
         };
-        psi.ArgumentList.Add("build");
+        var browserWasm = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase);
+        psi.ArgumentList.Add(CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile && !browserWasm
+            ? "publish"
+            : "build");
         psi.ArgumentList.Add(projectPath);
         psi.ArgumentList.Add("-c");
         psi.ArgumentList.Add("Release");
         psi.ArgumentList.Add("-o");
         psi.ArgumentList.Add(outputRoot);
         psi.ArgumentList.Add("--nologo");
-        psi.ArgumentList.Add("--no-incremental");
-        psi.ArgumentList.Add("-p:UseAppHost=false");
+        psi.ArgumentList.Add("--disable-build-servers");
+        // Keep generated-project builds isolated from runner-wide MSBuild/VBCS
+        // servers. This is required for reliable concurrent AST compiles on
+        // macOS, where a silent SDK exit otherwise leaves no diagnostic to map.
+        psi.ArgumentList.Add("-p:UseSharedCompilation=false");
+        psi.ArgumentList.Add("-p:BuildInParallel=false");
+        psi.ArgumentList.Add("-m:1");
+        if (!(CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile))
+            psi.ArgumentList.Add("--no-incremental");
+        if (!CompilePublishLayoutContext.IncludeRuntime &&
+            !(CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile))
+            psi.ArgumentList.Add("-p:UseAppHost=false");
+        if (runtimeIdentifier is not null || ApplicationDependencyCatalog.Detect(File.ReadAllText(Path.Combine(tempRoot, "Program.cs"))).Count > 0)
+        {
+            psi.ArgumentList.Add("-r");
+            psi.ArgumentList.Add(runtimeIdentifier ?? CompilerDriver.CurrentRuntimeIdentifier());
+        }
         CompilerBuildEnvironment.Configure(psi, tempRoot);
+        if (selectedSdk is not null)
+        {
+            // Keep MSBuild's imported targets and workload resolvers aligned
+            // with the SDK recorded in this generated project's global.json.
+            var dotnetRoot = Path.GetDirectoryName(CompilerToolResolver.ResolveDotnetHost())
+                ?? throw new CompilerException("Unable to resolve the .NET SDK directory for the generated build.");
+            var sdkDirectory = Path.Combine(dotnetRoot, "sdk", selectedSdk.ToString());
+            psi.Environment["MSBuildSDKsPath"] = Path.Combine(sdkDirectory, "Sdks");
+            psi.Environment["MSBUILD_EXE_PATH"] = Path.Combine(sdkDirectory, OperatingSystem.IsWindows() ? "MSBuild.exe" : "MSBuild");
+            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_SDKS_DIR"] = sdkDirectory;
+            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_SDKS_VER"] = selectedSdk.ToString();
+            psi.Environment["DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR"] = dotnetRoot;
+        }
+        const string extensionsPrefix = "-p:MSBuildProjectExtensionsPath=";
+        var extensions = psi.ArgumentList.FirstOrDefault(argument => argument.StartsWith(extensionsPrefix, StringComparison.Ordinal));
+        var assetsPath = Path.Combine(extensions is null ? Path.Combine(tempRoot, "obj") : extensions[extensionsPrefix.Length..], "project.assets.json");
 
         using var process = Process.Start(psi) ?? throw new CompilerException("Unable to start dotnet build.");
         var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
         await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-        return (process.ExitCode, await stdoutTask.ConfigureAwait(false), await stderrTask.ConfigureAwait(false));
+        return (process.ExitCode, await stdoutTask.ConfigureAwait(false), await stderrTask.ConfigureAwait(false), assetsPath);
     }
 
     private static IReadOnlyList<CompileDiagnostic> ParseGeneratedBuildDiagnostics(string text)
@@ -246,7 +410,19 @@ internal static class RunCompiler
         return result;
     }
 
-    private static string BuildProject(IReadOnlyList<(string Name, string Path)> references, bool usesMimeKit)
+    private static bool IsAndroidRuntime(string? runtimeIdentifier) =>
+        runtimeIdentifier is "android-arm64" or "android-x64";
+
+    private static bool IsWindowsRuntime(string? runtimeIdentifier) =>
+        string.IsNullOrWhiteSpace(runtimeIdentifier)
+            ? OperatingSystem.IsWindows()
+            : runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase);
+
+    private static string BuildProject(
+        IReadOnlyList<(string Name, string Path)> references,
+        IReadOnlyList<ApplicationPackageReference> dependencies,
+        string? runtimeIdentifier,
+        string? startupObject = null)
     {
         var items = new StringBuilder();
         if (references.Count > 0)
@@ -262,26 +438,67 @@ internal static class RunCompiler
             items.AppendLine("  </ItemGroup>");
         }
 
-        var mimeKitVersion = ApplicationDependencyCatalog.ResolveVersion("MimeKit", ApplicationDependencyCatalog.MimeKitVersion);
-        var packageItems = usesMimeKit
-            ? $"  <ItemGroup>\n    <PackageReference Include=\"MimeKit\" Version=\"{mimeKitVersion}\" />\n  </ItemGroup>\n"
+        var packageItems = dependencies.Count == 0
+            ? string.Empty
+            : "  <ItemGroup>\n" + string.Join(Environment.NewLine, dependencies.Select(package =>
+                $"    <PackageReference Include=\"{EscapeXml(package.Name)}\" Version=\"{EscapeXml(package.Version)}\" />")) +
+              "\n  </ItemGroup>\n";
+        if (Environment.GetEnvironmentVariable("XPSCRIPT_XAML_MCP") == "1")
+            packageItems += "  <ItemGroup>\n    <PackageReference Include=\"XamlMcp.Avalonia\" Version=\"1.0.0-preview.3\" PrivateAssets=\"all\" />\n  </ItemGroup>\n";
+        if (IsAndroidRuntime(runtimeIdentifier) && dependencies.Any(package => package.Name == "Avalonia.Android"))
+            packageItems += "  <ItemGroup>\n" +
+                "    <PackageReference Include=\"Xamarin.AndroidX.Tracing.Tracing\" Version=\"1.3.0.4\" />\n" +
+                "    <PackageReference Include=\"Xamarin.AndroidX.Tracing.Tracing.Ktx\" Version=\"1.2.0.10\" ExcludeAssets=\"all\" />\n" +
+                "  </ItemGroup>\n";
+        var isAndroid = IsAndroidRuntime(runtimeIdentifier);
+        var targetFramework = isAndroid ? "net10.0-android36.1" :
+            (Environment.GetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK") is { Length: > 0 } selected ? selected : "net10.0");
+        var startup = isAndroid || string.IsNullOrWhiteSpace(startupObject) ? string.Empty : $"    <StartupObject>{EscapeXml(startupObject)}</StartupObject>\n";
+        var androidProperties = isAndroid
+            ? $"    <SupportedOSPlatformVersion>30.0</SupportedOSPlatformVersion>\n" +
+              "    <AndroidUseLatestPlatformSdk>true</AndroidUseLatestPlatformSdk>\n" +
+              "    <AndroidApplication>true</AndroidApplication>\n" +
+              $"    <RuntimeIdentifiers>{runtimeIdentifier}</RuntimeIdentifiers>\n" +
+              "    <AndroidPackageFormat>apk</AndroidPackageFormat>\n" +
+              "    <AndroidUseAapt2FromPackage>false</AndroidUseAapt2FromPackage>\n" +
+              "    <PublishTrimmed>false</PublishTrimmed>\n" +
+              "    <AndroidLinkMode>None</AndroidLinkMode>\n" +
+              "    <RunAOTCompilation>false</RunAOTCompilation>\n" +
+              "    <ApplicationId>eu.xpscript.app</ApplicationId>\n"
+            : string.Empty;
+        var isBrowserWasm = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase);
+        var useAppHost = !isAndroid && !isBrowserWasm && (CompilePublishLayoutContext.IncludeRuntime || (CompilePublishLayoutContext.IsConfigured && CompilePublishLayoutContext.SingleFile));
+        var publishSingleFile = !isAndroid && !isBrowserWasm && CompilePublishLayoutContext.SingleFile;
+        var projectSdk = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase)
+            ? "Microsoft.NET.Sdk.WebAssembly"
+            : "Microsoft.NET.Sdk";
+        var wasmProperties = string.Equals(runtimeIdentifier, "browser-wasm", StringComparison.OrdinalIgnoreCase)
+            ? "    <UseMonoRuntime>true</UseMonoRuntime>\n    <WasmBuildNative>false</WasmBuildNative>\n"
             : string.Empty;
 
         return $"""
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="{projectSdk}">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <StartupObject>Program</StartupObject>
-    <TargetFramework>net10.0</TargetFramework>
+{startup}
+    <TargetFramework>{targetFramework}</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <UseAppHost>false</UseAppHost>
+    <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
+    <UseAppHost>{useAppHost.ToString().ToLowerInvariant()}</UseAppHost>
+    <SelfContained>{CompilePublishLayoutContext.IncludeRuntime.ToString().ToLowerInvariant()}</SelfContained>
+    <PublishSingleFile>{publishSingleFile.ToString().ToLowerInvariant()}</PublishSingleFile>
+{wasmProperties}
     <NuGetAudit>{(ApplicationSecurityModeContext.Current != ApplicationSecurityMode.Off).ToString().ToLowerInvariant()}</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <WarningsNotAsErrors>NU1901;NU1902;NU1903;NU1904;$(WarningsNotAsErrors)</WarningsNotAsErrors>
+{androidProperties}    <RuntimeIdentifier>{runtimeIdentifier ?? string.Empty}</RuntimeIdentifier>
   </PropertyGroup>
+{(isAndroid ? "  <ItemGroup>\n    <AndroidResource Include=\"Resources\\values\\styles.xml\" Condition=\"Exists('Resources\\values\\styles.xml')\" />\n  </ItemGroup>\n" : string.Empty)}
 {packageItems}{items}</Project>
 """;
     }
@@ -300,6 +517,9 @@ internal static class RunCompiler
             "Avalonia.Themes.Fluent.dll",
             "Avalonia.Controls.WebView.dll"
         };
+        var xamlMcpEnabled = Environment.GetEnvironmentVariable("XPSCRIPT_XAML_MCP") == "1";
+        if (xamlMcpEnabled)
+            required = [.. required, "XamlMcp.Avalonia.dll"];
         foreach (var name in required)
         {
             var source = Path.Combine(directory, name);
@@ -317,6 +537,7 @@ internal static class RunCompiler
             {
                 var name = Path.GetFileName(path);
                 return name.Equals("XPScript.UI.Desktop.dll", StringComparison.OrdinalIgnoreCase) ||
+                       (xamlMcpEnabled && name.Equals("XamlMcp.Avalonia.dll", StringComparison.OrdinalIgnoreCase)) ||
                        name.StartsWith("Avalonia.", StringComparison.OrdinalIgnoreCase) ||
                        name.StartsWith("SkiaSharp", StringComparison.OrdinalIgnoreCase) ||
                        name.StartsWith("HarfBuzzSharp", StringComparison.OrdinalIgnoreCase) ||
@@ -353,18 +574,6 @@ internal static class RunCompiler
                 }
             }
         }
-    }
-
-    private static void StageMimeKit(string outputRoot)
-    {
-        var source = Path.Combine(Path.GetDirectoryName(typeof(RunCompiler).Assembly.Location) ?? "", "MimeKit.dll");
-        if (!File.Exists(source)) throw new CompilerException("Required MimeKit runtime assembly was not found: " + source);
-        var target = Path.Combine(outputRoot, "MimeKit.dll");
-        var targetInfo = new FileInfo(target);
-        if (targetInfo.LinkTarget is not null || (targetInfo.Exists && (targetInfo.Attributes & FileAttributes.ReparsePoint) != 0))
-            throw new CompilerException("MimeKit runtime dependency target may not be a link: " + target);
-        if (targetInfo.Exists) File.Delete(target);
-        CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Managed runtime dependency");
     }
 
     private static void StageNativeDependencies(

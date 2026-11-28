@@ -31,6 +31,7 @@ internal static class CompilerDiagnosticParser
                 pos = mapped.Position;
             }
             var code = DiagnosticSourceLine(sourcePath, source, diagnosticSource, line);
+            var sourceLength = code.Length;
             var classification = CompilerDiagnosticClassifier.ClassifyUpstream(upstreamCode, mapped is not null || CompilerDiagnosticClassifier.IsSourceMappedPath(diagnosticSource));
             if (classification.DiagnosticCode is CompilerDiagnosticCodes.UnknownSymbol or CompilerDiagnosticCodes.UnknownMember)
                 code = RecoverDiagnosticSourceLine(sourcePath, source, diagnosticSource, code, description, upstreamCode);
@@ -39,6 +40,8 @@ internal static class CompilerDiagnosticParser
                 File = DiagnosticFileName(diagnosticSource),
                 Line = line,
                 Position = pos,
+                EndLine = line,
+                EndColumn = sourceLength > 0 ? sourceLength + 1 : pos + 1,
                 Description = Humanize(description),
                 SourceCode = code,
                 MarkedCode = Mark(code, pos),
@@ -67,7 +70,7 @@ internal static class CompilerDiagnosticParser
             new CompileDiagnostic
             {
                 File = DiagnosticFileName(sourcePath),
-                Description = debug
+                Description = debug || !ContainsGeneratedCodeDiagnostics(message)
                     ? FirstDiagnosticLine(message)
                     : "Compilation failed. Use --debug to show generated C# diagnostics.",
                 DiagnosticCode = string.IsNullOrWhiteSpace(diagnosticCode) ? CompilerDiagnosticCodes.CompilationFailed : diagnosticCode,
@@ -121,6 +124,17 @@ internal static class CompilerDiagnosticParser
         var context = ExpandedSourceContext.Current;
         var map = sourceMap ?? context?.Map;
         if (map is null) return null;
+
+        // Most parser/binder diagnostics retain the expanded line number. Prefer
+        // that direct source-map entry before using the text-based recovery below;
+        // included files commonly contain several lines, so a description-only
+        // search cannot uniquely identify the failing line.
+        if (reportedLine > 0 && reportedLine <= map.Count)
+        {
+            var direct = map.Resolve(reportedLine, rootSourcePath);
+            if (direct.IncludeTrace is { Count: > 0 })
+                return new RecoveredIncludeLocation(direct.SourcePath, direct.Line, 1);
+        }
 
         // Fallback for generated diagnostics whose #line mapping was lost: match the
         // diagnostic's source expression against physical included source lines.
@@ -394,6 +408,11 @@ internal static class CompilerDiagnosticParser
         }
         catch { return ""; }
     }
+
+    private static bool ContainsGeneratedCodeDiagnostics(string message) =>
+        message.Contains(GeneratedMarker, StringComparison.Ordinal) ||
+        Regex.IsMatch(message, @"(?:^|[\\/])?Program\.cs\(\d+,\d+\):\s*(?:error|warning)\s+CS\d+:", RegexOptions.IgnoreCase | RegexOptions.Multiline) ||
+        message.Contains("Generated code failed to compile.", StringComparison.Ordinal);
 
     private static string FirstDiagnosticLine(string message) =>
         message.Split('\n', StringSplitOptions.RemoveEmptyEntries)

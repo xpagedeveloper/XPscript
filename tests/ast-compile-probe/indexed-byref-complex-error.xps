@@ -1,0 +1,10 @@
+Class Counter
+    Public Property Get Item(ByRef index As Long) As Long
+        Item = index
+    End Property
+End Class
+Sub Main()
+    Dim counter As New Counter
+    Dim values List As String
+    Print counter.Item(values("x"))
+End Sub

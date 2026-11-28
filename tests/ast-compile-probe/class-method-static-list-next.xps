@@ -1,0 +1,16 @@
+Class Collector
+    Public Function Add() As Long
+        Static values List As Long
+        If Not IsElement(values("count")) Then
+            values("count") = 0
+        End If
+        values("count") = values("count") + 1
+        Add = values("count")
+    End Function
+End Class
+
+Sub Main()
+    Dim collector As New Collector
+    Print CStr(collector.Add())
+    Print CStr(collector.Add())
+End Sub

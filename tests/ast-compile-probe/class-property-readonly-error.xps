@@ -1,0 +1,9 @@
+Class Box
+    Public Property Get Value As Long
+        Value = 1
+    End Property
+End Class
+Sub Main()
+    Dim item As New Box
+    item.Value = 3
+End Sub

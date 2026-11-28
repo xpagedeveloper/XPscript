@@ -1,0 +1,28 @@
+Class Store
+    Public Property Get Item As XPHttpClient
+    End Property
+    Public Property Get RequestResult As XPHttpRequest
+    End Property
+    Public Property Get ResponseResult As XPHttpResponse
+    End Property
+    Public Property Get PartResult As XPHttpPart
+    End Property
+    Public Property Get FileResult As XPHttpFile
+    End Property
+    Public Property Get PartsResult As XPHttpPartCollection
+    End Property
+    Public Property Get FilesResult As XPHttpFileCollection
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    If store.Item Is Nothing Then
+    Else
+        Error 6, "signature-only HTTP result"
+    End If
+    If store.RequestResult Is Nothing And store.ResponseResult Is Nothing And store.PartResult Is Nothing And store.FileResult Is Nothing And store.PartsResult Is Nothing And store.FilesResult Is Nothing Then
+    Else
+        Error 6, "signature-only HTTP families"
+    End If
+    Print "HTTP_PROPERTY_SIGNATURE_ONLY_OK"
+End Sub

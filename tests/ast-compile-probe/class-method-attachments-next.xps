@@ -1,0 +1,13 @@
+Option Declare
+
+Class AttachmentMethods
+    Public Function Accept(ByVal files As XPAttachmentCollection) As Boolean
+        Accept = files Is Nothing
+    End Function
+End Class
+
+Sub Main()
+    Dim methods As New AttachmentMethods
+    If Not methods.Accept(Nothing) Then Error 4265
+    Print "AST_ATTACHMENT_CLASS_METHOD_OK"
+End Sub

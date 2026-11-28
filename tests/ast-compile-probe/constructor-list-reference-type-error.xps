@@ -1,0 +1,12 @@
+Class Box
+End Class
+Class Leaf Extend Box
+End Class
+Class Record
+    Public Sub New(ByRef values List As Box)
+    End Sub
+End Class
+Sub Main()
+    Dim values List As Leaf
+    Dim item As New Record(values)
+End Sub

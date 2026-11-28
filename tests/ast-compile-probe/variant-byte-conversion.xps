@@ -1,0 +1,7 @@
+Sub Main()
+    Dim value As Variant
+    value = 7
+    Dim result As Byte
+    result = value
+    Print result
+End Sub

@@ -62,6 +62,7 @@ internal static class XPScriptNativeJson
     public static XPScriptJsonObject CreateObject() => new(new System.Text.Json.Nodes.JsonObject());
     public static XPScriptJsonArray CreateArray() => new(new System.Text.Json.Nodes.JsonArray());
     public static XPScriptJsonElement CreateElement() => new(null);
+    public static XPScriptJsonElement CreateElement(object? value, object? name) => new(ToNode(value), XPScriptRuntime.CStr(name));
     public static XPScriptJsonDocument Parse(object? value) { var text = XPScriptRuntime.CStr(value); if (Encoding.UTF8.GetByteCount(text) > MaxParseBytes) throw new XPScriptRuntimeException(5, "JSON input exceeds the 8 MiB parse limit."); try { var node = System.Text.Json.Nodes.JsonNode.Parse(text, nodeOptions: null, documentOptions: new System.Text.Json.JsonDocumentOptions { MaxDepth = MaxDepth }); ValidateBudget(node); return new XPScriptJsonDocument(node); } catch (System.Text.Json.JsonException) { throw new XPScriptRuntimeException(5, "Invalid JSON input."); } }
     public static string Stringify(object? value) { var node = ToNode(value); ValidateBudget(node); var text = node?.ToJsonString() ?? "null"; if (Encoding.UTF8.GetByteCount(text) > MaxEstimatedPayloadBytes) throw new XPScriptRuntimeException(5, "JSON output exceeds the 16 MiB limit."); return text; }
 
@@ -122,6 +123,7 @@ internal static class XPScriptNativeJson
 
 internal sealed class XPScriptJsonDocument
 {
+    public XPScriptJsonDocument() : this(new System.Text.Json.Nodes.JsonObject()) { }
     internal XPScriptJsonDocument(System.Text.Json.Nodes.JsonNode? node) { XPScriptNativeJson.ValidateBudget(node); Node = node; }
     internal System.Text.Json.Nodes.JsonNode? Node { get; }
     public XPScriptJsonElement Root => new(Node);
@@ -130,37 +132,187 @@ internal sealed class XPScriptJsonDocument
 }
 internal sealed class XPScriptJsonObject
 {
+    private int _cursor = -1;
+    public XPScriptJsonObject() : this(new System.Text.Json.Nodes.JsonObject()) { }
     internal XPScriptJsonObject(System.Text.Json.Nodes.JsonObject node) { XPScriptNativeJson.ValidateBudget(node); Node = node; }
     internal System.Text.Json.Nodes.JsonObject Node { get; }
     public int Count => Node.Count;
     public object? Get(object? name) => XPScriptNativeJson.FromNode(Node[XPScriptRuntime.CStr(name)]);
+    public int Size => Node.Count;
+    public XPScriptJsonElement? GetElementByName(object? name)
+    {
+        var key = XPScriptRuntime.CStr(name);
+        return Node.ContainsKey(key) ? new XPScriptJsonElement(Node[key], key, value => Node[key] = value) : null;
+    }
+    public XPScriptJsonElement? GetFirstElement() { _cursor = 0; return ElementAt(_cursor, true); }
+    public XPScriptJsonElement? GetNextElement() { _cursor++; return ElementAt(_cursor, true); }
+    public XPScriptJsonElement? GetNthElement(object? indexValue, object? suppressErrors = null)
+    {
+        var oneBased = XPScriptRuntime.CInt(indexValue);
+        var suppress = suppressErrors is null || XPScriptRuntime.CBool(suppressErrors);
+        if (oneBased < 1 || oneBased > Size) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); }
+        _cursor = oneBased - 1; return ElementAt(_cursor, false);
+    }
+    public XPScriptJsonElement AppendElement(object? value, object? name)
+    {
+        var key = XPScriptRuntime.CStr(name); if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object elements require a name.");
+        Node[key] = XPScriptNativeJson.ToNode(value); return GetElementByName(key)!;
+    }
+    public XPScriptJsonArray AppendArray(object? name)
+    {
+        var key = XPScriptRuntime.CStr(name); if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object arrays require a name.");
+        var array = new System.Text.Json.Nodes.JsonArray(); Node[key] = array; return new XPScriptJsonArray(array);
+    }
+    public XPScriptJsonObject AppendObject(object? name)
+    {
+        var key = XPScriptRuntime.CStr(name); if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON objects require a name.");
+        var obj = new System.Text.Json.Nodes.JsonObject(); Node[key] = obj; return new XPScriptJsonObject(obj);
+    }
+    public void Copy(object? source)
+    {
+        if (source is not XPScriptJsonObject other) throw new XPScriptRuntimeException(13, "Copy requires XPJsonObject.");
+        Node.Clear(); foreach (var pair in other.Node) Node[pair.Key] = pair.Value?.DeepClone(); _cursor = -1;
+    }
     public void Set(object? name, object? value) { var key = XPScriptRuntime.CStr(name); var hadPrevious = Node.TryGetPropertyValue(key, out var previous); var previousCopy = previous?.DeepClone(); Node[key] = XPScriptNativeJson.ToNode(value); try { XPScriptNativeJson.ValidateBudget(Node); } catch { if (hadPrevious) Node[key] = previousCopy; else Node.Remove(key); throw; } }
+    public void SetArray(object? name, XPScriptJsonArray value) => Set(name, value);
     public void Remove(object? name) => Node.Remove(XPScriptRuntime.CStr(name));
     public bool Contains(object? name) => Node.ContainsKey(XPScriptRuntime.CStr(name));
     public string Stringify() => XPScriptNativeJson.Stringify(this);
     public object? ToObject(object? contract) => XPScriptNativeJson.ToObject(this, contract);
+    private XPScriptJsonElement? ElementAt(int index, bool suppress)
+    {
+        if (index < 0 || index >= Size) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); }
+        var key = Node.ElementAt(index).Key; return GetElementByName(key);
+    }
 }
-internal sealed class XPScriptJsonArray
+internal sealed class XPScriptJsonArray : System.Collections.IEnumerable
 {
+    private int _cursor = -1;
+    public XPScriptJsonArray() : this(new System.Text.Json.Nodes.JsonArray()) { }
     internal XPScriptJsonArray(System.Text.Json.Nodes.JsonArray node) { XPScriptNativeJson.ValidateBudget(node); Node = node; }
     internal System.Text.Json.Nodes.JsonArray Node { get; }
     public int Count => Node.Count;
+    public int Size => Node.Count;
+    public string Value => Stringify();
+    public XPScriptJsonElement? GetFirstElement() { _cursor = 0; return ElementAt(_cursor, true); }
+    public XPScriptJsonElement? GetNextElement() { _cursor++; return ElementAt(_cursor, true); }
+    public XPScriptJsonElement? GetNthElement(object? indexValue, object? suppressErrors = null)
+    {
+        var oneBased = XPScriptRuntime.CInt(indexValue);
+        var suppress = suppressErrors is null || XPScriptRuntime.CBool(suppressErrors);
+        if (oneBased < 1 || oneBased > Size) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); }
+        _cursor = oneBased - 1; return ElementAt(_cursor, false);
+    }
     public void Add(object? value) { Node.Add(XPScriptNativeJson.ToNode(value)); try { XPScriptNativeJson.ValidateBudget(Node); } catch { Node.RemoveAt(Node.Count - 1); throw; } }
+    public XPScriptJsonElement AppendElement(object? value) { Add(value); return ElementAt(Node.Count - 1, false)!; }
+    public XPScriptJsonArray AppendArray() { var array = new System.Text.Json.Nodes.JsonArray(); Node.Add(array); return new XPScriptJsonArray(array); }
+    public XPScriptJsonObject AppendObject() { var obj = new System.Text.Json.Nodes.JsonObject(); Node.Add(obj); return new XPScriptJsonObject(obj); }
+    public System.Collections.IEnumerator GetEnumerator() => Node.Select(XPScriptNativeJson.FromNode).ToArray().GetEnumerator();
     public object? Get(object? indexValue) { var index = XPScriptRuntime.CInt(indexValue); if (index < 0 || index >= Node.Count) throw new XPScriptRuntimeException(9, "JSON array index out of range."); return XPScriptNativeJson.FromNode(Node[index]); }
     public void Set(object? indexValue, object? value) { var index = XPScriptRuntime.CInt(indexValue); if (index < 0 || index >= Node.Count) throw new XPScriptRuntimeException(9, "JSON array index out of range."); var previous = Node[index]?.DeepClone(); Node[index] = XPScriptNativeJson.ToNode(value); try { XPScriptNativeJson.ValidateBudget(Node); } catch { Node[index] = previous; throw; } }
     public void RemoveAt(object? indexValue) { var index = XPScriptRuntime.CInt(indexValue); if (index < 0 || index >= Node.Count) throw new XPScriptRuntimeException(9, "JSON array index out of range."); Node.RemoveAt(index); }
+    public void Copy(object? source)
+    {
+        if (source is not XPScriptJsonArray other) throw new XPScriptRuntimeException(13, "Copy requires XPJsonArray.");
+        Node.Clear(); foreach (var item in other.Node) Node.Add(item?.DeepClone()); _cursor = -1;
+    }
     public string Stringify() => XPScriptNativeJson.Stringify(this);
     public object? ToObject(object? contract) => XPScriptNativeJson.ToObject(this, contract);
+    private XPScriptJsonElement? ElementAt(int index, bool suppress)
+    {
+        if (index < 0 || index >= Size) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); }
+        return new XPScriptJsonElement(Node[index], "", value => Node[index] = value);
+    }
 }
 internal sealed class XPScriptJsonElement
 {
-    internal XPScriptJsonElement(System.Text.Json.Nodes.JsonNode? node) { XPScriptNativeJson.ValidateBudget(node); Node = node; }
-    internal System.Text.Json.Nodes.JsonNode? Node { get; }
+    public XPScriptJsonElement() : this(null) { }
+    internal XPScriptJsonElement(System.Text.Json.Nodes.JsonNode? node, string name = "", Action<System.Text.Json.Nodes.JsonNode?>? setter = null) { XPScriptNativeJson.ValidateBudget(node); Node = node; Name = name; _setter = setter; }
+    internal System.Text.Json.Nodes.JsonNode? Node { get; set; }
+    private readonly Action<System.Text.Json.Nodes.JsonNode?>? _setter;
+    public string Name { get; }
     public string Type => Node switch { null => "Null", System.Text.Json.Nodes.JsonObject => "Object", System.Text.Json.Nodes.JsonArray => "Array", System.Text.Json.Nodes.JsonValue value when value.TryGetValue<bool>(out _) => "Boolean", System.Text.Json.Nodes.JsonValue value when value.TryGetValue<string>(out _) => "String", System.Text.Json.Nodes.JsonValue => "Number", _ => "Null" };
-    public object? Value => XPScriptNativeJson.FromNode(Node);
+    public object? Value
+    {
+        get => XPScriptNativeJson.FromNode(Node);
+        set
+        {
+            var replacement = XPScriptNativeJson.ToNode(value);
+            XPScriptNativeJson.ValidateBudget(replacement);
+            Node = replacement;
+            _setter?.Invoke(replacement);
+        }
+    }
+    public void Copy(object? source)
+    {
+        if (source is not XPScriptJsonElement element) throw new XPScriptRuntimeException(13, "Copy requires XPJsonElement.");
+        Value = element.Node?.DeepClone();
+    }
     public XPScriptJsonObject? AsObject() => Node is System.Text.Json.Nodes.JsonObject obj ? new(obj) : null;
     public XPScriptJsonArray? AsArray() => Node is System.Text.Json.Nodes.JsonArray array ? new(array) : null;
     public object? ToObject(object? contract) => XPScriptNativeJson.ToObject(this, contract);
+}
+
+internal sealed class XPScriptJsonNavigator
+{
+    private int _cursor = -1;
+    internal System.Text.Json.Nodes.JsonNode Root { get; private set; }
+    public bool PreferJSONNavigator { get; set; } = true;
+    public bool PreferUTF8 { get; set; } = true;
+    public XPScriptJsonNavigator(object? input = null)
+    {
+        if (input is null || XPScriptNullRuntime.IsNull(input)) Root = new System.Text.Json.Nodes.JsonObject();
+        else if (input is XPScriptJsonNavigator navigator) Root = navigator.Root.DeepClone();
+        else if (input is XPScriptJsonDocument document) Root = document.Node?.DeepClone() ?? new System.Text.Json.Nodes.JsonObject();
+        else Root = XPScriptNativeJson.Parse(input).Node ?? new System.Text.Json.Nodes.JsonObject();
+    }
+    public XPScriptJsonElement? GetElementByName(object? name) => Root is System.Text.Json.Nodes.JsonObject obj && obj.ContainsKey(XPScriptRuntime.CStr(name)) ? ElementFromObject(obj, XPScriptRuntime.CStr(name)) : null;
+    public XPScriptJsonElement? GetElementByPointer(object? pointer)
+    {
+        var text = XPScriptRuntime.CStr(pointer); if (text.Length == 0) return new XPScriptJsonElement(Root, "", value => Root = value ?? new System.Text.Json.Nodes.JsonObject());
+        if (!text.StartsWith("/", StringComparison.Ordinal)) throw new XPScriptRuntimeException(5, "JSON Pointer must start with '/'.");
+        System.Text.Json.Nodes.JsonNode? current = Root, parent = null; string? property = null; int? index = null;
+        foreach (var raw in text.Split('/').Skip(1))
+        {
+            var token = raw.Replace("~1", "/", StringComparison.Ordinal).Replace("~0", "~", StringComparison.Ordinal); parent = current; property = null; index = null;
+            if (current is System.Text.Json.Nodes.JsonObject obj) { if (!obj.TryGetPropertyValue(token, out current)) return null; property = token; }
+            else if (current is System.Text.Json.Nodes.JsonArray arr && int.TryParse(token, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var i) && i >= 0 && i < arr.Count) { current = arr[i]; index = i; }
+            else return null;
+        }
+        if (parent is System.Text.Json.Nodes.JsonObject parentObject && property is not null) return ElementFromObject(parentObject, property);
+        if (parent is System.Text.Json.Nodes.JsonArray parentArray && index.HasValue) return ElementFromArray(parentArray, index.Value);
+        return new XPScriptJsonElement(current);
+    }
+    public XPScriptJsonElement? GetFirstElement() { _cursor = 0; return ElementAt(_cursor, true); }
+    public XPScriptJsonElement? GetNextElement() { _cursor++; return ElementAt(_cursor, true); }
+    public XPScriptJsonElement? GetNthElement(object? indexValue, object? suppressErrors = null)
+    {
+        var oneBased = XPScriptRuntime.CInt(indexValue); var suppress = suppressErrors is null || XPScriptRuntime.CBool(suppressErrors); var size = Root is System.Text.Json.Nodes.JsonObject o ? o.Count : Root is System.Text.Json.Nodes.JsonArray a ? a.Count : 1;
+        if (oneBased < 1 || oneBased > size) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); }
+        _cursor = oneBased - 1; return ElementAt(_cursor, false);
+    }
+    public string Stringify() => XPScriptNativeJson.Stringify(Root);
+    public XPScriptJsonElement AppendElement(object? value, object? name = null)
+    {
+        if (Root is System.Text.Json.Nodes.JsonObject obj) { var key = XPScriptRuntime.CStr(name); if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object elements require a name."); obj[key] = XPScriptNativeJson.ToNode(value); return ElementFromObject(obj, key); }
+        if (Root is System.Text.Json.Nodes.JsonArray arr) { arr.Add(XPScriptNativeJson.ToNode(value)); return ElementFromArray(arr, arr.Count - 1); }
+        throw new XPScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
+    }
+    public XPScriptJsonArray AppendArray(object? name = null) { var child = new System.Text.Json.Nodes.JsonArray(); AddChild(child, name); return new XPScriptJsonArray(child); }
+    public XPScriptJsonObject AppendObject(object? name = null) { var child = new System.Text.Json.Nodes.JsonObject(); AddChild(child, name); return new XPScriptJsonObject(child); }
+    private void AddChild(System.Text.Json.Nodes.JsonNode child, object? name)
+    {
+        if (Root is System.Text.Json.Nodes.JsonObject obj) { var key = XPScriptRuntime.CStr(name); if (key.Length == 0) throw new XPScriptRuntimeException(5, "JSON object children require a name."); obj[key] = child; }
+        else if (Root is System.Text.Json.Nodes.JsonArray arr) arr.Add(child); else throw new XPScriptRuntimeException(5, "Cannot append to a scalar JSON root.");
+    }
+    private XPScriptJsonElement? ElementAt(int index, bool suppress)
+    {
+        if (Root is System.Text.Json.Nodes.JsonObject obj) { if (index < 0 || index >= obj.Count) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); } return ElementFromObject(obj, obj.ElementAt(index).Key); }
+        if (Root is System.Text.Json.Nodes.JsonArray arr) { if (index < 0 || index >= arr.Count) { if (suppress) return null; throw new XPScriptRuntimeException(9, "Index is out of range."); } return ElementFromArray(arr, index); }
+        return index == 0 ? new XPScriptJsonElement(Root, "", value => Root = value ?? new System.Text.Json.Nodes.JsonObject()) : null;
+    }
+    private static XPScriptJsonElement ElementFromObject(System.Text.Json.Nodes.JsonObject obj, string key) => new(obj[key], key, value => obj[key] = value);
+    private static XPScriptJsonElement ElementFromArray(System.Text.Json.Nodes.JsonArray arr, int index) => new(arr[index], "", value => arr[index] = value);
 }
 """;
 }

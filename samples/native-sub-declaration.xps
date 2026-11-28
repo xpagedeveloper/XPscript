@@ -1,0 +1,5 @@
+Declare Sub NativeNoop Lib "native-null-abi" ()
+
+Sub Main()
+    Print "NATIVE-SUB-COMPILE-OK"
+End Sub

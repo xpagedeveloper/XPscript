@@ -1,0 +1,6 @@
+Option Base 1
+
+Sub Main()
+    Dim values(2) As Long
+    Print LBound(values)
+End Sub

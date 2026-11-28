@@ -1,0 +1,1642 @@
+openapi: 3.0.3
+info:
+  title: Datauttag
+  description: |
+    API dokumentation för Riksantikvarieämbetets Direktåtkomsttjänster inom Öppna data.
+    Med Direktåtkomsttjänster avses här REST-baserade tjänster avsedda att användas vid maskin-till-maskin integration.
+    
+    # Datamängder
+    Direkttjänster finns framtagna för nedanstående datamängder.
+    
+    ## Lämningsinformation
+    När en klient hämtar data ur tjänsten anger klienten en tidsperiod och får då reda på summan av förändringar som skett för en entitet i den aktuella tidsperioden.
+    Man får alltså inte ut en ändringspost per förändring från tjänsten.
+    Endast summan av alla ev. förekommande förändringar inom tidsperioden jämfört med hur lämningen såg ut INNAN angiven tidsperiod!
+    
+    ## Klassificering-lämningsinformation
+    Tjänster för metadataklassificeringar för lämningsinformation
+    
+    # Rekommenderad användning av Riksantikvarieämbetets direktåtkomsttjänster
+    Riksantikvarieämbetets direktåtkomsttjänster är i första hand avsedda att användas enligt följande integrationsmönster.
+    Tanken här är att en klient använder först någon av Riksantikvarieämbetets nedladdningstjänster för en given datamängd.
+    Klienten laddar då ned ett datauttag (geopackage format) som används för att grundladda klientens eget system.
+    Därefter anropar klienten direktåtkomsttjänster för att hämta de förändringar som skett inom datamängden ”sen sist”.
+    Klienten kan därmed själv styra över hur ofta klientens system ska uppdateras med de förändringar som skett i Riksantikvarieämbetet källsystem.
+    
+    När en förändring skett för t ex en viss lämning är rekommendationen att klienten först raderar all befintlig information för lämningen i sitt system
+    och ersätter sedan med informationen som kom med i förändringen för lämningen.
+    
+    ### Uppdateringsintervall
+    Data i tjänsten uppdateras varje natt mellan 00:00 - 04:00 för föregående dag.
+    Detta innebär att en klient måste alltid anropa efter kl 04:00 varje natt för att hämta gårdagens förändringar.
+
+  termsOfService: N/A.
+  contact:
+    name: Frågor kring Riksantikvarieämbetets Direktåtkomsttjänster skickas till support@raa.se.
+      Ange "Publiceringsplattform, Direktåtkomsttjänster" som rubrik i ditt meddelande.
+    email: support@raa.se
+  license:
+    name: CC0 1.0
+    url: https://creativecommons.org/publicdomain/zero/1.0/
+  version: 1.2.0
+servers:
+  - url: /datauttag
+tags:
+  - name: Lämningar
+    description: Tjänster kopplade till Riksantikvarieämbetets lämningsinformation.
+  - name: Klassificering-lämningsinformation
+    description: Information om Riksantikvarieämbetets befintliga metadataklassificeringar
+      avseende lämningsinformation.
+
+paths:
+  /lamningar:
+    get:
+      tags:
+        - Lämningar
+      summary: Hämtar information om uppdaterade lämningar
+      description: Hämtar information om uppdaterade lämningar.
+      operationId: lamning
+      parameters:
+        - name: from
+          in: query
+          description: Parameter som anger från och med vilket datum (yyyy-MM-dd) valda
+            ändringar ska ha gjorts. Endast förflutna datum är tillåtna.
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          description: Parameter som anger till och med vilket datum (yyyy-MM-dd) valda
+            ändringar ska ha gjorts. Endast förflutna datum är tillåtna.
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          description: Anger index för önskad resultatsida. Notera att indexet är nollbaserat.
+            Dvs vill man hämta första sidan anger man page=0.
+          schema:
+            type: number
+            format: number
+        - name: size
+          in: query
+          description: Anger antalet sökresultat per sida (begränsas till max antal
+            10000 objekt).
+          schema:
+            type: number
+            format: number
+        - name: sort
+          in: query
+          description: |
+            Anger sorteringsordningen för sökresultat.
+            Sorteringsordning anges genom att skriva ett attributnamn i responsen sökresultatet ska sorteras efter.
+            Även ordningsföljden för sortering kan anges. Tillåtna värden för sorteringsordningen är 'asc' (stigande) samt 'desc' (fallande).
+            Antag att ett sökresultat innehåller attributen 'namn', 'skostorlek'.
+            En klient kan då göra en sökning och sortera sökresultatet i önskad sorteringsordning.
+            Exempel 1: 'namn' (sorterar på namn i alfabetisk ordning, default är fallande sorteringsordning)
+            Exempel 2: 'skostorlek,desc'  (sorterar på skostorlek, stigande sorteringsordning)
+            Nedanstående fält kan anges för sortering&#58;
+            * id
+            * lamningsnummer
+            * publiceringsdatum
+            * lamningstyp
+            * antikvariskBedomning
+            * oforandratLage
+            * placering
+            * ruin
+          schema:
+            type: string
+            format: sort
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedLamningResponse'
+        400:
+          description: (Bad request). Felaktigt indata angavs till tjänsten (typiskt
+            valideringsfel).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        500:
+          description: (Internal server error). Ett oväntat fel inträffade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        503:
+          description: (Service Unavailable). Inträffar typiskt när tjänsten har ett
+            externt beroende till en tjänst som inte svarade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+  /lamningar/{id}:
+    get:
+      tags:
+        - Lämningar
+      summary: Hämtar information om senaste uppdatering av lämning
+      description: Hämtar information om lämning enligt överenskommen modell.
+      operationId: lamningbyid
+      parameters:
+        - name: id
+          in: path
+          description: Lämningens uuid
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lamning'
+        404:
+          description: (Not found). Angiven post kunde inte hittas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        500:
+          description: (Internal server error). Ett oväntat fel inträffade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        503:
+          description: (Service Unavailable). Inträffar typiskt när tjänsten har ett
+            externt beroende till en tjänst som inte svarade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+  /lamningar/legacy:
+    get:
+      tags:
+        - Lämningar
+      summary: Hämtar information om kopplingen mellan KMR och FMIS.
+      description: Hämtar information om kopplingen mellan KMR och FMIS.
+      operationId: lamninglegacy
+      parameters:
+        - name: page
+          in: query
+          description: Anger index för önskad resultatsida. Notera att indexet är nollbaserat.
+            Dvs vill man hämta första sidan anger man page=0.
+          schema:
+            type: number
+            format: number
+        - name: size
+          in: query
+          description: Anger antalet sökresultat per sida (begränsas till max antal
+            10000 objekt).
+          schema:
+            type: number
+            format: number
+        - name: sort
+          in: query
+          description: |
+            Anger sorteringsordningen för sökresultat.
+            Sorteringsordning anges genom att skriva ett attributnamn i responsen sökresultatet ska sorteras efter.
+            Även ordningsföljden för sortering kan anges. Tillåtna värden för sorteringsordningen är 'asc' (stigande) samt 'desc' (fallande).
+            Antag att ett sökresultat innehåller attributen 'namn', 'skostorlek'.
+            En klient kan då göra en sökning och sortera sökresultatet i önskad sorteringsordning.
+            Exempel 1: 'namn' (sorterar på namn i alfabetisk ordning, default är fallande sorteringsordning)
+            Exempel 2: 'skostorlek,desc'  (sorterar på skostorlek, stigande sorteringsordning)
+            Nedanstående fält kan anges för sortering&#58;
+            * id
+            * raaNummer
+            * fmisId
+            * lamningsnummer
+          schema:
+            type: string
+            format: sort
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedLamningLegacyResponse'
+        400:
+          description: (Bad request). Felaktigt indata angavs till tjänsten (typiskt valideringsfel).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        404:
+          description: (Not found). Angiven post kunde inte hittas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        500:
+          description: (Internal server error). Ett oväntat fel inträffade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        503:
+          description: (Service Unavailable). Inträffar typiskt när tjänsten har ett
+            externt beroende till en tjänst som inte svarade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+  /lamningar/legacy/lan/{lan}:
+    get:
+      tags:
+        - Lämningar
+      summary: Hämtar information om kopplingen mellan KMR och FMIS.
+      description: Hämtar information om kopplingen mellan KMR och FMIS.
+      operationId: lamninglegacybylan
+      parameters:
+        - name: lan
+          in: path
+          description: Länsnamn eller länskod
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Anger index för önskad resultatsida. Notera att indexet är nollbaserat.
+            Dvs vill man hämta första sidan anger man page=0.
+          schema:
+            type: number
+            format: number
+        - name: size
+          in: query
+          description: Anger antalet sökresultat per sida (begränsas till max antal
+            10000 objekt).
+          schema:
+            type: number
+            format: number
+        - name: sort
+          in: query
+          description: |
+            Anger sorteringsordningen för sökresultat.
+            Sorteringsordning anges genom att skriva ett attributnamn i responsen sökresultatet ska sorteras efter.
+            Även ordningsföljden för sortering kan anges. Tillåtna värden för sorteringsordningen är 'asc' (stigande) samt 'desc' (fallande).
+            Antag att ett sökresultat innehåller attributen 'namn', 'skostorlek'.
+            En klient kan då göra en sökning och sortera sökresultatet i önskad sorteringsordning.
+            Exempel 1: 'namn' (sorterar på namn i alfabetisk ordning, default är fallande sorteringsordning)
+            Exempel 2: 'skostorlek,desc'  (sorterar på skostorlek, stigande sorteringsordning)
+            Nedanstående fält kan anges för sortering&#58;
+            * id
+            * raaNummer
+            * fmisId
+            * lamningsnummer
+          schema:
+            type: string
+            format: sort
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedLamningLegacyResponse'
+        404:
+          description: (Not found). Angiven post kunde inte hittas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        500:
+          description: (Internal server error). Ett oväntat fel inträffade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        503:
+          description: (Service Unavailable). Inträffar typiskt när tjänsten har ett
+            externt beroende till en tjänst som inte svarade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+  /lamningar/legacy/id/{id}:
+    get:
+      tags:
+        - Lämningar
+      summary: Hämtar information om kopplingen mellan KMR och FMIS för en enskild
+        lämning.
+      description: Hämtar information om kopplingen mellan KMR och FMIS för en enskild
+        lämning, utifrån lämningens uuid.
+      operationId: lamninglegacybyid
+      parameters:
+        - name: id
+          in: path
+          description: Lämningens uuid
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LamningLegacy'
+        400:
+          description: (Bad request). Felaktigt indata angavs till tjänsten (typiskt
+            valideringsfel).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        404:
+          description: (Not found). Angiven post kunde inte hittas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        500:
+          description: (Internal server error). Ett oväntat fel inträffade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        503:
+          description: (Service Unavailable). Inträffar typiskt när tjänsten har ett
+            externt beroende till en tjänst som inte svarade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+  /lamningar/legacy/fmis/{id}:
+    get:
+      tags:
+        - Lämningar
+      summary: Hämtar information om kopplingen mellan KMR och FMIS för en enskild
+        lämning.
+      description: Hämtar information om kopplingen mellan KMR och FMIS för en enskild
+        lämning, utifrån dess FMIS-ID.
+      operationId: lamninglegacybyfmisid
+      parameters:
+        - name: id
+          in: path
+          description: Lämningens fmisId
+          required: true
+          schema:
+            type: string
+            format: number
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LamningLegacy'
+        404:
+          description: (Not found). Angiven post kunde inte hittas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        500:
+          description: (Internal server error). Ett oväntat fel inträffade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        503:
+          description: (Service Unavailable). Inträffar typiskt när tjänsten har ett
+            externt beroende till en tjänst som inte svarade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+  /antikvariskbedomningtyp:
+    get:
+      tags:
+        - Klassificering-lämningsinformation
+      summary: Returnerar en lista av  alla antikvariska bedömningstyper i logisk
+        ordning.
+      description: Returnerar en lista av  alla antikvariska bedömningstyper i logisk
+        ordning.
+      parameters:
+        - name: page
+          in: query
+          description: Anger index för önskad resultatsida. Notera att indexet är nollbaserat.
+            Dvs vill man hämta första sidan anger man page=0.
+          schema:
+            type: number
+            format: number
+        - name: size
+          in: query
+          description: Anger antalet sökresultat per sida (begränsas till max antal
+            10000 objekt).
+          schema:
+            type: number
+            format: number
+        - name: sort
+          in: query
+          description: |
+            Anger sorteringsordningen för sökresultat.
+            Sorteringsordning anges genom att skriva ett attributnamn i responsen sökresultatet ska sorteras efter.
+            Även ordningsföljden för sortering kan anges. Tillåtna värden för sorteringsordningen är 'asc' (stigande) samt 'desc' (fallande).
+            Antag att ett sökresultat innehåller attributen 'namn', 'skostorlek'.
+            En klient kan då göra en sökning och sortera sökresultatet i önskad sorteringsordning.
+            Exempel 1: 'namn' (sorterar på namn i alfabetisk ordning, default är fallande sorteringsordning)
+            Exempel 2: 'skostorlek,desc'  (sorterar på skostorlek, stigande sorteringsordning)
+            Nedanstående fält kan anges för sortering&#58;
+            * id
+            * namn
+          schema:
+            type: string
+            format: sort
+      responses:
+        200:
+          description: Returnerar en lista av antikvariskabedömningstyper i logisk
+            ordning.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAntikvariskBedomningTypResponse'
+        400:
+          description: (Bad request). Felaktigt indata angavs till tjänsten (typiskt
+            valideringsfel).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        500:
+          description: (Internal server error). Ett oväntat fel inträffade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        503:
+          description: (Service Unavailable). Inträffar typiskt när tjänsten har ett
+            externt beroende till en tjänst som inte svarade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+  /placeringtyp:
+    get:
+      tags:
+        - Klassificering-lämningsinformation
+      summary: Returnerar en lista av samtliga placeringstyper.
+      description: Returnerar en lista av samtliga placeringstyper i sin logiska ordning.
+      parameters:
+        - name: page
+          in: query
+          description: Anger index för önskad resultatsida. Notera att indexet är nollbaserat.
+            Dvs vill man hämta första sidan anger man page=0.
+          schema:
+            type: number
+            format: number
+        - name: size
+          in: query
+          description: Anger antalet sökresultat per sida (begränsas till max antal
+            10000 objekt).
+          schema:
+            type: number
+            format: number
+        - name: sort
+          in: query
+          description: |
+            Anger sorteringsordningen för sökresultat.
+            Sorteringsordning anges genom att skriva ett attributnamn i responsen sökresultatet ska sorteras efter.
+            Även ordningsföljden för sortering kan anges. Tillåtna värden för sorteringsordningen är 'asc' (stigande) samt 'desc' (fallande).
+            Antag att ett sökresultat innehåller attributen 'namn', 'skostorlek'.
+            En klient kan då göra en sökning och sortera sökresultatet i önskad sorteringsordning.
+            Exempel 1: 'namn' (sorterar på namn i alfabetisk ordning, default är fallande sorteringsordning)
+            Exempel 2: 'skostorlek,desc'  (sorterar på skostorlek, stigande sorteringsordning)
+            Nedanstående fält kan anges för sortering&#58;
+            * id
+            * namn
+          schema:
+            type: string
+            format: sort
+      responses:
+        200:
+          description: Returnerar en lista av antikvariskabedömningstyper i logisk
+            ordning.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedPlaceringTypResponse'
+        400:
+          description: (Bad request). Felaktigt indata angavs till tjänsten (typiskt
+            valideringsfel).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        500:
+          description: (Internal server error). Ett oväntat fel inträffade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        503:
+          description: (Service Unavailable). Inträffar typiskt när tjänsten har ett
+            externt beroende till en tjänst som inte svarade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+  /lamningstyp:
+    get:
+      tags:
+        - Klassificering-lämningsinformation
+      summary: Returnerar lista över över samtliga lämningstyper i alfabetisk ordning
+      description: Returnerar en lista över samtliga lämningstyper i alfabetisk ordning.
+        Notera att listan kan innehålla såväl aktiva som historiska lämningstyper
+        - dvs lämningstyper som inte längre får användas vid nyregistrering.
+      parameters:
+        - name: page
+          in: query
+          description: Anger index för önskad resultatsida. Notera att indexet är nollbaserat.
+            Dvs vill man hämta första sidan anger man page=0.
+          schema:
+            type: number
+            format: number
+        - name: size
+          in: query
+          description: Anger antalet sökresultat per sida (begränsas till max antal
+            10000 objekt).
+          schema:
+            type: number
+            format: number
+        - name: sort
+          in: query
+          description: |
+            Anger sorteringsordningen för sökresultat.
+            Sorteringsordning anges genom att skriva ett attributnamn i responsen sökresultatet ska sorteras efter.
+            Även ordningsföljden för sortering kan anges. Tillåtna värden för sorteringsordningen är 'asc' (stigande) samt 'desc' (fallande).
+            Antag att ett sökresultat innehåller attributen 'namn', 'skostorlek'.
+            En klient kan då göra en sökning och sortera sökresultatet i önskad sorteringsordning.
+            Exempel 1: 'namn' (sorterar på namn i alfabetisk ordning, default är fallande sorteringsordning)
+            Exempel 2: 'skostorlek,desc'  (sorterar på skostorlek, stigande sorteringsordning)
+            Nedanstående fält kan anges för sortering&#58;
+            * id
+            * namn
+          schema:
+            type: string
+            format: sort
+      responses:
+        200:
+          description: Returnerar en lista av lämningstyper i alfabetisk ordning.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedLamningsTypResponse'
+        400:
+          description: (Bad request). Felaktigt indata angavs till tjänsten (typiskt
+            valideringsfel).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        500:
+          description: (Internal server error). Ett oväntat fel inträffade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+        503:
+          description: (Service Unavailable). Inträffar typiskt när tjänsten har ett
+            externt beroende till en tjänst som inte svarade.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorModel'
+components:
+  schemas:
+
+    PagedLamningResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          description: Innehåller framsökta poster.
+          items:
+            $ref: '#/components/schemas/Lamning'
+        pageable:
+          type: object
+          properties:
+            sort:
+              type: object
+              properties:
+                sorted:
+                  type: boolean
+                  description: Anger om något sorteringskriterie angavs i sökningen
+                    eller ej.
+                  example: false
+                unsorted:
+                  type: boolean
+                  description: Anger om något sorteringskriterie angavs i sökningen
+                    eller om tjänstens defaultsortering användes.
+                  example: false
+                empty:
+                  type: boolean
+                  example: false
+              description: Objektrepresentation avseende sortering av sökresultat.
+            pageSize:
+              type: number
+              description: Anger antalet sökresultat på aktuell sida. Defaultvärde;
+                20
+              example: 10.0
+            pageNumber:
+              type: number
+              description: Anger aktuell sökresultatsida i sökresultatet. Notera att
+                sidnumreringen är nollbaserad.
+              example: 1.0
+            offset:
+              type: number
+              description: Anger offset för vilken post(ordningsnummer) som visas
+                i aktuell sökresultatsida. Används som index för att generera nästa
+                sökresultatsida
+              example: 7.0
+            paged:
+              type: boolean
+            unpaged:
+              type: boolean
+          description: Objektrepresentation av ett paginerat sökresultatsvar.
+        totalPages:
+          type: integer
+          description: Anger det totala antalet resultatsidor för sökresultatet.
+        totalElements:
+          type: integer
+          description: Anger det totala antalet objekt i sökresultatet.
+        last:
+          type: boolean
+          description: Anger om aktuell sida är sista sidan i sökresultatet eller
+            ej.
+        first:
+          type: boolean
+          description: Anger om aktuell sida är första sidan i sökresultatet eller
+            ej.
+        sort:
+          type: object
+          properties:
+            sorted:
+              type: boolean
+            unsorted:
+              type: boolean
+            empty:
+              type: boolean
+        numberOfElements:
+          type: integer
+          description: Anger faktiskt antalet sökresultatposter på aktuell sökresultatsida.
+          example: 1
+        size:
+          type: integer
+          description: Anger önskat antal resultatposter på aktuell sökresultatsida.
+          example: 2
+        number:
+          type: integer
+          description: Anger index för aktuell sökresultatsida.
+          example: 3
+        empty:
+          type: boolean
+          description: Anger om sökresultatet innehåller poster eller ej.
+          example: false
+      description: Objektpresentation av sökresultat för lämningar.
+    Lamning:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Anger lämningens tekniska identitet (uuid).
+          format: uuid
+          example: 00004af1-67e0-45a4-91d4-d374dbb98ad7
+        lamningsnummer:
+          type: string
+          description: Anger lämningsnumret för lämningen. Lämningsnumret är en människoläsbar
+            identitet för lämningen.
+          example: L1947:8930
+        publiceringsdatum:
+          type: string
+          description: Anger tidpunkt då lämningen senast publicerades. Tidpunkt angiven
+            som Internet Date/Time Format, se RFC3339 (https://xml2rfc.ietf.org/public/rfc/html/rfc3339.html#anchor14")
+          format: dateTime
+          example: 2019-12-10T16:15:40.1156457+01:00
+        version:
+          type: number
+          description: Anger lämningens aktuella versionsnummer.
+          example: 597505.0
+        uppdateringstyp:
+          type: array
+          description: |
+            Anger uppdateringstypen som gjorts på en lämning inom angiven period.
+            Följande uppdateringstyper kan förekomma:
+            - NY - Anger att lämningen är ny och inte förekommer sedan tidigare.
+            - UTGAR - Anger att lämningen har makulerats och tagits bort.
+            - UPPDATERAD_ANTIKVARISK_BEDOMNING - Anger att lämningens antikvariska bedömning förändrats.
+            - UPPDATERAD_GEOMETRI - Anger att lämningens utbredning (geometri) förändrats.
+            - UPPDATERAD_LAMNINGSTYP - Anger att att lämningens lämningstyp förändrats.
+            - UPPDATERAD_LAGE - Anger att lämningens läge har förändrats. Lämningen kan t ex ha flyttats och fått ett nytt läge. Händelsen bör hanteras som UPPDATERAD_GEOMETRI.
+            - UPPDATERAD_PLACERING - Anger att lämningens placering förändrats. Inträffar t ex om en lämning blivit överväxt och därmed blivit 'ej synlig ovan mark' istället för 'synlig ovan mark'.
+            - OVRIG_UPPDATERING - Anger att lämningen har genomgått en ospecificerad ändring, t ex att stavfel rättats i ev. beskrivningstext eller liknande.
+          items:
+            type: string
+            enum:
+              - NY
+              - UTGAR
+              - UPPDATERAD_ANTIKVARISK_BEDOMNING
+              - UPPDATERAD_GEOMETRI
+              - UPPDATERAD_LAMNINGSTYP
+              - UPPDATERAD_LAGE
+              - UPPDATERAD_PLACERING
+              - OVRIG_UPPDATERING
+            example: "UTGAR"
+        lamningstyp:
+          type: object
+          properties:
+            id:
+              type: number
+              description: Anger identitet för lämningstypen.
+              example: 1037.0
+            namn:
+              type: string
+              description: Anger namnet för lämningstypen.
+              example: Fångstgrop
+            undertyp:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: number
+                    description: Anger identitet för undertypen.
+                    example: 316.0
+                  namn:
+                    type: string
+                    description: Anger namnet för undertypen.
+                    example: Torp
+              description: Anger objektrepresentation för lämningstypens ev. förekommande
+                subtyp.
+          description: Anger objektrepresentation för lämningstypen.
+        antikvariskBedomning:
+          type: object
+          properties:
+            id:
+              type: number
+              description: Anger identiteten för lämningens antikvariska bedömningstyp.
+              example: 1.0
+            namn:
+              type: string
+              description: Anger namnet för lämningens antikvariska bedöming.
+              example: Fornlämning
+        oforandratLage:
+          type: boolean
+          description: Anger att lämningens läge är oförändrat. Dvs - lämningen är
+            inte flyttad från sin ursprungsplats.
+          example: true
+        placering:
+          type: object
+          properties:
+            id:
+              type: number
+              description: Anger identiteten för lämningens placeringstyp.
+              example: 1.0
+            namn:
+              type: string
+              description: Anger namnet för lämningens placering.
+              example: Synlig ovan mark
+        ruin:
+          type: boolean
+          description: Anger om lämningen är en ruin eller ej utifrån beräknade kriterier
+            baserat på lämningstyp, placering och antikvarisk bedömning.
+          example: true
+        geometri:
+          $ref: '#/components/schemas/FeatureCollectionLamning'
+        centrumpunkt:
+          type: object
+          properties:
+            type:
+              type: string
+              example: FeatureCollection
+            crs:
+              type: object
+              properties:
+                type:
+                  type: string
+                  example: name
+                properties:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      example: urn:ogc:def:crs:EPSG::3006
+            features:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: Feature
+                  geometry:
+                    $ref: '#/components/schemas/Point'
+          description: Anger lämningen beräknade centrumpunkt i GeoJson[2008] format.
+        lan:
+          type: array
+          description: Anger lista av de län lämningen är belägen inom.
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                description: Anger identitet för länet.
+                example: "23"
+              namn:
+                type: string
+                description: Anger namnet för länet.
+                example: jämtland
+        registreringsunderlag:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: Anger identitet för den registreringsunderlagstyp som användes
+                vid inmätningen.
+              example: 101
+            namn:
+              type: string
+              description: Anger namnet för den registreringsunderlagstyp som användes
+                vid inmätningen.
+              example: Fastighetskartan/utskrivet ortofoto
+            kvalitettyp:
+              type: object
+              properties:
+                id:
+                  type: number
+                  description: Anger identitet för den registreringsunderlagskvalitetstyp
+                    som användes vid inmätningen. Registreringsunderlagskvalittetypen
+                    är alltid kopplad till det registreringsunderlag som användes
+                    vid inmätningen.
+                  example: 204.0
+                namn:
+                  type: string
+                  description: Anger namnet för den registreringsunderlagskvalitetstyp
+                    som användes vid inmätningen.
+                  example: Skala 1:10000
+              description: Anger objektrepresentation för den kvalitet som användes
+                vid inmätningen av lämningen.
+          description: Anger objektrepresentation för det registreringsunderlag som
+            användes vid inmätningen av lämningen.
+        matmetod:
+          type: object
+          properties:
+            id:
+              type: integer
+              description: Anger identitet för den mätmetodtyp som användes vid inmätningen.
+              example: 5
+            namn:
+              type: string
+              description: Anger namnet för den mätmetod som användes vid inmätningen.
+              example: Manuell inprickning
+          description: Objektrepresentation av den mätmetod som användes vid inmätning
+            av lämningen.
+        medelfel:
+          type: string
+          description: Anger inmätningens felmarginal uttryckt i meter.
+          example: "10.0"
+        url:
+          type: string
+          description: Anger url till websida som visar objektet.
+          example: https://pub.raa.se/visa/objekt/lamning/dedfd906-a811-4b91-b9ab-64685eb152c2
+      description: Lämning modell
+    PagedLamningLegacyResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          description: Innehåller framsökta poster.
+          items:
+            $ref: '#/components/schemas/LamningLegacy'
+        pageable:
+          type: object
+          properties:
+            sort:
+              type: object
+              properties:
+                sorted:
+                  type: boolean
+                  description: Anger om något sorteringskriterie angavs i sökningen
+                    eller ej.
+                  example: false
+                unsorted:
+                  type: boolean
+                  description: Anger om något sorteringskriterie angavs i sökningen
+                    eller om tjänstens defaultsortering användes.
+                  example: false
+                empty:
+                  type: boolean
+                  example: false
+              description: Objektrepresentation avseende sortering av sökresultat.
+            pageSize:
+              type: number
+              description: Anger antalet sökresultat på aktuell sida. Defaultvärde;
+                20
+              example: 10.0
+            pageNumber:
+              type: number
+              description: Anger aktuell sökresultatsida i sökresultatet. Notera att
+                sidnumreringen är nollbaserad.
+              example: 1.0
+            offset:
+              type: number
+              description: Anger offset för vilken post(ordningsnummer) som visas
+                i aktuell sökresultatsida. Används som index för att generera nästa
+                sökresultatsida
+              example: 7.0
+            paged:
+              type: boolean
+            unpaged:
+              type: boolean
+          description: Objektrepresentation av ett paginerat sökresultatsvar.
+        totalPages:
+          type: integer
+          description: Anger det totala antalet resultatsidor för sökresultatet.
+        totalElements:
+          type: integer
+          description: Anger det totala antalet objekt i sökresultatet.
+        last:
+          type: boolean
+          description: Anger om aktuell sida är sista sidan i sökresultatet eller
+            ej.
+        first:
+          type: boolean
+          description: Anger om aktuell sida är första sidan i sökresultatet eller
+            ej.
+        sort:
+          type: object
+          properties:
+            sorted:
+              type: boolean
+            unsorted:
+              type: boolean
+            empty:
+              type: boolean
+        numberOfElements:
+          type: integer
+          description: Anger faktiskt antalet sökresultatposter på aktuell sökresultatsida.
+          example: 1
+        size:
+          type: integer
+          description: Anger önskat antal resultatposter på aktuell sökresultatsida.
+          example: 2
+        number:
+          type: integer
+          description: Anger index för aktuell sökresultatsida.
+          example: 3
+        empty:
+          type: boolean
+          description: Anger om sökresultatet innehåller poster eller ej.
+          example: false
+      description: Objektpresentation av sökresultat för anläggningar.
+    LamningLegacy:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Anger lämningens identitet i KMR. Ersätter FMIS-objektid.
+          format: uuid
+          example: 000004e2-430d-496b-90bd-7e3e8ea57c5b
+        raaNummer:
+          type: string
+          nullable: true
+          description: Anger människoläsbar identitet för en lämning i FMIS. Det RAÄ-nummer
+            som objektet hade i FMIS innan migrering till KMR.
+          example: Årsunda 670
+        fmisId:
+          type: number
+          nullable: true
+          description: Anger lämningens tekniska identiet i FMIS.
+          example: 12000000029558
+        lamningsNummer:
+          type: string
+          description: Anger människoläsbar identitet för en lämning i KMR. Ersätter
+            RAÄ-numret.
+          example: L1950:8166
+      description: Objektrepresentation som beskriver relationen mellan lämningar
+        i (nya) KMR och (gamla) FMIS.
+    PagedAntikvariskBedomningTypResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          description: Innehåller framsökta poster.
+          items:
+            $ref: '#/components/schemas/AntikvariskBedomningTyp'
+        pageable:
+          type: object
+          properties:
+            sort:
+              type: object
+              properties:
+                sorted:
+                  type: boolean
+                  description: Anger om något sorteringskriterie angavs i sökningen
+                    eller ej.
+                  example: false
+                unsorted:
+                  type: boolean
+                  description: Anger om något sorteringskriterie angavs i sökningen
+                    eller om tjänstens defaultsortering användes.
+                  example: false
+                empty:
+                  type: boolean
+                  example: false
+              description: Objektrepresentation avseende sortering av sökresultat.
+            pageSize:
+              type: number
+              description: Anger antalet sökresultat på aktuell sida. Defaultvärde;
+                20
+              example: 10.0
+            pageNumber:
+              type: number
+              description: Anger aktuell sökresultatsida i sökresultatet. Notera att
+                sidnumreringen är nollbaserad.
+              example: 1.0
+            offset:
+              type: number
+              description: Anger offset för vilken post(ordningsnummer) som visas
+                i aktuell sökresultatsida. Används som index för att generera nästa
+                sökresultatsida
+              example: 7.0
+            paged:
+              type: boolean
+            unpaged:
+              type: boolean
+          description: Objektrepresentation av ett paginerat sökresultatsvar.
+        totalPages:
+          type: integer
+          description: Anger det totala antalet resultatsidor för sökresultatet.
+        totalElements:
+          type: integer
+          description: Anger det totala antalet objekt i sökresultatet.
+        last:
+          type: boolean
+          description: Anger om aktuell sida är sista sidan i sökresultatet eller
+            ej.
+        first:
+          type: boolean
+          description: Anger om aktuell sida är första sidan i sökresultatet eller
+            ej.
+        sort:
+          type: object
+          properties:
+            sorted:
+              type: boolean
+            unsorted:
+              type: boolean
+            empty:
+              type: boolean
+        numberOfElements:
+          type: integer
+          description: Anger faktiskt antalet sökresultatposter på aktuell sökresultatsida.
+          example: 1
+        size:
+          type: integer
+          description: Anger önskat antal resultatposter på aktuell sökresultatsida.
+          example: 2
+        number:
+          type: integer
+          description: Anger index för aktuell sökresultatsida.
+          example: 3
+        empty:
+          type: boolean
+          description: Anger om sökresultatet innehåller poster eller ej.
+          example: false
+      description: Objektpresentation av sökresultat för antikvariska bedömningstyper.
+    AntikvariskBedomningTyp:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        namn:
+          type: string
+          example: Fornlämning
+      description: Ett objekt som beskriver en typ av antikvarisk bedömning.
+    PagedPlaceringTypResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          description: Innehåller framsökta poster.
+          items:
+            $ref: '#/components/schemas/PlaceringTyp'
+        pageable:
+          type: object
+          properties:
+            sort:
+              type: object
+              properties:
+                sorted:
+                  type: boolean
+                  description: Anger om något sorteringskriterie angavs i sökningen
+                    eller ej.
+                  example: false
+                unsorted:
+                  type: boolean
+                  description: Anger om något sorteringskriterie angavs i sökningen
+                    eller om tjänstens defaultsortering användes.
+                  example: false
+                empty:
+                  type: boolean
+                  example: false
+              description: Objektrepresentation avseende sortering av sökresultat.
+            pageSize:
+              type: number
+              description: Anger antalet sökresultat på aktuell sida. Defaultvärde;
+                20
+              example: 10.0
+            pageNumber:
+              type: number
+              description: Anger aktuell sökresultatsida i sökresultatet. Notera att
+                sidnumreringen är nollbaserad.
+              example: 1.0
+            offset:
+              type: number
+              description: Anger offset för vilken post(ordningsnummer) som visas
+                i aktuell sökresultatsida. Används som index för att generera nästa
+                sökresultatsida
+              example: 7.0
+            paged:
+              type: boolean
+            unpaged:
+              type: boolean
+          description: Objektrepresentation av ett paginerat sökresultatsvar.
+        totalPages:
+          type: integer
+          description: Anger det totala antalet resultatsidor för sökresultatet.
+        totalElements:
+          type: integer
+          description: Anger det totala antalet objekt i sökresultatet.
+        last:
+          type: boolean
+          description: Anger om aktuell sida är sista sidan i sökresultatet eller
+            ej.
+        first:
+          type: boolean
+          description: Anger om aktuell sida är första sidan i sökresultatet eller
+            ej.
+        sort:
+          type: object
+          properties:
+            sorted:
+              type: boolean
+            unsorted:
+              type: boolean
+            empty:
+              type: boolean
+        numberOfElements:
+          type: integer
+          description: Anger faktiskt antalet sökresultatposter på aktuell sökresultatsida.
+          example: 1
+        size:
+          type: integer
+          description: Anger önskat antal resultatposter på aktuell sökresultatsida.
+          example: 2
+        number:
+          type: integer
+          description: Anger index för aktuell sökresultatsida.
+          example: 3
+        empty:
+          type: boolean
+          description: Anger om sökresultatet innehåller poster eller ej.
+          example: false
+      description: Objektpresentation av sökresultat för placeringstyper.
+    PlaceringTyp:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Anger stabil identitet för placeringstypen.
+          example: 1
+        namn:
+          type: string
+          description: Anger namnet för angiven placeringstyp (lämpligt för presentation).
+          example: Synlig ovan mark
+      description: Objektrepresentation för en placeringstyp.
+    PagedLamningsTypResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          description: Innehåller framsökta poster.
+          items:
+            $ref: '#/components/schemas/LamningsTyp'
+        pageable:
+          type: object
+          properties:
+            sort:
+              type: object
+              properties:
+                sorted:
+                  type: boolean
+                  description: Anger om något sorteringskriterie angavs i sökningen
+                    eller ej.
+                  example: false
+                unsorted:
+                  type: boolean
+                  description: Anger om något sorteringskriterie angavs i sökningen
+                    eller om tjänstens defaultsortering användes.
+                  example: false
+                empty:
+                  type: boolean
+                  example: false
+              description: Objektrepresentation avseende sortering av sökresultat.
+            pageSize:
+              type: number
+              description: Anger antalet sökresultat på aktuell sida. Defaultvärde;
+                20
+              example: 10.0
+            pageNumber:
+              type: number
+              description: Anger aktuell sökresultatsida i sökresultatet. Notera att
+                sidnumreringen är nollbaserad.
+              example: 1.0
+            offset:
+              type: number
+              description: Anger offset för vilken post(ordningsnummer) som visas
+                i aktuell sökresultatsida. Används som index för att generera nästa
+                sökresultatsida
+              example: 7.0
+            paged:
+              type: boolean
+            unpaged:
+              type: boolean
+          description: Objektrepresentation av ett paginerat sökresultatsvar.
+        totalPages:
+          type: integer
+          description: Anger det totala antalet resultatsidor för sökresultatet.
+        totalElements:
+          type: integer
+          description: Anger det totala antalet objekt i sökresultatet.
+        last:
+          type: boolean
+          description: Anger om aktuell sida är sista sidan i sökresultatet eller
+            ej.
+        first:
+          type: boolean
+          description: Anger om aktuell sida är första sidan i sökresultatet eller
+            ej.
+        sort:
+          type: object
+          properties:
+            sorted:
+              type: boolean
+            unsorted:
+              type: boolean
+            empty:
+              type: boolean
+        numberOfElements:
+          type: integer
+          description: Anger faktiskt antalet sökresultatposter på aktuell sökresultatsida.
+          example: 1
+        size:
+          type: integer
+          description: Anger önskat antal resultatposter på aktuell sökresultatsida.
+          example: 2
+        number:
+          type: integer
+          description: Anger index för aktuell sökresultatsida.
+          example: 3
+        empty:
+          type: boolean
+          description: Anger om sökresultatet innehåller poster eller ej.
+          example: false
+      description: Objektpresentation av sökresultat för lämningstyper.
+    LamningsTyp:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Anger identiteten för en lämningstyp.
+          example: 101
+        namn:
+          type: string
+          description: Anger namnet för en lämningstyp.
+          example: Blästplats
+      description: Objektrepresentation för en lämningstyp.
+    ErrorModel:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          description: Anger tidpunkten när felet inträffade. Tidpunkt angiven som
+            date-time, se RFC3339 (Internet Date/Time Format)
+          format: date-time
+          example: '2020-01-16T15:57:44.167+01:00'
+        status:
+          type: integer
+          description: Anger http statuskod.
+          format: int32
+          example: 400
+        message:
+          type: string
+          description: Innehåller ett felmeddelande tänkt att presenteras för slutanvändare.
+          example: Ogiltig indata
+        errorCode:
+          type: string
+          nullable: true
+          description: Anger ett unikt felmeddelande för aktuellt fel.
+          example: null
+        errorGroup:
+          type: string
+          nullable: true
+          description: Anger typ av fel. Skapas genom att en hash tas av stacktracen.
+        path:
+          type: string
+          description: Anger den resourcepath där felet uppstod.
+          example: /bebyggelse/byggnader
+        errorFields:
+          type: object
+          nullable: true
+          properties:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ErrorField'
+          description: |
+            Innehåller information om vad som gått fel vid validering av indata
+            till tjänsten.
+            
+            objektet består av attribut namnsatta efter namnet på indata-fältet
+            som inte kunde valideras.
+            
+            Varje attribut består i sin tur av en array av objekt av typen
+            ErrorField som beskrivet ett unikt fel för attributet. För varje
+            sådant fel som uppstått skapas en post i arrayen.
+        errorParse:
+          type: object
+          nullable: true
+          #          properties: {}
+          description: Anger ev. parsningsfel som uppstått vid parsning av indata.
+            Om inget fel uppstått är värdet null.
+        developerMessage:
+          type: string
+          nullable: true
+          description: Innehåller information om felet som inträffat. Avsett för utvecklare.
+            Det som returernas är e.getMessage(). Per default är denna inaktiverad
+            i produktion men aktiv i övriga miljöer.
+        developerTrace:
+          type: string
+          nullable: true
+          description: Innehåller stacktracen för felet som inträffat. Det som returneras
+            är stacktracen filtrerad på fel av typen "se.raa.*" fel.
+      description: Objektrepresentation av felmeddelanden.
+    ErrorField:
+      type: object
+      properties:
+        field:
+          type: string
+          description: Anger namnet på htmlformulärsfält som var felaktigt.
+          example: page
+        rejectedValue:
+          type: object
+          properties: {}
+          description: Innehåller ett objekt där vad felet bestod i framgår. Notera
+            attdatatyp skiljer sig åt beroende  på typ av fel.
+          example: abc123
+        message:
+          type: string
+          description: Innehåller beskrivande felmeddelande avsett att visa upp för
+            slutanvändare.
+          example: Måste vara ett heltal
+      description: Objekt som beskriver ett unikt fel från servern.
+
+    FeatureCollectionLamning:
+      description: |
+        Anger lämningens utbredning (geometri) i GeoJson[2008] format.
+        "https://geojson.org/geojson-spec.html#feature-collection-objects".
+        De geometrityper som kan förekomma är av någon av typerna:
+        - Point ("https://geojson.org/geojson-spec.html#point")
+        - LineString ("https://geojson.org/geojson-spec.html#linestring")
+        - Polygon ("https://geojson.org/geojson-spec.html#polygon")
+      type: object
+      required:
+        - type
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          enum:
+            - FeatureCollection
+        crs:
+          type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              enum:
+                - name
+            properties:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: 'urn:ogc:def:crs:EPSG::3006'
+                  description: Anger koordinatsystemet för geometrin.
+        features:
+          type: array
+          items:
+            type: object
+            required:
+              - type
+            properties:
+              type:
+                type: string
+                enum:
+                  - Feature
+              id:
+                type: string
+                description: Anger unik och stabil identitet (geometrinummer) för aktuell feature.
+                example: 'L2017:105-4'
+              geometry:
+                oneOf:
+                  - $ref: '#/components/schemas/Point'
+                  - $ref: '#/components/schemas/Polygon'
+                  - $ref: '#/components/schemas/LineString'
+                example:
+                  type: 'Polygon'
+                  coordinates: '[[[490109.3,6229117.8],[490154.8,6229148.0],[490123.5,6229155.9],[490109.3,6229117.8]]]'
+                  properties: {}
+
+    Point:
+      description: >-
+        Point ("https://geojson.org/geojson-spec.html#point")
+      type: object
+      required:
+        - type
+        - coordinates
+        - properties
+      properties:
+        type:
+          type: string
+          enum:
+            - Point
+        coordinates:
+          additionalProperties: true
+          example: "[350568.661,6308029.335]"
+          type: array
+          items:
+            type: number
+        properties:
+          type: object
+
+    LineString:
+      description:
+        LineString ("https://geojson.org/geojson-spec.html#linestring")
+      type: object
+      required:
+        - type
+        - coordinates
+        - properties
+      properties:
+        type:
+          type: string
+          enum:
+            - LineString
+        coordinates:
+          additionalProperties: true
+          example: "[[603354.2236,6289289.2777],[603404.1628,6289249.6712]]"
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+        properties:
+          type: object
+
+    Polygon:
+      description:
+        Polygon ("https://geojson.org/geojson-spec.html#polygon")
+      type: object
+      required:
+        - type
+        - coordinates
+        - properties
+      properties:
+        type:
+          type: string
+          enum:
+            - Polygon
+        coordinates:
+          additionalProperties: true
+          example: "[[[490109.3,6229117.8],[490154.8,6229148.0],[490123.5,6229155.9],[490109.3,6229117.8]]]"
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                type: number
+        properties:
+          type: object
+
+    MultiPoint:
+      description: >-
+        MultiPoint ("https://geojson.org/geojson-spec.html#multipoint")
+      type: object
+      required:
+        - type
+        - coordinates
+        - properties
+      properties:
+        type:
+          type: string
+          enum:
+            - MultiPoint
+        coordinates:
+          additionalProperties: true
+          example: "[[350568.661,6308029.335],[350800.123,6308200.123]]"
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+        properties:
+          type: object
+
+    MultiLineString:
+      description:
+        LineString ("https://geojson.org/geojson-spec.html#multilinestring")
+      type: object
+      required:
+        - type
+        - coordinates
+        - properties
+      properties:
+        type:
+          type: string
+          enum:
+            - MultiLineString
+        coordinates:
+          additionalProperties: true
+          example: "[[[603354.2236,6289289.2777],[603404.1628,6289249.6712]],[[350568.661,6308029.335],[350800.123,6308200.123]]]"
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                type: number
+        properties:
+          type: object
+
+    MultiPolygon:
+      description:
+        MultiPolygon ("https://geojson.org/geojson-spec.html#multipolygon")
+      type: object
+      required:
+        - type
+        - coordinates
+        - properties
+      properties:
+        type:
+          type: string
+          enum:
+            - MultiPolygon
+        coordinates:
+          additionalProperties: true
+          example: "[[[[604306.141,6720935.27],[604327.369,6720879.604],[604260.988,6720917.65],[604306.141,6720935.27]]],[[[604289.772,6721008.011],[604290.172,6721011.215],[604343.736,6720860.79],[604289.772,6721008.011]]]]"
+          type: array
+          items:
+            type: array
+            items:
+              type: array
+              items:
+                type: array
+                items:
+                  type: number
+        properties:
+          type: object
+
+  parameters:
+    pageParameter:
+      name: page
+      in: query
+      description: Anger index för önskad resultatsida. Notera att indexet är nollbaserat.
+        Dvs vill man hämta första sidan anger man page=0.
+      schema:
+        type: number
+        format: number
+    sizeParameter:
+      name: size
+      in: query
+      description: Anger antalet sökresultat per sida (begränsas till max antal 10000
+        objekt).
+      schema:
+        type: number
+        format: number

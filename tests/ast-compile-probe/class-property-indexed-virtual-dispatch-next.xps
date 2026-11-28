@@ -1,0 +1,24 @@
+Class Base
+    Public Property Get Item(ByVal index As Long) As Long
+        Item = index + 1
+    End Property
+End Class
+
+Class Child Extend Base
+    Public Property Get Item(ByVal index As Long) As Long
+        Item = index + 10
+    End Property
+End Class
+
+Class Caller
+    Public Function Read(ByVal item As Base, ByVal index As Long) As Long
+        Read = item.Item(index)
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New Child
+    Dim caller As New Caller
+    If caller.Read(item, 2) <> 12 Then Error 6, "derived indexed property dispatch failed"
+    Print "CLASS_INDEXED_PROPERTY_VIRTUAL_DISPATCH_OK"
+End Sub

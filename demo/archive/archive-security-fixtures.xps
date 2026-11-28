@@ -1,7 +1,7 @@
 Option Declare
 
 Sub Main()
-    Dim duplicateArchive As New Archive("../../out/archive-security-fixtures/duplicate-names.zip")
+    Dim duplicateArchive As New Archive(Application.Args(0))
     Dim duplicateEntry As ArchiveEntry
     Dim duplicateCount As Integer
     Set duplicateEntry = duplicateArchive.GetFirstEntry()
@@ -12,9 +12,11 @@ Sub Main()
     Wend
     If duplicateCount <> 2 Then Error 5, "Archive duplicate-name iterator did not return both entries"
 
-    Dim output As New Archive("../../out/archive-security-fixtures/symlink-source-test.zip")
+    Dim fixtureRoot As String
+    fixtureRoot = Application.Args(1)
+    Dim output As New Archive(fixtureRoot & "/symlink-source-test.zip")
     output.Create("zip")
-    output.AddFolder("../../out/archive-security-fixtures/source", "source", True)
+    output.AddFolder(fixtureRoot & "/source", "source", True)
     If Not output.Contains("source/real.txt") Then Error 5, "Archive security fixture lost the real source file"
     If output.Contains("source/link.txt") Then Error 5, "Archive.AddFolder followed a symbolic link"
 

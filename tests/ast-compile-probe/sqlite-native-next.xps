@@ -1,0 +1,15 @@
+Option Declare
+
+Sub Main()
+    Dim db As New XPDBSQLite(":memory:")
+    Dim rows As XPJsonDocument
+    Call db.Execute("CREATE TABLE people (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+    Call db.Execute("INSERT INTO people(name) VALUES ('Ada')")
+    Set rows = db.Query("SELECT id, name FROM people ORDER BY id")
+    If InStr(rows.Stringify(), "Ada") > 0 Then
+        Print "SQLITE_AST_OK"
+    Else
+        Error 5, "SQLite AST query result failed"
+    End If
+    Call db.Close()
+End Sub

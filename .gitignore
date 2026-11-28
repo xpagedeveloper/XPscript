@@ -13,3 +13,31 @@ graphify-out/
 docs-site/node_modules/
 docs-site/.astro/
 docs-site/dist/
+**/tmp*/
+.tmp*
+*.bin
+*.tmp
+__pycache__/
+*.pyc
+ast-file-text-next.txt
+tmp*
+
+# Generated test/compiler artifacts
+**/ast-output/
+**/wasm-prereq-output/
+tests/notes-dxl-diagnostic-temp/
+csv-parity.csv
+example.zip
+tests/ast-compile-probe/roundtrip.xlsx
+tests/cli-compiler-benchmark/string-number-array-500.xps
+tests/ast-compile-probe/ast-image-parity.png
+samples/xpimage-format-*.png
+samples/xpscript-xpimage-*.png
+samples/xpscript-full-runtime-stream-test.txt
+.context-engine.yaml
+.ccindex/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+/playwright-report/
+/test-results/
+/.manual-wasm-ui-5230/.xpscript-cache

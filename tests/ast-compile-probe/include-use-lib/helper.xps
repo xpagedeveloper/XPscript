@@ -1,0 +1,3 @@
+Function IncludeUseValue() As Long
+    IncludeUseValue = 42
+End Function

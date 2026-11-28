@@ -1,0 +1,8 @@
+Class First Extend Second
+End Class
+Class Second Extend Third
+End Class
+Class Third Extend First
+End Class
+Sub Main()
+End Sub

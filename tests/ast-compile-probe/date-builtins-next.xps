@@ -1,0 +1,7 @@
+Sub Main()
+    Dim start As Variant = DateNumber(2026, 1, 2)
+    Dim finish As Variant = DateAdd("d", 3, start)
+    If DateDiff("d", start, finish) <> 3 Then Error 6301, "DateAdd/DateDiff day interval drifted"
+    If DateDiff("m", start, DateAdd("m", 2, start)) <> 2 Then Error 6302, "DateAdd/DateDiff month interval drifted"
+    Print "DATE_BUILTINS_OK"
+End Sub

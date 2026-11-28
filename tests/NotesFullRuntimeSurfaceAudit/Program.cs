@@ -15,9 +15,29 @@ var samplePaths = new[]
     Path.Combine(repoRoot, "samples", "notes-session-full-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-database-full-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-database-query-access-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-database-full-surface-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-document-collection-extended-surface.xps"),
     Path.Combine(repoRoot, "samples", "notes-dbdirectory-runtime-test.xps"),
+    Path.Combine(repoRoot, "samples", "notes-extended-surface.xps"),
+    Path.Combine(repoRoot, "samples", "notes-modified-documents-runtime-test.xps"),
     Path.Combine(repoRoot, "samples", "notes-mime-entity-surface.xps"),
-    Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps")
+    Path.Combine(repoRoot, "samples", "notes-richtext-linked-objects-surface.xps"),
+    Path.Combine(repoRoot, "samples", "notes-view-native-multikey-dxl.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-extended-surface.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-columnnames-domino-runtime-test.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-navigation-v1-domino-runtime-test.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-navigation-v2-domino-runtime-test.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-navigation-v3-domino-runtime-test.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-navigator-cache-policy-compile.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-navigator-entry-extended-surface.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-richtext-extended-surface.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-mail-surface.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-mail-no-mime-surface.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-stream-runtime-test.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-agent-runtime-test.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-agent-types-domino-runtime-test.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-dxl-import-export-surface.xps")
+    ,Path.Combine(repoRoot, "samples", "notes-view-navigator-entry-extended-surface.xps")
 };
 foreach (var samplePath in samplePaths)
 {
@@ -34,6 +54,59 @@ var build = builder.GetMethod("Build", BindingFlags.Static | BindingFlags.Public
     ?? throw new InvalidOperationException("NotesRuntimeSourceBuilder.Build() not found.");
 var source = (string?)build.Invoke(null, null) ?? throw new InvalidOperationException("Notes runtime source was null.");
 var sample = string.Join("\n", samplePaths.Select(File.ReadAllText));
+
+var notesPreprocessor = compiler.GetType("XPScript.Compiler.NotesRuntimePreprocessor", throwOnError: true)!;
+var transformNotes = notesPreprocessor.GetMethod("Transform")!;
+foreach (var ast in new[] { false, true })
+{
+    const string input = "Dim view As NotesView\nDim doc As NotesDocument\nSet doc = view.GetDocumentByKey(\"key\", True)";
+    var transformed = (string)transformNotes.Invoke(Activator.CreateInstance(notesPreprocessor, nonPublic: true), [input, ast])!;
+    if (transformed.Contains("GetFirstDocumentByKey", StringComparison.Ordinal) ||
+        !transformed.Contains("XPScriptNotes.NormalizeObjectResult(view.GetDocumentByKey(", StringComparison.Ordinal))
+        throw new InvalidOperationException("Notes key lookup was renamed or lost Nothing normalization.");
+}
+Console.WriteLine("NotesView key lookup preprocessing contract: OK");
+
+// DXL log properties return caller-owned MEMHANDLE copies, not DHANDLEs.
+// Mixing the two memory APIs can panic inside Notes instead of returning an error.
+foreach (var method in new[] { "GetDxlImporterLog", "GetDxlExporterLog" })
+{
+    var parsed = CSharpSyntaxTree.ParseText(source).GetCompilationUnitRoot();
+    var body = parsed.DescendantNodes().OfType<MethodDeclarationSyntax>()
+        .Single(m => m.Identifier.ValueText == method).ToString();
+    foreach (var api in new[] { "OSMemoryLock", "OSMemoryUnlock", "OSMemoryFree" })
+        if (!body.Contains("\"" + api + "\"", StringComparison.Ordinal))
+            throw new InvalidOperationException(method + " is missing MEMHANDLE operation " + api);
+    if (body.Contains("\"OSLockObject\"", StringComparison.Ordinal) ||
+        body.Contains("\"OSMemGetSize\"", StringComparison.Ordinal))
+        throw new InvalidOperationException(method + " uses the DHANDLE API for a MEMHANDLE.");
+}
+Console.WriteLine("DXL log MEMHANDLE lifetime contract: OK");
+
+var userIdResolver = source.IndexOf("private string ResolveUserIdFile()", StringComparison.Ordinal);
+if (userIdResolver < 0)
+    throw new InvalidOperationException("Notes runtime does not expose the user.id resolver.");
+var userIdResolverEnd = source.IndexOf("\n    }", userIdResolver, StringComparison.Ordinal);
+if (userIdResolverEnd < 0)
+    throw new InvalidOperationException("Notes user.id resolver could not be delimited.");
+var userIdResolverBody = source[userIdResolver..userIdResolverEnd];
+foreach (var candidate in new[]
+{
+    "Path.Combine(DataDir, \"user.id\")",
+    "Path.Combine(RuntimeDirectory, \"Data\", \"user.id\")",
+    "Path.Combine(RuntimeDirectory, \"user.id\")"
+})
+{
+    if (!userIdResolverBody.Contains(candidate, StringComparison.Ordinal))
+        throw new InvalidOperationException($"Notes user.id resolution is missing candidate: {candidate}");
+}
+
+var userIdAssignment = source.IndexOf("Environment.SetEnvironmentVariable(\"KeyFileName\", userId)", StringComparison.Ordinal);
+var notesInitialization = source.IndexOf("Api.Initialize(", StringComparison.Ordinal);
+var apiUserIdAssignment = source.IndexOf("Api.SetEnvironmentVariable(\"KeyFileName\", userId)", StringComparison.Ordinal);
+if (userIdAssignment < 0 || notesInitialization < 0 || userIdAssignment > notesInitialization || apiUserIdAssignment < notesInitialization)
+    throw new InvalidOperationException("Notes initialization does not select user.id before native initialization and restore it in the API environment.");
+Console.WriteLine("Notes user.id initialization contract: OK");
 
 var syntaxTree = CSharpSyntaxTree.ParseText(source);
 var root = syntaxTree.GetCompilationUnitRoot();
@@ -67,7 +140,14 @@ var classes = new[]
     (Runtime: "XPScriptNotesRichTextStyle", Surface: "NotesRichTextStyle", Anchor: (string?)null),
     (Runtime: "XPScriptNotesRichTextParagraphStyle", Surface: "NotesRichTextParagraphStyle", Anchor: (string?)null),
     (Runtime: "XPScriptNotesRichTextTab", Surface: "NotesRichTextTab", Anchor: (string?)null),
-    (Runtime: "XPScriptNotesColorObject", Surface: "NotesColorObject", Anchor: (string?)null)
+    (Runtime: "XPScriptNotesMIMEEntity", Surface: "NotesMIMEEntity", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesMIMEHeader", Surface: "NotesMIMEHeader", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesColorObject", Surface: "NotesColorObject", Anchor: (string?)null),
+    (Runtime: "XPScriptNotesMail", Surface: "NotesMail", Anchor: (string?)"Send"),
+    (Runtime: "XPScriptNotesStream", Surface: "NotesStream", Anchor: (string?)"ReadText"),
+    (Runtime: "XPScriptNotesAgent", Surface: "NotesAgent", Anchor: (string?)"Run"),
+    (Runtime: "XPScriptNotesDXLImporter", Surface: "NotesDXLImporter", Anchor: (string?)"Import"),
+    (Runtime: "XPScriptNotesDXLExporter", Surface: "NotesDXLExporter", Anchor: (string?)"ExportDatabaseDesign")
 };
 
 var requestedSurfaces = new HashSet<string>(args, StringComparer.OrdinalIgnoreCase);
@@ -94,7 +174,21 @@ var allowedGuardedMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase
 {
     "NotesDocument.CreateMIMEEntity",
     "NotesDocument.GetMIMEEntity",
-    "NotesItem.GetMIMEEntity"
+    "NotesItem.GetMIMEEntity",
+    // The native MIME iterator deliberately implements SEARCH_DEPTH only;
+    // other search modes are rejected explicitly rather than silently ignored.
+    "NotesMIMEEntity.GetNextEntity"
+};
+
+// These are documented native search flags, not placeholder implementations.
+// Their constant-valued bodies are intentional and should not be reported as
+// suspicious constant members by the surface audit.
+var allowedConstantMembers = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+{
+    "NotesRichTextNavigator.RT_FIND_CASEINSENSITIVE",
+    "NotesRichTextNavigator.RT_FIND_CASESENSITIVE",
+    "NotesRichTextNavigator.RT_FIND_ACCENTINSENSITIVE",
+    "NotesRichTextNavigator.RT_FIND_PITCHINSENSITIVE"
 };
 
 var missing = new List<string>();
@@ -134,7 +228,8 @@ foreach (var item in selectedClasses)
             if (!allowedGuardedMembers.Contains(qualifiedName) &&
                 Regex.IsMatch(memberText, @"NotImplementedException|NotSupportedException|Unsupported|not supported", RegexOptions.IgnoreCase))
                 placeholders.Add(qualifiedName);
-            if (Regex.IsMatch(memberText, "=>\\s*(?:false|true|0|\"\")\\s*;", RegexOptions.IgnoreCase))
+            if (!allowedConstantMembers.Contains(qualifiedName) &&
+                Regex.IsMatch(memberText, "=>\\s*(?:false|true|0|\"\")\\s*;", RegexOptions.IgnoreCase))
                 suspiciousConstants.Add(qualifiedName);
         }
     }

@@ -1,0 +1,5 @@
+Sub Main()
+    Dim image As XPImage
+    Set image = New XPImage(2, 2, "#123456")
+    Print image.Width
+End Sub

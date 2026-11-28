@@ -1,0 +1,12 @@
+Class Box
+End Class
+Class OtherBox
+End Class
+Class Store
+    Public Property Set Item(ByVal index As Long, ByVal incoming As Box)
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    Set store.Item(1) = New OtherBox()
+End Sub

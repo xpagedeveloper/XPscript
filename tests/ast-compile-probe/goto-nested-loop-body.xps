@@ -1,0 +1,14 @@
+Sub Main()
+    Dim total As Long
+    Dim i As Long
+    Dim item As Variant
+    For i = 1 To 2
+        ForAll item In Array(1, 2)
+            GoTo addNested
+            total = total + 100
+addNested:
+            total = total + i * item
+        End ForAll
+    Next
+    Print total
+End Sub

@@ -44,12 +44,16 @@ public static class ApplicationDependencyInspector
         if (!CompilerDriver.SupportedRuntimes.Contains(rid, StringComparer.OrdinalIgnoreCase))
             throw new ArgumentException("Unsupported runtime identifier '" + rid + "'.");
 
-        var originalSource = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
-        var includeResult = new IncludeSourcePreprocessor().Transform(originalSource, sourcePath);
-        var transpiler = new XPScriptTranspiler();
+        var workspace = CompilerPathSecurity.CreateOwnedTemporaryDirectory("dependency-source-");
         string generatedSource;
-        using (ExpandedSourceContext.Begin(includeResult.Source, sourcePath, includeResult.Map))
-            generatedSource = transpiler.Transpile(includeResult.Source, sourcePath, rid);
+        try
+        {
+            generatedSource = await AstCompiler.GenerateSourceAsync(sourcePath, workspace, rid, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            try { CompilerPathSecurity.DeleteOwnedTemporaryDirectory(workspace); } catch { }
+        }
 
         var direct = ApplicationDependencyCatalog.Detect(generatedSource);
         if (direct.Count == 0)

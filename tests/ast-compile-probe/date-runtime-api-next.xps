@@ -1,0 +1,7 @@
+Sub Main()
+    Dim normalized As Variant = DateNumber(2026, 13, 1)
+    If DatePart("yyyy", normalized) <> 2027 Or DatePart("m", normalized) <> 1 Or DatePart("d", normalized) <> 1 Then
+        Error 6411, "DateNumber did not use the shared runtime normalization"
+    End If
+    Print "DATE_RUNTIME_API_OK"
+End Sub

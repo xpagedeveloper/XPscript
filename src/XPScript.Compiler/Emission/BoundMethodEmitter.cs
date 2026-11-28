@@ -1,0 +1,143 @@
+using System.Text;
+using XPScript.Compiler.Binding;
+
+namespace XPScript.Compiler.Emission;
+
+/// <summary>Wraps a bound method body in a deterministic C# method declaration.</summary>
+public sealed class BoundMethodEmitter
+{
+    private readonly BoundStatementEmitter _statements = new();
+
+    public string Emit(string methodName, Type returnType, IReadOnlyList<BoundStatement> statements)
+        => Emit(methodName, returnType, [], statements);
+
+    public string Emit(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundStatement> statements)
+        => Emit(methodName, returnType, parameters, statements, isStatic: true);
+
+    public string Emit(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters, IReadOnlyList<BoundStatement> statements, bool isStatic,
+        string? source = null, string? sourcePath = null, XpTypeSymbol? semanticReturnType = null, bool cloneImageParameters = true)
+        => EmitCore(methodName, returnType, parameters, statements, isStatic, source, sourcePath, null, semanticReturnType,
+            cloneImageParameters, trackSourceLines: false);
+
+    internal string EmitWithSourceTracking(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters,
+        IReadOnlyList<BoundStatement> statements, bool isStatic, string source, string sourcePath, SourceMap sourceMap,
+        XpTypeSymbol? semanticReturnType = null, bool cloneImageParameters = true)
+        => EmitCore(methodName, returnType, parameters, statements, isStatic, source, sourcePath, sourceMap,
+            semanticReturnType, cloneImageParameters, trackSourceLines: true);
+
+    private string EmitCore(string methodName, Type returnType, IReadOnlyList<ParameterSymbol> parameters,
+        IReadOnlyList<BoundStatement> statements, bool isStatic, string? source, string? sourcePath, SourceMap? sourceMap,
+        XpTypeSymbol? semanticReturnType, bool cloneImageParameters, bool trackSourceLines)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
+        ArgumentNullException.ThrowIfNull(returnType);
+        ArgumentNullException.ThrowIfNull(statements);
+        ArgumentNullException.ThrowIfNull(parameters);
+        var clearByRefImageOnFailure = !methodName.StartsWith("__xps_constructor", StringComparison.OrdinalIgnoreCase) &&
+            !methodName.StartsWith("__xps_destructor", StringComparison.OrdinalIgnoreCase) &&
+            !methodName.StartsWith("__xps_property_", StringComparison.OrdinalIgnoreCase);
+
+        string body;
+        _statements.ImageScopeEnabled = parameters.Any(p => AstImageSupport.IsImage(p.SemanticType?.Name)) ||
+            BoundStatementTraversal.Descendants(statements).OfType<BoundVariableDeclarationStatement>()
+                .Any(d => AstImageSupport.IsImage(d.Local.SemanticType?.Name)) ||
+            BoundStatementTraversal.Descendants(statements).OfType<BoundAssignmentStatement>()
+                .Any(a => AstImageSupport.IsImageStorage(a.Target));
+        try
+        {
+            body = source is not null && sourcePath is not null &&
+                (trackSourceLines || BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
+                ? _statements.EmitWithSourceMap(statements, source, sourcePath, sourceMap, trackSourceLines).Code
+                : _statements.Emit(statements);
+        }
+        catch (NotSupportedException ex)
+        {
+            throw new BoundEmissionException(ex.Message, statements.FirstOrDefault()?.Span, ex);
+        }
+        var output = new StringBuilder();
+        output.Append("public ").Append(isStatic ? "static " : string.Empty).Append(semanticReturnType is null ? CSharpType(returnType) : CSharpType(semanticReturnType)).Append(' ')
+            .Append(methodName).Append('(')
+            .Append(string.Join(", ", parameters.Select(Parameter)))
+            .Append(")\n{\n");
+        if (_statements.ImageScopeEnabled)
+        {
+            output.Append("    using var __imageScope = new AstImageScope();\n");
+            foreach (var parameter in parameters.Where(p => p.IsBorrowedImageSnapshot))
+                output.Append("    __imageScope.Borrow(").Append(parameter.Name).Append(");\n");
+            foreach (var parameter in parameters.Where(p => cloneImageParameters && !p.IsByRef && AstImageSupport.IsImage(p.SemanticType?.Name)))
+            {
+                output.Append("    ").Append(parameter.Name).Append(" = __imageScope.Own(").Append(parameter.Name).Append("?.Clone());\n");
+                output.Append("    __imageScope.Observe(() => ").Append(parameter.Name).Append(");\n");
+            }
+            output.Append("    try\n    {\n");
+        }
+        foreach (var line in body.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            output.Append(_statements.ImageScopeEnabled ? "        " : "    ").Append(line).Append('\n');
+        if (returnType != typeof(void) && BoundStatementTraversal.Descendants(statements).Any(item => item is BoundOnErrorStatement or BoundResumeStatement))
+            output.Append(_statements.ImageScopeEnabled ? "        " : "    ").Append("return default!;\n");
+        if (_statements.ImageScopeEnabled)
+        {
+            output.Append("    }\n    catch\n    {\n");
+            if (clearByRefImageOnFailure)
+                foreach (var parameter in parameters.Where(p => p.IsByRef && AstImageSupport.IsImage(p.SemanticType?.Name)))
+                    output.Append("        ").Append(parameter.Name).Append(" = null;\n");
+            output.Append("        throw;\n    }\n");
+        }
+        output.Append("}\n");
+        return output.ToString();
+    }
+
+    private static string Parameter(ParameterSymbol parameter)
+    {
+        var mode = parameter.IsByRef ? "ref " : string.Empty;
+        var type = parameter.SemanticType?.IsList == true ? $"LSList<{CSharpType(parameter.SemanticType.ElementType!)}>" : CSharpType(parameter.Type);
+        type = parameter.SemanticType?.IsArray == true
+            ? "System.Array"
+            : parameter.SemanticType is { } semantic ? CSharpType(semantic) : type;
+        return mode + type + " " + parameter.Name;
+    }
+
+    internal static string SemanticStorageType(LocalSymbol local, string fallback)
+    {
+        if (local.SemanticType?.IsReferenceCell == true) return CSharpType(local.SemanticType);
+        if (local.IsDynamicArray) return "System.Array";
+        if (local.Type == typeof(Array)) return "System.Array";
+        if (local.Type.IsArray) return "System.Array";
+        if (local.SemanticType?.IsArray == true) return "System.Array";
+        if (local.ArrayLength is not null || local.ArrayBounds.Count > 0 || local.ArrayLowerBound != 0 || local.ArrayRank > 1) return "System.Array";
+        if (local.SemanticType is { } collection && (collection.IsArray || collection.IsList)) return CSharpType(collection);
+        if (BoundExpressionEmitter.RuntimeObjectType(local.SemanticType?.Name ?? "") is { } native) return native;
+        return local.SemanticType is { RuntimeType: not null } semantic && semantic.RuntimeType == typeof(object) &&
+            !semantic.IsVariant && !semantic.IsObject && !semantic.IsNothing && !semantic.IsNull && !semantic.IsEmpty && !semantic.IsList
+            ? "Xp" + semantic.Name : fallback;
+    }
+
+    internal static string CSharpType(Type type) => type == typeof(void) ? "void"
+        : type == typeof(long) ? "long"
+        : type == typeof(double) ? "double"
+        : type == typeof(bool) ? "bool"
+        : type == typeof(string) ? "string"
+        : type == typeof(object) ? "object"
+        : type.FullName?.Replace('+', '.') ?? type.Name;
+
+    internal static string CSharpType(XpTypeSymbol type) => type.Name.ToUpperInvariant() switch
+    {
+        "BYTE" or "INTEGER" or "LONG" => "long",
+        "SINGLE" or "DOUBLE" or "CURRENCY" => "double",
+        "BOOLEAN" => "bool",
+        "STRING" => "string",
+        "VARIANT" => "object",
+        "VOID" => "void",
+        _ => CSharpNativeType(type)
+    };
+
+    private static string CSharpNativeType(XpTypeSymbol type) => type.IsReferenceCell
+        ? $"System.Runtime.CompilerServices.StrongBox<{CSharpType(type.ElementType!)}>"
+        : type.IsList
+        ? $"LSList<{CSharpType(type.ElementType!)}>"
+        : type.IsArray
+        ? "System.Array"
+        : BoundExpressionEmitter.RuntimeObjectType(type.Name) ??
+          (type.RuntimeType == typeof(object) && !type.IsVariant && !type.IsObject && !type.IsNothing && !type.IsNull && !type.IsEmpty
+              ? "Xp" + type.Name : CSharpType(type.RuntimeType));
+}

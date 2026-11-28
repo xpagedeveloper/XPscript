@@ -29,7 +29,6 @@ public readonly record struct RuntimeFeatures(
         if (Ai) yield return ("XPAi", "server target", "Keep AI credentials and requests on the server.");
         if (Sqlite) yield return ("XPDBSQLite", "server or desktop target", null);
         if (MsSql) yield return ("XPDbMsSql", "server or desktop target", null);
-        if (Spreadsheet) yield return ("XPSpreadsheet", "server or desktop target", null);
         if (NetworkTools) yield return ("NetworkTools", "server or desktop target", "Browser sandboxes do not expose native ICMP, sockets, TLS streams, or local network interface APIs.");
     }
 
@@ -49,16 +48,15 @@ public readonly record struct RuntimeFeatures(
                          PreprocessorFeatureGate.ContainsCall(code, "XPJsonSchema.Parse", "XPJsonSchema.FromJson");
 
         return new RuntimeFeatures(
-            Http: PreprocessorFeatureGate.ContainsTypeReference(code, "XPHttpClient", "XPHttpResponse", "NotesHTTPRequest"),
+            Http: PreprocessorFeatureGate.ContainsTypeReference(code, "XPHttpClient", "XPHttpResponse", "NotesHTTPRequest", "XPNotesHTTPRequest"),
             Json: PreprocessorFeatureGate.ContainsTypeReference(
-                  code, "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "NotesJSONNavigator",
-                      "NotesJSONObject", "NotesJSONArray", "NotesJSONElement") ||
+                  code, "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJSONNavigator") ||
                   PreprocessorFeatureGate.ContainsCall(
                       code, "XPJsonDocument.Parse", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode"),
-            JsonSchema: jsonSchema || PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm"),
+            JsonSchema: jsonSchema,
             Xml: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPXml") ||
                  PreprocessorFeatureGate.ContainsCall(code, "XPXmlDocument.Parse", "XmlParse", "XmlStringify", "XmlEscape"),
-            Csv: PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPCsv") ||
+            Csv: AstSpreadsheetSupport.UsesWorksheetCsv(source) || PreprocessorFeatureGate.ContainsTypePrefixReference(code, "XPCsv") ||
                  PreprocessorFeatureGate.ContainsCall(
                      code, "XPCsvDocument.Parse", "XPCsvDocument.ParseBytes", "XPCsvDocument.Load", "CsvParse", "CsvParseBytes",
                      "CsvStringify", "CsvEscape", "ToCsv"),
@@ -68,9 +66,9 @@ public readonly record struct RuntimeFeatures(
             MsSql: PreprocessorFeatureGate.ContainsTypeReference(code, "XPDbMsSql"),
             Attachments: attachments,
             Ui: PreprocessorFeatureGate.ContainsTypeReference(code, "UIForm", "UIListView"),
-            Ai: PreprocessorFeatureGate.ContainsAny(code, "XPAi", "XPAiResponse", "AITool"),
+            Ai: PreprocessorFeatureGate.ContainsAny(code, "XPAi", "XPAiResponse", "XPAITool"),
             Archive: PreprocessorFeatureGate.ContainsTypeReference(code, "Archive", "ArchiveEntry"),
-            Spreadsheet: PreprocessorFeatureGate.ContainsTypeReference(code, "XPSpreadsheet", "XPWorksheet", "XPCell"),
+            Spreadsheet: AstSpreadsheetSupport.UsesSpreadsheet(source),
             NetworkTools: PreprocessorFeatureGate.ContainsTypeReference(code, "NetworkTools", "NetworkPingResult", "NetworkTraceHop", "NetworkDnsResult", "NetworkPortResult", "NetworkUdpResult", "NetworkHttpResult", "NetworkTlsResult", "NetworkInterfaceInfo", "NetworkEndpointInfo"),
             Image: PreprocessorFeatureGate.ContainsTypeReference(code, "XPImage") || PreprocessorFeatureGate.ContainsCall(code, "XPImage.Load", "XPImage.FromBytes", "XPImage.FromBase64"));
     }

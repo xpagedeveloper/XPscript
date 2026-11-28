@@ -1,0 +1,6 @@
+Sub Main()
+    Print "ANDROID-LINE=first"
+    Print "ANDROID-VALUE=" & 42
+    Print "ANDROID-BOOL=" & True
+    Print "ANDROID-LINE=last"
+End Sub

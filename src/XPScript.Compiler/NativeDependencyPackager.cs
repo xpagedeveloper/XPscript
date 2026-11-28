@@ -38,6 +38,23 @@ internal sealed class NativeDependencyPackager
         return result;
     }
 
+    internal void Stage(string sourcePath, string outputDirectory, IReadOnlyList<Dependency> dependencies)
+    {
+        var sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(Path.GetFullPath(sourcePath)) ?? Environment.CurrentDirectory);
+        var seen = new HashSet<string>(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        foreach (var dependency in dependencies)
+        {
+            var source = CompilerPathSecurity.ResolveApplicationLocalNativeFile(sourceDirectory, dependency.DeclaredPath);
+            var target = Path.Combine(outputDirectory, dependency.LoadName);
+            if (!seen.Add(dependency.LoadName))
+                throw new CompilerException("Multiple native dependencies would use the same file name: " + dependency.LoadName);
+            if (!File.Exists(source))
+                throw new CompilerException("Application-local native dependency was not found: " + dependency.LoadName);
+            CompilerSecureFileCopy.CopyValidatedRegularFile(source, target, "Native dependency");
+            CompilerPathSecurity.HardenTemporaryFile(target);
+        }
+    }
+
     public static bool IsApplicationLocalPath(string value)
     {
         if (string.IsNullOrWhiteSpace(value)) return false;

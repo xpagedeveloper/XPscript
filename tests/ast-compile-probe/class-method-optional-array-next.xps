@@ -1,0 +1,19 @@
+Class Reader
+    Public Function Read(Optional ByVal values() As Long) As Long
+        If values Is Nothing Then
+            Read = 0
+        Else
+            values(-2) = values(-2) + 3
+            Read = values(-2)
+        End If
+    End Function
+End Class
+
+Sub Main()
+    Dim reader As New Reader
+    Dim values(-2 To 0) As Long
+    values(-2) = 4
+    Print CStr(reader.Read())
+    Print CStr(reader.Read(values))
+    Print CStr(values(-2))
+End Sub

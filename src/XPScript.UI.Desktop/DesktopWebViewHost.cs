@@ -18,7 +18,7 @@ internal static class DesktopWebViewHost
         if (!string.IsNullOrWhiteSpace(background)) view.Background = new SolidColorBrush(Color.Parse(background));
         Views[Key(instanceId, fieldName)] = view;
         if (!string.IsNullOrEmpty(html)) view.AdapterCreated += (_, _) => view.NavigateToString(html);
-        else if (Uri.TryCreate(string.IsNullOrWhiteSpace(source) ? "about:blank" : source, UriKind.Absolute, out var uri)) view.Source = uri;
+        else view.Source = ResolveSourceUri(source);
         return view;
     }
 
@@ -57,7 +57,8 @@ internal static class DesktopWebViewHost
         return result;
     }
 
-    private static string Navigate(NativeWebView view, string? value) { if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)) throw new InvalidOperationException("WebView navigation requires an absolute URI."); view.Navigate(uri); return uri.AbsoluteUri; }
+    private static string Navigate(NativeWebView view, string? value) { var uri = ResolveSourceUri(value); view.Navigate(uri); return uri.AbsoluteUri; }
+    private static Uri ResolveSourceUri(string? value) { var source = string.IsNullOrWhiteSpace(value) ? "about:blank" : value.Trim(); if (Uri.TryCreate(source, UriKind.Absolute, out var absolute)) return absolute; var normalized = source.Replace('/', Path.DirectorySeparatorChar); if (normalized.Contains("..", StringComparison.Ordinal)) throw new InvalidOperationException("WebView asset path may not contain '..'."); var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, normalized)); if (!File.Exists(path)) throw new FileNotFoundException("UIForm WebView asset was not found.", path); return new Uri(path); }
     private static string NavigateHtml(NativeWebView view, string? html) { view.NavigateToString(html ?? string.Empty); return "true"; }
     private static string SetUserAgent(NativeWebView view, string? value) { view.UserAgent = value ?? string.Empty; return view.UserAgent ?? string.Empty; }
     private static string SetBackground(NativeWebView view, string? value) { if (!string.IsNullOrWhiteSpace(value)) view.Background = new SolidColorBrush(Color.Parse(value)); return view.Background?.ToString() ?? string.Empty; }
@@ -67,8 +68,8 @@ internal static class DesktopWebViewHost
     private static string Edit(NativeWebView view, Action<NativeWebViewCommandManager> action) { var manager = view.TryGetCommandManager(); if (manager is null) return "false"; action(manager); return "true"; }
     private static string GetCookies(NativeWebView view) { var manager = view.TryGetCookieManager(); if (manager is null) return "[]"; var cookies = Wait(manager.GetCookiesAsync()) ?? []; return JsonSerializer.Serialize(cookies.Select(cookie => new { cookie.Name, cookie.Value, cookie.Domain, cookie.Path, cookie.Secure, cookie.HttpOnly, expires = cookie.Expires == DateTime.MinValue ? null : cookie.Expires.ToString("O", System.Globalization.CultureInfo.InvariantCulture) })); }
     private static string SetCookie(NativeWebView view, string? payload) { var manager = view.TryGetCookieManager(); if (manager is null) return "false"; using var document = JsonDocument.Parse(payload ?? "{}"); manager.AddOrUpdateCookie(BuildCookie(document.RootElement, true)); return "true"; }
-    private static string DeleteCookie(NativeWebView view, string? payload) { var manager = view.TryGetCookieManager(); if (manager is null) return "false"; using var document = JsonDocument.Parse(payload ?? "{}"); var cookie = BuildCookie(document.RootElement, false); manager.DeleteCookie(cookie.Name, cookie.Domain, cookie.Path); return "true"; }
-    private static string ClearCookies(NativeWebView view) { var manager = view.TryGetCookieManager(); if (manager is null) return "false"; var cookies = Wait(manager.GetCookiesAsync()) ?? []; foreach (var cookie in cookies) manager.DeleteCookie(cookie.Name, cookie.Domain, cookie.Path); return "true"; }
+    private static string DeleteCookie(NativeWebView view, string? payload) { var manager = view.TryGetCookieManager(); if (manager is null) return "false"; using var document = JsonDocument.Parse(payload ?? "{}"); var cookie = BuildCookie(document.RootElement, false); manager.DeleteCookie(cookie); return "true"; }
+    private static string ClearCookies(NativeWebView view) { var manager = view.TryGetCookieManager(); if (manager is null) return "false"; var cookies = Wait(manager.GetCookiesAsync()) ?? []; foreach (var cookie in cookies) manager.DeleteCookie(cookie); return "true"; }
     private static Cookie BuildCookie(JsonElement root, bool includeValue) { static string Read(JsonElement value, string name, string fallback = "") => value.TryGetProperty(name, out var property) ? property.GetString() ?? fallback : fallback; var name = Read(root, "name"); var domain = Read(root, "domain"); var path = Read(root, "path", "/"); if (name.Length == 0 || domain.Length == 0) throw new InvalidOperationException("WebView cookies require name and domain."); return new Cookie(name, includeValue ? Read(root, "value") : string.Empty, path.Length == 0 ? "/" : path, domain); }
     private static T? Wait<T>(Task<T> task) { if (!Dispatcher.UIThread.CheckAccess() || task.IsCompleted) return task.GetAwaiter().GetResult(); var frame = new DispatcherFrame(); task.ContinueWith(_ => Dispatcher.UIThread.Post(() => frame.Continue = false), TaskScheduler.Default); Dispatcher.UIThread.PushFrame(frame); return task.GetAwaiter().GetResult(); }
     private static string Bool(bool value) => value ? "true" : "false";

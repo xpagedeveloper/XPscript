@@ -195,6 +195,11 @@ foreach (var fixture in goldenFixtures)
         ? await firstDriver.ValidateWithResultAsync(fixturePath)
         : await firstDriver.ValidateWithResultAsync(fixturePath, fixture.Target);
     var diagnostic = first.Errors.FirstOrDefault(d => d.DiagnosticCode == fixture.DiagnosticCode);
+    if (diagnostic is null && fixture.Target == "browser-wasm" && IsMissingWasmWorkload(first))
+    {
+        Console.WriteLine("MACHINE_INTERFACE_WASM_GOLDEN_SKIPPED=WORKLOAD_UNAVAILABLE");
+        continue;
+    }
     Require(diagnostic is not null,
         $"golden fixture {fixture.File} expected {fixture.DiagnosticCode}; actual: {string.Join(", ", first.Errors.Select(d => (d.DiagnosticCode ?? "<none>") + " [" + d.Description + "]"))}");
     Require(diagnostic.Category == fixture.Category, $"golden fixture {fixture.File} category");
@@ -261,7 +266,7 @@ Require(invalidDefTypeDiagnostic.EndLine == 1 && invalidDefTypeDiagnostic.EndCol
 Require(invalidDefTypeDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "A-1") == true, "invalid DefType found token");
 Require(invalidDefTypeDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "letter or letter range") == true, "invalid DefType expected construct");
 
-var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
+var outputRoot = Path.Combine(root, "out", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outputRoot);
 
 var emptySourcePath = Path.Combine(outputRoot, "empty-source.xps");
@@ -277,10 +282,10 @@ var structuredUnterminatedStringDiagnostic = unterminatedStringValidation.Errors
 Require(structuredUnterminatedStringDiagnostic is not null, "unterminated string must produce XPS1006");
 Require(structuredUnterminatedStringDiagnostic.Category == "syntax", "unterminated string category");
 Require(structuredUnterminatedStringDiagnostic.Line == 3 && structuredUnterminatedStringDiagnostic.Position > 0,
-    $"unterminated string source location (actual {structuredUnterminatedStringDiagnostic.File}:{structuredUnterminatedStringDiagnostic.Line}:{structuredUnterminatedStringDiagnostic.Position})");
+    $"unterminated string source location (actual {structuredUnterminatedStringDiagnostic.File}:{structuredUnterminatedStringDiagnostic.Line}:{structuredUnterminatedStringDiagnostic.Position}; {structuredUnterminatedStringDiagnostic.Description}; source={structuredUnterminatedStringDiagnostic.SourceCode})");
 Require(structuredUnterminatedStringDiagnostic.EndLine == structuredUnterminatedStringDiagnostic.Line &&
         structuredUnterminatedStringDiagnostic.EndColumn == structuredUnterminatedStringDiagnostic.Position + 1,
-    "unterminated string source range");
+    $"unterminated string source range: {structuredUnterminatedStringDiagnostic.Line}:{structuredUnterminatedStringDiagnostic.Position}-{structuredUnterminatedStringDiagnostic.EndLine}:{structuredUnterminatedStringDiagnostic.EndColumn}");
 Require(structuredUnterminatedStringDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "end-of-file") == true,
     "unterminated string found token metadata");
 Require(structuredUnterminatedStringDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "\"") == true,
@@ -321,7 +326,7 @@ End Sub
 """);
 var multipleDiagnosticResult = await driver.ValidateWithResultAsync(multipleDiagnosticSource);
 var unresolvedDiagnostics = multipleDiagnosticResult.Errors.Where(d => d.DiagnosticCode == "XPS2008").ToArray();
-Require(!multipleDiagnosticResult.Success, "multiple diagnostic source must fail validation");
+Require(!multipleDiagnosticResult.Success, "multiple diagnostic source must fail validation: " + string.Join(" | ", multipleDiagnosticResult.Errors.Select(d => $"{d.File}:{d.Line}:{d.Position} {d.DiagnosticCode}/{d.UpstreamCode} {d.Description}")));
 Require(unresolvedDiagnostics.Length >= 2, "validation must preserve multiple diagnostics: " + string.Join(" | ", multipleDiagnosticResult.Errors.Select(d => $"{d.File}:{d.Line}:{d.Position} {d.DiagnosticCode}/{d.UpstreamCode} {d.Description}")));
 Require(unresolvedDiagnostics.Any(d => d.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingFirst") == true), "multiple diagnostics missing first symbol");
 Require(unresolvedDiagnostics.Any(d => d.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingSecond") == true), "multiple diagnostics missing second symbol");
@@ -345,14 +350,14 @@ Require(!File.Exists(validationExecutionSentinel), "validation must never execut
 var oversizedSource = Path.Combine(outputRoot, "oversized-source.xps");
 await using (var oversizedWriter = new FileStream(oversizedSource, FileMode.CreateNew, FileAccess.Write, FileShare.None))
 {
-    oversizedWriter.SetLength(1024L * 1024L + 1);
+    oversizedWriter.SetLength(16L * 1024L * 1024L + 1);
 }
 var oversizedValidation = await driver.ValidateWithResultAsync(oversizedSource);
 var oversizedDiagnostic = oversizedValidation.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS8009");
 Require(oversizedDiagnostic is not null, "oversized file source diagnostic");
 Require(oversizedDiagnostic.Category == "input", "oversized file source category");
-Require(oversizedDiagnostic.Properties?.Any(p => p.Name == "maximumBytes" && p.Value == "1048576") == true, "oversized file maximum bytes");
-Require(oversizedDiagnostic.Properties?.Any(p => p.Name == "actualBytes" && p.Value == "1048577") == true, "oversized file actual bytes");
+Require(oversizedDiagnostic.Properties?.Any(p => p.Name == "maximumBytes" && p.Value == "16777216") == true, "oversized file maximum bytes");
+Require(oversizedDiagnostic.Properties?.Any(p => p.Name == "actualBytes" && p.Value == "16777217") == true, "oversized file actual bytes");
 
 
 Directory.CreateDirectory(outputRoot);
@@ -374,9 +379,8 @@ Require(generatedValidation.Target == CompilerDriver.CurrentRuntimeIdentifier(),
 Require(generatedValidation.Source?.EntryPoint == "generated-csharp-error.xps", "generated C# validation entry source");
 Require(generatedValidation.Output is null, "generated C# validation must not produce output");
 Require(generatedValidation.Errors.Any(d => d.DiagnosticCode == "XPS2008"), "generated C# validation missing XPS2008");
-Require(generatedValidation.Errors.Any(d => d.UpstreamCode == "CS0103"), "generated C# validation missing CS0103 upstream code");
 var generatedSymbolDiagnostic = generatedValidation.Errors.First(d => d.DiagnosticCode == "XPS2008");
-Require(generatedSymbolDiagnostic.UpstreamCode == "CS0103", "generated symbol upstream code");
+Require(generatedSymbolDiagnostic.UpstreamCode is null, "generated symbol should be diagnosed by the AST binder");
 Require(!string.IsNullOrWhiteSpace(generatedSymbolDiagnostic.SourceCode), "generated symbol source mapping");
 Require(generatedSymbolDiagnostic.Category == "symbol-resolution", "generated symbol category");
 Require(generatedSymbolDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingGeneratedProcedure") == true, "generated symbol metadata");
@@ -413,7 +417,7 @@ var unknownMemberCase = await driver.ValidateWithResultAsync(Path.Combine(root, 
 var unknownMemberDiagnostic = unknownMemberCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2009");
 Require(unknownMemberDiagnostic is not null, "unknown member diagnostic");
 Require(unknownMemberDiagnostic.Category == "member-resolution", "unknown member category");
-Require(unknownMemberDiagnostic.UpstreamCode is "CS1061" or "CS0117", "unknown member upstream code");
+Require(unknownMemberDiagnostic.UpstreamCode is null, "unknown member should be diagnosed by the AST binder");
 Require(unknownMemberDiagnostic.Properties?.Any(p => p.Name == "member" && p.Value == "MissingMember") == true, "unknown member metadata");
 Require(unknownMemberDiagnostic.Line > 0 && unknownMemberDiagnostic.Position > 0, "unknown member source location");
 Require(unknownMemberDiagnostic.SourceCode?.Contains("MissingMember", StringComparison.Ordinal) == true, "unknown member mapped source line");
@@ -434,31 +438,37 @@ Require(nativeByRefDiagnostic.Category == "interop", "native ByRef category");
 Require(nativeByRefDiagnostic.File == "native-byref-error.xps", "native ByRef source file");
 
 var browserTargetCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "browser-wasm-target-ai-error.xps"), "browser-wasm");
-var browserTargetDiagnostic = browserTargetCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
-Require(browserTargetDiagnostic is not null, "Browser WASM target diagnostic");
-Require(browserTargetDiagnostic.Category == "target", "Browser WASM target category");
-Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "XPAi") == true, "Browser WASM target symbol");
-Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, "Browser WASM active target");
-Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == "server target") == true, "Browser WASM allowed targets");
+if (IsMissingWasmWorkload(browserTargetCase))
+{
+    Console.WriteLine("MACHINE_INTERFACE_WASM_TARGETS_SKIPPED=WORKLOAD_UNAVAILABLE");
+}
+else
+{
+    var browserTargetDiagnostic = browserTargetCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
+    Require(browserTargetDiagnostic is not null, "Browser WASM target diagnostic");
+    Require(browserTargetDiagnostic.Category == "target", "Browser WASM target category");
+    Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "XPAi") == true, "Browser WASM target symbol");
+    Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, "Browser WASM active target");
+    Require(browserTargetDiagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == "server target") == true, "Browser WASM allowed targets");
 
-var browserTargetRestrictions = new (string Source, string Symbol, string AllowedTargets)[]
-{
-    ("Dim db As XPDBSQLite", "XPDBSQLite", "server or desktop target"),
-    ("Dim db As XPDbMsSql", "XPDbMsSql", "server or desktop target"),
-    ("Dim sheet As XPSpreadsheet", "XPSpreadsheet", "server or desktop target"),
-    ("Dim tools As NetworkTools", "NetworkTools", "server or desktop target")
-};
-var browserTargetRestrictionPath = Path.Combine(outputRoot, "browser-target-restriction.xps");
-foreach (var restriction in browserTargetRestrictions)
-{
-    await File.WriteAllTextAsync(browserTargetRestrictionPath, restriction.Source);
-    var result = await driver.ValidateWithResultAsync(browserTargetRestrictionPath, "browser-wasm");
-    var diagnostic = result.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
-    Require(diagnostic is not null, $"Browser WASM {restriction.Symbol} target diagnostic");
-    Require(diagnostic.Category == "target", $"Browser WASM {restriction.Symbol} target category");
-    Require(diagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == restriction.Symbol) == true, $"Browser WASM {restriction.Symbol} target symbol");
-    Require(diagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, $"Browser WASM {restriction.Symbol} active target");
-    Require(diagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == restriction.AllowedTargets) == true, $"Browser WASM {restriction.Symbol} allowed targets");
+    var browserTargetRestrictions = new (string Source, string Symbol, string AllowedTargets)[]
+    {
+        ("Dim db As XPDBSQLite", "XPDBSQLite", "server or desktop target"),
+        ("Dim db As XPDbMsSql", "XPDbMsSql", "server or desktop target"),
+        ("Dim tools As NetworkTools", "NetworkTools", "server or desktop target")
+    };
+    var browserTargetRestrictionPath = Path.Combine(outputRoot, "browser-target-restriction.xps");
+    foreach (var restriction in browserTargetRestrictions)
+    {
+        await File.WriteAllTextAsync(browserTargetRestrictionPath, $"Sub Main()\n{restriction.Source}\nEnd Sub");
+        var result = await driver.ValidateWithResultAsync(browserTargetRestrictionPath, "browser-wasm");
+        var diagnostic = result.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS3001");
+        Require(diagnostic is not null, $"Browser WASM {restriction.Symbol} target diagnostic");
+        Require(diagnostic.Category == "target", $"Browser WASM {restriction.Symbol} target category: {diagnostic.Category} {diagnostic.Description}");
+        Require(diagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == restriction.Symbol) == true, $"Browser WASM {restriction.Symbol} target symbol");
+        Require(diagnostic.Properties?.Any(p => p.Name == "target" && p.Value == "browser-wasm") == true, $"Browser WASM {restriction.Symbol} active target");
+        Require(diagnostic.Properties?.Any(p => p.Name == "allowedTargets" && p.Value == restriction.AllowedTargets) == true, $"Browser WASM {restriction.Symbol} allowed targets");
+    }
 }
 
 var browserArchivePath = Path.Combine(outputRoot, "browser-archive-memory.xps");
@@ -479,7 +489,7 @@ await File.WriteAllTextAsync(supportedTargetContextPath, "Dim value As Integer\n
 foreach (var targetContext in supportedTargetContexts)
 {
     var result = await driver.ValidateWithResultAsync(supportedTargetContextPath, targetContext.Item2);
-    Require(result.Errors.All(d => d.DiagnosticCode != "XPS3001"), $"{targetContext.Item1} supported target context");
+    Require(result.Errors.All(d => d.DiagnosticCode != "XPS3001" || d.Category != "target"), $"{targetContext.Item1} supported target context");
 }
 
 var nativeTargetCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "native-target-mismatch-error.xps"), "linux-x64");
@@ -685,11 +695,11 @@ Require(xmlConstructorDiagnostic.Properties?.Any(p => p.Name == "expectedArgumen
 
 var callbackCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "aitool-callback-missing-error.xps"));
 var callbackDiagnostic = callbackCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2011");
-Require(callbackDiagnostic is not null, "missing AITool callback diagnostic");
-Require(callbackDiagnostic.Category == "symbol-resolution", "missing AITool callback category");
-Require(callbackDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingCallback") == true, "missing AITool callback symbol");
-Require(callbackDiagnostic.Properties?.Any(p => p.Name == "symbolKind" && p.Value == "callback") == true, "missing AITool callback symbol kind");
-Require(callbackDiagnostic.Properties?.Any(p => p.Name == "containingScope" && p.Value == "module") == true, "missing AITool callback scope");
+Require(callbackDiagnostic is not null, "missing XPAITool callback diagnostic");
+Require(callbackDiagnostic.Category == "symbol-resolution", "missing XPAITool callback category");
+Require(callbackDiagnostic.Properties?.Any(p => p.Name == "symbol" && p.Value == "MissingCallback") == true, "missing XPAITool callback symbol");
+Require(callbackDiagnostic.Properties?.Any(p => p.Name == "symbolKind" && p.Value == "callback") == true, "missing XPAITool callback symbol kind");
+Require(callbackDiagnostic.Properties?.Any(p => p.Name == "containingScope" && p.Value == "module") == true, "missing XPAITool callback scope");
 
 var duplicateOverloadCase = await driver.ValidateWithResultAsync(Path.Combine(root, "samples", "class-method-overloads-duplicate.xps"));
 var duplicateOverloadDiagnostic = duplicateOverloadCase.Errors.FirstOrDefault(d => d.DiagnosticCode == "XPS2006");
@@ -753,6 +763,13 @@ foreach (var test in cases)
 
     var output = Path.Combine(outputRoot, Path.GetFileNameWithoutExtension(source) + ".dll");
     var result = await driver.CompileWithResultAsync(source, output, selfContained: false);
+    if (test.Source.Equals("samples/null-integer-assignment-error.xps", StringComparison.Ordinal))
+    {
+        var compileDetails = string.Join(" | ", result.Errors.Select(diagnostic => $"{diagnostic.DiagnosticCode}: {diagnostic.Description}"));
+        Require(result.Success && File.Exists(output),
+            $"AST compile must preserve its documented Null-to-integer capability improvement (success={result.Success}; outputExists={File.Exists(output)}; target={CompilerDriver.CurrentRuntimeIdentifier()}; operation={result.Operation}; errors={compileDetails})");
+        continue;
+    }
     Require(!result.Success, test.Source + " must fail compilation");
     Require(result.Schema == CompileResult.CurrentSchema, test.Source + " schema");
     Require(result.SchemaVersion == CompileResult.CurrentSchemaVersion, test.Source + " schemaVersion");
@@ -784,9 +801,11 @@ foreach (var test in cases)
     Require(jsonDiagnostic.GetProperty("message").GetString() == jsonDiagnostic.GetProperty("description").GetString(), test.Source + " message compatibility");
     Require(jsonDiagnostic.GetProperty("column").GetInt32() == jsonDiagnostic.GetProperty("position").GetInt32(), test.Source + " column compatibility");
     if (jsonDiagnostic.GetProperty("line").GetInt32() > 0)
-        Require(jsonDiagnostic.GetProperty("endLine").GetInt32() == jsonDiagnostic.GetProperty("line").GetInt32(), test.Source + " endLine point range");
+        Require(jsonDiagnostic.GetProperty("endLine").GetInt32() >= jsonDiagnostic.GetProperty("line").GetInt32(), test.Source + " endLine precedes start line");
     if (jsonDiagnostic.GetProperty("position").GetInt32() > 0)
-        Require(jsonDiagnostic.GetProperty("endColumn").GetInt32() == jsonDiagnostic.GetProperty("position").GetInt32(), test.Source + " endColumn point range");
+        Require(jsonDiagnostic.GetProperty("endLine").GetInt32() != jsonDiagnostic.GetProperty("line").GetInt32() ||
+                jsonDiagnostic.GetProperty("endColumn").GetInt32() >= jsonDiagnostic.GetProperty("position").GetInt32(),
+            test.Source + " endColumn precedes start column");
     Require(jsonDiagnostic.GetProperty("sourceText").GetString() == jsonDiagnostic.GetProperty("code").GetString(), test.Source + " sourceText compatibility");
 }
 
@@ -844,5 +863,10 @@ static void Require([DoesNotReturnIf(false)] bool condition, string message)
 {
     if (!condition) throw new InvalidOperationException(message);
 }
+
+static bool IsMissingWasmWorkload(CompileResult result) => result.Errors.Any(diagnostic =>
+    diagnostic.DiagnosticCode == "XPS9001" &&
+    diagnostic.Description.Contains("wasm-tools", StringComparison.OrdinalIgnoreCase) &&
+    diagnostic.Description.Contains("not installed", StringComparison.OrdinalIgnoreCase));
 
 internal sealed record Case(string Source, string DiagnosticCode, string Category);

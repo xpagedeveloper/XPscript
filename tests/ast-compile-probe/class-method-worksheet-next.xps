@@ -1,0 +1,17 @@
+Class Reader
+    Public Function ReadName(ByVal value As XPWorksheet) As String
+        ReadName = value.Name
+    End Function
+End Class
+
+Sub Main()
+    Dim book As New XPSpreadsheet
+    Dim sheet As XPWorksheet
+    Set sheet = book.AddWorksheet("Data")
+    Dim reader As New Reader
+    Print reader.ReadName(sheet)
+    Dim usedRows As Long
+    Dim usedColumns As Long
+    usedRows = sheet.UsedRowCount
+    usedColumns = sheet.UsedColumnCount
+End Sub

@@ -22,6 +22,6 @@ Print CStr(IsFile(filePath))
 Print CStr(IsDir(directoryPath))
 ```
 
-`FileExists` and `IsFile` both test for an existing file in the current runtime implementation. `DirExists` and `IsDir` both test for an existing directory. The paired names are retained as supported XPscript API surfaces.
+`FileExists` and `IsFile` both test for an existing file in the current runtime implementation. `DirExists` and `IsDir` both test for an existing directory. On Windows, `IsDir` also accepts a drive designator such as `C:` and tests the corresponding drive root. The paired names are retained as supported XPscript API surfaces.
 
 These helpers belong to the File I/O and filesystem API documented in `file-io-reference.md`.

@@ -1,0 +1,44 @@
+Class BaseThing
+    Private mValue As String
+
+    Sub New()
+        mValue = "base"
+    End Sub
+
+    Public Sub Touch()
+        mValue = mValue & ":touch"
+    End Sub
+
+    Public Function Describe() As String
+        Describe = mValue
+    End Function
+
+    Public Property Get Label As String
+        Label = mValue & ":property"
+    End Property
+
+    Sub Delete()
+        Print "BASE_DELETE"
+    End Sub
+End Class
+
+Class ChildThing Extend BaseThing
+    Public Sub TouchBase()
+        Call Parent.Touch()
+    End Sub
+
+    Public Function DescribeChild() As String
+        DescribeChild = Me.Describe() & "|" & Parent.Describe() & "|" & Parent.Label
+    End Function
+
+    Sub Delete()
+        Print "CHILD_DELETE"
+    End Sub
+End Class
+
+Sub Main()
+    Dim item As New ChildThing()
+    Call item.TouchBase()
+    Print "INHERIT=" & item.DescribeChild()
+    Delete item
+End Sub

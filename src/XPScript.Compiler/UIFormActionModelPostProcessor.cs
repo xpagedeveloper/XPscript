@@ -19,22 +19,75 @@ internal sealed class UIFormActionModelPostProcessor
     public bool Visible { get; set; } = true;
     public bool Enabled { get; set; } = true;
     public bool ReadOnly { get; set; }
+    private double _cornerRadius;
+    private double? _width;
+    private double? _height;
+    private string _font = string.Empty;
+    private double? _fontSize;
+    public double CornerRadius
+    {
+        get => _cornerRadius;
+        set
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+                throw new XPScriptRuntimeException(5, "UIForm control CornerRadius must be between 0 and 1000.");
+            _cornerRadius = value;
+        }
+    }
+    public double? Width { get => _width; set => _width = value; }
+    public double? Height { get => _height; set => _height = value; }
+    public string Font { get => _font; set => _font = value ?? string.Empty; }
+    public double? FontSize { get => _fontSize; set => _fontSize = value; }
     public string Placeholder { get; set; } = string.Empty;
     public string Tooltip { get; set; } = string.Empty;
+    public string TabName { get; set; } = string.Empty;
 """, "field-state");
         }
 
-        if (!generated.Contains("internal sealed class XPScriptUIButton", StringComparison.Ordinal))
+        if (!generated.Contains("internal sealed class XPScriptUITab", StringComparison.Ordinal))
         {
             generated = ReplaceRequiredRegex(generated,
-                @"internal\s+sealed\s+class\s+XPScriptUIForm\s*\{",
+                @"internal\s+sealed\s+(?:partial\s+)?class\s+XPScriptUIForm(?:\s*:\s*[^\{]+)?\s*\{",
                 """
+internal sealed class XPScriptUITab
+{
+    public required string Name { get; init; }
+    public required string Label { get; set; }
+    public string Background { get; set; } = string.Empty;
+    public string FontColor { get; set; } = string.Empty;
+    public string Font { get; set; } = string.Empty;
+    public double FontSize { get; set; } = 16;
+    public bool Bold { get; set; }
+    public string SelectedBackground { get; set; } = string.Empty;
+    public string SelectedFontColor { get; set; } = string.Empty;
+    public string SelectedFont { get; set; } = string.Empty;
+    public double SelectedFontSize { get; set; } = 16;
+    public bool SelectedBold { get; set; }
+}
+
 internal sealed class XPScriptUIButton
 {
     public required string Name { get; init; }
     public required string Label { get; set; }
     public required string Handler { get; set; }
     public string Style { get; set; } = "Default";
+    public string Icon { get; set; } = string.Empty;
+    public string Image { get; set; } = string.Empty;
+    private double _cornerRadius;
+    public double? Width { get; set; }
+    public double? Height { get; set; }
+    public string Font { get; set; } = string.Empty;
+    public double? FontSize { get; set; }
+    public double CornerRadius
+    {
+        get => _cornerRadius;
+        set
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value < 0 || value > 1000)
+                throw new XPScriptRuntimeException(5, "UIForm control CornerRadius must be between 0 and 1000.");
+            _cornerRadius = value;
+        }
+    }
     public int LayoutRow { get; set; }
     public int LayoutColumn { get; set; }
     public int ColumnSpan { get; set; } = 1;
@@ -43,7 +96,7 @@ internal sealed class XPScriptUIButton
     public bool Enabled { get; set; } = true;
 }
 
-internal sealed class XPScriptUIForm
+internal sealed partial class XPScriptUIForm
 {
 """, "button-type");
         }
@@ -56,6 +109,8 @@ internal sealed class XPScriptUIForm
     private int _gridColumns = 1;
     private string _theme = "System";
     private readonly List<XPScriptUIButton> _buttons = [];
+    private readonly List<XPScriptUITab> _tabs = [];
+    private string _activeTab = string.Empty;
     private readonly HashSet<string> _requestedRefreshRegions = new(StringComparer.Ordinal);
     private bool _refreshAllRequested;
     private string _navigationTarget = string.Empty;
@@ -74,10 +129,13 @@ internal sealed class XPScriptUIForm
     public bool ShowValidationErrors { get; set; } = true;
     public int ButtonCount => _buttons.Count;
     internal IReadOnlyList<XPScriptUIButton> Buttons => _buttons;
+    internal IReadOnlyList<XPScriptUITab> Tabs => _tabs;
+    public string ActiveTab { get => _activeTab; set => SetActiveTab(value); }
     public object GetData() => _data;
     public void SetData(object? value) => BindData(value);
 """, "form-api");
         }
+
 
         if (!generated.Contains("public void SetFieldLabel(object? name, object? label)", StringComparison.Ordinal))
         {
@@ -96,6 +154,43 @@ internal sealed class XPScriptUIForm
     public void SetFieldLabel(object? name, object? label)
     {
         FindField(name).Label = XPScriptRuntime.CStr(label);
+    }
+
+    public XPScriptUITab AddTab(object? name, object? label)
+    {
+        var tabName = NormalizeControlName(name, "tab");
+        if (_tabs.Any(tab => tab.Name.Equals(tabName, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm tab '{tabName}' already exists.");
+        var tab = new XPScriptUITab { Name = tabName, Label = XPScriptRuntime.CStr(label) };
+        _tabs.Add(tab);
+        if (_activeTab.Length == 0) _activeTab = tabName;
+        return tab;
+    }
+
+    public XPScriptUITabContainer AddTabContainer(object? name)
+    {
+        var containerName = NormalizeControlName(name, "tabs");
+        var container = new XPScriptUITabContainer(this, containerName);
+        AddChild(container);
+        return container;
+    }
+
+    public void SetFieldTab(object? name, object? tabName)
+    {
+        var field = FindField(name);
+        var value = XPScriptRuntime.CStr(tabName).Trim();
+        if (value.Length == 0) { field.TabName = string.Empty; return; }
+        if (!_tabs.Any(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm tab '{value}' does not exist.");
+        field.TabName = _tabs.First(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)).Name;
+    }
+
+    public void SetActiveTab(object? name)
+    {
+        var value = XPScriptRuntime.CStr(name).Trim();
+        if (!_tabs.Any(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)))
+            throw new XPScriptRuntimeException(5, $"UIForm tab '{value}' does not exist.");
+        _activeTab = _tabs.First(tab => tab.Name.Equals(value, StringComparison.OrdinalIgnoreCase)).Name;
     }
 
     public void SetFieldVisible(object? name, object? visible)
@@ -144,8 +239,14 @@ internal sealed class XPScriptUIForm
         {
             Name = buttonName,
             Label = XPScriptRuntime.CStr(label),
-            Handler = NormalizeHandlerName(handlerName)
+            Handler = NormalizeHandlerName(handlerName),
+            Result = buttonName,
+            CornerRadius = _cornerRadius
         };
+        if (_defaultControlWidth.HasValue) button.Width = _defaultControlWidth;
+        if (_defaultControlHeight.HasValue) button.Height = _defaultControlHeight;
+        if (_defaultFont.Length > 0) button.Font = _defaultFont;
+        if (_defaultFontSize.HasValue) button.FontSize = _defaultFontSize;
         _buttons.Add(button);
         return button;
     }
@@ -178,6 +279,12 @@ internal sealed class XPScriptUIForm
             throw new XPScriptRuntimeException(5, "UIForm button style must contain between 1 and 64 characters.");
         FindButton(name).Style = value;
     }
+
+    public void SetButtonIcon(object? name, object? icon)
+        => FindButton(name).Icon = XPScriptRuntime.CStr(icon).Trim();
+
+    public void SetButtonImage(object? name, object? image)
+        => FindButton(name).Image = XPScriptRuntime.CStr(image).Trim();
 
     public void SetButtonVisible(object? name, object? visible)
     {

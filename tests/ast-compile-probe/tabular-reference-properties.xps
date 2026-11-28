@@ -1,0 +1,97 @@
+Class TableStore
+    Private csvValue As XPCsvDocument
+    Private bookValue As XPSpreadsheet
+    Public Property Get Csv As XPCsvDocument
+        Set Csv = csvValue
+    End Property
+    Public Property Set Csv(ByRef incoming As XPCsvDocument)
+        Set csvValue = incoming
+        Set incoming = Nothing
+    End Property
+    Public Property Get Book(Optional ByRef index As Long = 2) As XPSpreadsheet
+        index = index + 1
+        Set Book = bookValue
+    End Property
+    Public Property Set Book(Optional ByRef index As Long = 2, ByRef incoming As XPSpreadsheet)
+        index = index + 1
+        Set bookValue = incoming
+        Set incoming = Nothing
+    End Property
+    Public Property Get Sheet As XPWorksheet
+        Set Sheet = bookValue.Worksheet(1)
+    End Property
+    Public Property Get Cell As XPCell
+        Set Cell = bookValue.Worksheet(1).Cell("B2")
+    End Property
+    Public Property Get Area As XPRange
+        Set Area = bookValue.Worksheet(1).Range("B2:B3")
+    End Property
+    Public Property Get Row As XPCsvRow
+        Set Row = csvValue.Rows[0]
+    End Property
+    Public Property Get Unassigned As XPCsvDocument
+    End Property
+    Public Property Set Failing(ByRef index As Long, ByVal incoming As XPSpreadsheet)
+        Set bookValue = incoming
+        index = index + 1
+        Error 3501, "tabular setter failed"
+    End Property
+End Class
+Sub Main()
+    Dim store As New TableStore
+    Dim other As New TableStore
+    Dim csv As New XPCsvDocument("id,name" & Chr(10) & "001,initial")
+    Dim book As New XPSpreadsheet
+    Dim index As Long = 3
+    Dim failure As Long
+    Call book.AddWorksheet("Shared")
+    If store.Csv Is Nothing And store.Unassigned Is Nothing Then
+    Else
+        Error 6, "tabular defaults"
+    End If
+    Set store.Csv = csv
+    Set store.Book(index) = book
+    If csv Is Nothing Or book Is Nothing Or index <> 4 Then Error 6, "setter snapshot or alias"
+    If store.Csv Is csv And store.Book() Is book Then
+    Else
+        Error 6, "tabular identity"
+    End If
+    Call store.Row.Set("name", "shared")
+    If csv.Rows[0].Get("name") <> "shared" Then Error 6, "CSV getter chain"
+    store.Cell.Value = "cell"
+    If book.Worksheet(1).Cell("B2").Text <> "cell" Then Error 6, "cell mutation"
+    store.Area.Bold = True
+    If store.Area.Bold <> True Then Error 6, "range mutation"
+    Call store.Book().AddWorksheet("Added")
+    If book.WorksheetCount <> 2 Or store.Sheet.Name <> "Shared" Then Error 6, "workbook mutation"
+    With store
+        Set .cSv = csv
+        Set .bOoK() = book
+    End With
+    Dim decoded As XPCsvDocument = store.Csv
+    Call decoded.FromBytes(Array(105, 100, 44, 110, 97, 109, 101, 10, 48, 48, 50, 44, 110, 101, 119))
+    Set store.Csv = decoded
+    If csv.Rows[0].Get("name") <> "shared" Or store.Row.Get("name") <> "new" Then Error 6, "FromBytes old alias"
+    Dim replacement As New XPSpreadsheet
+    On Error Resume Next
+    Set store.Failing(index) = replacement
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3501 Or index <> 5 Then Error 6, "exception alias"
+    If store.Book(index) Is replacement Then
+    Else
+        Error 6, "exception reference"
+    End If
+    If index <> 6 Then Error 6, "getter alias"
+    If other.Csv Is Nothing And other.Book() Is Nothing Then
+    Else
+        Error 6, "instance storage"
+    End If
+    Set store.Csv = Nothing
+    Set store.Book() = Nothing
+    If store.Csv Is Nothing And store.Book() Is Nothing Then
+    Else
+        Error 6, "clear tabular references"
+    End If
+    Print "TABULAR_REFERENCE_PROPERTIES_OK"
+End Sub

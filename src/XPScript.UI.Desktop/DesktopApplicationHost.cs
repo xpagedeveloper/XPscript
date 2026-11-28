@@ -1,5 +1,8 @@
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
+using System.Runtime.ExceptionServices;
 
 namespace XPScript.UI.Desktop;
 
@@ -9,6 +12,50 @@ internal static class DesktopApplicationHost
     private static readonly ManualResetEventSlim Started = new(false);
     private static Thread? _uiThread;
     private static Exception? _startupFailure;
+    private static CancellationTokenSource? _macLoopCancellation;
+    private static bool _macScriptCompleted;
+    private static bool _macKeepAlive;
+
+    // Test projects can supply Avalonia.Headless configuration without adding
+    // the test package to the production desktop runtime.
+    internal static Func<AppBuilder, AppBuilder>? TestConfigurator { get; set; }
+
+    public static void RunMacOS(Action script)
+    {
+        ArgumentNullException.ThrowIfNull(script);
+        if (!OperatingSystem.IsMacOS())
+            throw new PlatformNotSupportedException("The macOS desktop loop requires macOS.");
+
+        lock (SyncRoot)
+        {
+            if (_uiThread is not null)
+                throw new InvalidOperationException("The desktop UI runtime has already started.");
+            _uiThread = Thread.CurrentThread;
+        }
+
+        InitializeOnCurrentThread();
+        using var cancellation = new CancellationTokenSource();
+        _macLoopCancellation = cancellation;
+        Started.Set();
+        Exception? scriptFailure = null;
+        var worker = new Thread(() =>
+        {
+            try { script(); }
+            catch (Exception ex) { scriptFailure = ex; }
+            finally
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    _macScriptCompleted = true;
+                    if (scriptFailure is not null || !_macKeepAlive) cancellation.Cancel();
+                });
+            }
+        }) { IsBackground = true, Name = "XPScript script" };
+        worker.Start();
+        Dispatcher.UIThread.MainLoop(cancellation.Token);
+        worker.Join();
+        if (scriptFailure is not null) ExceptionDispatchInfo.Capture(scriptFailure).Throw();
+    }
 
     public static void EnsureStarted()
     {
@@ -57,16 +104,21 @@ internal static class DesktopApplicationHost
             return;
         }
 
+        if (OperatingSystem.IsMacOS())
+        {
+            _macKeepAlive = keepAlive;
+            if (!keepAlive && _macScriptCompleted) _macLoopCancellation?.Cancel();
+            return;
+        }
         Thread.CurrentThread.IsBackground = !keepAlive;
     }
+
 
     private static void Run()
     {
         try
         {
-            AppBuilder.Configure<XpsDesktopApplication>()
-                .UsePlatformDetect()
-                .SetupWithoutStarting();
+            InitializeOnCurrentThread();
             Started.Set();
             Dispatcher.UIThread.MainLoop(CancellationToken.None);
         }
@@ -75,5 +127,27 @@ internal static class DesktopApplicationHost
             _startupFailure = ex;
             Started.Set();
         }
+    }
+
+    // macOS entry points will call this on the process main thread before
+    // dispatching the XPscript body to a worker thread.
+    internal static void InitializeOnCurrentThread()
+    {
+        var builder = AppBuilder.Configure<XpsDesktopApplication>();
+        builder = TestConfigurator?.Invoke(builder) ?? builder.UsePlatformDetect();
+        if (OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable("XAML_MCP") == "1")
+        {
+            var assembly = System.Reflection.Assembly.Load("XamlMcp.Avalonia");
+            var extensions = assembly.GetType("XamlMcp.Avalonia.AttachExtensions", throwOnError: true)!;
+            var attach = extensions.GetMethod("AttachXamlMcp", [typeof(AppBuilder)])
+                ?? throw new InvalidOperationException("XamlMcp AttachXamlMcp extension is unavailable.");
+            builder = (AppBuilder)(attach.Invoke(null, [builder])
+                ?? throw new InvalidOperationException("XamlMcp AttachXamlMcp returned no AppBuilder."));
+        }
+        if (TestConfigurator is not null)
+            builder.SetupWithoutStarting();
+        else
+            _ = builder.SetupWithClassicDesktopLifetime(Array.Empty<string>(), desktop =>
+                desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown);
     }
 }

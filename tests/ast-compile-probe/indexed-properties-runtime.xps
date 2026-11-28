@@ -1,0 +1,56 @@
+Class Store
+    Private stored As Long
+    Public Property Get Item(ByVal row As Long, ByVal column As String) As Long
+        Item = stored + row
+    End Property
+    Public Property Let Item(ByVal row As Long, ByVal column As String, ByVal incoming As Long)
+        stored = row + incoming
+    End Property
+    Public Property Get ReadOnly(ByVal row As Long) As Long
+        ReadOnly = stored + row
+    End Property
+    Public Property Let WriteOnly(ByVal row As Long, ByVal incoming As Long)
+        stored = row + incoming
+    End Property
+    Public Sub InternalWrite()
+        Item(1, "inside") = 8
+    End Sub
+    Public Property Get CopyIndex(index As Long) As Long
+        index = index + 1
+        CopyIndex = index
+    End Property
+End Class
+Private events As String
+Function IndexValue() As Long
+    events = events & "I"
+    IndexValue = 2
+End Function
+Function Incoming() As Long
+    events = events & "V"
+    Incoming = 5
+End Function
+Sub Main()
+    Dim first As New Store
+    Dim second As New Store
+    Dim position As Long
+    position = 1
+    If first.CopyIndex(position) <> 2 Then Error 5, "default index input"
+    If position <> 1 Then Error 5, "index snapshot"
+    events = ""
+    first.Item(IndexValue(), "cell") = Incoming()
+    If events <> "IV" Then Error 5, "evaluation order"
+    If first.Item(1, "cell") <> 8 Then Error 5, "setter"
+    If second.Item(1, "cell") <> 1 Then Error 5, "instance state"
+    With first
+        .iTeM(3, "cell") = 6
+        If .ItEm(1, "cell") <> 10 Then Error 5, "With"
+        .WriteOnly(2) = 11
+    End With
+    If first.ReadOnly(1) <> 14 Then Error 5, "write-only"
+    Call first.InternalWrite()
+    If first.ReadOnly(1) <> 10 Then Error 5, "internal accessor"
+    On Error Resume Next
+    first.Item(1, "cell") = 3
+    If first.Item(1, "cell") <> 5 Then Error 5, "error flow"
+    Print "INDEXED_PROPERTIES_RUNTIME_OK"
+End Sub

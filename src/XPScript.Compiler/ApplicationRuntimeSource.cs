@@ -2,7 +2,7 @@ namespace XPScript.Compiler;
 
 internal static class ApplicationRuntimeSource
 {
-    public const string Code = """
+    public const string CoreCode = """
 internal sealed class XPScriptStateScope
 {
     private readonly object _sync = new();
@@ -184,6 +184,15 @@ internal static class XPScriptExternalStateBridge
     }
 
     public static object? SessionState() => ResolveWebObject("Session");
+    public static object? SessionObject() => ResolveWebObject("Session");
+    public static object? GetProperty(object target, string name)
+        => target.GetType().GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)?.GetValue(target);
+    public static object? Invoke(object target, string name, params object?[] args)
+    {
+        var method = target.GetType().GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+            .FirstOrDefault(m => string.Equals(m.Name, name, StringComparison.Ordinal) && m.GetParameters().Length == args.Length);
+        return method?.Invoke(target, args);
+    }
     public static object? RequestState() => ResolveWebObject("RequestScope");
 
     private static object? ResolveWebObject(string propertyName)
@@ -207,6 +216,33 @@ internal static class XPScriptSessionRuntime
 {
     private static readonly XPScriptStateScope LocalState = new();
     public static XPScriptStateProxy State { get; } = new(XPScriptExternalStateBridge.SessionState, LocalState, "Session.State is unavailable.");
+    private static object? Current => XPScriptExternalStateBridge.SessionObject();
+    private static object? Call(string name, params object?[] args) => Current is null ? null : XPScriptExternalStateBridge.Invoke(Current, name, args);
+    public static object? Start() => Call(nameof(Start));
+    public static object? Add(object? name, object? value) => Call(nameof(Add), name, value);
+    public static object? Set(object? name, object? value) => Call(nameof(Set), name, value);
+    public static object? Get(object? name) => Call(nameof(Get), name);
+    public static object? Exists(object? name) => Call(nameof(Exists), name);
+    public static object? Remove(object? name) => Call(nameof(Remove), name);
+    public static object? Unset(object? name) => Call(nameof(Unset), name);
+    public static object? Clear() => Call(nameof(Clear));
+    public static object? Authenticate(object? userId, object? userName, object? rules) => Call(nameof(Authenticate), userId, userName, rules);
+    public static object? SignOut() => Call(nameof(SignOut));
+    public static object? RotateId() => Call(nameof(RotateId));
+    public static object? RegenerateId() => Call(nameof(RegenerateId));
+    public static object? Abandon() => Call(nameof(Abandon));
+    public static object? Destroy() => Call(nameof(Destroy));
+    public static object? SetRole(object? role) => Call(nameof(SetRole), role);
+    public static object? GetRoles() => Call(nameof(GetRoles));
+    public static object? HasRole(object? role) => Call(nameof(HasRole), role);
+    public static object? RemoveRole(object? role) => Call(nameof(RemoveRole), role);
+    public static object? HasRule(object? rule) => Call(nameof(HasRule), rule);
+    public static object? Id => Current is null ? null : XPScriptExternalStateBridge.GetProperty(Current, nameof(Id));
+    public static object? Count => Current is null ? 0 : XPScriptExternalStateBridge.GetProperty(Current, nameof(Count));
+    public static object? Keys => Current is null ? Array.Empty<object>() : XPScriptExternalStateBridge.GetProperty(Current, nameof(Keys));
+    public static object? IsAuthenticated => Current is null ? false : XPScriptExternalStateBridge.GetProperty(Current, nameof(IsAuthenticated));
+    public static object? UserId => Current is null ? "" : XPScriptExternalStateBridge.GetProperty(Current, nameof(UserId));
+    public static object? UserName => Current is null ? "" : XPScriptExternalStateBridge.GetProperty(Current, nameof(UserName));
 }
 
 internal static class XPScriptRequestRuntime
@@ -242,6 +278,7 @@ internal static class XPScriptRequestRuntime
 
 internal static class XPScriptApplicationRuntime
 {
+    internal static object Namespace { get; } = new();
     private static readonly object Sync = new();
     private static readonly XPScriptStateScope LocalState = new();
     private static string[] _args = [];
@@ -289,6 +326,8 @@ internal static class XPScriptApplicationRuntime
         get { lock (Sync) return string.Join(" ", _args); }
     }
 
+    public static string NewLine => Environment.NewLine;
+
     public static string ExecutablePath => Environment.ProcessPath ?? Environment.GetCommandLineArgs().FirstOrDefault() ?? "";
     public static string ExecutableFileName => System.IO.Path.GetFileName(ExecutablePath);
     public static string ExecutableDirectory => System.IO.Path.GetDirectoryName(ExecutablePath) ?? "";
@@ -296,6 +335,14 @@ internal static class XPScriptApplicationRuntime
 
     public static string Path => ExecutablePath;
     public static string FileName => ExecutableFileName;
+    public static string TempFolder => TempPath;
+    public static int ExitCode { get => Environment.ExitCode; set => Environment.ExitCode = value; }
+    public static object? Id { get => State.Get("__xps_application_id"); set => State.Set("__xps_application_id", value); }
+    public static object? Title { get => State.Get("__xps_application_title"); set => State.Set("__xps_application_title", value); }
+    public static object? Icon { get => XPScriptApplicationExecutableRuntime.Icon; set => XPScriptApplicationExecutableRuntime.Icon = value; }
+    public static object? Width { get => State.Get("__xps_application_width"); set => State.Set("__xps_application_width", value); }
+    public static object? Height { get => State.Get("__xps_application_height"); set => State.Set("__xps_application_height", value); }
 }
-""" + ApplicationPersistenceRuntimeSource.Code + ApplicationSystemLogRuntimeSource.Code + ApplicationLogRuntimeSource.Code + ApplicationDebugRuntimeSource.Code;
+""" + ApplicationMetadataRuntimeSource.Code;
+    public const string Code = CoreCode + ApplicationPersistenceRuntimeSource.Code + ApplicationSystemLogRuntimeSource.Code + ApplicationLogRuntimeSource.Code + ApplicationDebugRuntimeSource.Code;
 }

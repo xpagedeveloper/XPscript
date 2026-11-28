@@ -1,0 +1,4 @@
+[Get]
+Sub Index()
+    Print 7
+End Sub

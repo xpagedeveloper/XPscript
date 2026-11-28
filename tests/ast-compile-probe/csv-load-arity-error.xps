@@ -1,0 +1,4 @@
+Sub Main()
+    Dim table As XPCsvDocument
+    Set table = XPCsvDocument.Load()
+End Sub

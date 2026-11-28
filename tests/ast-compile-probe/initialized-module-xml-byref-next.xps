@@ -1,0 +1,11 @@
+Public sharedXml As XPXmlDocument = New XPXmlDocument()
+
+Sub Touch(ByRef value As XPXmlDocument)
+    Set value = XPXmlDocument.Parse("<root />")
+End Sub
+
+Sub Main()
+    Call Touch(sharedXml)
+    If sharedXml.Root.Name <> "root" Then Error 6, "initialized XML module ByRef storage failed"
+    Print "INITIALIZED_MODULE_XML_BYREF_OK"
+End Sub

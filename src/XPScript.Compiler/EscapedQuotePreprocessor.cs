@@ -7,17 +7,39 @@ internal sealed class EscapedQuotePreprocessor
     private static readonly HashSet<string> SafeFollowingKeywords = new(StringComparer.OrdinalIgnoreCase)
     {
         "Then", "Else", "ElseIf", "And", "Or", "Xor", "Like", "To", "Step", "For", "As", "Alias",
-        "WindowsLib", "WindowsAlias", "LinuxLib", "LinuxAlias", "MacOSLib", "MacOSAlias"
+        "WindowsLib", "WindowsAlias", "LinuxLib", "LinuxAlias", "MacOSLib", "MacOSAlias", "Unicode"
     };
 
     public string Transform(string source)
     {
         var output = new StringBuilder(source.Length);
         var inString = false;
+        var lineStart = true;
+        var routeAttribute = false;
 
         for (var i = 0; i < source.Length; i++)
         {
             var c = source[i];
+            if (!inString && lineStart)
+            {
+                if (c is ' ' or '\t')
+                {
+                    output.Append(c);
+                    continue;
+                }
+                routeAttribute = source.AsSpan(i).StartsWith("[Route:", StringComparison.OrdinalIgnoreCase);
+                lineStart = false;
+            }
+            if (!inString && routeAttribute)
+            {
+                output.Append(c);
+                if (c is '\r' or '\n')
+                {
+                    lineStart = true;
+                    routeAttribute = false;
+                }
+                continue;
+            }
             if (c == '"')
             {
                 if (inString && i + 1 < source.Length && source[i + 1] == '"')
@@ -43,6 +65,7 @@ internal sealed class EscapedQuotePreprocessor
             }
 
             output.Append(c);
+            if (!inString && (c is '\r' or '\n')) lineStart = true;
         }
 
         return output.ToString();

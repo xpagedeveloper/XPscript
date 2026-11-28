@@ -1,0 +1,79 @@
+$ErrorActionPreference = 'Stop'
+$root = Resolve-Path (Join-Path $PSScriptRoot '../..')
+$compiler = Join-Path $root 'src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll'
+
+function Invoke-ExpectedCompilerDiagnostic([string] $sourcePath) {
+    $stdoutPath = [System.IO.Path]::GetTempFileName()
+    $stderrPath = [System.IO.Path]::GetTempFileName()
+    try {
+        $arguments = '"' + $compiler + '" ast-compile "' + $sourcePath + '"'
+        $process = Start-Process -FilePath 'dotnet' -ArgumentList $arguments -RedirectStandardOutput $stdoutPath -RedirectStandardError $stderrPath -NoNewWindow -Wait -PassThru
+        $output = @()
+        if (Test-Path $stdoutPath) { $output += Get-Content -LiteralPath $stdoutPath }
+        if (Test-Path $stderrPath) { $output += Get-Content -LiteralPath $stderrPath }
+        return [pscustomobject]@{ ExitCode = $process.ExitCode; Output = ($output -join "`n") }
+    }
+    finally {
+        Remove-Item -LiteralPath $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
+    }
+}
+
+. (Join-Path $PSScriptRoot 'cli-common.ps1')
+$imageSource = Join-Path $PSScriptRoot 'class-field-xpimage-array-next.xps'
+$imageOutput = Join-Path $root ('out/array-signature-xpimage-' + [Guid]::NewGuid().ToString('N'))
+Write-AstCliCheckpoint 'xpimage-array-start'
+$imageCompile = Invoke-BoundedDotnetRun @($compiler, 'ast-compile', $imageSource, '-o', $imageOutput, '--debug')
+if ($imageCompile.TimedOut -or $imageCompile.ExitCode -ne 0) { throw "XPImage array compilation failed for ${imageSource}: $($imageCompile.Output)" }
+$imageRun = Invoke-BoundedDotnetRun @((Join-Path $imageOutput 'Generated.dll'))
+if ($imageRun.TimedOut -or $imageRun.ExitCode -ne 0 -or $imageRun.Output.Trim() -ne 'XPIMAGE_ARRAY_CLONE_OK') {
+    throw "XPImage array clone regression failed for ${imageSource}: $($imageRun.Output)"
+}
+Write-Host 'AST_XPIMAGE_ARRAY_CLONE_OK'
+Write-AstCliCheckpoint 'xpimage-array-complete'
+
+$negativeSignPattern = '[-\u2212]'
+foreach ($fixture in @('array-parameter-runtime-next', 'constructor-array-runtime-next', 'method-array-runtime-next', 'constructor-array-optional-next')) {
+    $output = Join-Path $root ("out/array-signature-" + $fixture)
+    if (Test-Path $output) { Remove-Item -Recurse -Force $output }
+    $result = dotnet $compiler ast-compile (Join-Path $PSScriptRoot ($fixture + '.xps')) -o $output 2>&1
+    if ($LASTEXITCODE -ne 0 -or ($result -join "`n") -notmatch 'AST compilation succeeded') { throw "Array signature compilation failed: $result" }
+    $run = dotnet (Join-Path $output 'Generated.dll') 2>&1
+    $runtimePattern = "41:${negativeSignPattern}2:0|42:${negativeSignPattern}1:1|43:${negativeSignPattern}3:${negativeSignPattern}1|nothing"
+    if ($LASTEXITCODE -ne 0 -or ($run -join "`n") -notmatch $runtimePattern) { throw "Array signature runtime mismatch: $run" }
+}
+$fieldOutput = Join-Path $root 'out/array-signature-class-field-array'
+if (Test-Path $fieldOutput) { Remove-Item -Recurse -Force $fieldOutput }
+$fieldResult = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-field-array-syntax-next.xps') -o $fieldOutput 2>&1
+if ($LASTEXITCODE -ne 0 -or ($fieldResult -join "`n") -notmatch 'AST compilation succeeded') { throw "Class-field array syntax compilation failed: $fieldResult" }
+Write-Host 'AST_CLASS_FIELD_ARRAY_SYNTAX_OK'
+$fieldRuntimeOutput = Join-Path $root 'out/array-signature-class-field-array-runtime'
+if (Test-Path $fieldRuntimeOutput) { Remove-Item -Recurse -Force $fieldRuntimeOutput }
+$fieldRuntimeResult = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'class-field-array-runtime-next.xps') -o $fieldRuntimeOutput 2>&1
+if ($LASTEXITCODE -ne 0) { throw "Class-field array runtime compilation failed: $fieldRuntimeResult" }
+$fieldRuntimeRun = dotnet (Join-Path $fieldRuntimeOutput 'Generated.dll') 2>&1
+if ($LASTEXITCODE -ne 0 -or ($fieldRuntimeRun -join "`n") -ne 'CLASS_FIELD_ARRAY_RUNTIME_OK') { throw "Class-field array runtime regression failed: $fieldRuntimeRun" }
+Write-Host 'AST_CLASS_FIELD_ARRAY_RUNTIME_OK'
+foreach ($case in @(
+    @('procedure-array-deferred', '7'),
+    @('constructor-array-deferred', '7')
+)) {
+    $fixture = $case[0]
+    $output = Join-Path $root ("out/array-signature-" + $fixture)
+    if (Test-Path $output) { Remove-Item -Recurse -Force $output }
+    $result = dotnet $compiler ast-compile (Join-Path $PSScriptRoot ($fixture + '.xps')) -o $output 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "Array deferred fixture compilation failed: $result" }
+    $run = dotnet (Join-Path $output 'Generated.dll') 2>&1
+    if ($LASTEXITCODE -ne 0 -or ($run -join "`n") -ne $case[1]) { throw "Array deferred fixture runtime mismatch: $fixture / $run" }
+}
+foreach ($case in @(
+    @('array-storage-bounds-error', 'XPS1012', 2),
+    @('constructor-array-rank-error', 'XPS1012', 2),
+    @('constructor-array-list-error', 'XPS1012', 2)
+)) {
+    $fixture = $case[0]
+    $diagnostic = Invoke-ExpectedCompilerDiagnostic (Join-Path $PSScriptRoot ($fixture + '.xps'))
+    if ($diagnostic.ExitCode -ne 2 -or $diagnostic.Output -notmatch "$fixture.xps:$($case[2]):\d+: $($case[1]):") {
+        throw "Array signature diagnostic mismatch: $($diagnostic.Output)"
+    }
+}
+Write-Host 'AST_ARRAY_SIGNATURES_OK'

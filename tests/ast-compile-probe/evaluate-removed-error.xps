@@ -1,0 +1,5 @@
+Option Declare
+
+Sub Main()
+    Print CStr(Evaluate("Return 1+2"))
+End Sub

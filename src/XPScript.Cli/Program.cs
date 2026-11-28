@@ -19,12 +19,14 @@ if (args.Length == 0 || args[0] is "--help" or "-h")
 try
 {
     if (args[0].EndsWith(".xps", StringComparison.OrdinalIgnoreCase))
-        return await XPScriptCompilerCommandLine.CompileAsync(args);
+        return await XPScriptCompilerCommandLine.RunAsync(["compile", .. args]);
 
     return args[0].ToLowerInvariant() switch
     {
-        "compile" => await XPScriptCompilerCommandLine.CompileAsync(args[1..]),
-        "run" => await XPScriptCompilerCommandLine.RunScriptAsync(args),
+        "compile" => await XPScriptCompilerCommandLine.RunAsync(args),
+        "run" => await XPScriptCompilerCommandLine.RunAsync(args),
+        "compilev1" or "legacy-compile" => await XPScriptCompilerCommandLine.RunAsync(args),
+        "runv1" or "legacy-run" => await XPScriptCompilerCommandLine.RunAsync(args),
         "daemon" => await CompilerDaemonServer.RunAsync(args[1..]),
         "dependencies" => await XPScript.Cli.ApplicationDependencyCommand.RunDependenciesAsync(args[1..]),
         "security" => await XPScript.Cli.ApplicationDependencyCommand.RunSecurityAsync(args[1..]),
@@ -32,6 +34,7 @@ try
         "new" => XpsScaffolder.Run(args[1..]),
         "openapi" => XPScript.Cli.XpsOpenApiCommand.Run(args[1..]),
         "service" => await XPScript.Cli.ServiceCommand.RunAsync(args[1..]),
+        "android" => await XPScript.Cli.AndroidCommand.RunAsync(args[1..]),
         "web" => await RunWebAsync(args[1..]),
         "fastcgi" => await RunFastCgiAsync(args[1..]),
         _ => Fail("Unknown command: " + args[0])
@@ -47,7 +50,9 @@ static string[] NormalizeGlobalDiagnosticOptions(string[] arguments)
 {
     var commandIndex = Array.FindIndex(arguments, value =>
         value.Equals("compile", StringComparison.OrdinalIgnoreCase) ||
-        value.Equals("run", StringComparison.OrdinalIgnoreCase));
+        value.Equals("run", StringComparison.OrdinalIgnoreCase) ||
+        value.Equals("web", StringComparison.OrdinalIgnoreCase) ||
+        value.Equals("fastcgi", StringComparison.OrdinalIgnoreCase));
 
     if (commandIndex <= 0)
         return arguments;
@@ -76,6 +81,9 @@ static void ConfigureRuntimeDiagnosticEnvironment(string[] arguments)
 
 static async Task<int> RunWebAsync(string[] commandArgs)
 {
+    if (commandArgs.Length > 0 && commandArgs[0].Equals("precompile", StringComparison.OrdinalIgnoreCase))
+        return await RunWebPrecompileAsync(commandArgs[1..]);
+
     var debug = commandArgs.Any(value => value.Equals("--debug", StringComparison.OrdinalIgnoreCase));
     if (debug)
     {
@@ -305,6 +313,13 @@ static async Task<int> RunWebAsync(string[] commandArgs)
     }
 }
 
+static async Task<int> RunWebPrecompileAsync(string[] commandArgs)
+{
+    var root = RequireRoot(commandArgs);
+    await using var dispatcher = new XpsWebDispatcher(root);
+    return await dispatcher.PrecompileAllAsync();
+}
+
 static async Task<int> RunFastCgiAsync(string[] commandArgs)
 {
     commandArgs = XpsHostConfig.Apply("fastcgi", commandArgs);
@@ -517,9 +532,10 @@ Usage:
   xpscript security <source.xps> [--platform RID|--rid RID] [--json]
   xpscript [--info] run <source.xps> [--platform RID|--rid RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
   xpscript <source.xps> [-o output] [--platform RID|--rid RID] [--single-file true|false] [--runtime true|false] [compiler options...]
-  xpscript new <rest|web|desktop|cli> <directory>
+  xpscript new <rest|web|desktop|cli|android> <directory>
   xpscript openapi generate <spec.yaml|spec.yml|spec.json> [-o output.xps] [--force]
   xpscript service install <compiled-service> --name NAME --display-name "DISPLAY NAME" [--start auto|manual|disabled]
+  xpscript android devices
   xpscript web <directory> [--default-document FILE.xps] [--address IP] [--port PORT] [--host HOST ...] [--protocols http1|http2|http1+2]
                 [--https-cert FILE] [--https-cert-password-env NAME]
                 [--health] [--metrics] [--operational-allow CIDR ...] [--sessions]
@@ -527,6 +543,7 @@ Usage:
                 [--session-same-site Strict|Lax|None] [--session-secure]
                 [--structured-log FILE] [--operational-external]
                 [--static-files] [--static-max-bytes BYTES] [--static-allow EXT MIME]
+  xpscript web precompile --root DIR
   xpscript web [--config FILE] --root DIR [web options...]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] [--listen ADDRESS:PORT]
   xpscript fastcgi [--config FILE] --root DIR [--default-document FILE.xps] --unix-socket PATH
@@ -537,7 +554,8 @@ Command model:
   new      Create a REST, web, desktop or CLI starter in a required target directory. Use . for the current directory.
   openapi  Generate XPScript REST server source from OpenAPI 3.0/3.1 YAML or JSON.
   service  Install compiled XPScript services using the native service manager.
-  web      Run the standalone Kestrel runtime.
+  android  Discover and deploy to Android devices and emulators.
+  web      Run the standalone Kestrel runtime, or precompile all web sources.
   fastcgi  Run the FastCGI web runtime.
 
 Running `xpscript` without arguments prints this usage reference. `--info` may appear before or after `run`/`compile`. For `run`, only the value supplied to `--Args` is forwarded to the compiled program; for example `xpscript run main.xps --Args "first second"` launches the generated program as `main.exe first second` on Windows.\n\nThe same xpscript executable owns all command modes. The XPScript.Compiler project provides shared compiler services and command handling.
@@ -566,7 +584,9 @@ Examples:
   xpscript run hello.xps --info
   xpscript run hello.xps --Args "first second"
   xpscript service install ./worker --name xps-worker --display-name "XPScript Worker" --start auto
+  xpscript android devices
   xpscript web ./site
+  xpscript web precompile --root ./site
   xpscript web --config ./production.cfg
   xpscript web --root ./site --sessions
   xpscript web --root ./site --default-document home.xps

@@ -4,6 +4,40 @@ namespace XPScript.Web.Compiler;
 
 internal static class XpsOpenApiSchema
 {
+    internal static void ValidateExternalReferences(string specification, string? sourceName)
+    {
+        var lines = specification.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n');
+        for (var index = 0; index < lines.Length; index++)
+        {
+            var trimmed = lines[index].TrimStart();
+            if (!trimmed.StartsWith("$ref:", StringComparison.Ordinal) &&
+                !trimmed.StartsWith("'$ref':", StringComparison.Ordinal) &&
+                !trimmed.StartsWith("\"$ref\":", StringComparison.Ordinal))
+                continue;
+
+            var colon = trimmed.IndexOf(':');
+            var reference = trimmed[(colon + 1)..].Trim();
+            if (reference.StartsWith("\"#/", StringComparison.Ordinal))
+                reference = reference[1..].TrimEnd('\\');
+            if (reference.Length >= 2 &&
+                ((reference[0] == '\'' && reference[^1] == '\'') ||
+                 (reference[0] == '"' && reference[^1] == '"')))
+                reference = reference[1..^1];
+
+            // YAML block scalar indicators are syntax, not the $ref value itself.
+            // The actual folded/literal value is on the following indented line(s)
+            // and is resolved by the YAML parser.
+            if (reference is "|" or "|-" or "|+" or ">" or ">-" or ">+")
+                continue;
+
+            if (reference.StartsWith("#/", StringComparison.Ordinal)) continue;
+
+            var source = string.IsNullOrWhiteSpace(sourceName) ? "OpenAPI source" : sourceName;
+            throw new XpsOpenApiGenerationException(
+                $"{source}: line {index + 1}, property '$ref' uses external reference '{reference}'. External OpenAPI references are not supported; provide a bundled definition with local '#/' references.");
+        }
+    }
+
     internal sealed record NormalizedDocument(
         string Version,
         JsonObject Root,
@@ -44,6 +78,26 @@ internal static class XpsOpenApiSchema
 
     private static readonly AsyncLocal<string?> OpenApiVersion = new();
     private static readonly AsyncLocal<IReadOnlyDictionary<string, string>?> ReferenceTypeNames = new();
+    private static readonly AsyncLocal<Dictionary<JsonObject, JsonObject>?> ResolvedReferences = new();
+    private static readonly AsyncLocal<Dictionary<JsonObject, string>?> ResolvedTypes = new();
+
+    internal static IDisposable BeginResolveCache()
+    {
+        var previous = ResolvedReferences.Value;
+        ResolvedReferences.Value = new Dictionary<JsonObject, JsonObject>(ReferenceEqualityComparer.Instance);
+        var previousTypes = ResolvedTypes.Value;
+        ResolvedTypes.Value = new Dictionary<JsonObject, string>(ReferenceEqualityComparer.Instance);
+        return new ResolveCacheScope(previous, previousTypes);
+    }
+
+    private sealed class ResolveCacheScope(Dictionary<JsonObject, JsonObject>? previous, Dictionary<JsonObject, string>? previousTypes) : IDisposable
+    {
+        public void Dispose()
+        {
+            ResolvedReferences.Value = previous;
+            ResolvedTypes.Value = previousTypes;
+        }
+    }
 
     internal static IDisposable UseOpenApiVersion(string version)
     {
@@ -71,10 +125,16 @@ internal static class XpsOpenApiSchema
     internal static JsonObject Resolve(JsonObject root, JsonNode? node, string context)
     {
         if (node is not JsonObject current) throw new XpsOpenApiGenerationException(context + " must be an object.");
+        var original = current;
+        if (ResolvedReferences.Value?.TryGetValue(original, out var cached) == true) return cached;
         for (var depth = 0; depth < 32; depth++)
         {
-            var reference = ReadString(current, "$ref");
-            if (reference is null) return current;
+            var reference = ReadString(current, "$ref")?.Trim().Trim('"');
+            if (reference is null)
+            {
+                ResolvedReferences.Value?[original] = current;
+                return current;
+            }
             if (!reference.StartsWith("#/", StringComparison.Ordinal))
                 throw new XpsOpenApiGenerationException(context + " uses external $ref '" + reference + "'. Only local OpenAPI references are supported.");
             JsonNode? target = root;
@@ -91,6 +151,14 @@ internal static class XpsOpenApiSchema
 
     internal static string XpsType(JsonObject root, JsonObject schema, string context)
     {
+        if (ResolvedTypes.Value?.TryGetValue(schema, out var cached) == true) return cached;
+        var result = XpsTypeCore(root, schema, context);
+        ResolvedTypes.Value?[schema] = result;
+        return result;
+    }
+
+    private static string XpsTypeCore(JsonObject root, JsonObject schema, string context)
+    {
         if (schema["type"] is JsonArray types)
         {
             if (OpenApiVersion.Value?.StartsWith("3.0.", StringComparison.Ordinal) == true)
@@ -101,7 +169,13 @@ internal static class XpsOpenApiSchema
         }
         if (ReadString(schema, "$ref") is { } reference)
         {
-            _ = Resolve(root, schema, context);
+            var referenced = Resolve(root, schema, context);
+            var referencedType = ReadString(referenced, "type")?.ToLowerInvariant();
+            if (referencedType is not null &&
+                referencedType != "object" &&
+                !referenced.ContainsKey("properties") &&
+                referenced["enum"] is not JsonArray)
+                return XpsType(root, referenced, context + " referenced schema");
             return ReferenceTypeName(reference, context);
         }
         var resolved = Resolve(root, schema, context);
@@ -141,17 +215,37 @@ internal static class XpsOpenApiSchema
         RewriteComponentReferences(document);
         if (root["components"] is JsonObject components && components["schemas"] is JsonObject schemas)
         {
+            var referenced = new HashSet<string>(StringComparer.Ordinal);
+            CollectComponentReferences(schema, referenced);
             var defs = new JsonObject();
-            foreach (var pair in schemas)
+            var pending = new Queue<string>(referenced);
+            while (pending.Count > 0)
             {
-                if (pair.Value is null) continue;
-                var clone = pair.Value.DeepClone();
+                var name = pending.Dequeue();
+                if (defs.ContainsKey(name) || !schemas.TryGetPropertyValue(name, out var value) || value is null) continue;
+                var clone = value.DeepClone();
+                var nested = new HashSet<string>(StringComparer.Ordinal);
+                CollectComponentReferences(clone, nested);
+                foreach (var nestedName in nested)
+                    if (!defs.ContainsKey(nestedName)) pending.Enqueue(nestedName);
                 RewriteComponentReferences(clone);
-                defs[pair.Key] = clone;
+                defs[name] = clone;
             }
             if (defs.Count > 0) document["$defs"] = defs;
         }
         return document.ToJsonString();
+    }
+
+    private static void CollectComponentReferences(JsonNode? node, HashSet<string> references)
+    {
+        if (node is JsonObject obj)
+        {
+            if (ReadString(obj, "$ref") is { } reference && reference.StartsWith("#/components/schemas/", StringComparison.Ordinal))
+                references.Add(reference["#/components/schemas/".Length..].Replace("~1", "/", StringComparison.Ordinal).Replace("~0", "~", StringComparison.Ordinal));
+            foreach (var pair in obj) CollectComponentReferences(pair.Value, references);
+        }
+        else if (node is JsonArray array)
+            foreach (var item in array) CollectComponentReferences(item, references);
     }
 
     private static void RewriteComponentReferences(JsonNode? node)
@@ -189,11 +283,25 @@ internal static class XpsOpenApiSchema
     internal static bool IsObjectType(JsonObject root, JsonObject schema, string context)
     {
         var type = XpsType(root, schema, context);
-        return type is "XPJsonArray" or "XPJsonObject" || ReadString(schema, "$ref") is not null;
+        if (type is "XPJsonArray" or "XPJsonObject") return true;
+        foreach (var keyword in new[] { "oneOf", "anyOf", "allOf" })
+        {
+            if (schema[keyword] is not JsonArray branches || branches.Count == 0) continue;
+            var objectBranches = branches.OfType<JsonObject>().ToArray();
+            if (objectBranches.Length == branches.Count && objectBranches.All(branch => IsObjectType(root, branch, context + " " + keyword)))
+                return true;
+        }
+        if (ReadString(schema, "$ref") is null) return false;
+        var resolved = Resolve(root, schema, context);
+        var resolvedType = XpsType(root, resolved, context);
+        return resolvedType is "XPJsonArray" or "XPJsonObject" ||
+               (resolvedType.Equals(type, StringComparison.OrdinalIgnoreCase) &&
+                (resolved.ContainsKey("properties") || ReadString(resolved, "type")?.Equals("object", StringComparison.OrdinalIgnoreCase) == true));
     }
 
     internal static string ReferenceTypeName(string reference, string context)
     {
+        reference = reference.Trim().Trim('"');
         if (!reference.StartsWith("#/components/schemas/", StringComparison.Ordinal))
             throw new XpsOpenApiGenerationException(context + " schema reference '" + reference + "' must point to #/components/schemas/... for typed XPScript generation.");
         var raw = reference[(reference.LastIndexOf('/') + 1)..].Replace("~1", "/", StringComparison.Ordinal).Replace("~0", "~", StringComparison.Ordinal);

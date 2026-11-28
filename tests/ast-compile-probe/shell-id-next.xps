@@ -1,0 +1,15 @@
+Sub Main()
+    Dim processId As Long
+    On Error Resume Next
+    processId = ShellId("/usr/bin/true")
+    On Error GoTo 0
+    If processId <= 0 Then processId = ShellId("rundll32.exe")
+    If processId <= 0 Then Error 6340, "ShellId did not return a process identifier"
+    Dim failure As Long
+    On Error Resume Next
+    Call ShellId("")
+    failure = Err
+    On Error GoTo 0
+    If failure = 0 Then Error 6341, "ShellId accepted an empty program"
+    Print "SHELL_ID_GUARD_OK"
+End Sub

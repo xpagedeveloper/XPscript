@@ -1,0 +1,16 @@
+Class BaseDelete
+    Public Sub Delete()
+        Print "BASE_DELETE"
+    End Sub
+End Class
+
+Class ChildDelete Extend BaseDelete
+    Public Sub Delete()
+        Print "CHILD_DELETE"
+    End Sub
+End Class
+
+Sub Main()
+    Dim item As New ChildDelete()
+    Delete item
+End Sub

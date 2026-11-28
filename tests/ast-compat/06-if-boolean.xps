@@ -1,0 +1,5 @@
+Sub Main()
+    Dim x As Integer
+    x = 1
+    If x = 1 And Not False Then Print "BOOLEAN_OK"
+End Sub

@@ -1,0 +1,46 @@
+Sub Main()
+    Dim numbers List As Long
+    numbers("a") = 1
+    numbers("b") = 2
+    ForAll entry In numbers
+        Print ListTag(entry)
+        entry = entry + 10
+    End ForAll
+    Print numbers("a")
+    Print numbers("b")
+
+    Dim words List As String
+    words("one") = "blue"
+    words("two") = "green"
+    ForAll word In words
+        word = UCase(word)
+        Print ListTag(word) & ":" & word
+    End ForAll
+
+    Dim extras List As Long
+    extras("only") = 3
+    ForAll entry In numbers
+        Print ListTag(entry)
+        ForAll inner In extras
+            inner = inner + 1
+        End ForAll
+        entry = entry + 1
+        Print ListTag(entry)
+    End ForAll
+    Print numbers("a")
+    Print numbers("b")
+    Print extras("only")
+
+    Dim additions List As Long
+    additions("first") = 1
+    Dim count As Long
+    count = 0
+    ForAll value In additions
+        count = count + 1
+        additions("later") = 2
+        value = value + 1
+    End ForAll
+    Print count
+    Print additions("first")
+    Print additions("later")
+End Sub

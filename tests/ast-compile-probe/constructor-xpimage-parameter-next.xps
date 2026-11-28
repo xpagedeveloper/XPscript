@@ -1,0 +1,16 @@
+Class ImageOwner
+    Private picture As XPImage
+    Public Sub New(ByVal value As XPImage)
+        Set picture = value
+    End Sub
+    Public Property Get Width As Long
+        Width = picture.Width
+    End Property
+End Class
+
+Sub Main()
+    Dim source As New XPImage(5, 4)
+    Dim owner As ImageOwner
+    Set owner = New ImageOwner(source)
+    Print CStr(owner.Width)
+End Sub

@@ -14,13 +14,17 @@ Sub Main()
     If stream.Bytes <> 0 Then Error 9961, "New NotesStream.Bytes must be 0"
     If stream.Position <> 0 Then Error 9962, "New NotesStream.Position must be 0"
     If Not stream.IsEOS Then Error 9963, "New NotesStream.IsEOS must be True"
+    If stream.IsReadOnly Then Error 9970, "New NotesStream.IsReadOnly must be False"
 
     stream.Charset = "UTF-8"
     Call stream.WriteText("Alpha" & Chr(10) & "Beta")
     If stream.Bytes = 0 Then Error 9964, "WriteText did not write data"
     stream.Position = 0
+    Call stream.Read(1)
+    stream.Position = 0
     text = stream.ReadText()
     If text <> "Alpha" & Chr(10) & "Beta" Then Error 9965, "ReadText roundtrip failed"
+    Call stream.Write("Gamma")
 
     Call stream.Truncate()
     If stream.Bytes <> stream.Position Then Error 9966, "Truncate did not truncate at current position"
@@ -30,7 +34,8 @@ Sub Main()
     Call stream.WriteText("stream-file")
     Call stream.Close()
 
-    If Not stream.Open(path) Then Error 9968, "NotesStream reopen failed"
+    If Not stream.Open(path, "readonly") Then Error 9968, "NotesStream readonly reopen failed"
+    If Not stream.IsReadOnly Then Error 9971, "Readonly mode was not retained"
     stream.Position = 0
     If stream.ReadText() <> "stream-file" Then Error 9969, "NotesStream file roundtrip failed"
     Call stream.Close()

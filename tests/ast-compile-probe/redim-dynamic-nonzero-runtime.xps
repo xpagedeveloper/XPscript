@@ -1,0 +1,16 @@
+Option Declare
+
+Sub Main()
+    Dim values() As Long
+    Dim first As Long
+    Dim last As Long
+
+    first = 5
+    last = first + 2
+    ReDim values(first To last)
+    values(first) = 42
+    If LBound(values) <> 5 Or UBound(values) <> 7 Or values(5) <> 42 Then
+        Error 9901, "Dynamic non-zero ReDim bounds failed"
+    End If
+    Print "REDIM_DYNAMIC_NONZERO_RUNTIME=OK"
+End Sub

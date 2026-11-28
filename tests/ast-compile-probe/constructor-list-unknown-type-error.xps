@@ -1,0 +1,6 @@
+Class Record
+    Public Sub New(ByVal values List As MissingType)
+    End Sub
+End Class
+Sub Main()
+End Sub

@@ -1,0 +1,14 @@
+Sub Main()
+    Dim form As New UIForm("Android Audio API")
+    Dim audio = form.AddAudio("intro", "Intro audio")
+    audio.Source = "assets/intro.mp3"
+    audio.Volume = 0.75
+    audio.AutoPlay = False
+    audio.Loop = True
+    audio.PlaybackRate = 1.0
+    audio.Play()
+    audio.Pause()
+    audio.Stop()
+    Call Application.Debug.Info("ANDROID-AUDIO-SOURCE=" & audio.Source)
+    Print "ANDROID-AUDIO-API=ready"
+End Sub

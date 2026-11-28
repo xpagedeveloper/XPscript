@@ -1,0 +1,94 @@
+Class ImageOwner
+    Private retained As XPImage
+    Public DirectImage As XPImage
+    Public Borrowed As Variant
+    Public Observation As Variant
+    Public Property Set Picture(ByRef incoming As XPImage)
+        Set retained = incoming
+        Observation = retained
+    End Property
+    Public Property Get IsEmpty As Boolean
+        IsEmpty = retained Is Nothing
+    End Property
+End Class
+Class MiddleOwner Extend ImageOwner
+    Public MiddleImage As XPImage
+End Class
+Class ChildOwner Extend MiddleOwner
+    Public ChildImage As XPImage
+End Class
+Sub AssertExpired(ByVal value As Variant)
+    Dim image As XPImage = value
+    If image Is Nothing Then Error 6, "missing cleanup observation"
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = image.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 6, "Delete did not recycle image field"
+End Sub
+Sub DeleteFromHandler()
+    Dim owner As New ImageOwner
+    Dim source As New XPImage(3, 2)
+    Set owner.Picture = source
+    Dim observation As Variant = owner.Observation
+    On Error GoTo Handler
+    Error 3803, "cleanup from handler"
+    Exit Sub
+Handler:
+    Delete owner
+    If Not (owner Is Nothing) Then Error 6, "handler Delete did not clear owner"
+    Call AssertExpired(observation)
+    If source.Width <> 3 Then Error 6, "handler cleanup recycled source"
+End Sub
+Sub Main()
+    Dim source As New XPImage(4, 3)
+    Dim unusedOwner As New ImageOwner
+    Delete unusedOwner
+    Delete unusedOwner
+    Dim owner As New ImageOwner
+    Dim alias As ImageOwner = owner
+    Dim other As New ImageOwner
+    Set owner.Picture = source
+    Set owner.DirectImage = source
+    owner.Borrowed = source
+    Set other.Picture = source
+    Dim privateObservation As Variant = owner.Observation
+    Dim publicObservation As Variant = owner.DirectImage
+    Delete owner
+    If Not (owner Is Nothing) Then Error 6, "Delete did not clear variable"
+    If Not alias.IsEmpty Or Not (alias.DirectImage Is Nothing) Then Error 6, "Delete did not clear private/public fields"
+    Call AssertExpired(privateObservation)
+    Call AssertExpired(publicObservation)
+    Dim borrowed As XPImage = alias.Borrowed
+    If borrowed.Width <> 4 Or source.Width <> 4 Then Error 6, "Delete consumed borrowed image"
+    If other.IsEmpty Then Error 6, "Delete crossed instance ownership"
+    Delete alias
+    Dim child As New ChildOwner
+    Set child.Picture = source
+    Set child.DirectImage = source
+    Set child.MiddleImage = source
+    Set child.ChildImage = source
+    Dim baseImage As Variant = child.Observation
+    Dim directImage As Variant = child.DirectImage
+    Dim middleImage As Variant = child.MiddleImage
+    Dim childImage As Variant = child.ChildImage
+    Dim baseAlias As ImageOwner = child
+    Delete baseAlias
+    If Not (baseAlias Is Nothing) Then Error 6, "base Delete did not clear variable"
+    If Not child.IsEmpty Or Not (child.DirectImage Is Nothing) Then Error 6, "base fields survived polymorphic Delete"
+    If Not (child.MiddleImage Is Nothing) Or Not (child.ChildImage Is Nothing) Then Error 6, "derived fields survived polymorphic Delete"
+    Call AssertExpired(baseImage)
+    Call AssertExpired(directImage)
+    Call AssertExpired(middleImage)
+    Call AssertExpired(childImage)
+    Delete child
+    Delete child
+    Dim otherImage As Variant = other.Observation
+    Delete other
+    Call AssertExpired(otherImage)
+    Call DeleteFromHandler()
+    If source.Width <> 4 Then Error 6, "Delete recycled original source"
+    Print "IMAGE_FIELD_DELETE_OK"
+End Sub

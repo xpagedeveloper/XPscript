@@ -1,0 +1,31 @@
+[Platform:browser-wasm]
+
+[ServerSide]
+Function ServerStatus() As String
+    ServerStatus = "WASM server bridge ready"
+End Function
+
+Sub Main()
+    Dim form As New UIForm("WASM UI object hierarchy test")
+    Dim first As Variant
+    Dim second As Variant
+    Dim moved As Variant
+
+    first = form.AddPanel("firstPanel", "First container")
+    first.Id = "firstPanel"
+    second = form.AddPanel("secondPanel", "Second container")
+    second.Id = "secondPanel"
+    moved = form.NewSelect("moved", "Moved control")
+    moved.Id = "moved"
+    Call moved.AddOption("Initial")
+    Call moved.AddOption("Moved")
+
+    Call first.AddUIElement(moved)
+    Call second.AddUIElement(moved)
+    Call form.AddUIElement(first)
+    Call form.AddUIElement(second)
+
+    Call form.AddTextField("notes", "Notes")
+    Call form.SetFieldValue("notes", ServerStatus())
+    Call form.Show(False)
+End Sub

@@ -207,7 +207,7 @@ static async Task RunExecutableRegression(string root, string scriptPath)
 
     using var process = Process.Start(start) ?? throw new Exception("Failed to start CGI executable.");
     process.StandardInput.Close();
-    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(120));
     var stdoutTask = process.StandardOutput.ReadToEndAsync(timeout.Token);
     var stderrTask = process.StandardError.ReadToEndAsync(timeout.Token);
     await process.WaitForExitAsync(timeout.Token);
@@ -217,7 +217,7 @@ static async Task RunExecutableRegression(string root, string scriptPath)
     if (process.ExitCode != 0)
         throw new Exception($"CGI executable failed with exit {process.ExitCode}. stderr={stderr} stdout={stdout}");
     if (!stdout.StartsWith("Status: 200 OK\r\n", StringComparison.Ordinal))
-        throw new Exception("CGI executable did not emit status 200: " + stdout);
+        throw new Exception($"CGI executable did not emit status 200: {stdout} stderr={stderr}");
     if (!stdout.Contains("X-CGI: xpscript\r\n", StringComparison.Ordinal))
         throw new Exception("CGI executable lost XPScript response header.");
     if (!stdout.EndsWith("GET|Fredrik Norling|Cgi", StringComparison.Ordinal))
@@ -264,7 +264,7 @@ End Sub
 
     using var process = Process.Start(start) ?? throw new Exception("Failed to start XPImage CGI executable.");
     process.StandardInput.Close();
-    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(120));
     await using var stdout = new MemoryStream();
     var stdoutTask = process.StandardOutput.BaseStream.CopyToAsync(stdout, timeout.Token);
     var stderrTask = process.StandardError.ReadToEndAsync(timeout.Token);

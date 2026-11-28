@@ -1,0 +1,7 @@
+Function FortyTwo() As Long
+    FortyTwo = 42
+End Function
+
+Sub Main()
+    Print FortyTwo()
+End Sub

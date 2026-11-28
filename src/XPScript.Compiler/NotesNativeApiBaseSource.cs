@@ -10,6 +10,7 @@ internal sealed partial class XPScriptNotesNativeApi : IDisposable
     private readonly nint _library;
     private readonly string _runtimeDirectory;
     private readonly string _applicationDirectory;
+    internal string ApplicationDirectory => _applicationDirectory;
     private bool _initialized;
     private bool _disposed;
 

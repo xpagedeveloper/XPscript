@@ -1,0 +1,9 @@
+Class Store
+    Public Property Set Item(ByRef incoming As XPImage)
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    Set store.Item = Nothing
+    Print "IMAGE_SET_BYREF_SIGNATURE_OK"
+End Sub

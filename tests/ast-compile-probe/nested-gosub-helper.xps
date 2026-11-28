@@ -1,0 +1,12 @@
+Sub Main()
+    GoSub outer
+    Print "after"
+    Exit Sub
+outer:
+    Print "outer"
+    GoSub inner
+    Return
+inner:
+    Print "inner"
+    Return
+End Sub

@@ -1,0 +1,5 @@
+Sub Main()
+    If SEARCH_BREADTH <> 1723 Then Error 6201, "SEARCH_BREADTH value drifted"
+    If SEARCH_DEPTH <> 1724 Then Error 6202, "SEARCH_DEPTH value drifted"
+    Print "NOTES_SEARCH_CONSTANTS_OK"
+End Sub

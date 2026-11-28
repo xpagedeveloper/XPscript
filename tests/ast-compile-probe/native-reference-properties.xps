@@ -1,0 +1,88 @@
+Class NativeStore
+    Private payload As XPJsonObject
+    Private nodeValue As XPXmlNode
+    Public Property Get Current As XPJsonObject
+        Set Current = payload
+    End Property
+    Public Property Set Current(ByRef incoming As XPJsonObject)
+        Set payload = incoming
+        Set incoming = Nothing
+    End Property
+    Public Property Get Node(Optional ByRef index As Long = 2) As XPXmlNode
+        index = index + 1
+        Set Node = nodeValue
+    End Property
+    Public Property Set Node(Optional ByRef index As Long = 2, ByRef incoming As XPXmlNode)
+        index = index + 1
+        Set nodeValue = incoming
+        Set incoming = Nothing
+    End Property
+    Public Property Get Unassigned As XPXmlDocument
+    End Property
+    Public Property Get Fresh As XPJsonObject
+        Set Fresh = New XPJsonObject
+    End Property
+    Public Property Set Failing(ByRef index As Long, ByVal incoming As XPXmlNode)
+        Set nodeValue = incoming
+        index = index + 1
+        Error 3401, "native setter failed"
+    End Property
+End Class
+Sub Main()
+    Dim store As New NativeStore
+    Dim other As New NativeStore
+    Dim value As New XPJsonObject
+    Dim document As XPXmlDocument = XmlParse("<root>initial</root>")
+    Dim element As XPXmlElement = document.Root
+    Dim index As Long = 3
+    Dim failure As Long
+    If store.Current Is Nothing Then
+    Else
+        Error 6, "native field default"
+    End If
+    If store.Unassigned Is Nothing Then
+    Else
+        Error 6, "native result default"
+    End If
+    Set store.Current = value
+    If value Is Nothing Then Error 6, "incoming snapshot"
+    If store.Current Is value Then
+    Else
+        Error 6, "JSON identity"
+    End If
+    Call store.Current.Set("x", 7)
+    If value.Get("x") <> 7 Then Error 6, "JSON mutation"
+    Call store.Fresh.Set("fresh", 1)
+    With store
+        Set .Node() = element
+    End With
+    If store.Node(index) Is element Then
+    Else
+        Error 6, "XML upcast identity"
+    End If
+    If index <> 4 Then Error 6, "getter index alias"
+    store.Node().Value = "shared"
+    If document.Root.Value <> "shared" Then Error 6, "XML mutation"
+    Set store.Node(index) = element
+    If index <> 5 Or element Is Nothing Then Error 6, "setter alias or source replacement"
+    On Error Resume Next
+    Set store.Failing(index) = element
+    failure = Err
+    On Error GoTo 0
+    If failure <> 3401 Or index <> 6 Then Error 6, "native exceptional alias"
+    If store.Node() Is element Then
+    Else
+        Error 6, "native exceptional identity"
+    End If
+    If other.Current Is Nothing Then
+    Else
+        Error 6, "instance storage"
+    End If
+    Set store.Current = Nothing
+    Set store.Node() = Nothing
+    If store.Current Is Nothing And store.Node() Is Nothing Then
+    Else
+        Error 6, "native clear"
+    End If
+    Print "NATIVE_REFERENCE_PROPERTIES_OK"
+End Sub

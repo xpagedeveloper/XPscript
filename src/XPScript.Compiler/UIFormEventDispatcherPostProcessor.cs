@@ -18,8 +18,17 @@ internal sealed class UIFormEventDispatcherPostProcessor
         if (!regex.IsMatch(generated))
             throw new CompilerException("Unable to install UIForm event dispatcher runtime.");
 
-        return regex.Replace(generated,
+        var result = regex.Replace(generated,
             """
+    [System.Diagnostics.CodeAnalysis.DynamicDependency(
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties |
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicMethods,
+        typeof(XPScriptUIFormEvent))]
+    [System.Diagnostics.CodeAnalysis.DynamicDependency(
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicProperties |
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.PublicMethods |
+        System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.NonPublicMethods,
+        typeof(XPScriptUIForm))]
     internal string DispatchRegisteredEvent(string eventToken, string submittedValue)
     {
         var separator = eventToken.IndexOf(':');
@@ -32,6 +41,13 @@ internal sealed class UIFormEventDispatcherPostProcessor
         var useEventCallback = false;
         object?[] callbackArguments = [];
         XPScriptUIFormEvent? callbackEvent = null;
+
+        if (kind.Equals("submit", StringComparison.OrdinalIgnoreCase) && controlName.Equals("OK", StringComparison.OrdinalIgnoreCase))
+        {
+            try { ApplySubmittedStateJson(submittedValue); }
+            catch (XPScriptRuntimeException) { return SerializeActionState(false); }
+            return SerializeActionState(IsDataValid);
+        }
 
         if (kind.Equals("validate", StringComparison.OrdinalIgnoreCase))
         {
@@ -64,6 +80,15 @@ internal sealed class UIFormEventDispatcherPostProcessor
             {
                 ApplySubmittedValue(field, submittedValue);
             }
+            if (field.AutoCompleteProviderHandler.Length > 0)
+            {
+                var providerResult = XPScriptCallbackRuntime.Invoke(
+                    field.AutoCompleteProviderHandler,
+                    "UIForm autocomplete provider",
+                    submittedValue);
+                ApplyAutoCompleteProviderOptions(field, providerResult);
+                return SerializeActionState();
+            }
             handlerName = field.OnChangeHandler.Length > 0 ? field.OnChangeHandler : field.RefreshHandler;
             if (handlerName.Length == 0)
                 throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' has no registered change handler.");
@@ -85,13 +110,55 @@ internal sealed class UIFormEventDispatcherPostProcessor
         }
         else if (kind.Equals("button", StringComparison.OrdinalIgnoreCase))
         {
-            ApplySubmittedStateJson(submittedValue);
+            try
+            {
+                ApplySubmittedStateJson(submittedValue);
+            }
+            catch (XPScriptRuntimeException)
+            {
+                return SerializeActionState();
+            }
+            if (!IsDataValid)
+                return SerializeActionState();
             var button = FindButton(controlName);
             handlerName = button.Handler;
             useEventCallback = button.UseEventCallback;
             callbackArguments = button.EventCallbackArguments;
             if (useEventCallback)
                 callbackEvent = new XPScriptUIFormEvent(this, "button", button.Name, null, Array.Empty<string>());
+        }
+        else if (kind.Equals("play", StringComparison.OrdinalIgnoreCase) ||
+                 kind.Equals("pause", StringComparison.OrdinalIgnoreCase) ||
+                 kind.Equals("ended", StringComparison.OrdinalIgnoreCase) ||
+                 kind.Equals("error", StringComparison.OrdinalIgnoreCase))
+        {
+            var field = FindField(controlName);
+            if (field.Type is not ("Audio" or "Video"))
+                throw new XPScriptRuntimeException(5, $"UIForm field '{field.Name}' is not a media field.");
+            if (submittedValue.Length > 0 && submittedValue[0] == '{')
+            {
+                try
+                {
+                    using var signal = System.Text.Json.JsonDocument.Parse(submittedValue);
+                    var state = signal.RootElement;
+                    if (state.TryGetProperty("position", out var position) && position.TryGetInt64(out var positionValue)) field.Position = positionValue;
+                    if (state.TryGetProperty("duration", out var duration) && duration.TryGetInt64(out var durationValue)) field.Duration = durationValue;
+                    if (state.TryGetProperty("isPlaying", out var playing) && playing.ValueKind == System.Text.Json.JsonValueKind.True) field.Play();
+                    else if (state.TryGetProperty("isPlaying", out playing) && playing.ValueKind == System.Text.Json.JsonValueKind.False) field.Pause();
+                }
+                catch (System.Text.Json.JsonException) { }
+            }
+            handlerName = kind.ToLowerInvariant() switch
+            {
+                "play" => field.OnPlayHandler,
+                "pause" => field.OnPauseHandler,
+                "ended" => field.OnEndedHandler,
+                "error" => field.OnErrorHandler,
+                _ => string.Empty
+            };
+            if (handlerName.Length == 0)
+                throw new XPScriptRuntimeException(5, $"UIForm media field '{field.Name}' has no registered {kind} handler.");
+            callbackEvent = new XPScriptUIFormEvent(this, kind.ToLowerInvariant(), field.Name, submittedValue, Array.Empty<string>());
         }
         else
         {
@@ -152,7 +219,16 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 System.Text.Json.JsonValueKind.Null => string.Empty,
                 _ => throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' submitted an unsupported event value type.")
             };
-            ApplySubmittedValue(field, submitted);
+            try
+            {
+                field.ValidationError = string.Empty;
+                ApplySubmittedValue(field, submitted);
+            }
+            catch (XPScriptRuntimeException exception)
+            {
+                field.ValidationError = exception.Message;
+                throw;
+            }
         }
     }
 
@@ -178,12 +254,28 @@ internal sealed class UIFormEventDispatcherPostProcessor
         throw new XPScriptRuntimeException(5, $"UIForm handler '{handlerName}' must accept zero parameters or the current UIForm as one parameter.");
     }
 
-    private string SerializeActionState()
+    private static void ApplyAutoCompleteProviderOptions(XPScriptUIField field, object? providerResult)
+    {
+        field.Options.Clear();
+        if (providerResult is string || providerResult is not System.Collections.IEnumerable values) return;
+        foreach (var value in values)
+        {
+            var option = XPScriptRuntime.CStr(value).Trim();
+            if (option.Length > 0 && !field.Options.Contains(option, StringComparer.Ordinal))
+                field.Options.Add(option);
+        }
+    }
+
+    private string SerializeActionState(bool? accepted = null)
     {
         var result = System.Text.Json.JsonSerializer.Serialize(new
         {
+            accepted,
             refreshAll = _refreshAllRequested,
             refreshRegions = _requestedRefreshRegions.ToArray(),
+            activeTab = _activeTab,
+            tabs = _tabs.Select(tab => new { name = tab.Name, label = tab.Label, background = tab.Background, fontColor = tab.FontColor, font = tab.Font, fontSize = tab.FontSize, bold = tab.Bold, selectedBackground = tab.SelectedBackground, selectedFontColor = tab.SelectedFontColor, selectedFont = tab.SelectedFont, selectedFontSize = tab.SelectedFontSize, selectedBold = tab.SelectedBold }).ToArray(),
+            tabPlacement = TabPlacement,
             navigation = _navigationTarget.Length == 0 ? null : new
             {
                 target = _navigationTarget
@@ -201,10 +293,14 @@ internal sealed class UIFormEventDispatcherPostProcessor
                 regexPattern = field.RegexPattern,
                 value = field.Type is "PasswordField" or "MultiListBox" or "Separator" or "Spacer" ? null : GetFieldValueString(field.Name),
                 values = field.Type == "MultiListBox" ? ReadSelectedValues(field.Name) : Array.Empty<string>(),
+                progressValue = field.Type == "ProgressBar" ? (double?)field.Value : null,
+                progressIndeterminate = field.Type == "ProgressBar" ? (bool?)field.IsIndeterminate : null,
+                activityRunning = field.Type == "ActivityIndicator" ? (bool?)field.IsRunning : null,
                 options = field.Options,
                 regionId = field.RegionId,
                 validationError = string.IsNullOrEmpty(field.ValidationError) ? GetValidationError(field.Name) : field.ValidationError
             }).ToArray(),
+            mediaCommands = _mediaCommands.Select(command => new { name = command.Name, command = command.Command }).ToArray(),
             buttons = _buttons.Select(button => new
             {
                 name = button.Name,
@@ -218,10 +314,15 @@ internal sealed class UIFormEventDispatcherPostProcessor
         _refreshAllRequested = false;
         _requestedRefreshRegions.Clear();
         _navigationTarget = string.Empty;
+        _mediaCommands.Clear();
         return result;
     }
 
     public object? GetFieldValue(object? name)
 """, 1);
+        return !result.Contains("class Script", StringComparison.Ordinal) &&
+            result.Contains("internal static class Program", StringComparison.Ordinal)
+            ? result.Replace("typeof(Script)", "typeof(Program)", StringComparison.Ordinal)
+            : result;
     }
 }

@@ -1,5 +1,7 @@
 # Native CSV
 
+Experimental AST supports user-class Get/Set properties typed as XPCsvDocument and any native CSV header/row/column collection or item type, with scalar Optional/ByRef indexes. Values share references and mutations; changing the setter's incoming parameter does not replace the caller's variable. Use Set for assignment. FromBytes still requires a writable document variable: read the property into a local, call FromBytes on that local, and Set the property to the replacement. Other aliases keep the previous document. See [tabular accessor regression](../tests/ast-compile-probe/tabular-reference-properties.xps).
+
 XPscript provides a native CSV API for parsing, building, iterating, sorting, serializing and saving CSV data without external runtime dependencies.
 
 CSV values are text. Parsing does not infer Integer, Boolean or Date values, so values such as `00123` are preserved exactly.
@@ -333,6 +335,14 @@ Collections:
 - `Columns`
 - `Get(indexOrName)`
 - `Set(indexOrName, value)`
+
+## AST compilation and conditional inclusion
+
+`XPCsvDocument`, headers, rows and columns compile directly through AST using the same native CSV runtime as normal compilation, not a second parser or placeholder. Typed parameters/returns, ByRef replacement, Static references, case-insensitive members, collection iteration and row indexing are supported. `FromBytes` replaces the document reference, preserving old aliases and argument evaluation order; both ordinary and `Call` statements use that lowering.
+
+CSV runtime code is included only when CSV types or global CSV functions are actually used. Names inside strings and comments do not activate it. `CsvEscape` alone includes only the existing escaping helpers, not document parsing or file loading. Pure CSV use adds no external NuGet packages or addon notices. `Load`/`Save` retain normal compilation's working-directory file behavior.
+
+`ToSpreadsheet`, worksheet `ToCsv` and static `XPCsvDocument.FromWorksheet` compile directly through AST using the shared spreadsheet/CSV interoperability helpers. Only programs using this interoperability include both engines; CSV-only programs omit spreadsheet code. The spreadsheet engine is package-free, so no additional NuGet package or third-party notice is required.
 
 ## Resource limit
 

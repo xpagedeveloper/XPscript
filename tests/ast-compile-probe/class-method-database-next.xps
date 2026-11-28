@@ -1,0 +1,76 @@
+Class Reader
+    Public Function IsNothingSqlite(ByVal value As XPDBSQLite) As Boolean
+        IsNothingSqlite = value Is Nothing
+    End Function
+    Public Function IsNothingMySql(ByVal value As XPDbMySql) As Boolean
+        IsNothingMySql = value Is Nothing
+    End Function
+    Public Function IsNothingMsSql(ByVal value As XPDbMsSql) As Boolean
+        IsNothingMsSql = value Is Nothing
+    End Function
+    Public Function IsNothingSupabase(ByVal value As XPDbSupabase) As Boolean
+        IsNothingSupabase = value Is Nothing
+    End Function
+    Public Function IsNothingSupabaseAlias(ByVal value As XPSupabaseDB) As Boolean
+        IsNothingSupabaseAlias = value Is Nothing
+    End Function
+End Class
+
+Class DatabaseByRefMethods
+    Public Sub ClearMySql(ByRef value As XPDbMySql)
+        Set value = Nothing
+    End Sub
+
+    Public Sub ClearMsSql(ByRef value As XPDbMsSql)
+        Set value = Nothing
+    End Sub
+
+    Public Sub ClearSupabase(ByRef value As XPDbSupabase)
+        Set value = Nothing
+    End Sub
+
+    Public Sub ReplaceSupabase(ByRef value As XPDbSupabase)
+        Set value = New XPDbSupabase("https://replacement.example.invalid", "test-key")
+    End Sub
+
+    Public Sub ReplaceSupabaseAndFail(ByRef value As XPDbSupabase)
+        Call ReplaceSupabase(value)
+        Error 4351, "Supabase replacement must survive failure"
+    End Sub
+End Class
+
+Sub Main()
+    Dim reader As New Reader
+    Print CStr(reader.IsNothingSqlite(Nothing))
+    Print CStr(reader.IsNothingMySql(Nothing))
+    Print CStr(reader.IsNothingMsSql(Nothing))
+    Print CStr(reader.IsNothingSupabase(Nothing))
+    Print CStr(reader.IsNothingSupabaseAlias(Nothing))
+
+    Dim methods As New DatabaseByRefMethods
+    Dim mysql As XPDbMySql
+    Call methods.ClearMySql(mysql)
+    If Not (mysql Is Nothing) Then Error 4352
+    Dim mssql As XPDbMsSql
+    Call methods.ClearMsSql(mssql)
+    If Not (mssql Is Nothing) Then Error 4353
+    Dim supabase As XPDbSupabase
+    Call methods.ClearSupabase(supabase)
+    If Not (supabase Is Nothing) Then Error 4354
+
+    Dim original As New XPDbSupabase("https://original.example.invalid", "test-key")
+    Dim current As Variant
+    Set current = original
+    Call methods.ReplaceSupabase(current)
+    If current Is original Or Not current.IsOpen Or Not original.IsOpen Then Error 4355
+    Set current = original
+    On Error GoTo ExpectedSupabaseFailure
+    Call methods.ReplaceSupabaseAndFail(current)
+    Error 4356, "expected Supabase replacement error missing"
+    Exit Sub
+ExpectedSupabaseFailure:
+    If Err <> 4351 Or current Is original Or Not current.IsOpen Or Not original.IsOpen Then Error 4357
+    Call current.Dispose()
+    Call original.Dispose()
+    Print "AST_DATABASE_CLASS_METHOD_BYREF_OK"
+End Sub

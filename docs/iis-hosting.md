@@ -7,6 +7,43 @@ XPScript can be hosted on Windows Server with IIS in two practical ways:
 
 The current `xpscript fastcgi` command exposes a FastCGI TCP listener. IIS FastCGI application mappings launch a FastCGI process directly and do not act as a generic TCP FastCGI proxy, so do not point an IIS FastCGI handler at the XPScript TCP listener. Use Kestrel behind IIS or the CGI host instead.
 
+## Choose a hosting topology
+
+| Requirement | Recommended topology | IIS/ARR required |
+|---|---|---:|
+| Standalone XPScript server, private network or another proxy in front | Kestrel (`xpscript web`) | No |
+| Public Windows site with IIS TLS, bindings and logging | IIS reverse proxy to Kestrel | Yes |
+| Simple IIS integration with process-per-request execution | Direct IIS CGI | No ARR; CGI role required |
+| Persistent FastCGI worker | XPScript FastCGI behind nginx, Apache or another FastCGI proxy | IIS cannot proxy the TCP listener directly |
+
+“Without ARR” does not mean that IIS can host the Kestrel process itself. Either run Kestrel directly, or use the direct CGI executable. ARR is only needed when IIS forwards requests to a separate Kestrel process.
+
+## Option 0: Run Kestrel without IIS or ARR
+
+Use this when IIS is not needed, or when another reverse proxy already terminates TLS:
+
+```powershell
+C:\XPScript\host\xpscript.exe web `
+  --root C:\XPScript\sites\example `
+  --address 127.0.0.1 `
+  --port 8080 `
+  --host example.com
+```
+
+For a directly exposed service, bind only to an intentional interface, configure HTTPS or put a trusted reverse proxy in front, and restrict the accepted host names. Run the process under a service manager and do not expose the development/default listener unintentionally.
+
+## FastCGI without IIS
+
+FastCGI is a persistent TCP (or Unix-socket on Linux/macOS) worker protocol. Start XPScript as the worker and configure a FastCGI-capable reverse proxy to forward requests to it:
+
+```powershell
+C:\XPScript\host\xpscript.exe fastcgi `
+  --root C:\XPScript\sites\example `
+  --listen 127.0.0.1:9000
+```
+
+Keep the listener private. The proxy must pass the standard CGI parameters and request body. On Windows, use Kestrel behind IIS when IIS is the required frontend; do not configure an IIS FastCGI application mapping to `127.0.0.1:9000`, because IIS starts a process for its own FastCGI protocol and is not a generic TCP FastCGI proxy.
+
 ## Requirements
 
 On the IIS server install:

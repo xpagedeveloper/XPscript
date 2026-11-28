@@ -1,0 +1,4 @@
+Sub Main()
+    Dim response As XPHttpResponse
+    response.StatusCode = 200
+End Sub

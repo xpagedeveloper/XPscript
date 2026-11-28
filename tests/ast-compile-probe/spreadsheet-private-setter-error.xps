@@ -1,0 +1,4 @@
+Sub Main()
+    Dim sheet As XPWorksheet
+    sheet.Name = "Not permitted"
+End Sub

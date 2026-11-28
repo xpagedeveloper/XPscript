@@ -43,6 +43,10 @@ internal static class NotesViewNavigationV2PostProcessor
         source = source.Replace("public XPScriptNotesViewEntry? GetPrev() => OpenAt(_currentIndex < 0 ? _rows.Length - 1 : _currentIndex - 1, true);", "public XPScriptNotesViewEntry? GetPrev() => OpenVisible(_currentIndex < 0 ? _rows.Length - 1 : _currentIndex - 1, -1);", StringComparison.Ordinal);
         source = ReplaceRequired(source, "    private XPScriptNotesViewEntry? OpenAt(int index, bool move)", "    private XPScriptNotesViewEntry? OpenVisible(int start, int step)\n    {\n        EnsureAlive();\n        for (var i = start; i >= 0 && i < _rows.Length; i += step) if (IsVisible(_rows[i])) return OpenAt(i, true);\n        return null;\n    }\n    private XPScriptNotesViewEntry? OpenAt(int index, bool move)", "navigator-visible-open");
 
+        source = source.Replace(
+            "public bool IsConflict { get { EnsureAlive(); return false; } }",
+            "public bool IsConflict { get { EnsureAlive(); return Row.IsConflict; } }",
+            StringComparison.Ordinal);
         return source;
     }
 

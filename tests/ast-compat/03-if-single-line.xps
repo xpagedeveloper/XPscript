@@ -1,0 +1,6 @@
+Sub Main()
+    Dim x As Integer
+    x = 1
+    If x = 1 Then Print "SINGLE_TRUE"
+    If x = 2 Then Print "SHOULD_NOT_PRINT"
+End Sub

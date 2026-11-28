@@ -1,0 +1,19 @@
+Public sharedObject As XPJsonObject = New XPJsonObject()
+Public sharedArray As XPJsonArray = New XPJsonArray()
+
+Sub TouchObject(ByRef value As XPJsonObject)
+    Set value = New XPJsonObject()
+    Call value.Set("answer", 42)
+End Sub
+
+Sub TouchArray(ByRef value As XPJsonArray)
+    Set value = New XPJsonArray()
+    Call value.Add(42)
+End Sub
+
+Sub Main()
+    Call TouchObject(sharedObject)
+    Call TouchArray(sharedArray)
+    If sharedObject.Count <> 1 Or sharedArray.Count <> 1 Then Error 6, "initialized JSON collection module ByRef storage failed"
+    Print "INITIALIZED_MODULE_JSON_COLLECTIONS_BYREF_OK"
+End Sub

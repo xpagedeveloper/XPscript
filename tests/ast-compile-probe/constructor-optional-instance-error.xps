@@ -1,0 +1,7 @@
+Class Record
+    Public Value As Long
+    Public Sub New(Optional ByVal seed As Long = Me.Value)
+    End Sub
+End Class
+Sub Main()
+End Sub

@@ -1,0 +1,136 @@
+Class OptionalStore
+    Private calls As Long
+    Private backingValue As Long
+    Public Function NextDefault() As Long
+        calls = calls + 1
+        NextDefault = calls
+    End Function
+    Public Function Count() As Long
+        Count = calls
+    End Function
+    Public Property Get Item(ByRef index As Long, Optional ByRef extra As Long = NextDefault(), Optional ByVal amount As Long = extra + index) As Long
+        index = index + extra
+        extra = extra + 10
+        Item = index + extra + amount
+    End Property
+    Public Property Let Item(ByRef index As Long, Optional ByRef extra As Long = NextDefault(), Optional ByVal amount As Long = extra + index, ByVal incoming As Long)
+        index = index + extra
+        extra = extra + 10
+        backingValue = index + extra + amount + incoming
+    End Property
+    Public Property Get Stored() As Long
+        Stored = backingValue
+    End Property
+    Public Property Get Fresh(Optional ByRef index As Long = 5) As Long
+        index = index + 1
+        Fresh = index
+    End Property
+    Public Property Get Zero(Optional ByVal text As String, Optional ByVal flag As Boolean, Optional ByVal number As Long) As Long
+        If text <> "" Or flag Or number <> 0 Then Error 6, "implicit defaults"
+        Zero = 0
+    End Property
+    Public Property Let WriteOnly(Optional ByVal index As Long = 7, ByVal incoming As Long)
+        backingValue = index + incoming
+    End Property
+    Private Property Get Hidden(Optional ByVal index As Long = 9) As Long
+        Hidden = index
+    End Property
+    Public Property Get Snapshot(Optional index As Long = 3) As Long
+        index = index + 1
+        Snapshot = index
+    End Property
+    Public Function Internal() As Long
+        Internal = Hidden() + Me.Fresh()
+    End Function
+    Public Property Get Failing(ByRef index As Long, Optional ByRef extra As Long = 2) As Long
+        index = index + extra
+        extra = extra + 1
+        Error 3107, "optional getter"
+    End Property
+    Public Property Let Failing(ByRef index As Long, Optional ByRef extra As Long = 2, ByVal incoming As Long)
+        index = index + extra + incoming
+        Error 3108, "optional setter"
+    End Property
+    Public Property Get BadDefault(Optional ByVal index As Long = RaiseDefault()) As Long
+        Error 6, "body must not execute"
+    End Property
+    Public Function RaiseDefault() As Long
+        calls = calls + 1
+        Error 3109, "default failed"
+    End Function
+End Class
+Sub Forward(ByRef index As Long)
+    Dim store As New OptionalStore
+    Dim result As Long
+    result = store.Item(index)
+End Sub
+Sub Main()
+    Dim store As New OptionalStore
+    Dim index As Long
+    Dim result As Long
+    index = 2
+    result = store.Item(index)
+    If result <> 17 Or index <> 3 Or store.Count() <> 1 Then Error 6, "omitted suffix"
+    result = store.Item(index)
+    If result <> 22 Or index <> 5 Or store.Count() <> 2 Then Error 6, "fresh side effect"
+    result = store.Fresh() + store.Fresh()
+    If result <> 12 Then Error 6, "fresh ByRef storage"
+    If store.Snapshot() <> 4 Or store.Snapshot(index) <> 6 Or index <> 5 Then Error 6, "unmodified snapshot"
+    result = store.Item(index, index)
+    If index <> 20 Or result <> 50 Or store.Count() <> 2 Then Error 6, "shared supplied aliases"
+    index = 1
+    result = store.Item(index, index, 3)
+    If result <> 27 Or index <> 12 Or store.Count() <> 2 Then Error 6, "full signature"
+    index = 1
+    store.Item(index) = 10
+    If index <> 4 Or store.Stored <> 31 Or store.Count() <> 3 Then Error 6, "setter suffix"
+    index = 1
+    store.Item(index, index) = 10
+    If index <> 12 Or store.Stored <> 36 Or store.Count() <> 3 Then Error 6, "setter shared aliases"
+    If store.Zero() <> 0 Or store.Internal() <> 15 Then Error 6, "implicit defaults and internal calls"
+    store.WriteOnly() = 10
+    If store.Stored <> 17 Then Error 6, "write only"
+    With store
+        result = .fReSh()
+    End With
+    If result <> 6 Then Error 6, "With"
+    Dim values(1) As Long
+    values(0) = 1
+    result = store.Item(values(0))
+    If values(0) <> 5 Or result <> 24 Then Error 6, "array alias"
+    Dim entries List As Long
+    entries("a") = 1
+    ForAll entry In entries
+        result = store.Item(entry)
+    End ForAll
+    If entries("a") <> 6 Or result <> 27 Then Error 6, "ForAll alias"
+    index = 1
+    Call Forward(index)
+    If index <> 2 Then Error 6, "parameter forwarding"
+    On Error GoTo GetterFailed
+    result = store.Failing(index)
+    Error 6, "getter did not fail"
+GetterFailed:
+    If Err <> 3107 Or index <> 4 Then Error 6, "exception alias"
+    Resume AfterGetter
+AfterGetter:
+    On Error GoTo SetterFailed
+    store.Failing(index) = 3
+    Error 6, "setter did not fail"
+SetterFailed:
+    If Err <> 3108 Or index <> 9 Then Error 6, "setter exception alias"
+    Resume AfterSetter
+AfterSetter:
+    On Error GoTo DefaultFailed
+    result = store.BadDefault()
+    Error 6, "default did not fail"
+DefaultFailed:
+    If Err <> 3109 Or store.Count() <> 6 Then Error 6, "default exception"
+    Resume Done
+Done:
+    On Error GoTo 0
+    index = 1
+    store.Item(index) = store.NextDefault()
+    If store.Count() <> 8 Or index <> 9 Or store.Stored <> 43 Then Error 6, "RHS before defaults"
+    Print "INDEXED_OPTIONAL_RUNTIME_OK"
+End Sub

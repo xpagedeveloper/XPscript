@@ -1,0 +1,12 @@
+Class Reader
+    Public Function Delimiter(ByVal value As XPCsvDocument) As String
+        Delimiter = value.Delimiter
+    End Function
+End Class
+
+Sub Main()
+    Dim value As New XPCsvDocument
+    value.Delimiter = ";"
+    Dim reader As New Reader
+    Print reader.Delimiter(value)
+End Sub

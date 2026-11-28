@@ -1,0 +1,16 @@
+Class BaseCalc
+    Public Function Compute(ByVal value As Integer) As String
+        Compute = CStr(value)
+    End Function
+End Class
+
+Class ChildCalc Extend BaseCalc
+    Public Function Compute(ByVal value As Integer) As String
+        Compute = Parent.Compute(value)
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New ChildCalc()
+    Print item.Compute(7)
+End Sub

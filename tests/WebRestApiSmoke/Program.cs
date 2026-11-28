@@ -83,6 +83,26 @@ Function GetUser(ByVal id As Integer) As String
 End Function
 
 [Anonymous]
+[Post:/api/upload-file]
+Sub UploadFile()
+    Dim uploaded As Variant
+    Set uploaded = Request.FileFirst("file")
+    If uploaded Is Nothing Then
+        Response.Write("missing")
+        Exit Sub
+    End If
+    Response.Write(uploaded.FileName)
+    Response.Write("|")
+    Response.Write(uploaded.Text())
+    ForAll item In Request.Files("file")
+        Response.Write("|" & item.FileName)
+    End ForAll
+    ForAll uploadedItem In Request.Files()
+        Response.Write("|" & uploadedItem.FileName)
+    End ForAll
+End Sub
+
+[Anonymous]
 [Get]
 [Route:/api/bind/{id}]
 Sub BindSources([FromRoute] id As Integer, [FromQuery] verbose As Boolean, [FromHeader:"X-Tenant-ID"] tenantId As String, [FromCookie:"client-id"] clientId As String)
@@ -140,6 +160,24 @@ End Sub
 [Route:/api/problem]
 Sub ProblemRoute()
     Response.problem(400, "Example problem", "Example detail")
+End Sub
+
+[Anonymous]
+[Get]
+[Route:/api/problem-long]
+Sub ProblemLongRoute()
+    Dim status As Long
+    status = 422
+    Response.Problem(status, "Long problem", "Long detail")
+End Sub
+
+[Anonymous]
+[Get]
+[Route:/api/problem-integer]
+Sub ProblemIntegerRoute()
+    Dim status As Integer
+    status = 401
+    Response.problem(status, "Integer problem", "Integer detail")
 End Sub
 
 [Anonymous]
@@ -232,6 +270,18 @@ try
     await using var dispatcher = new XpsWebDispatcher(root);
     var app = new XpsApplicationState();
 
+    Console.WriteLine("BEGIN AST multipart upload");
+    const string uploadBody = "--upload-boundary\r\nContent-Disposition: form-data; name=\"file\"; filename=\"sample.txt\"\r\n\r\nXPscript upload\r\n"
+        + "--upload-boundary\r\nContent-Disposition: form-data; name=\"other\"; filename=\"other.txt\"\r\n\r\nOther upload\r\n--upload-boundary--\r\n";
+    var uploadedFile = await SendAsync(dispatcher, app, "POST", "/api/upload-file", uploadBody,
+        "multipart/form-data; boundary=upload-boundary");
+    if (uploadedFile.StatusCode != 200 || BodyText(uploadedFile) != "sample.txt|XPscript upload|sample.txt|sample.txt|other.txt")
+        throw new Exception($"api.xps UploadFile returned HTTP {uploadedFile.StatusCode}: {BodyText(uploadedFile)}");
+    var missingFile = await SendAsync(dispatcher, app, "POST", "/api/upload-file");
+    if (missingFile.StatusCode != 200 || BodyText(missingFile) != "missing")
+        throw new Exception($"api.xps UploadFile missing-file case returned HTTP {missingFile.StatusCode}: {BodyText(missingFile)}");
+    Console.WriteLine("END AST multipart upload");
+
     // Keep method-dispatch hardening first: a path match must never invoke a handler for another HTTP method.
     var wrongMethodGetRoute = await SendAsync(dispatcher, app, "POST", "/api/users/42");
     if (wrongMethodGetRoute.StatusCode != 405)
@@ -242,6 +292,41 @@ try
     var wrongMethodPostRoute = await SendAsync(dispatcher, app, "GET", "/api/users");
     if (wrongMethodPostRoute.StatusCode != 405)
         throw new Exception($"GET reached or incorrectly resolved POST-only route; expected 405, got {wrongMethodPostRoute.StatusCode}.");
+
+    // Exercise the known response regression immediately after dispatch guards.
+    foreach (var (path, status, title, detail) in new[]
+    {
+        ("/api/problem", 400, "Example problem", "Example detail"),
+        ("/api/problem-long", 422, "Long problem", "Long detail"),
+        ("/api/problem-integer", 401, "Integer problem", "Integer detail")
+    })
+    {
+        var problem = await SendAsync(dispatcher, app, "GET", path);
+        if (problem.StatusCode != status || problem.ContentType?.StartsWith("application/problem+json", StringComparison.OrdinalIgnoreCase) != true)
+            throw new Exception($"Problem response failed for {path}: status={problem.StatusCode}, contentType={problem.ContentType}, body={BodyText(problem)}");
+        using var document = JsonDocument.Parse(problem.Body);
+        var payload = document.RootElement;
+        if (payload.GetProperty("status").GetInt32() != status ||
+            payload.GetProperty("type").GetString() != "about:blank" ||
+            payload.GetProperty("title").GetString() != title ||
+            payload.GetProperty("detail").GetString() != detail)
+            throw new Exception($"Problem response fields drifted for {path}: {BodyText(problem)}");
+    }
+    foreach (var writeProblem in new Action<XpsWebResponse, long, string, string>[]
+    {
+        XpsWebResponseRestExtensions.Problem, XpsWebResponseRestExtensions.problem
+    })
+    foreach (var status in new[] { 0L, 399L, 600L, long.MinValue, long.MaxValue })
+    {
+        var response = new XpsWebResponse { StatusCode = 202 };
+        var rejected = false;
+        try { writeProblem(response, status, "invalid", "invalid"); }
+        catch (ArgumentOutOfRangeException) when (status >= int.MinValue && status <= int.MaxValue) { rejected = true; }
+        catch (OverflowException) when (status < int.MinValue || status > int.MaxValue) { rejected = true; }
+        if (!rejected || response.StatusCode != 202 || response.Body.Length != 0)
+            throw new Exception($"Invalid Problem status {status} was accepted or mutated the response.");
+    }
+    Console.WriteLine("WEB-REST-PROBLEM-NUMERIC-STATUS=OK");
 
     // Keep JSON parser hardening first so parser regressions fail before the broader REST suite.
     var earlyMalformedJson = await SendAsync(
@@ -474,10 +559,6 @@ try
 
     var raw = await SendAsync(dispatcher, app, "POST", "/api/raw", "hello-body", "text/plain");
     if (raw.StatusCode != 200 || BodyText(raw) != "\"hello-body\"") throw new Exception("Reserved Body object did not expose request text.");
-
-    var problem = await SendAsync(dispatcher, app, "GET", "/api/problem");
-    if (problem.StatusCode != 400 || !problem.ContentType!.StartsWith("application/problem+json", StringComparison.OrdinalIgnoreCase))
-        throw new Exception("Response.problem did not produce RFC Problem Details JSON.");
 
     var export = await SendAsync(dispatcher, app, "GET", "/api/attachment-export", serverRoot: root);
     if (export.StatusCode != 200) throw new Exception($"Attachment private export returned {export.StatusCode}: {BodyText(export)}");

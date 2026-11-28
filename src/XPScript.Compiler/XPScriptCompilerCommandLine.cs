@@ -16,11 +16,29 @@ public static class XPScriptCompilerCommandLine
             return 0;
         }
 
+        if (args.Length > 1 && args[1] is "--help" or "-h" &&
+            args[0] is "compile" or "ast-compile" or "compilev1" or "legacy-compile" or "run" or "ast-run" or "runv1" or "legacy-run" or "validate")
+        {
+            WriteHelp("xpscript compile", "xpscript run");
+            return 0;
+        }
+
         if (args[0].Equals("run", StringComparison.OrdinalIgnoreCase))
-            return await RunScriptAsync(args).ConfigureAwait(false);
+            return await AstRunAsync(args[1..]).ConfigureAwait(false);
 
         if (args[0].Equals("compile", StringComparison.OrdinalIgnoreCase))
-            return await CompileAsync(args[1..]).ConfigureAwait(false);
+            return await AstCompileAsync(args[1..]).ConfigureAwait(false);
+
+        if (args[0] is "compilev1" or "legacy-compile")
+            return LegacyCompilerDisabled(args[0]);
+
+        if (args[0] is "runv1" or "legacy-run")
+            return LegacyCompilerDisabled(args[0]);
+
+        if (args[0].Equals("ast-compile", StringComparison.OrdinalIgnoreCase))
+            return await AstCompileAsync(args[1..]).ConfigureAwait(false);
+        if (args[0].Equals("ast-run", StringComparison.OrdinalIgnoreCase))
+            return await AstRunAsync(args[1..]).ConfigureAwait(false);
 
         if (args[0].Equals("validate", StringComparison.OrdinalIgnoreCase))
             return await ValidateAsync(args[1..]).ConfigureAwait(false);
@@ -62,7 +80,7 @@ public static class XPScriptCompilerCommandLine
             var name = args[0];
             for (var i = 1; i < args.Length; i++)
             {
-                if (args[i] == "--result-format" && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
+                if (args[i].Equals("--result-format", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
                 else throw new ArgumentException($"Unknown argument: {args[i]}");
             }
             if (resultFormat is not ("text" or "json")) throw new ArgumentException("describe --result-format must be text or json.");
@@ -90,8 +108,8 @@ public static class XPScriptCompilerCommandLine
         {
             for (var i = 0; i < args.Length; i++)
             {
-                if (args[i] == "--search" && i + 1 < args.Length) query = args[++i];
-                else if (args[i] == "--result-format" && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
+                if (args[i].Equals("--search", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length) query = args[++i];
+                else if (args[i].Equals("--result-format", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length) resultFormat = args[++i].ToLowerInvariant();
                 else throw new ArgumentException($"Unknown argument: {args[i]}");
             }
             if (resultFormat is not ("text" or "json")) throw new ArgumentException("symbols --result-format must be text or json.");
@@ -117,7 +135,7 @@ public static class XPScriptCompilerCommandLine
             var code = args[0];
             for (var i = 1; i < args.Length; i++)
             {
-                if (args[i] == "--result-format" && i + 1 < args.Length)
+                if (args[i].Equals("--result-format", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                     resultFormat = args[++i].ToLowerInvariant();
                 else
                     throw new ArgumentException($"Unknown argument: {args[i]}");
@@ -175,53 +193,71 @@ public static class XPScriptCompilerCommandLine
         var resultFormat = "text";
         var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
         string? target = null;
+        string? targetFramework = null;
         var restricted = false;
         var debug = false;
+        var info = false;
         ApplicationSecurityMode? securityMode = null;
         var embedAssets = false;
+        var xamlMcp = false;
         var sourceRoots = new List<string>();
         var sourcePreprocessors = new List<string>();
+        static bool Is(string value, string expected) => value.Equals(expected, StringComparison.OrdinalIgnoreCase);
 
         try
         {
             for (var i = 1; i < args.Length; i++)
             {
-                if ((args[i] == "-o" || args[i] == "--output") && i + 1 < args.Length)
+                if ((Is(args[i], "-o") || Is(args[i], "--output")) && i + 1 < args.Length)
                     outputPath = Path.GetFullPath(args[++i]);
-                else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
+                else if ((Is(args[i], "--rid") || Is(args[i], "--platform")) && i + 1 < args.Length)
                     runtimeIdentifier = args[++i].ToLowerInvariant();
                 else if (args[i].StartsWith("--runtime=", StringComparison.OrdinalIgnoreCase))
                     selfContained = ParseBooleanCompileOption("--runtime", args[i]["--runtime=".Length..]);
-                else if (args[i] == "--runtime" && i + 1 < args.Length)
+                else if (Is(args[i], "--runtime") && i + 1 < args.Length)
                     selfContained = ParseBooleanCompileOption("--runtime", args[++i]);
                 else if (args[i].StartsWith("--single-file=", StringComparison.OrdinalIgnoreCase))
+                {
                     singleFile = ParseBooleanCompileOption("--single-file", args[i]["--single-file=".Length..]);
-                else if (args[i] == "--single-file" && i + 1 < args.Length)
+                }
+                else if (Is(args[i], "--single-file") && i + 1 < args.Length)
+                {
                     singleFile = ParseBooleanCompileOption("--single-file", args[++i]);
+                }
                 else if (args[i].StartsWith("--singlefile=", StringComparison.OrdinalIgnoreCase))
+                {
                     singleFile = ParseBooleanCompileOption("--singlefile", args[i]["--singlefile=".Length..]);
-                else if (args[i] == "--singlefile" && i + 1 < args.Length)
+                }
+                else if (Is(args[i], "--singlefile") && i + 1 < args.Length)
+                {
                     singleFile = ParseBooleanCompileOption("--singlefile", args[++i]);
-                else if (args[i] == "--target" && i + 1 < args.Length)
+                }
+                else if (Is(args[i], "--target") && i + 1 < args.Length)
                     target = args[++i].ToLowerInvariant();
-                else if (args[i] == "--result-format" && i + 1 < args.Length)
+                else if (Is(args[i], "--target-framework") && i + 1 < args.Length)
+                    targetFramework = args[++i];
+                else if (Is(args[i], "--result-format") && i + 1 < args.Length)
                     resultFormat = args[++i].ToLowerInvariant();
-                else if (args[i] == "--restricted")
+                else if (Is(args[i], "--restricted"))
                     restricted = true;
-                else if (args[i] == "--debug")
+                else if (Is(args[i], "--debug"))
                     debug = true;
+                else if (Is(args[i], "--info"))
+                    info = true;
                 else if (args[i].StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
                     securityMode = ApplicationSecurityModeContext.Parse(args[i]["--security=".Length..]);
-                else if (args[i] == "--security" && i + 1 < args.Length)
+                else if (Is(args[i], "--security") && i + 1 < args.Length)
                     securityMode = ApplicationSecurityModeContext.Parse(args[++i]);
-                else if (args[i] == "--embed-assets")
+                else if (Is(args[i], "--embed-assets"))
                     embedAssets = true;
-                else if (args[i] == "--source-root" && i + 1 < args.Length)
+                else if (Is(args[i], "--XAML_MCP"))
+                    xamlMcp = true;
+                else if (Is(args[i], "--source-root") && i + 1 < args.Length)
                 {
                     restricted = true;
                     sourceRoots.Add(Path.GetFullPath(args[++i]));
                 }
-                else if (args[i] == "--preprocessor" && i + 1 < args.Length)
+                else if (Is(args[i], "--preprocessor") && i + 1 < args.Length)
                     sourcePreprocessors.Add(args[++i]);
                 else
                     throw new ArgumentException($"Unknown argument: {args[i]}");
@@ -229,14 +265,18 @@ public static class XPScriptCompilerCommandLine
 
             if (resultFormat is not ("text" or "json" or "xml"))
                 throw new ArgumentException("--result-format must be text, json, or xml.");
-            if (target is not null && target != "webiis")
-                throw new ArgumentException("--target currently supports webiis.");
+            targetFramework = DotNetVersionSelection.NormalizeTargetFramework(targetFramework);
+            _ = DotNetVersionSelection.SelectSdk(targetFramework);
+            Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", targetFramework);
+            Environment.SetEnvironmentVariable("XPSCRIPT_XAML_MCP", xamlMcp ? "1" : "0");
+            if (target is not null && target is not ("desktop" or "console" or "webiis"))
+                throw new ArgumentException("--target must be desktop, console, or webiis.");
             if (target == "webiis" && embedAssets)
                 throw new ArgumentException("--embed-assets is supported for desktop executable compilation. Web and browser-WASM assets are packaged as application assets.");
 
-            var effectiveSecurityMode = securityMode ?? (debug ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
+            var effectiveSecurityMode = securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off);
             using var securityScope = ApplicationSecurityModeContext.Push(effectiveSecurityMode);
-            using var diagnosticMode = CompilerDiagnosticMode.Push(debug);
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug, info);
             using var publishLayoutScope = CompilePublishLayoutContext.Push(singleFile, selfContained);
             var timer = Stopwatch.StartNew();
             var sourceName = Path.GetFileName(sourcePath);
@@ -262,23 +302,29 @@ public static class XPScriptCompilerCommandLine
             var defaultExtension = runtimeIdentifier.StartsWith("win-", StringComparison.OrdinalIgnoreCase) ? ".exe" : "";
             outputPath ??= Path.Combine(Path.GetDirectoryName(sourcePath)!, fileName + defaultExtension);
 
-            if (UIFormAppAssets.UsesUIForm(sourcePath))
+            var usesUiFormAssets = UIFormAppAssets.UsesUIForm(sourcePath);
+            if (usesUiFormAssets)
                 UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
 
-            using var assetScope = UIFormAssetCompileContext.Push(embedAssets);
+            // UIForm applications use external assets by default. Only the
+            // explicit --embed-assets option switches to embedded materialization.
+            var effectiveEmbedAssets = embedAssets;
+            using var assetScope = UIFormAssetCompileContext.Push(effectiveEmbedAssets);
             using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
             using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
             var compiler = new CompilerDriver();
             var mode = $"single-file={singleFile.ToString().ToLowerInvariant()}, runtime={selfContained.ToString().ToLowerInvariant()}";
             var result = await WaitWithProgressAsync(
-                compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier),
+                compiler.CompileWithResultAsync(sourcePath, outputPath, selfContained, runtimeIdentifier, embedAssets),
                 timer,
                 $"Compiling {sourceName} [{runtimeIdentifier}, {mode}]").ConfigureAwait(false);
-            if (result.Success && !embedAssets && UIFormAppAssets.UsesUIForm(sourcePath))
+            if (result.Success && !effectiveEmbedAssets && usesUiFormAssets)
                 UIFormAppAssets.PublishExternalAssets(sourcePath, outputPath);
             CompleteProgress(result.Success
                 ? $"Compiled {sourceName} in {timer.Elapsed.TotalSeconds:F1}s"
                 : $"Compilation failed for {sourceName} after {timer.Elapsed.TotalSeconds:F1}s");
+            if (result.Success && (info || debug))
+                WriteArtifactSize(result.Output ?? outputPath);
             WriteResult(result, resultFormat);
             return result.Success ? 0 : 2;
         }
@@ -291,9 +337,327 @@ public static class XPScriptCompilerCommandLine
         }
     }
 
+    public static async Task<int> AstCompileAsync(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            Console.Error.WriteLine("ast-compile requires an .xps source file.");
+            return 1;
+        }
+
+        var sourcePath = Path.GetFullPath(args[0]);
+        var outputDirectory = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourcePath)!, "ast-output"));
+        string? target = null;
+        string? targetFramework = null;
+        var debug = false;
+        var info = false;
+        var resultFormat = "text";
+        string? runtimeIdentifier = null;
+        var selfContained = false;
+        var singleFile = true;
+        var singleFileSpecified = false;
+        var restricted = false;
+        ApplicationSecurityMode? securityMode = null;
+        var sourceRoots = new List<string>();
+        var sourcePreprocessors = new List<string>();
+        var embedAssets = false;
+        var xamlMcp = false;
+        // Match the legacy CLI contract: option names are case-insensitive while
+        // their values and paths retain their original spelling.
+        static bool Is(string value, string expected) => value.Equals(expected, StringComparison.OrdinalIgnoreCase);
+        for (var i = 1; i < args.Length; i++)
+        {
+            if ((Is(args[i], "-o") || Is(args[i], "--output")) && i + 1 < args.Length)
+                outputDirectory = Path.GetFullPath(args[++i]);
+            else if (Is(args[i], "--debug"))
+                debug = true;
+            else if (Is(args[i], "--info"))
+                info = true;
+            else if (Is(args[i], "--target") && i + 1 < args.Length)
+                target = args[++i].ToLowerInvariant();
+            else if (Is(args[i], "--target-framework") && i + 1 < args.Length)
+                targetFramework = args[++i];
+            else if ((Is(args[i], "--rid") || Is(args[i], "--platform")) && i + 1 < args.Length)
+                runtimeIdentifier = args[++i].ToLowerInvariant();
+            else if (args[i].StartsWith("--runtime=", StringComparison.OrdinalIgnoreCase))
+                selfContained = ParseBooleanCompileOption("--runtime", args[i]["--runtime=".Length..]);
+            else if (Is(args[i], "--runtime") && i + 1 < args.Length)
+                selfContained = ParseBooleanCompileOption("--runtime", args[++i]);
+            else if (args[i].StartsWith("--single-file=", StringComparison.OrdinalIgnoreCase))
+            {
+                singleFileSpecified = true;
+                singleFile = ParseBooleanCompileOption("--single-file", args[i]["--single-file=".Length..]);
+            }
+            else if (Is(args[i], "--single-file") && i + 1 < args.Length)
+            {
+                singleFileSpecified = true;
+                singleFile = ParseBooleanCompileOption("--single-file", args[++i]);
+            }
+            else if (args[i].StartsWith("--singlefile=", StringComparison.OrdinalIgnoreCase))
+            {
+                singleFileSpecified = true;
+                singleFile = ParseBooleanCompileOption("--singlefile", args[i]["--singlefile=".Length..]);
+            }
+            else if (Is(args[i], "--singlefile") && i + 1 < args.Length)
+            {
+                singleFileSpecified = true;
+                singleFile = ParseBooleanCompileOption("--singlefile", args[++i]);
+            }
+            else if (Is(args[i], "--restricted"))
+                restricted = true;
+            else if (args[i].StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
+                securityMode = ApplicationSecurityModeContext.Parse(args[i]["--security=".Length..]);
+            else if (Is(args[i], "--security") && i + 1 < args.Length)
+                securityMode = ApplicationSecurityModeContext.Parse(args[++i]);
+            else if (Is(args[i], "--source-root") && i + 1 < args.Length)
+            {
+                restricted = true;
+                sourceRoots.Add(Path.GetFullPath(args[++i]));
+            }
+            else if (Is(args[i], "--preprocessor") && i + 1 < args.Length)
+                sourcePreprocessors.Add(args[++i]);
+            else if (Is(args[i], "--embed-assets"))
+                embedAssets = true;
+            else if (Is(args[i], "--XAML_MCP"))
+                xamlMcp = true;
+            else if (Is(args[i], "--result-format") && i + 1 < args.Length)
+                resultFormat = args[++i].ToLowerInvariant();
+            else
+                throw new ArgumentException($"Unknown argument: {args[i]}");
+        }
+
+        try
+        {
+            targetFramework = DotNetVersionSelection.NormalizeTargetFramework(targetFramework);
+            _ = DotNetVersionSelection.SelectSdk(targetFramework);
+            Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", targetFramework);
+            Environment.SetEnvironmentVariable("XPSCRIPT_XAML_MCP", xamlMcp ? "1" : "0");
+            // Keep the established framework-dependent AST layout by default. When
+            // either publish switch explicitly requests a non-default layout, pass
+            // that choice into the generated-project backend.
+            if (resultFormat is not ("text" or "json" or "xml"))
+                throw new ArgumentException("--result-format must be text, json, or xml.");
+            if (target is not null && !target.Equals("desktop", StringComparison.OrdinalIgnoreCase) &&
+                !target.Equals("console", StringComparison.OrdinalIgnoreCase) &&
+                !target.Equals("webiis", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Unsupported AST target '{target}'. Supported AST targets are desktop, console, and webiis.");
+            }
+            if (runtimeIdentifier is not null && !CompilerDriver.SupportedRuntimes.Contains(runtimeIdentifier, StringComparer.OrdinalIgnoreCase))
+                throw new ArgumentException("Unsupported runtime identifier '" + runtimeIdentifier + "'.");
+            using var securityScope = ApplicationSecurityModeContext.Push(
+                securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off));
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug, info);
+            using var publishLayoutScope = selfContained || !singleFile || (singleFileSpecified && singleFile)
+                ? CompilePublishLayoutContext.Push(singleFile, selfContained)
+                : null;
+            if (string.Equals(target, "webiis", StringComparison.OrdinalIgnoreCase))
+            {
+                var package = await WebIisPackageTarget.BuildAsync(sourcePath, outputDirectory, selfContained, resultFormat).ConfigureAwait(false);
+                var webResult = package.WithOperation("ast-compile").WithContext(sourcePath, runtimeIdentifier);
+                if (resultFormat == "text")
+                    Console.WriteLine($"AST webiis package succeeded: {package.Output}");
+                else
+                    WriteResult(webResult, resultFormat);
+                return package.Success ? 0 : 2;
+            }
+            var assemblyPath = await AstCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier,
+                securityMode ?? ApplicationSecurityMode.Off, restricted, sourceRoots, sourcePreprocessors, embedAssets).ConfigureAwait(false);
+            var result = CompileResult.Ok(assemblyPath)
+                .WithOperation("ast-compile")
+                .WithContext(sourcePath, runtimeIdentifier);
+            if (resultFormat == "text")
+                Console.WriteLine($"AST compilation succeeded: {assemblyPath}");
+            else
+                WriteResult(result, resultFormat);
+            return 0;
+        }
+        catch (CompilerException ex)
+        {
+            if (resultFormat is "json" or "xml")
+            {
+                var result = CompileResult.Error(ex.GeneratedDiagnostics.Count > 0
+                    ? ex.GeneratedDiagnostics
+                    : [new CompileDiagnostic { Description = ex.Message }])
+                    .WithOperation("ast-compile")
+                    .WithContext(sourcePath, runtimeIdentifier);
+                WriteResult(result, resultFormat);
+                return 2;
+            }
+            if (ex.GeneratedDiagnostics.Count == 0)
+            {
+                var message = ex.Message;
+                var containsBackendDetail = message.Contains(".NET", StringComparison.OrdinalIgnoreCase) ||
+                    message.Contains("dotnet", StringComparison.OrdinalIgnoreCase) ||
+                    message.Contains("Roslyn", StringComparison.OrdinalIgnoreCase);
+                Console.Error.WriteLine(!debug && containsBackendDetail
+                    ? "Compilation failed. Run with --debug for technical diagnostics."
+                    : message);
+            }
+            else
+                foreach (var diagnostic in ex.GeneratedDiagnostics)
+                    Console.Error.WriteLine($"{diagnostic.File}:{diagnostic.Line}:{diagnostic.Position}: {diagnostic.DiagnosticCode}: {diagnostic.Description}");
+            return 2;
+        }
+        catch (Exception ex)
+        {
+            if (resultFormat is "json" or "xml")
+            {
+                var result = CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }])
+                    .WithOperation("ast-compile")
+                    .WithContext(sourcePath, runtimeIdentifier);
+                WriteResult(result, resultFormat);
+                return 1;
+            }
+            Console.Error.WriteLine(debug
+                ? ex.ToString()
+                : "Compilation failed. Run with --debug for technical diagnostics.");
+            return 1;
+        }
+    }
+
+    private static async Task<int> AstRunAsync(string[] args)
+    {
+        if (args.Length == 0)
+        {
+            Console.Error.WriteLine("ast-run requires an .xps source file.");
+            return 1;
+        }
+
+        string? sourceArgument = null;
+        var runtimeIdentifier = CompilerDriver.CurrentRuntimeIdentifier();
+        var debug = false;
+        var info = false;
+        var resultFormat = "text";
+        string? targetFramework = null;
+        var restricted = false;
+        var scriptArgs = new List<string>();
+        var sourceRoots = new List<string>();
+        var sourcePreprocessors = new List<string>();
+        ApplicationSecurityMode? securityMode = null;
+
+        try
+        {
+            for (var i = 0; i < args.Length; i++)
+            {
+                var value = args[i];
+                if (value.Equals("--args", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--Args requires one quoted argument string.");
+                    scriptArgs.AddRange(SplitRunArguments(args[i]));
+                }
+                else if (value.Equals("--debug", StringComparison.OrdinalIgnoreCase)) debug = true;
+                else if (value.Equals("--info", StringComparison.OrdinalIgnoreCase)) info = true;
+                else if (value.Equals("--target-framework", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--target-framework requires a .NET major version, for example 10 or 11.");
+                    targetFramework = args[i];
+                }
+                else if (value.Equals("--no-daemon", StringComparison.OrdinalIgnoreCase)) { }
+                else if (value.Equals("--result-format", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--result-format requires text, json, or xml.");
+                    resultFormat = args[i].ToLowerInvariant();
+                    if (resultFormat is not ("text" or "json" or "xml"))
+                        throw new ArgumentException("--result-format must be text, json, or xml.");
+                }
+                else if (value.Equals("--restricted", StringComparison.OrdinalIgnoreCase)) restricted = true;
+                else if (value.Equals("--rid", StringComparison.OrdinalIgnoreCase) || value.Equals("--platform", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException(value + " requires a runtime identifier.");
+                    runtimeIdentifier = args[i].ToLowerInvariant();
+                }
+                else if (value.StartsWith("--security=", StringComparison.OrdinalIgnoreCase))
+                    securityMode = ApplicationSecurityModeContext.Parse(value["--security=".Length..]);
+                else if (value.Equals("--security", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--security requires off, warn, or strict.");
+                    securityMode = ApplicationSecurityModeContext.Parse(args[i]);
+                }
+                else if (value.Equals("--source-root", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--source-root requires a directory path.");
+                    restricted = true;
+                    sourceRoots.Add(Path.GetFullPath(args[i]));
+                }
+                else if (value.Equals("--preprocessor", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length) throw new ArgumentException("--preprocessor requires a specification.");
+                    sourcePreprocessors.Add(args[i]);
+                }
+                else if (!value.StartsWith("--", StringComparison.Ordinal) && sourceArgument is null)
+                    sourceArgument = value;
+                else
+                    throw new ArgumentException("Unexpected ast-run argument: " + value);
+            }
+
+            if (sourceArgument is null) throw new ArgumentException("ast-run requires an .xps source file.");
+            var sourcePath = Path.GetFullPath(sourceArgument);
+            if (!File.Exists(sourcePath))
+            {
+                WriteResult(CompileResult.Error([new CompileDiagnostic { File = Path.GetFileName(sourcePath), Description = "Source file not found." }]).WithOperation("ast-run"), resultFormat);
+                return 2;
+            }
+            if (!Path.GetExtension(sourcePath).Equals(".xps", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("XPScript source files must use the .xps extension.");
+
+            targetFramework = DotNetVersionSelection.NormalizeTargetFramework(targetFramework);
+            _ = DotNetVersionSelection.SelectSdk(targetFramework);
+            DotNetVersionSelection.RequireRuntime(targetFramework);
+            Environment.SetEnvironmentVariable("XPSCRIPT_TARGET_FRAMEWORK", targetFramework);
+
+            var sourceDirectory = Path.GetDirectoryName(sourcePath) ?? Environment.CurrentDirectory;
+            if (UIFormAppAssets.UsesUIForm(sourcePath))
+                UIFormAppAssets.EnsureAssetsDirectory(sourcePath);
+            if (restricted && sourceRoots.Count == 0) sourceRoots.Add(sourceDirectory);
+            using var securityScope = ApplicationSecurityModeContext.Push(securityMode ?? ((info || debug) ? ApplicationSecurityMode.Warn : ApplicationSecurityMode.Off));
+            using var diagnosticMode = CompilerDiagnosticMode.Push(debug, info);
+            if (!runtimeIdentifier.Equals(CompilerDriver.CurrentRuntimeIdentifier(), StringComparison.OrdinalIgnoreCase))
+                throw new PlatformNotSupportedException("Direct AST execution can run only the current runtime target '" + CompilerDriver.CurrentRuntimeIdentifier() + "'.");
+
+            var outputDirectory = CompilerPathSecurity.CreateOwnedTemporaryDirectory("ast-run-");
+            var navigationPath = Path.Combine(outputDirectory, "navigation.json");
+            try
+            {
+                using var preprocessorScope = SourcePreprocessorConfigurationContext.Push(sourcePreprocessors);
+                using var includeScope = restricted ? IncludeSecurityContext.Push(sourceRoots) : null;
+                if (info) WriteProgress($"Started to compile {Path.GetFileName(sourcePath)}");
+                var assemblyPath = await AstCompiler.CompileAsync(sourcePath, outputDirectory, runtimeIdentifier,
+                    securityMode ?? ApplicationSecurityMode.Off, restricted, sourceRoots, sourcePreprocessors).ConfigureAwait(false);
+                if (info) WriteProgressLine($"Compiled {Path.GetFileName(sourcePath)}");
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = Path.GetExtension(assemblyPath).Equals(".dll", StringComparison.OrdinalIgnoreCase) ? CompilerToolResolver.ResolveDotnetHost() : assemblyPath,
+                    UseShellExecute = false,
+                    WorkingDirectory = sourceDirectory
+                };
+                startInfo.Environment["XPSCRIPT_NAVIGATION_FILE"] = navigationPath;
+                if (Path.GetExtension(assemblyPath).Equals(".dll", StringComparison.OrdinalIgnoreCase)) startInfo.ArgumentList.Add(assemblyPath);
+                foreach (var argument in scriptArgs) startInfo.ArgumentList.Add(argument);
+                using var process = Process.Start(startInfo) ?? throw new InvalidOperationException("Unable to start the AST-compiled XPScript program.");
+                await process.WaitForExitAsync().ConfigureAwait(false);
+                return process.ExitCode;
+            }
+            finally
+            {
+                try { Directory.Delete(outputDirectory, true); } catch { }
+            }
+        }
+        catch (Exception ex)
+        {
+            if (resultFormat is "json" or "xml")
+            {
+                WriteResult(CompileResult.Error([new CompileDiagnostic { Description = debug ? ex.ToString() : ex.Message }]).WithOperation("ast-run"), resultFormat);
+            }
+            else
+                Console.Error.WriteLine(debug ? ex : ex.Message);
+            return 1;
+        }
+    }
+
     public static async Task<int> ValidateAsync(string[] args)
     {
-        const int MaxStdinSourceChars = 1_048_576;
+        const int MaxStdinSourceChars = 16 * 1024 * 1024;
         var resultFormat = "text";
         var debug = false;
         string? stdinRoot = null;
@@ -306,15 +670,15 @@ public static class XPScriptCompilerCommandLine
 
             for (var i = 0; i < args.Length; i++)
             {
-                if (args[i] == "--stdin")
+                if (args[i].Equals("--stdin", StringComparison.OrdinalIgnoreCase))
                     continue;
-                if (args[i] == "--filename" && i + 1 < args.Length)
+                if (args[i].Equals("--filename", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                     virtualFileName = args[++i];
-                else if ((args[i] == "--rid" || args[i] == "--platform") && i + 1 < args.Length)
+                else if ((args[i].Equals("--rid", StringComparison.OrdinalIgnoreCase) || args[i].Equals("--platform", StringComparison.OrdinalIgnoreCase)) && i + 1 < args.Length)
                     runtimeIdentifier = args[++i].ToLowerInvariant();
-                else if (args[i] == "--result-format" && i + 1 < args.Length)
+                else if (args[i].Equals("--result-format", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                     resultFormat = args[++i].ToLowerInvariant();
-                else if (args[i] == "--debug")
+                else if (args[i].Equals("--debug", StringComparison.OrdinalIgnoreCase))
                     debug = true;
                 else if (!args[i].StartsWith("--", StringComparison.Ordinal) && sourceArgument is null)
                     sourceArgument = args[i];
@@ -424,24 +788,20 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--no-daemon")
+                if (value.Equals("--no-daemon", StringComparison.OrdinalIgnoreCase))
                 {
                     noDaemon = true;
                     continue;
                 }
 
-                if (value == "--info")
+                if (value.Equals("--info", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (debug)
-                        throw new ArgumentException("--info and --debug cannot be used together.");
                     info = true;
                     continue;
                 }
 
-                if (value == "--debug")
+                if (value.Equals("--debug", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (info)
-                        throw new ArgumentException("--info and --debug cannot be used together.");
                     debug = true;
                     continue;
                 }
@@ -452,7 +812,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--security")
+                if (value.Equals("--security", StringComparison.OrdinalIgnoreCase))
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--security requires off, warn, or strict.");
@@ -460,7 +820,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--rid" || value == "--platform")
+                if (value.Equals("--rid", StringComparison.OrdinalIgnoreCase) || value.Equals("--platform", StringComparison.OrdinalIgnoreCase))
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException(value + " requires a runtime identifier.");
@@ -468,7 +828,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--result-format")
+                if (value.Equals("--result-format", StringComparison.OrdinalIgnoreCase))
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--result-format requires text, json, or xml.");
@@ -478,13 +838,13 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--restricted")
+                if (value.Equals("--restricted", StringComparison.OrdinalIgnoreCase))
                 {
                     restricted = true;
                     continue;
                 }
 
-                if (value == "--source-root")
+                if (value.Equals("--source-root", StringComparison.OrdinalIgnoreCase))
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--source-root requires a directory path.");
@@ -493,7 +853,7 @@ public static class XPScriptCompilerCommandLine
                     continue;
                 }
 
-                if (value == "--preprocessor")
+                if (value.Equals("--preprocessor", StringComparison.OrdinalIgnoreCase))
                 {
                     if (i + 1 >= commandLineArgs.Length)
                         throw new ArgumentException("--preprocessor requires a specification.");
@@ -598,6 +958,7 @@ public static class XPScriptCompilerCommandLine
                         runOutputDirectory,
                         currentRuntimeIdentifier,
                         debug,
+                        info,
                         effectiveSecurityMode,
                         restricted,
                         sourceRoots,
@@ -636,6 +997,8 @@ public static class XPScriptCompilerCommandLine
 
             if (info)
                 WriteProgressLine("Starting program");
+            if (info || debug)
+                WriteArtifactSize(executablePath);
 
             // Framework-dependent run builds may return the managed assembly directly.
             // Launch DLL output through the resolved dotnet host; native apphost output remains
@@ -825,12 +1188,26 @@ public static class XPScriptCompilerCommandLine
         progressLineWidth = 0;
     }
 
+    private static int LegacyCompilerDisabled(string command)
+    {
+        Console.Error.WriteLine($"{command}: Legacy compilation is disabled. Use compile/ast-compile or run/ast-run.");
+        return 2;
+    }
+
     private static void WriteProgressLine(string message)
     {
         if (progressLineWidth > 0)
             CompleteProgress(message);
         else
             Console.Error.WriteLine(message);
+    }
+
+    private static void WriteArtifactSize(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return;
+        var bytes = new FileInfo(path).Length;
+        var mib = bytes / (1024d * 1024d);
+        WriteProgressLine($"Output: {path} ({mib:F2} MiB, {bytes:N0} bytes)");
     }
 
     public static void WriteHelp(string compileCommand = "xpscript compile", string runCommand = "xpscript run")
@@ -840,24 +1217,32 @@ XPScript Compiler and Runtime
 (c) xpagedeveloper.com 2026
 
 Usage:
-  {compileCommand} <source.xps> [-o output] [--target webiis] [--platform RID] [--single-file true|false] [--runtime true|false] [--embed-assets] [--result-format text|json|xml] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  {compileCommand} <source.xps> [-o output] [--target desktop|console|webiis] [--target-framework 10|11|...] [--platform RID] [--single-file true|false] [--runtime true|false] [--info] [--debug] [--embed-assets] [--result-format text|json|xml] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...]
+  xpscript legacy-compile|compilev1 <source.xps> (disabled; use compile/ast-compile)
   xpscript validate <source.xps> [--platform RID] [--result-format text|json|xml]
+  xpscript ast-run <source.xps> [--target-framework 10|11|...] [--platform RID] [--security=off|warn|strict] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
   xpscript mcp
   xpscript mcp install codex|claude [--scope user|project] [--force]
   {runCommand} <source.xps> [--info] [--security=off|warn|strict] [--platform RID] [--restricted] [--source-root DIR ...] [--preprocessor SPEC ...] [--Args "arg1 arg2 ..."]
+  xpscript legacy-run|runv1 <source.xps> (disabled; use run/ast-run)
 
 Supported runtime identifiers:
   win-x64, win-arm64, linux-x64, linux-arm64, osx-x64, osx-arm64
 
 Compiler targets:
+  desktop   Create a desktop executable (the default AST target).
+  console   Create a console executable.
   webiis    Create an IIS deployable ASP.NET Core application folder and ZIP package.
 
+The default compile and run commands use the AST compiler. Legacy compiler entry points are retained only as rejected compatibility aliases.
+
 If --platform/--rid is omitted, XPScript targets the current operating system and process architecture.
-Desktop compile defaults to --single-file=true and --runtime=false: application libraries are bundled into the executable, while .NET 10 must be installed on the target computer.
+If --target-framework is omitted, the highest installed .NET SDK major version (10 or higher) is selected, including its highest installed patch. For example, --target-framework 10 selects the highest installed 10.x SDK and emits net10.0.
+Desktop compile defaults to --single-file=true and --runtime=false: application libraries are bundled into the executable, while the selected .NET runtime must be installed on the target computer.
 --single-file=false publishes the executable and application libraries as separate files in the output directory.
---runtime=true includes the .NET 10 runtime; --runtime=false requires a compatible installed .NET 10 runtime.
-When --runtime=false and .NET 10 is missing, the native .NET apphost reports the missing framework and provides Microsoft's install/download link before managed application code starts.
-For --target webiis, --runtime=true creates a self-contained package and --runtime=false creates a .NET 10 Hosting Bundle dependent package.
+--runtime=true includes the selected .NET runtime; --runtime=false requires a compatible installed runtime for the selected target framework.
+When running a framework-dependent program, XPscript checks that the selected runtime major is installed and reports the required version before managed application code starts.
+For --target webiis, --runtime=true creates a self-contained package and --runtime=false creates a Hosting Bundle dependent package for the selected target framework.
 --embed-assets embeds a UIForm application's assets/ tree into a desktop executable. Embedded assets are materialized beside the executable at startup so existing assets/... paths continue to work.
 Without --embed-assets, UIForm assets are copied next to the compiled desktop executable.
 UIForm compile and run operations automatically create a sibling assets/ directory when it does not exist.
@@ -917,6 +1302,7 @@ The run command uses an in-process Roslyn fast path for eligible scripts, a fram
         string outputDirectory,
         string runtimeIdentifier,
         bool debug,
+        bool info,
         ApplicationSecurityMode securityMode,
         bool restricted,
         IReadOnlyList<string> sourceRoots,
@@ -927,6 +1313,7 @@ The run command uses an in-process Roslyn fast path for eligible scripts, a fram
             outputDirectory,
             runtimeIdentifier,
             debug,
+            info,
             securityMode,
             restricted,
             sourceRoots,

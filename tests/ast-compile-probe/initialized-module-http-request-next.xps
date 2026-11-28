@@ -1,0 +1,12 @@
+Public sharedRequest As XPHttpRequest = New XPHttpRequest()
+
+Sub Touch(ByRef value As XPHttpRequest)
+    Set value = New XPHttpRequest()
+    value.Method = "PATCH"
+End Sub
+
+Sub Main()
+    Call Touch(sharedRequest)
+    If sharedRequest Is Nothing Or sharedRequest.Method <> "PATCH" Then Error 6, "initialized HTTP request module ByRef storage failed"
+    Print "INITIALIZED_MODULE_HTTP_REQUEST_OK"
+End Sub

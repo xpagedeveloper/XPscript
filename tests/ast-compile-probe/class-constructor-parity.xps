@@ -1,0 +1,17 @@
+Class Record
+    Public Value As Long
+    Public Label As String
+    Public Sub New(ByVal value As Long, ByVal label As String)
+        Me.Value = value + 1
+        Me.Label = label
+    End Sub
+End Class
+Sub Main()
+    Dim first As New Record(4, "first")
+    Dim second As New Record(8, "second")
+    Print first.Value
+    Print first.Label
+    Print second.Value
+    Print second.Label
+    Print "CONSTRUCTOR_PARITY_OK"
+End Sub

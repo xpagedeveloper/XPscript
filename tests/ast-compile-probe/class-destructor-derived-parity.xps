@@ -1,0 +1,20 @@
+Class Root
+    Public Sub Delete()
+        Print "ROOT"
+    End Sub
+End Class
+Class Middle Extend Root
+    Public Sub Delete()
+        Print "MIDDLE"
+    End Sub
+End Class
+Class Leaf Extend Middle
+    Public Sub Delete()
+        Print "LEAF"
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Leaf
+    Delete item
+    If item Is Nothing Then Print "DERIVED_DESTRUCTOR_PARITY_OK"
+End Sub

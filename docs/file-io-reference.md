@@ -65,6 +65,8 @@ For broader compatibility notes, also see the repository [compatibility matrix](
 | `ReadBytes` | `ReadBytes(path)` | file path. | Returns the complete file as a Byte array. | [file-convenience.xps](../samples/file-convenience.xps) |
 | `WriteBytes` | `WriteBytes path, values` | path and Byte array/array-like value. | Replaces a file with the supplied bytes. | [file-convenience.xps](../samples/file-convenience.xps) |
 
+File-loading operations (`ReadFile`, `ReadLines`, `ReadBytes`, `FileHash`, `FileEquals`, `FileInfo`, and the source side of `CopyFile`/`MoveFile`) raise a runtime error when the required file does not exist. File-writing operations (`WriteFile`, `AppendFile`, `WriteLines`, `WriteBytes`, and the destination side of `CopyFile`/`MoveFile`) raise a runtime error when the destination directory does not exist; they do not create missing parent directories automatically.
+
 ### `GetFileAttr(fullPath)` attribute values
 
 `GetFileAttr` returns an integer bit mask. Test a specific attribute with a bitwise `And`, for example:

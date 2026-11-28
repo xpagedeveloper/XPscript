@@ -2,6 +2,22 @@
 
 XPScript includes a native `XPHttpClient` for outgoing HTTP and REST calls.
 
+## AST compilation
+
+User-class Get/Set properties can declare XPHttpClient, XPHttpRequest, XPHttpResponse, XPHttpPart, XPHttpFile, XPHttpPartCollection and XPHttpFileCollection, including scalar Optional/ByRef indexes. Getters retain their native types for chained calls and member access. Setters receive snapshot references, even when their incoming parameter is ByRef; object changes remain shared but replacing that parameter does not replace the caller's variable. Unassigned results start as Nothing. Properties neither clone nor automatically dispose clients: explicitly call Dispose when the shared client is no longer needed, and do not use any alias afterward. TLS, private-network and read-only-member guards are unchanged. The distinct static XPHttpPart/XPHttpFile names do not gain an implicit conversion; GetFile returns XPHttpPart, and an existing Variant runtime cast can bridge a value when an XPHttpFile declaration is needed. Object-valued indexes and automatic class destruction remain separate migration work.
+
+`http-reference-properties.xps` runs against the existing probe's isolated HTTP/TLS and multipart endpoints. `http-property-signature-only.xps` verifies all seven getter families without creating clients or making requests. Run `dotnet run --project tests/AstHttpRuntimeProbe -c Release -- . --accessors-only` for the focused accessor regression. The full probe runs this first, then preserves normal/AST HTTP/TLS parity and unused-runtime checks. The property fixture itself remains AST capability coverage: normal compilation still rejects its Optional wrapper with XPS1012.
+
+`XPHttpClient`, `XPHttpRequest`, `XPHttpResponse` and the response part/file types bind directly to the existing HTTP runtime in AST. Native metadata supplies real overloads, typed results and writable/read-only properties. ByVal shares a reference; ByRef can replace it. Dispose clients explicitly when finished. JSON/authentication helpers delegate to the shared helpers used by normal compilation, not a second implementation.
+
+The Notes HTTP compatibility request type is also available as `XPNotesHTTPRequest`. This XP-prefixed name is distinct from native `XPHttpRequest`; `NotesHTTPRequest` remains supported as the compatibility spelling. The two names use the same compatibility runtime.
+
+AST uses the same TLS validator as normal compilation: `CertificateValidation` defaults to `Strict`. `AllowSelfSigned` is an explicit opt-in and still rejects hostname mismatches and expired certificates; `Insecure` deliberately disables certificate checks and must not be used for untrusted endpoints. Private/local destinations remain blocked unless the client explicitly enables `AllowPrivateNetwork`. Header injection/framing, URL, timeout and body-size checks are unchanged. Fractional timeout values remain fractional.
+
+HTTP and TLS code is included only when HTTP objects are used; strings/comments do not activate it, and ordinary variables named `http` are not substituted with stubs. HTTP needs no external NuGet addon. `GetAsync`, `DeleteAsync`, `PostAsync`, `PutAsync`, `PatchAsync`, `LoadForm`, `SaveForm` and `PutForm` compile through the AST path and use the same native async/UIForm helper runtimes as normal compilation.
+
+`tests/AstHttpRuntimeProbe` compiles and executes the same fixture through AST and normal compilation against isolated local HTTP/TLS endpoints. It checks status/error responses, JSON, headers, request/reference semantics, redirects, private-network restrictions, body limits, timeouts, real certificate rejection and unused-runtime exclusion. This is permanent Language/Runtime FullTest coverage; MCP verifies matching compilation and mapped diagnostics.
+
 ## Basic requests
 
 ```xpscript

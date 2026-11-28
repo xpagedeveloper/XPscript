@@ -1,0 +1,163 @@
+Sub Main()
+    Dim form As New UIForm("Android UIForm Controls API")
+    Dim result As String
+
+    Dim progress As UIFormField
+    Set progress = form.AddProgressBar("progress", "Progress")
+    Print "ANDROID-CONTROL-PROGRESS-TYPE=" & progress.Type
+    Call Application.Debug.Info("ANDROID-CONTROL-PROGRESS-TYPE=" & progress.Type)
+    Dim activity As UIFormField
+    Set activity = form.AddActivityIndicator("activity", "Loading")
+    activity.IsRunning = True
+
+    Dim slider As UIFormField
+    Set slider = form.AddSlider("volume", "Volume")
+    slider.Value = 0.75
+    slider.Minimum = 0
+    slider.Maximum = 1
+    slider.Step = 0.05
+    form.SetSliderStep("volume", 0.05)
+
+    Dim toggle As UIFormField
+    Set toggle = form.AddSwitch("enabled", "Enabled")
+    Call form.SetFieldValue("enabled", True)
+    Dim icon As UIFormField
+    Set icon = form.AddIcon("status", "check", "Status")
+    Dim card As UIFormField
+    Set card = form.AddCard("summary", "Summary")
+    Dim panel As UIFormField
+    Set panel = form.AddPanel("details", "Details")
+    panel.Id = "details-panel"
+    Dim panelTitle As UIFormField
+    Set panelTitle = form.AddTextField("detailsTitle", "Details title")
+    Call panel.AddChild(panelTitle)
+    Dim scroll As UIFormField
+    Set scroll = form.AddScrollView("content", "Content")
+
+    Dim list As UIFormField
+    Set list = form.AddListView("items", "Items")
+    Call list.AddOption("First")
+    Call list.AddOption("Second")
+    Dim mode As UIFormField
+    Set mode = form.AddSelect("mode", "Mode")
+    mode.Id = "mode-select"
+    Call mode.AddOption("Standard")
+    Call mode.AddOption("Advanced")
+    Call form.RefreshForm()
+    mode.SelectedValue = "Advanced"
+    Call mode.Clear()
+    Call mode.ClearOptions()
+    Call mode.AddOption("Standard")
+    Call mode.AddOption("Advanced")
+    Dim layout As UIFormField
+    Set layout = form.AddRadioGroup("layout", "Layout")
+    Call layout.AddOption("Compact")
+    Call layout.AddOption("Spacious")
+    layout.SelectedValue = "Spacious"
+    Dim tags As UIFormField
+    Set tags = form.AddMultiSelect("tags", "Tags")
+    Call tags.AddOption("One")
+    Call tags.AddOption("Two")
+    Dim week As UIFormField
+    Set week = form.AddWeekField("week", "Week")
+    week.SelectedValue = "2026-W34"
+    Dim dateValue As UIFormField
+    Set dateValue = form.AddDateField("dateValue", "Date")
+    dateValue.SelectedValue = "2026-10-03"
+    Dim timeValue As UIFormField
+    Set timeValue = form.AddTimeField("timeValue", "Time")
+    timeValue.SelectedValue = "19:30"
+    Dim dateTimeValue As UIFormField
+    Set dateTimeValue = form.AddDateTimeField("dateTimeValue", "DateTime")
+    dateTimeValue.SelectedValue = "2026-10-03T19:30"
+    Dim monthValue As UIFormField
+    Set monthValue = form.AddMonthField("monthValue", "Month")
+    monthValue.SelectedValue = "2026-10"
+    Dim colorValue As UIFormField
+    Set colorValue = form.AddColorField("colorValue", "Color")
+    colorValue.SelectedValue = "#336699"
+    Dim notes As UIFormField
+    Set notes = form.AddTextArea("notes", "Notes")
+    Dim secret As UIFormField
+    Set secret = form.AddPasswordField("secret", "Password")
+    Dim quantity As UIFormField
+    Set quantity = form.AddNumberField("quantity", "Quantity")
+    quantity.SelectedValue = 3
+    Dim amount As UIFormField
+    Set amount = form.AddDecimalField("amount", "Amount")
+    amount.SelectedValue = 12.5
+    Dim price As UIFormField
+    Set price = form.AddCurrencyField("price", "Price", "SEK")
+    price.SelectedValue = 99.95
+
+    Dim localProduct As UIFormField
+    Set localProduct = form.AddAutoCompleteField("localProduct", "Local product", "https://invalid.local/autocomplete")
+    Call form.AddOption("localProduct", "Keyboard")
+    Call form.ClearOptions("localProduct")
+    Call localProduct.AddOption("Mouse")
+    Call form.SetAutoCompleteProvider("localProduct", "FindLocalProducts")
+
+    Dim map As UIFormField
+    Set map = form.AddMap("map", "Map")
+    map.Source = "https://www.openstreetmap.org/"
+    Dim document As UIFormField
+    Set document = form.AddDocumentViewer("document", "PDF", "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf")
+    Dim youtube As UIFormField
+    Set youtube = form.AddYouTube("youtube", "YouTube", "dQw4w9WgXcQ")
+    youtube.RunOnLoad = True
+
+    Dim optionsGrid As UIFormGrid
+    Set optionsGrid = form.AddGrid("options", 2)
+    Call form.SetFieldGrid("mode", "options")
+    Print "ANDROID-COMPONENT-ID=" & form.GetComponentById("mode-select").Id
+    Print "ANDROID-COMPONENT-TYPE=" & form.GetComponentById("mode-select").Type
+    Print "ANDROID-COMPONENT-PARENT=" & mode.Parent.Type
+    Print "ANDROID-COMPONENT-PARENT-PARENT=" & mode.Parent.Parent.Type
+    Print "ANDROID-COMPONENTS-BY-TYPE=" & UBound(form.GetComponentsByType("Select")) + 1
+
+    Dim camera As UIFormField
+    Set camera = form.AddCameraPreview("camera", "Camera")
+    Dim carousel As UIFormField
+    Set carousel = form.AddCarousel("slides", "assets/slide-1.png", "data:image/png;base64,iVBORw0KGgo=")
+    form.SetCarouselIndex("slides", 0)
+    form.SetCarouselLoop("slides", True)
+    form.SetCarouselAutoAdvance("slides", 3000)
+
+    Dim audio As UIFormField
+    Set audio = form.AddAudio("audio", "Audio")
+    audio.Source = "assets/intro.mp3"
+    audio.Position = 0
+    audio.Duration = 120
+    audio.Volume = 0.8
+    audio.AutoPlay = False
+    audio.Loop = False
+    audio.Muted = False
+    audio.PlaybackRate = 1
+    Call audio.Play()
+    Call audio.Pause()
+    Call form.PlayMedia("audio")
+    Call form.PauseMedia("audio")
+    Call form.StopMedia("audio")
+
+    Dim video As UIFormField
+    Set video = form.AddVideo("video", "Video")
+    video.Source = "assets/intro.mp4"
+    Call form.PlayMedia("video")
+    Call form.PauseMedia("video")
+    Call form.StopMedia("video")
+
+    Call Application.Debug.Info("ANDROID-UIFORM-CONTROLS-API=ready")
+    result = form.ShowDialog()
+    Print "ANDROID-UIFORM-CONTROLS-API=ready"
+End Sub
+
+Function FindLocalProducts(query As String) As XPJsonArray
+    Dim result As New XPJsonArray
+    If Len(query) = 0 Then
+        Call result.Add("Keyboard")
+        Call result.Add("Monitor")
+    Else
+        Call result.Add(query & " result")
+    End If
+    Set FindLocalProducts = result
+End Function

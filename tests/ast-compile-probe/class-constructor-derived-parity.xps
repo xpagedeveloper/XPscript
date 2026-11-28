@@ -1,0 +1,21 @@
+Class Root
+    Public Value As Long
+    Public Sub New(ByVal seed As Long)
+        Value = seed + 1
+        Print "root"
+    End Sub
+End Class
+Class Child Extend Root
+    Public Extra As Long
+    Public Sub New(ByVal seed As Long)
+        Call Parent.New(seed)
+        Extra = seed + 2
+        Print "child"
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Child(4)
+    Print item.Value
+    Print item.Extra
+    Print "DERIVED_CONSTRUCTOR_PARITY_OK"
+End Sub

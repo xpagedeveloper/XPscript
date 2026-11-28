@@ -1,0 +1,14 @@
+Class ReadOnlyBox
+    Public Property Get Value As Long
+        Value = 1
+    End Property
+End Class
+
+Sub Increment(ByRef value As Long)
+    value = value + 1
+End Sub
+
+Sub Main()
+    Dim box As New ReadOnlyBox
+    Call Increment(box.Value)
+End Sub

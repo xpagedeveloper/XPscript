@@ -10,11 +10,11 @@ internal static class ThirdPartyLicenseNoticeGenerator
 {
     public const string OutputFileName = "Third-party-license.txt";
 
-    public static string Generate(string workspace, bool includeDotNetRuntime)
+    public static string Generate(string workspace, bool includeDotNetRuntime, string? projectAssetsPath = null)
     {
         var builder = new StringBuilder();
         AppendXPScriptLicense(builder);
-        AppendNuGetLicenses(builder, workspace);
+        AppendNuGetLicenses(builder, workspace, projectAssetsPath);
         if (includeDotNetRuntime)
             AppendDotNetRuntimeNotices(builder);
         return builder.ToString().TrimEnd() + Environment.NewLine;
@@ -87,9 +87,9 @@ internal static class ThirdPartyLicenseNoticeGenerator
         }
     }
 
-    private static void AppendNuGetLicenses(StringBuilder builder, string workspace)
+    private static void AppendNuGetLicenses(StringBuilder builder, string workspace, string? projectAssetsPath)
     {
-        var assetsPath = Path.Combine(workspace, "obj", "project.assets.json");
+        var assetsPath = projectAssetsPath ?? Path.Combine(workspace, "obj", "project.assets.json");
         if (!File.Exists(assetsPath)) return;
 
         using var document = JsonDocument.Parse(File.ReadAllText(assetsPath));
@@ -315,6 +315,8 @@ internal static class ThirdPartyLicenseNoticeGenerator
 
     private static string StandardLicenseText(string expression)
     {
+        if (expression.Equals("Apache-2.0", StringComparison.OrdinalIgnoreCase))
+            return ReadEmbeddedText("XPScript.LICENSE", string.Empty);
         if (expression.Equals("MIT", StringComparison.OrdinalIgnoreCase))
             return """
 MIT License

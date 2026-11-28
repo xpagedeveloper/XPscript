@@ -1,0 +1,5 @@
+Option Declare
+
+Sub Main()
+    Print "UNUSED_UI_FAMILY=OK"
+End Sub

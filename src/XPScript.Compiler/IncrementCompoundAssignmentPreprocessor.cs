@@ -15,12 +15,16 @@ internal sealed class IncrementCompoundAssignmentPreprocessor
     public string Transform(string source)
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        var byteNames = lines.Select(line => Regex.Match(line, @"(?i)^\s*(?:Dim|Static)\s+(?<name>[A-Za-z_]\w*)\s+As\s+Byte\b"))
+            .Where(match => match.Success)
+            .Select(match => match.Groups["name"].Value)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < lines.Length; i++)
-            lines[i] = RewriteLine(lines[i]);
+            lines[i] = RewriteLine(lines[i], byteNames);
         return string.Join(Environment.NewLine, lines);
     }
 
-    private static string RewriteLine(string line)
+    private static string RewriteLine(string line, IReadOnlySet<string> byteNames)
     {
         var (code, comment) = SplitComment(line);
 
@@ -30,7 +34,8 @@ internal sealed class IncrementCompoundAssignmentPreprocessor
             var indent = postfix.Groups["indent"].Value;
             var name = postfix.Groups["name"].Value;
             var helper = postfix.Groups["op"].Value == "++" ? "Increment" : "Decrement";
-            return indent + name + " = XPScriptIncrementRuntime." + helper + "(" + name + ")" + comment;
+            var argument = byteNames.Contains(name) ? "CByte(" + name + ")" : name;
+            return indent + name + " = XPScriptIncrementRuntime." + helper + "(" + argument + ")" + comment;
         }
 
         var compound = Compound.Match(code);

@@ -1,0 +1,68 @@
+Sub Main()
+    Dim book As New XPSpreadsheet
+    Dim sheet As XPWorksheet
+    Set sheet = book.AddWorksheet("Data")
+    sheet.Cell("A1").Value = "name"
+    sheet.Cell(2, 1).Value = "Åsa"
+    sheet.Cell("B1").Value = "amount"
+    sheet.Cell("B2").Value = 12.5
+    sheet.Cell("C2").Formula = "=B2*2"
+    Dim area As XPRange
+    Set area = sheet.Range("A1:C2")
+    With area
+        .Bold = True
+        .BackgroundColor = "#FFFF00"
+        .FontColor = "blue"
+        .FontSize = 12.5
+        .FontName = "Arial"
+        .NumberFormat = "0.00"
+        .HorizontalAlignment = "center"
+        .VerticalAlignment = "top"
+        .WrapText = True
+        .BorderBottom = "thin"
+        .BorderColor = "black"
+        .ColumnWidth = 18.5
+        .RowHeight = 24.5
+    End With
+    Call sheet.AutoFilter("A1:C2")
+    If sheet.AutoFilterRange <> "A1:C2" Then Error 9980, "Filter lost"
+    Dim bytes As Variant
+    bytes = book.ToBytes()
+    Dim restored As New XPSpreadsheet
+    Call restored.FromBytes(bytes)
+    Set sheet = restored.Worksheet("Data")
+    If Not restored.CanUpdate Or Not restored.CreatedByXPScript Then Error 9981, "Workbook marker lost"
+    If restored.XPScriptFormatVersion <> 2 Then Error 9982, "Workbook version lost"
+    If sheet.Cell("A2").Text <> "Åsa" Then Error 9983, "Unicode lost"
+    If CDbl(sheet.Cell("B2").Value) <> 12.5 Then Error 9984, "Numeric value lost"
+    If sheet.Cell("C2").Formula <> "=B2*2" Then Error 9985, "Formula lost"
+    If sheet.Cell("A1").FontSize <> 12.5 Then Error 9986, "Fractional formatting lost"
+    If sheet.Range("A1:C2").ColumnWidth <> 18.5 Then Error 9987, "Column width lost"
+    If sheet.Range("A1:C2").RowHeight <> 24.5 Then Error 9988, "Row height lost"
+    If Not sheet.Cell("A1").Bold Or sheet.Cell("A1").BackgroundColor <> "#FFFF00" Then Error 9989, "Style lost"
+    Dim values As Variant
+    values = sheet.Range("A1:A2").Values
+    If values(1) <> "Åsa" Then Error 9990, "Range array lost"
+    If LBound(values) <> 0 Or UBound(values) <> 1 Then Error 9990, "Range array bounds lost"
+    Dim count As Long
+    ForAll entry In values
+        count = count + 1
+    End ForAll
+    If count <> 2 Then Error 9990, "Range array iteration lost"
+    Dim code As Long
+    On Error Resume Next
+    values = sheet.Range("A1:B2").Values
+    code = Err
+    On Error GoTo 0
+    If code = 0 Then Error 9991, "Multidimensional Values accepted"
+    Call restored.RenameWorksheet("Data", "Renamed")
+    If sheet.Name <> "Renamed" Then Error 9992, "Shared worksheet reference lost"
+    Call restored.AddWorksheet("Other")
+    Call restored.RemoveWorksheet("Other")
+    If restored.WorksheetCount <> 1 Then Error 9993, "Worksheet mutation lost"
+    Call restored.SaveAs("roundtrip.xlsx")
+    Dim reopened As New XPSpreadsheet("roundtrip.xlsx")
+    If reopened.Worksheet("Renamed").Cell("A2").Text <> "Åsa" Then Error 9994, "File roundtrip lost"
+    Call reopened.Close()
+    Print "SPREADSHEET_AST_OK"
+End Sub

@@ -17,22 +17,24 @@ var latest = ApplicationPackagePatchStore.SelectLatestCompatiblePatch(
     ["9.9.99", "10.0.11", "10.0.12", "10.0.14", "10.1.0", "11.0.0", "10.0.15-preview.1"]);
 Require(latest == "10.0.14", "latest compatible patch selection failed");
 
-var avaloniaGroup = ApplicationDependencyCatalog.FindPatchGroup("Avalonia.Controls.WebView");
-Require(avaloniaGroup is not null, "Avalonia WebView must belong to Avalonia patch group");
+var avaloniaGroup = ApplicationDependencyCatalog.FindPatchGroup("Avalonia");
+Require(avaloniaGroup is not null, "Avalonia desktop packages must belong to Avalonia patch group");
+Require(ApplicationDependencyCatalog.FindPatchGroup("Avalonia.Controls.WebView") is null,
+    "Avalonia WebView must remain outside the desktop patch group because it has an independent compatible version");
 var avaloniaPackages = ApplicationDependencyCatalog.GetPatchGroupPackages(avaloniaGroup!);
-Require(avaloniaPackages.Count == 4, "Avalonia patch group must contain four packages");
+Require(avaloniaPackages.Count == 3, "Avalonia patch group must contain the three desktop packages");
 
 var available = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.OrdinalIgnoreCase)
 {
-    ["Avalonia"] = ["12.0.3", "12.0.5", "12.0.7"],
-    ["Avalonia.Desktop"] = ["12.0.3", "12.0.5", "12.0.6"],
-    ["Avalonia.Themes.Fluent"] = ["12.0.3", "12.0.5", "12.1.0"],
-    ["Avalonia.Controls.WebView"] = ["12.0.1", "12.0.5", "12.0.8-preview.1"]
+    ["Avalonia"] = ["12.1.4", "12.1.5", "12.2.0"],
+    ["Avalonia.Desktop"] = ["12.1.4", "12.1.5", "12.2.0"],
+    ["Avalonia.Themes.Fluent"] = ["12.1.4", "12.1.5", "12.2.0"],
+    ["Avalonia.Controls.WebView"] = ["12.1.1", "12.1.3"]
 };
 var common = ApplicationPackagePatchStore.SelectLatestCommonCompatiblePatch(avaloniaPackages, available);
-Require(common == "12.0.5", "Avalonia group must select highest common stable 12.0.x version");
+Require(common == "12.1.5", "Avalonia group must select highest common stable 12.1.x version");
 
-available["Avalonia.Controls.WebView"] = ["12.0.1", "12.0.4"];
+available["Avalonia.Desktop"] = ["12.1.1", "12.1.3"];
 common = ApplicationPackagePatchStore.SelectLatestCommonCompatiblePatch(avaloniaPackages, available);
 Require(common is null, "group must not patch when no common compatible version exists");
 

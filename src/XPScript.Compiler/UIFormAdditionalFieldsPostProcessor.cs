@@ -10,7 +10,8 @@ internal sealed class UIFormAdditionalFieldsPostProcessor
     {
         ArgumentNullException.ThrowIfNull(generated);
         if (generated.Contains(Sentinel, StringComparison.Ordinal)) return generated;
-        if (!generated.Contains("internal sealed class XPScriptUIForm", StringComparison.Ordinal)) return generated;
+        if (!generated.Contains("internal sealed class XPScriptUIForm", StringComparison.Ordinal) &&
+            !generated.Contains("internal sealed partial class XPScriptUIForm", StringComparison.Ordinal)) return generated;
 
         generated = InjectFieldMetadata(generated);
         generated = InjectFormMethods(generated);
@@ -91,11 +92,12 @@ internal sealed class UIFormAdditionalFieldsPostProcessor
         field.DataSourceUrl = XPScriptUIAdditionalFieldRuntime.AbsoluteHttpUrl(url);
         field.ValueMember = XPScriptUIAdditionalFieldRuntime.MemberName(valueMember, "value member");
         field.LabelMember = XPScriptUIAdditionalFieldRuntime.MemberName(labelMember, "label member");
-        foreach (var option in XPScriptUIAdditionalFieldRuntime.LoadOptions(field.DataSourceUrl, field.ValueMember, field.LabelMember))
-        {
-            field.RemoteOptions.Add(option);
-            if (!field.Options.Contains(option.Value, StringComparer.Ordinal)) field.Options.Add(option.Value);
-        }
+        if (!OperatingSystem.IsBrowser())
+            foreach (var option in XPScriptUIAdditionalFieldRuntime.LoadOptions(field.DataSourceUrl, field.ValueMember, field.LabelMember))
+            {
+                field.RemoteOptions.Add(option);
+                if (!field.Options.Contains(option.Value, StringComparer.Ordinal)) field.Options.Add(option.Value);
+            }
         return field;
     }
 
@@ -215,7 +217,8 @@ internal sealed class UIFormAdditionalFieldsPostProcessor
                     html.Append("<input list=\"xps_list_").Append(name).Append("\" id=\"xps_").Append(name).Append("\" name=\"").Append(name).Append("\" value=\"").Append(value).Append("\"").Append(required).Append("><datalist id=\"xps_list_").Append(name).Append("\">"); foreach (var option in field.RemoteOptions) { html.Append("<option value=\"").Append(System.Net.WebUtility.HtmlEncode(option.Value)).Append("\" label=\"").Append(System.Net.WebUtility.HtmlEncode(option.Label)).Append("\"></option>"); } html.Append("</datalist>"); break;
 """;
         if (!generated.Contains(caseMarker, StringComparison.Ordinal)) throw new CompilerException("Unable to extend UIForm web renderer.");
-        generated = generated.Replace(caseMarker, cases + caseMarker, StringComparison.Ordinal);
+        if (!generated.Contains("case \"MultiSelect\":", StringComparison.Ordinal))
+            generated = generated.Replace(caseMarker, cases + caseMarker, StringComparison.Ordinal);
 
         const string returnMarker = "        html.Append(\"<button type=\\\"submit\\\" name=\\\"__xps_uiform_submit\\\" value=\\\"1\\\">OK</button></form>\");\n        return html.ToString();";
         const string returnReplacement = """
@@ -280,6 +283,11 @@ internal static class XPScriptUIAdditionalFieldRuntime
     public static IReadOnlyList<XPScriptUIRemoteOption> LoadOptions(string url, string valueMember, string labelMember)
     {
         using var http = new XPScriptHttpClient();
+        // UIForm lookup sources are application-configured endpoints. Allow
+        // trusted local/intranet lookup servers so desktop and WASM manual
+        // fixtures can exercise lookup controls without the generic HTTP
+        // client rejecting loopback addresses.
+        http.AllowPrivateNetwork = true;
         var response = http.Get(url);
         if (!response.IsSuccess) throw new XPScriptRuntimeException(5, "UIForm lookup data source returned HTTP " + response.StatusCode + ".");
         var document = XPScriptNativeJson.Parse(response.Body);

@@ -1,0 +1,16 @@
+Option Declare
+
+Sub Main()
+    Dim json As New XPJSONArray
+    Call json.AppendElement("Fredrik")
+    If json.Size <> 1 Then Error 4290
+    Dim element As XPJSONElement
+    Set element = json.GetFirstElement()
+    If CStr(element.Value) <> "Fredrik" Then Error 4291
+    Call json.AppendObject()
+    If json.GetNextElement() Is Nothing Then Error 4292
+    Dim copy As New XPJSONArray
+    Call copy.Copy(json)
+    If copy.Size <> 2 Then Error 4293
+    Print "AST_JSON_ARRAY_CANONICAL_OK"
+End Sub

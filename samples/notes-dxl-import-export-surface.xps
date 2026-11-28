@@ -8,6 +8,8 @@ Sub Main()
     Dim exporter As NotesDXLExporter
     Dim doc As NotesDocument
     Dim docs As NotesDocumentCollection
+    Dim notes As NotesNoteCollection
+    Dim exportLog As String
 
     Set session = New NotesSession()
     Set db = session.OpenDatabase("", "xpscript.nsf")
@@ -58,13 +60,23 @@ Sub Main()
 
     Set docs = db.Search("Form=\"XPScriptTest\"", 1)
     If docs.Count > 0 Then
-        Set doc = docs.GetDocument(0)
+        Set doc = docs.GetFirstDocument()
+        If doc Is Nothing Then Error 5, "DXL fixture has no document to export"
         Call exporter.ExportDocument(doc, "out/notes-dxl/document.dxl")
         Print exporter.Log
         Call doc.Recycle()
     End If
     Call exporter.ExportDocumentCollection(docs, "out/notes-dxl/documents.dxl")
     Print exporter.Log
+
+    Set notes = db.CreateNoteCollection(False)
+    Call notes.SelectAllDesignElements(True)
+    Call notes.BuildCollection()
+    Call exporter.Export(notes, "out/notes-dxl/note-collection.dxl")
+    exportLog = exporter.Log
+    If exporter.Log <> exportLog Then Error 5, "DXL export log changed between reads"
+    Call notes.Recycle()
+    Print "NOTES-DXL-EXPORT=PASS"
 
     Call docs.Recycle()
     Call exporter.Recycle()

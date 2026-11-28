@@ -1,0 +1,14 @@
+Public seed As Long = 12
+Public current As Box = New Box(seed)
+
+Class Box
+    Public Value As Long
+
+    Public Sub New(ByVal initial As Long)
+        Value = initial
+    End Sub
+End Class
+
+Sub Main()
+    Print CStr(current.Value)
+End Sub

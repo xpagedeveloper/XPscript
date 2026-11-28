@@ -144,7 +144,7 @@ This is the compact reference for XPScript language commands, functions, runtime
 | `Input` | `Input [prompt,] variable` | prompt, variable | Reads console input. | [textio-console.xps](../samples/textio-console.xps) |
 | `Pause` | `Pause [prompt]` | optional prompt | Waits for console input. | [textio-console.xps](../samples/textio-console.xps) |
 | `Environ` | `Environ(name)` | environment variable name | Reads an environment variable. | [file-io-extensions.xps](../samples/file-io-extensions.xps) |
-| `Sleep` | `Sleep milliseconds` | milliseconds | Suspends execution. | [runtime-sax.xps](../samples/runtime-sax.xps) |
+| `Sleep` | `Sleep milliseconds` | milliseconds | Suspends execution. | [native-xml-regression.xps](../samples/native-xml-regression.xps) |
 | `Platform` | `Platform()` | none | Returns the current platform name. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `Shell` | `Shell(command [, windowStyle])` | command, optional style | Starts an external process. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `ShellArgs` | `ShellArgs(executable, arguments [, windowStyle])` | executable, one-dimensional argument array/list, optional style | Starts a process without waiting; structured arguments avoid command-string re-parsing. | [shell-structured-arguments.xps](../samples/shell-structured-arguments.xps) |
@@ -215,8 +215,12 @@ This is the compact reference for XPScript language commands, functions, runtime
 
 | Command/option | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
-| Compile | `xpscriptc source.xps -o output` | source, output | Compiles an XPScript source file. | [hello.xps](../samples/hello.xps) |
-| Run | `xpscript run source.xps [--Args "arg1 arg2 ..."]` | source, optional explicit program arguments | Compiles and runs a source file. Only `--Args` values are forwarded to the generated program. | [hello.xps](../samples/hello.xps) |
+| Compile | `xpscript compile source.xps -o output` | source, output | Compiles an XPScript source file with the AST compiler. | [hello.xps](../samples/hello.xps) |
+| `ast-compile` | `xpscript ast-compile source.xps -o output` | source, output | Explicit AST spelling; equivalent to `compile`. | [hello.xps](../samples/hello.xps) |
+| `legacy-compile` / `compilev1` | `xpscript legacy-compile source.xps -o output` | source, output | Uses the legacy compiler for compatibility. | [hello.xps](../samples/hello.xps) |
+| Run | `xpscript run source.xps [--Args "arg1 arg2 ..."]` | source, optional explicit program arguments | Compiles with AST and runs a source file. Only `--Args` values are forwarded to the generated program. | [hello.xps](../samples/hello.xps) |
+| `ast-run` | `xpscript ast-run source.xps [--Args "arg1 arg2 ..."]` | source, optional explicit program arguments | Explicit AST spelling; equivalent to `run`. | [hello.xps](../samples/hello.xps) |
+| `legacy-run` / `runv1` | `xpscript legacy-run source.xps [--Args "arg1 arg2 ..."]` | source, optional explicit program arguments | Uses the legacy compiler/runtime path for compatibility. | [hello.xps](../samples/hello.xps) |
 | `--platform` / `--rid` | `--platform win-x64` or `--rid win-x64` | RID | Selects target operating system and architecture. | [platform-shell.xps](../samples/platform-shell.xps) |
 | `--runtime` | `--runtime=true|false` | boolean | Includes (`true`) or excludes (`false`, default) the .NET 10 runtime. | [hello.xps](../samples/hello.xps) |
 | `--single-file` | `--single-file=true|false` | boolean | Bundles application libraries into the executable when `true` (default); emits separate application files when `false`. | [hello.xps](../samples/hello.xps) |

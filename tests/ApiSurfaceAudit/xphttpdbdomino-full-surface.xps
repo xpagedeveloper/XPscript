@@ -1,0 +1,35 @@
+Option Declare
+
+Sub Main()
+    Dim db As New XPHttpDbDominoRest("http://127.0.0.1:18082", "token", "demo")
+    Dim data As New XPJsonObject
+    Dim doc As XPJsonDocument
+    Dim text As String
+    Dim timeout As Double
+    Dim cert As String
+
+    text = db.BaseUrl
+    text = db.DataSource
+    text = db.BearerToken
+    timeout = db.Timeout
+    cert = db.CertificateValidation
+    db.Timeout = 10
+    db.CertificateValidation = "strict"
+    db.AllowPrivateNetwork = True
+    Call db.SetBearerToken("token-2")
+    Call db.SetDataSource("demo2")
+    text = db.Login("user", "password")
+    Call data.Set("Form", "Customer")
+    Set doc = db.CreateDocument(data)
+    Set doc = db.GetDocument("0123456789ABCDEF0123456789ABCDEF")
+    Set doc = db.UpdateDocument("0123456789ABCDEF0123456789ABCDEF", data)
+    Set doc = db.PatchDocument("0123456789ABCDEF0123456789ABCDEF", data)
+    Set doc = db.ListViews()
+    Set doc = db.GetView("People")
+    Set doc = db.GetView("People", "count=10")
+    Set doc = db.Query("Form = 'Customer'")
+    Set doc = db.ListForms()
+    Call db.DeleteDocument("0123456789ABCDEF0123456789ABCDEF")
+    Call db.Logout()
+    Print "XPHTTPDBDOMINO_FULL_SURFACE=OK"
+End Sub

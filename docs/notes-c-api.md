@@ -2,6 +2,12 @@
 
 XPscript exposes a native HCL Notes/Domino object model backed by the Notes/Domino C API. The implementation does not use the Domino Java APIs, JNI, JNA, or JNX.
 
+Notes objects require the native Notes runtime and are server-side capabilities. They
+must not be executed directly in browser WebAssembly. Use them only in procedures
+marked `[ServerSide]`; the server companion executes those procedures. A core-only
+`NotesSession` declaration can compile without activating MIME or rich-text
+dependencies, but it does not make Notes execution available in the browser.
+
 The supported XPscript Notes classes are:
 
 - `NotesSession`
@@ -13,13 +19,23 @@ The supported XPscript Notes classes are:
 - `NotesRichTextItem`
 - `NotesName`
 - `NotesDateTime`
-- `NotesAgentResult`
+- `NotesAgent`
 
-Except for `NotesSession`, objects are created from another Notes object rather than with `New`. Every Notes object supports `Recycle()`, and every wrapper exposes `IsRecycled` while it is alive. Explicitly recycling a typed Notes variable also sets that XPscript variable to `Nothing`.
+Except for `NotesSession`, objects are created from another Notes object rather than with `New`. Every Notes object supports `Recycle()`, and every wrapper exposes `IsRecycled` while it is alive. Explicitly recycling a typed Notes variable sets that XPscript variable to `Nothing`, except for `NotesSession`; the session reference remains available so `session.IsRecycled` can be checked after recycling.
+
+Numeric Notes properties exposed as 32-bit integers accept XPscript numeric values through Variant references, including case-insensitive member names. Conversion is checked before invoking the setter, so overflow leaves the previous value intact. See `samples/notes-richtext-numeric-setters-runtime-test.xps`.
+
+`NotesStream.Open` resolves relative filenames against the application working directory captured before loading Notes, so Notes changing the process working directory does not redirect stream files into the Notes installation. Absolute filenames remain supported. See `samples/notes-stream-runtime-test.xps`.
 
 ## NotesSession
 
+DXL importer/exporter `Log` reads a native result-log copy using the MEMHANDLE memory API and releases that copy after conversion to a string. Reading `Log` repeatedly does not recycle the importer/exporter. DXL importer handles remain 32-bit MEMHANDLE values, including on 64-bit Windows.
+
+`database.GetModifiedDocuments(since, NotesConst.All)` selects all supported note classes (`32767`). Use `NotesConst.Data` for data documents, or omit the class argument for the data-document default. Zero is not a valid note-class mask. The executable regression is `samples/notes-modified-documents-runtime-test.xps`.
+
 Exactly one `NotesSession` may be active in a process. The first constructor argument is the directory containing the Notes/Domino native runtime. The second argument is an optional explicit `notes.ini`. The third optional argument is an ID password used during Notes initialization.
+
+`New NotesSession()` performs platform autodetection. On Windows it checks the HCL Notes installer key and then the HCL Domino installer key for `PROGDIR`. If registry access is unavailable, it also checks the standard `Program Files\HCL\Notes` and `Program Files\HCL\Domino` directories. A candidate is accepted only when `nnotes.dll` exists and `notes.ini` exists either beside it or in its `Data` subdirectory. The shared runtime then resolves `notes.ini` from an explicit value, `NOTESINI`, the program/current directory, or the registry `DATADIR`; its `Directory=` entry supplies `DataDir`. If no valid installation is found, the constructor returns `Nothing` rather than guessing a runtime path. Native Notes initialization still requires a usable local ID file and matching Notes configuration.
 
 ```xpscript
 Dim session As NotesSession
@@ -37,8 +53,10 @@ Set sessionWithIni = New NotesSession("C:\Program Files\HCL\Notes", "C:\NotesDat
 | `NotesIni` | String | read-only | Resolved `notes.ini` path, or an empty string when the default configuration is used. |
 | `Username` | String | read-only | Current Notes user name. |
 | `UserName` | String | read-only | Alias of `Username`. |
+| `EffectiveUserName` | String | read-only | Effective Notes user name for the active session; currently the native session user name. |
 | `CommonUsername` | String | read-only | Common-name form derived from the current Notes user name. |
 | `CommonUserName` | String | read-only | Alias of `CommonUsername`. |
+| `UserNameObject` | NotesName | read-only | A NotesName wrapper created from the active session user name. Recycle it when no longer needed. |
 | `NotesVersion` | String | read-only | Notes/Domino runtime version text. |
 | `NotesBuildVersion` | Long | read-only | Runtime build number. |
 | `IsRecycled` | Boolean | read-only | `True` after the session has been recycled. |
@@ -102,8 +120,7 @@ Set serverDb = session.OpenDatabase("CN=Domino01/O=Example", "apps\customers.nsf
 | `Search(formula, maxResults)` | `NotesDocumentCollection` or `Nothing` | Executes a formula search and limits results when `maxResults > 0`. |
 | `FTSearch(query)` | `NotesDocumentCollection` or `Nothing` | Runs a full-text search against the database. |
 | `FTSearch(query, maxResults)` | `NotesDocumentCollection` or `Nothing` | Runs a full-text search with a result limit. The database must have the required FT index for the query. |
-| `RunAgent(name)` | `NotesAgentResult` or `Nothing` | Runs an agent by name. |
-| `RunAgent(name, document)` | `NotesAgentResult` or `Nothing` | Runs an agent with a `NotesDocument` as document context. |
+| `GetAgent(name)` | `NotesAgent` or `Nothing` | Obtains an agent; use `Run()` or `RunWithDocumentContext(document)` to execute it. |
 | `Recycle()` | Void | Recycles owned views, documents, collections, agent results, and then closes the native database handle. |
 
 `FullTextSearch` was an earlier internal/public name. The supported XPscript API is `FTSearch`.
@@ -117,6 +134,8 @@ Dim view As NotesView
 Set view = db.OpenView("People")
 ```
 
+`NotesViewEntry.IsConflict` is `True` when the underlying document contains the native `$Conflict` marker. Category and total entries return `False`; the AST runtime reads the marker through the native Notes API.
+
 ### Properties
 
 | Property | Type | Access | Description |
@@ -129,9 +148,9 @@ Set view = db.OpenView("People")
 
 | Member | Return type | Description |
 | --- | --- | --- |
-| `GetFirstDocumentByKey(key)` | `NotesDocument` or `Nothing` | Finds the first matching document using an exact text-key match. A scalar key targets the first sorted text column. |
-| `GetFirstDocumentByKey(key, exactMatch)` | `NotesDocument` or `Nothing` | Finds the first document by text key and controls exact versus partial matching. |
-| `GetFirstDocumentByKey(keys, exactMatch)` | `NotesDocument` or `Nothing` | When `keys` is an XPScript array, matches the supplied keys against successive sorted view columns. Arrays containing numeric or `NotesDateTime` values use native `NIFFindByKey`; text-only arrays use the managed comparison path. |
+| `GetDocumentByKey(key)` | `NotesDocument` or `Nothing` | Finds the first matching document using a partial text-key match. A scalar key targets the first sorted text column. |
+| `GetDocumentByKey(key, exactMatch)` | `NotesDocument` or `Nothing` | Finds the first document by text key and controls exact versus partial matching. |
+| `GetDocumentByKey(keys, exactMatch)` | `NotesDocument` or `Nothing` | When `keys` is an XPScript array, matches the supplied keys against successive sorted view columns. Arrays containing numeric or `NotesDateTime` values use native `NIFFindByKey`; text-only arrays use the managed comparison path. |
 | `GetAllDocumentsByKey(key)` | `NotesDocumentCollection` | Returns all exact text-key matches. |
 | `GetAllDocumentsByKey(key, exactMatch)` | `NotesDocumentCollection` | Returns text-key matches and controls exact versus partial matching. |
 | `GetAllDocumentsByKey(keys, exactMatch)` | `NotesDocumentCollection` | When `keys` is an XPScript array, returns documents matching all supplied keys across successive sorted view columns. Arrays containing numeric or `NotesDateTime` values use native `NIFFindByKey`; text-only arrays use the managed comparison path. |
@@ -254,7 +273,7 @@ Item names used for creation and replacement cannot be empty. Indexed `GetItemVa
 
 ### Generic item values
 
-`ReplaceItemValue` and `NotesItem.Values` currently support scalar values and one-dimensional arrays of homogeneous text, numeric, or `NotesDateTime` values. Mixed arrays and unsupported value kinds raise runtime error 13. An empty or unallocated array writes an empty text value.
+`ReplaceItemValue` and `NotesItem.Values` currently support scalar values and one-dimensional arrays of homogeneous text, numeric, or `NotesDateTime` values. Both AST CLR arrays and legacy LSArray values use this contract, including nonzero lower bounds. Mixed arrays and unsupported value kinds raise runtime error 13. An empty or unallocated array writes an empty text value. See `samples/notes-item-array-runtime-test.xps` for executable coverage.
 
 Current numeric handling accepts XPscript/.NET numeric scalar types and writes list values as Notes number lists. Arrays passed to the setter must be one-dimensional.
 
@@ -471,25 +490,6 @@ Represents an agent design element returned by `NotesDatabase.GetAgent` or `Note
 | `Save()` | Void | Persists pending enabled/server-name changes or saves the current agent design state. |
 | `Remove()` | Void | Permanently deletes the agent design note when permitted. |
 
-## NotesAgentResult
-
-Returned by `NotesDatabase.RunAgent`.
-
-### Properties
-
-| Property | Type | Access | Description |
-| --- | --- | --- | --- |
-| `Success` | Boolean | read-only | Currently `True` for a successfully returned agent run result. Native execution failures raise an XPscript runtime error instead of returning a failed result object. |
-| `Status` | Integer | read-only | Currently `0` for a successfully returned agent run result. |
-| `Output` | String | read-only | Captured agent stdout/output text. |
-| `IsRecycled` | Boolean | read-only | `True` after the wrapper has been recycled. |
-
-### Methods
-
-| Member | Return type | Description |
-| --- | --- | --- |
-| `Recycle()` | Void | Invalidates the `NotesAgentResult` wrapper. |
-
 ## Object creation rules
 
 Only `NotesSession` is constructed with `New`.
@@ -503,7 +503,7 @@ These classes must be obtained from the owning Notes object:
 - `NotesItem` and `NotesRichTextItem` from `NotesDocument`
 - `NotesName` from `NotesSession.CreateName`
 - `NotesDateTime` from `NotesSession.CreateDateTime`, `CreateDateTimeNow`, document/item time access, or item metadata
-- `NotesAgentResult` from `NotesDatabase.RunAgent`
+- `NotesAgent` from `NotesDatabase.GetAgent`; read `ReturnMessage` for captured agent output after `Run()` or `RunWithDocumentContext(document)`.
 
 Attempting to use `New` with the other Notes classes is rejected by the compiler.
 

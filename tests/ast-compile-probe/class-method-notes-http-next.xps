@@ -1,0 +1,13 @@
+Option Declare
+
+Class NotesHttpMethods
+    Public Function Accept(ByVal request As NotesHTTPRequest) As Boolean
+        Accept = request Is Nothing
+    End Function
+End Class
+
+Sub Main()
+    Dim methods As New NotesHttpMethods
+    If Not methods.Accept(Nothing) Then Error 4266
+    Print "AST_NOTES_HTTP_CLASS_METHOD_OK"
+End Sub

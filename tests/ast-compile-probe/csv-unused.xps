@@ -1,0 +1,13 @@
+Sub Main()
+    Dim csv As String
+    Dim row As String
+    Dim copy As Long
+    csv = "XPCsvDocument CsvParse CsvEscape"
+    row = "ordinary row"
+    copy = 7
+    Rem XPCsvDocument and CsvParse are not used here.
+    ' New XPCsvDocument
+    Print csv
+    Print row
+    Print copy
+End Sub

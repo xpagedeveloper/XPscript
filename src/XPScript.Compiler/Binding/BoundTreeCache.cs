@@ -1,0 +1,108 @@
+using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace XPScript.Compiler.Binding;
+
+/// <summary>
+/// Process-local, opt-in cache for bound procedure trees.
+/// The complete expanded source is part of the key, so editing an Include
+/// invalidates every dependent procedure without a stale cross-file binding.
+/// </summary>
+public static class BoundTreeCache
+{
+    private static readonly Dictionary<string, IReadOnlyList<BoundStatement>> Entries = new(StringComparer.Ordinal);
+    private static readonly LinkedList<string> Lru = new();
+    private static readonly object Gate = new();
+    private static long _hits;
+    private static long _misses;
+
+    public static bool Enabled => !string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_AST_BOUND_CACHE"), "0", StringComparison.Ordinal);
+
+    public static long Hits => Interlocked.Read(ref _hits);
+    public static long Misses => Interlocked.Read(ref _misses);
+    public static int Count { get { lock (Gate) return Entries.Count; } }
+    public static int MaxEntries => ReadMaxEntries();
+
+    public static string CreateKey(string identity, string procedureSource, string dependencyFingerprint, string semanticContext, string signature, bool allowDynamicConversions)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+        ArgumentNullException.ThrowIfNull(procedureSource);
+        ArgumentNullException.ThrowIfNull(dependencyFingerprint);
+        ArgumentNullException.ThrowIfNull(semanticContext);
+        ArgumentNullException.ThrowIfNull(signature);
+        var payload = string.Join("\n", identity, signature, allowDynamicConversions ? "dynamic" : "strict", dependencyFingerprint, semanticContext, procedureSource);
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
+    }
+
+    public static string DependencyFingerprint(IEnumerable<string>? dependencyPaths, string? rootPath = null)
+    {
+        if (dependencyPaths is null) return string.Empty;
+        var root = rootPath is null ? null : Path.GetFullPath(rootPath);
+        var builder = new StringBuilder();
+        foreach (var path in dependencyPaths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
+        {
+            var fullPath = Path.GetFullPath(path);
+            if (root is not null && string.Equals(fullPath, root, StringComparison.OrdinalIgnoreCase)) continue;
+            builder.Append(fullPath).Append('\0');
+            builder.Append(File.Exists(fullPath) ? File.ReadAllText(fullPath) : "<missing>").Append('\0');
+        }
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
+    }
+
+    public static bool TryGet(string key, out IReadOnlyList<BoundStatement> tree)
+    {
+        if (!Enabled)
+        {
+            tree = [];
+            return false;
+        }
+
+        lock (Gate)
+        {
+            if (Entries.TryGetValue(key, out tree!))
+            {
+                Touch(key);
+                Interlocked.Increment(ref _hits);
+                return true;
+            }
+        }
+
+        Interlocked.Increment(ref _misses);
+        tree = [];
+        return false;
+    }
+
+    public static void Store(string key, IReadOnlyList<BoundStatement> tree)
+    {
+        if (Enabled)
+        {
+            lock (Gate)
+            {
+                Entries[key] = tree;
+                Touch(key);
+                while (Entries.Count > MaxEntries && Lru.Last is { } oldest)
+                {
+                    Entries.Remove(oldest.Value);
+                    Lru.RemoveLast();
+                }
+            }
+        }
+    }
+
+    public static void Clear()
+    {
+        lock (Gate) { Entries.Clear(); Lru.Clear(); }
+        Interlocked.Exchange(ref _hits, 0);
+        Interlocked.Exchange(ref _misses, 0);
+    }
+
+    private static void Touch(string key)
+    {
+        Lru.Remove(key);
+        Lru.AddFirst(key);
+    }
+
+    private static int ReadMaxEntries()
+        => int.TryParse(Environment.GetEnvironmentVariable("XPSCRIPT_AST_CACHE_MAX_ENTRIES"), out var value) && value > 0 ? value : 256;
+}

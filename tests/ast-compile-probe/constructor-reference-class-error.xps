@@ -1,0 +1,12 @@
+Class Box
+End Class
+Class Other
+End Class
+Class Record
+    Public Sub New(ByVal value As Box)
+    End Sub
+End Class
+Sub Main()
+    Dim value As New Other
+    Dim item As New Record(value)
+End Sub

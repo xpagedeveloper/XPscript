@@ -55,7 +55,7 @@ internal sealed class XPScriptNotesStream : XPScriptNotesObject
         _readOnly = mode.Equals("readonly", StringComparison.OrdinalIgnoreCase) || mode.Equals("read", StringComparison.OrdinalIgnoreCase);
         try
         {
-            var fullPath = Path.GetFullPath(path);
+            var fullPath = Path.GetFullPath(path, Session.Api.ApplicationDirectory);
             if (!_readOnly)
             {
                 var directory = Path.GetDirectoryName(fullPath);

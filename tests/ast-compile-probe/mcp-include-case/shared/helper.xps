@@ -1,0 +1,5 @@
+Include "bare-helper.xps"
+
+Function IncludedValue() As Integer
+    Return BareHelperValue()
+End Function

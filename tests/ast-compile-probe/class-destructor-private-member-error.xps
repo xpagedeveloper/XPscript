@@ -1,0 +1,10 @@
+Class Root
+    Private secret As Long
+End Class
+Class Child Extend Root
+    Public Sub Delete()
+        Print Me.secret
+    End Sub
+End Class
+Sub Main()
+End Sub

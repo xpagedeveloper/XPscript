@@ -23,6 +23,19 @@ Sub Main()
 End Sub
 """, "Notes runtime state", "ReadServerName", "Client");
 
+            VerifyRejected(root, "unannotated-xpnotes-http.xps", """
+[Platform:browser-wasm]
+
+Function ReadServerValue() As String
+    Dim request As New XPNotesHTTPRequest
+    ReadServerValue = "server"
+End Function
+
+Sub Main()
+    Print ReadServerValue()
+End Sub
+""", "Notes runtime state", "ReadServerValue", "Client");
+
             VerifyRejected(root, "module-notes.xps", """
 [Platform:browser-wasm]
 
@@ -32,6 +45,21 @@ Sub Main()
     Print "browser"
 End Sub
 """, "module-level state", "Notes", "Module");
+
+            VerifyStructuredRejected(root, "class-method-notes.xps", """
+[Platform:browser-wasm]
+
+Class Customer
+    Public Function ReadServerName() As String
+        Dim session As New NotesSession
+        ReadServerName = session.ServerName
+    End Function
+End Class
+
+Sub Main()
+    Print "browser"
+End Sub
+""", "ReadServerName", "ClassMethod", "XPS3002", "execution-context");
 
             VerifyRejected(root, "invalid-spinner-delay.xps", """
 [Platform:browser-wasm]
@@ -108,6 +136,37 @@ End Function
 
 Sub Main()
     Print ReadServerName()
+End Sub
+""");
+
+            VerifyAccepted(root, "server-side-xpnotes-http.xps", """
+[Platform:browser-wasm]
+
+[ServerSide]
+Function ReadServerValue() As String
+    Dim request As New XPNotesHTTPRequest
+    ReadServerValue = "server"
+End Function
+
+Sub Main()
+    Print ReadServerValue()
+End Sub
+""");
+
+            VerifyAccepted(root, "server-side-json-compatibility-constructors.xps", """
+[Platform:browser-wasm]
+
+[ServerSide]
+Function ReadServerValue() As String
+    Dim navigator As New XPJSONNavigator("{""name"":""server""}")
+    Dim jsonObject As New XPJSONObject
+    Dim jsonArray As New XPJSONArray
+    Dim jsonElement As New XPJSONElement("name", "server")
+    ReadServerValue = "server"
+End Function
+
+Sub Main()
+    Print ReadServerValue()
 End Sub
 """);
         }
@@ -188,7 +247,10 @@ End Sub
     {
         var path = Path.Combine(root, fileName);
         File.WriteAllText(path, source);
-        var unit = new XpsWebCompiler().CompileAsync(path, root).GetAwaiter().GetResult();
-        unit.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        var options = BrowserWasmServerSideMetadata.ReadAnnotatedProcedureOptions(source);
+        var annotated = BrowserWasmServerSideMetadata.ReadAnnotatedProcedures(source);
+        var planningSource = BrowserWasmServerSideMetadata.InjectPlanningMarkers(source, annotated);
+        var plan = BrowserWasmServerBridgePlan.Create(planningSource, path, options);
+        BrowserWasmServerSideMetadata.ValidateExplicitBoundary(plan, annotated);
     }
 }

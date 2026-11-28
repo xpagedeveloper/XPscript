@@ -1,0 +1,14 @@
+Class BaseCalc
+    Public Function Compute(ByVal value As Integer) As String
+        Compute = CStr(value)
+    End Function
+End Class
+
+Class ChildCalc Extend BaseCalc
+    Public Function Compute(ByVal value As String) As String
+        Compute = value
+    End Function
+End Class
+
+Sub Main()
+End Sub

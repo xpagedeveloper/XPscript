@@ -1,0 +1,12 @@
+Public sharedClient As XPHttpClient = New XPHttpClient()
+
+Sub Touch(ByRef value As XPHttpClient)
+    Set value = New XPHttpClient()
+End Sub
+
+Sub Main()
+    Call Touch(sharedClient)
+    If sharedClient Is Nothing Then Error 6, "initialized HTTP module ByRef storage failed"
+    Call sharedClient.Dispose()
+    Print "INITIALIZED_MODULE_HTTP_BYREF_OK"
+End Sub

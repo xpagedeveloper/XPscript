@@ -4,11 +4,11 @@ internal static class XpsScaffolder
     {
         ArgumentNullException.ThrowIfNull(args);
         if (args.Length != 2)
-            throw new ArgumentException("Usage: xpscript new <rest|web|desktop|cli> <directory|file.xps>. The target is required; use '.' for the current directory.");
+            throw new ArgumentException("Usage: xpscript new <rest|web|desktop|cli|android> <directory|file.xps>. The target is required; use '.' for the current directory.");
 
         var kind = args[0].Trim().ToLowerInvariant();
-        if (kind is not ("rest" or "web" or "desktop" or "cli"))
-            throw new ArgumentException("Project type must be rest, web, desktop or cli.");
+        if (kind is not ("rest" or "web" or "desktop" or "cli" or "android"))
+            throw new ArgumentException("Project type must be rest, web, desktop, cli or android.");
 
         var suppliedTarget = args[1].Trim();
         if (suppliedTarget.Length == 0)
@@ -35,12 +35,20 @@ internal static class XpsScaffolder
             "web" => (WebTemplate, $"xpscript web {QuoteForDisplay(targetDirectory)}"),
             "desktop" => (DesktopTemplate, $"xpscript run {QuoteForDisplay(outputPath)}"),
             "cli" => (CliTemplate, $"xpscript run {QuoteForDisplay(outputPath)} --Args \"argument1 argument2\""),
+            "android" => (AndroidTemplate, $"xpscript android run {QuoteForDisplay(outputPath)}"),
             _ => throw new InvalidOperationException("Unsupported scaffold type.")
         };
         if (File.Exists(outputPath))
             throw new IOException("Refusing to overwrite existing file: " + outputPath);
 
         File.WriteAllText(outputPath, content);
+        if (kind == "android")
+        {
+            var metadataPath = Path.Combine(targetDirectory, "xpscript.json");
+            if (File.Exists(metadataPath))
+                throw new IOException("Refusing to overwrite existing file: " + metadataPath);
+            File.WriteAllText(metadataPath, "{\r\n  \"target\": \"android\",\r\n  \"applicationType\": \"headless\"\r\n}\r\n");
+        }
 
         Console.WriteLine($"Created {kind} scaffold: {outputPath}");
         Console.WriteLine();
@@ -102,6 +110,14 @@ Sub Main()
 
     result = form.ShowDialog()
     Print "RESULT=" & result
+End Sub
+""";
+
+    private const string AndroidTemplate = """
+Option Declare
+
+Sub Main()
+    Print "Hello from XPScript on Android"
 End Sub
 """;
 }

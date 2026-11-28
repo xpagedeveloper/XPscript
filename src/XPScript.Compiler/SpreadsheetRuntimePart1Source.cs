@@ -119,6 +119,7 @@ internal sealed class XPScriptSpreadsheet
 
     public void Save()
     {
+        EnsureFileAccess();
         if (string.IsNullOrEmpty(_path)) throw new InvalidOperationException("XPSpreadsheet.Save requires a filename. Use SaveAs(\"file.xlsx\") first.");
         EnsureCanUpdate();
         WriteFile(_path, false);
@@ -208,11 +209,18 @@ internal sealed class XPScriptSpreadsheet
 
     private static string ResolveXlsxPath(object? filename)
     {
+        EnsureFileAccess();
         var raw = XPScriptRuntime.CStr(filename).Trim();
         if (string.IsNullOrEmpty(raw)) throw new InvalidOperationException("XPSpreadsheet requires a .xlsx filename.");
         if (!System.IO.Path.GetExtension(raw).Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("XPSpreadsheet supports only .xlsx files. Other spreadsheet formats are not supported by this basic implementation.");
         return XPScriptFileSystemRuntime.ResolvePath(raw);
+    }
+
+    private static void EnsureFileAccess()
+    {
+        if (System.OperatingSystem.IsBrowser())
+            throw new InvalidOperationException("XPSpreadsheet file operations are not available in browser-wasm.");
     }
 
     private static byte[] RequireBytes(object? value)

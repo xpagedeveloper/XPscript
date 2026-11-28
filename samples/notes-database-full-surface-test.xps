@@ -257,7 +257,7 @@ Function TestChangedDatabaseSurface(ByVal session As NotesSession, ByVal db As N
 
     Set since = session.CreateDateTimeNow()
     Call since.AdjustDay(-1)
-    Set modifiedDocs = db.GetModifiedDocuments(since, 0)
+    Set modifiedDocs = db.GetModifiedDocuments(since, NotesConst.All)
     If modifiedDocs Is Nothing Then
         failures = failures + 1
     Else

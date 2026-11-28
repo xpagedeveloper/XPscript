@@ -1,0 +1,34 @@
+Option Declare
+
+Sub Main()
+    Dim form As New UIForm("Container layout properties")
+    Dim grid As Variant
+    Dim tabs As Variant
+    Dim mainTab As Variant
+    Set grid = form.AddGrid("content", 2)
+    Set tabs = form.AddTabContainer("mainTabs")
+    Set mainTab = tabs.AddTab("main", "Main")
+    mainTab.Background = "#E8F0FF"
+    mainTab.FontColor = "#111111"
+    mainTab.Font = "Arial"
+    mainTab.FontSize = 14
+    mainTab.Bold = True
+    mainTab.SelectedBackground = "#3366CC"
+    mainTab.SelectedFontColor = "#FFFFFF"
+    mainTab.SelectedFontSize = 16
+    mainTab.SelectedBold = True
+    Call tabs.AddTab("details", "Details")
+    tabs.TabPlacement = "Bottom"
+    Call tabs.SetVisibleTab("details")
+    grid.Width = 480
+    grid.Height = 240
+    grid.Margin = 8
+    grid.Padding = 12
+    grid.HorizontalAlignment = "Stretch"
+    grid.VerticalAlignment = "Top"
+    grid.Background = "#FFFFFF"
+    grid.Border = "#CCCCCC"
+    Print "UI_CONTAINER_LAYOUT_PROPERTIES_OK"
+    Print "VISIBLE_TAB=" & tabs.VisibleTab
+        Print "TAB_PLACEMENT=" & tabs.TabPlacement
+End Sub

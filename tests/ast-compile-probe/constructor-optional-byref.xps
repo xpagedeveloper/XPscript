@@ -1,0 +1,12 @@
+Class Record
+    Public Sub New(Optional value As Long = 1)
+        value = value + 1
+    End Sub
+End Class
+Sub Main()
+    Dim value As Long = 4
+    Dim omitted As New Record()
+    Dim supplied As New Record(value)
+    If value <> 5 Then Error 6, "implicit Optional ByRef lost"
+    Print "CONSTRUCTOR_OPTIONAL_BYREF_OK"
+End Sub

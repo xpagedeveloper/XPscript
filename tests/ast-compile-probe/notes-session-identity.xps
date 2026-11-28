@@ -1,0 +1,12 @@
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim name As NotesName
+    Set session = New NotesSession()
+    Print session.EffectiveUserName
+    Set name = session.UserNameObject
+    If name Is Nothing Then Error 5, "NotesSession.UserNameObject returned Nothing"
+    Call name.Recycle()
+    Call session.Recycle()
+End Sub

@@ -43,11 +43,12 @@ internal sealed class UIExtensionDesktopPostProcessor
         @"(?ms)^    public string ShowDialog\(\)\r?\n    \{\r?\n        if \(!XPScriptUIWebAdapter\.IsAvailable\).*?^    \}\r?\n\r?\n(?=    private XPScriptUIField AddField)",
         RegexOptions.CultureInvariant);
 
-    private static readonly string[] DialogFunctions = ["ShowDialog", "LoadFileDialog", "OpenFileDialog", "SaveFileDialog"];
+    private static readonly string[] DialogFunctions = ["ShowDialog", "LoadFileDialog", "OpenFileDialog", "SaveFileDialog", "ShowToast"];
 
     private const string Replacement = """
     public string ShowDialog()
     {
+        XPScriptUI.Activate(this);
         _modal = true;
         _visible = true;
         if (XPScriptUIWebAdapter.IsAvailable)
@@ -66,11 +67,13 @@ internal sealed class UIExtensionDesktopPostProcessor
             return "Pending";
         }
 
-        if (!XPScriptUIDesktopAdapter.IsAvailable)
-            throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured desktop UI backend or an active XPScript web request.");
-        var result = XPScriptUIDesktopAdapter.ShowDialog(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);
-        _visible = false;
-        return result;
+        try
+        {
+            if (!XPScriptUIDesktopAdapter.IsAvailable)
+                throw new XPScriptRuntimeException(5, "UIForm.ShowDialog requires a configured UI backend or an active XPScript web request.");
+            return XPScriptUIDesktopAdapter.ShowDialog(this, _fields, _data, ApplyDesktopValue, ApplyDesktopValues);
+        }
+        finally { _visible = false; }
     }
 
     private void ApplyDesktopValue(XPScriptUIField field, string submitted)
@@ -85,7 +88,15 @@ internal sealed class UIExtensionDesktopPostProcessor
 
 """;
 
-    public string Transform(string generated)
+    internal static string InstallModalBridge(string generated)
+    {
+        var replaced = ShowDialogPattern.Replace(generated, Replacement, 1);
+        if (string.Equals(replaced, generated, StringComparison.Ordinal))
+            throw new CompilerException("Unable to install the UIForm modal runtime bridge into generated code.");
+        return replaced;
+    }
+
+    public string Transform(string generated, bool browserWasm = false, bool browserWasmServer = false)
     {
         ArgumentNullException.ThrowIfNull(generated);
 
@@ -116,18 +127,33 @@ internal sealed class UIExtensionDesktopPostProcessor
 
         var needsListView = NeedsListView(generated);
 
-        var replaced = ShowDialogPattern.Replace(generated, Replacement, 1);
-        if (ReferenceEquals(replaced, generated) || string.Equals(replaced, generated, StringComparison.Ordinal))
-            throw new CompilerException("Unable to install the desktop UIForm runtime bridge into generated code.");
+        var replaced = generated.Contains("public string ShowDialog()", StringComparison.Ordinal)
+            ? InstallModalBridge(generated)
+            : generated;
 
         replaced = RewriteDialogCalls(replaced);
         replaced = replaced
             + "\n" + UIExtensionDesktopRuntimeSource.Code
-            + "\n" + UIDialogRuntimeSource.Code
+            + "\n" + (generated.Contains("class XPScriptUIDialogRuntime", StringComparison.Ordinal) ? string.Empty : UIDialogRuntimeSource.Code)
             + "\n" + UIListViewRuntimeSource.Code
             + "\n";
 
         replaced = NormalizeLineEndings(replaced);
+        if (!replaced.Contains("class XPScriptUIForm", StringComparison.Ordinal))
+            return replaced;
+
+        // Browser/WASM has a dedicated JavaScript/component renderer. The
+        // desktop post-processors below splice methods into the retired
+        // desktop renderer and are not valid against the browser runtime's
+        // component model.
+        if (browserWasm)
+        {
+            // Browser-WASM uses the JavaScript renderer, but it still needs
+            // the generated event dispatcher so a browser callback can invoke
+            // local XPscript code and then cross a [ServerSide] boundary.
+            return HardenWebBridgeLookup(replaced);
+        }
+
         replaced = new UIFormWindowLifecyclePostProcessor().Transform(replaced);
         replaced = new UIFormLayoutReactivePostProcessor().Transform(replaced);
         replaced = new UIFormActionModelPostProcessor().Transform(replaced);
@@ -157,7 +183,8 @@ internal sealed class UIExtensionDesktopPostProcessor
         replaced = new UIFormAdditionalFieldsPostProcessor().Transform(replaced);
         replaced = new UIFormAdditionalFieldFixupPostProcessor().Transform(replaced);
         replaced = new ApplicationUiMetadataPostProcessor().Transform(replaced);
-        replaced = new UIFormWebWindowLifecyclePostProcessor().Transform(replaced);
+        if (!browserWasmServer)
+            replaced = new UIFormWebWindowLifecyclePostProcessor().Transform(replaced);
         replaced = NormalizeAccessibilityRequestMarkers(replaced);
         replaced = new UIFormAccessibilityPostProcessor().Transform(replaced);
         return HardenWebBridgeLookup(replaced);
@@ -192,7 +219,8 @@ internal sealed class UIExtensionDesktopPostProcessor
         var runtimeIndex = generated.IndexOf(BaseUiRuntimeSentinel, StringComparison.Ordinal);
         var scriptPart = runtimeIndex >= 0 ? generated[..runtimeIndex] : generated;
 
-        if (scriptPart.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
+        if (generated.Contains("XPScriptUI.CreateForm(", StringComparison.Ordinal) ||
+            generated.Contains("new XPScriptUIForm(", StringComparison.Ordinal) ||
             scriptPart.Contains("XPScriptUIList.CreateListView(", StringComparison.Ordinal) ||
             scriptPart.Contains(RuntimeMsgBoxCall, StringComparison.Ordinal))
             return true;

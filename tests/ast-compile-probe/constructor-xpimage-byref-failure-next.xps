@@ -1,0 +1,30 @@
+Public fail As Boolean
+
+Class Holder
+    Public Picture As XPImage
+
+    Public Sub New(ByRef value As XPImage)
+        Set Picture = value
+        If fail Then Error 4982, "ByRef XPImage constructor failed"
+    End Sub
+End Class
+
+Sub Main()
+    Dim source As New XPImage(7, 4)
+    Dim item As New Holder(source)
+    If item.Picture Is Nothing Or item.Picture.Width <> 7 Then Error 6, "initial ByRef XPImage setup failed"
+
+    fail = True
+    Dim replacement As Holder
+    Dim failure As Long
+    On Error Resume Next
+    Set replacement = New Holder(source)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4982 Then Error 6, "ByRef XPImage failure was not raised"
+    If Not (replacement Is Nothing) Then Error 6, "failed ByRef XPImage assignment retained an object"
+    If item Is Nothing Or item.Picture Is Nothing Or item.Picture.Width <> 7 Then Error 6, "failed ByRef construction changed the existing target"
+    If source Is Nothing Or source.Width <> 7 Then Error 6, "failed ByRef construction changed the caller image"
+    Call source.Recycle()
+    Print "XPIMAGE_BYREF_CONSTRUCTOR_FAILURE_OK"
+End Sub

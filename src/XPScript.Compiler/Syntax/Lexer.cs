@@ -1,0 +1,346 @@
+using System.Globalization;
+
+namespace XPScript.Compiler.Syntax;
+
+public sealed class Lexer
+{
+    private readonly string _text;
+    private readonly int _baseOffset;
+    private int _position;
+    private readonly List<LexerDiagnostic> _diagnostics = [];
+
+    public IReadOnlyList<LexerDiagnostic> Diagnostics => _diagnostics;
+
+    public Lexer(string text, int baseOffset = 0)
+    {
+        _text = text ?? string.Empty;
+        _baseOffset = baseOffset;
+    }
+
+    public IReadOnlyList<SyntaxToken> Lex()
+    {
+        var tokens = new List<SyntaxToken>();
+        while (true)
+        {
+            var token = NextToken();
+            tokens.Add(token);
+            if (token.Kind == SyntaxKind.EndOfFileToken)
+                return tokens;
+        }
+    }
+
+    public SyntaxToken NextToken()
+    {
+        while (true)
+        {
+            while (Current is ' ' or '\t')
+                _position++;
+
+            if (IsContinuationMarker())
+            {
+                _position++;
+                while (Current is ' ' or '\t') _position++;
+                if (Current == '\r' && Peek(1) == '\n') _position += 2;
+                else if (Current == '\n' || Current == '\r') _position++;
+                continue;
+            }
+
+            if (Current != '\'')
+            {
+                if (IsRemCommentStart())
+                {
+                    while (_position < _text.Length && Current is not '\r' and not '\n')
+                        _position++;
+                    continue;
+                }
+                break;
+            }
+
+            while (_position < _text.Length && Current is not '\r' and not '\n')
+                _position++;
+        }
+
+        var start = _position;
+
+        if (_position >= _text.Length)
+            return Token(SyntaxKind.EndOfFileToken, start, 0);
+
+        if (Current is '\r' or '\n')
+        {
+            if (Current == '\r' && Peek(1) == '\n')
+                _position += 2;
+            else
+                _position++;
+            return Token(SyntaxKind.NewLineToken, start, _position - start);
+        }
+
+        if (char.IsDigit(Current))
+        {
+            while (char.IsDigit(Current))
+                _position++;
+
+            var isDecimal = false;
+            if (Current == '.' && char.IsDigit(Peek(1)))
+            {
+                isDecimal = true;
+                _position++;
+                while (char.IsDigit(Current))
+                    _position++;
+            }
+
+            var numericText = _text[start.._position];
+            var multiplier = 1L;
+            if (!isDecimal && Current is 'k' or 'K' or 'm' or 'M' or 'g' or 'G')
+            {
+                var suffix = _text.Substring(_position, Math.Min(2, _text.Length - _position));
+                multiplier = suffix.ToLowerInvariant() switch
+                {
+                    "kb" => 1024L,
+                    "mb" => 1024L * 1024L,
+                    "gb" => 1024L * 1024L * 1024L,
+                    _ => 1L
+                };
+                if (multiplier != 1L)
+                    _position += 2;
+            }
+
+            var text = _text[start.._position];
+            object? value = isDecimal
+                ? double.TryParse(numericText, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var doubleValue) ? doubleValue : null
+                : long.TryParse(numericText, NumberStyles.None, CultureInfo.InvariantCulture, out var longValue) ? TryScale(longValue, multiplier) : null;
+            return new SyntaxToken(SyntaxKind.NumberToken, text, value, Span(start, text.Length));
+        }
+
+        if (Current == '"')
+        {
+            _position++;
+            var value = new System.Text.StringBuilder();
+            while (_position < _text.Length)
+            {
+                if (Current == '\\' && Peek(1) == '"')
+                {
+                    value.Append('"');
+                    _position += 2;
+                    continue;
+                }
+                if (Current == '"')
+                {
+                    if (Peek(1) == '"')
+                    {
+                        value.Append('"');
+                        _position += 2;
+                        continue;
+                    }
+                    _position++;
+                    break;
+                }
+                value.Append(Current);
+                _position++;
+            }
+            var text = _text[start.._position];
+            if (text.Length == 0 || text[^1] != '"')
+                _diagnostics.Add(new LexerDiagnostic("XPS1006", "Unterminated string literal.", Span(start, text.Length)));
+            return new SyntaxToken(SyntaxKind.StringToken, text, value.ToString(), Span(start, text.Length));
+        }
+
+        if (Current is '{' or '|')
+        {
+            var delimiter = Current;
+            _position++;
+            var value = new System.Text.StringBuilder();
+            while (_position < _text.Length)
+            {
+                if (delimiter == '|' && Current == '|' && Peek(1) == '|')
+                {
+                    value.Append('|');
+                    _position += 2;
+                    continue;
+                }
+                if (Current == (delimiter == '{' ? '}' : '|'))
+                {
+                    _position++;
+                    break;
+                }
+                value.Append(Current);
+                _position++;
+            }
+            return new SyntaxToken(SyntaxKind.StringToken, _text[start.._position], value.ToString(), Span(start, _position - start));
+        }
+
+        if (char.IsLetter(Current) || Current is '_' or '$')
+        {
+            _position++;
+            while (char.IsLetterOrDigit(Current) || Current is '_' or '$')
+                _position++;
+            var text = _text[start.._position];
+            // A member name follows a dot and is an identifier even when it
+            // happens to have the same spelling as a language keyword. Notes
+            // exposes members such as NotesMail.SendTo, and tokenizing the
+            // trailing "To" as ToKeyword makes an otherwise valid member
+            // access impossible to parse.
+            var kind = IsMemberName(start) ? SyntaxKind.IdentifierToken : KeywordKind(text);
+            return new SyntaxToken(kind, text, null, Span(start, text.Length));
+        }
+
+        _position++;
+        return CurrentAt(start) switch
+        {
+            '#' => Token(SyntaxKind.HashToken, start, 1),
+            '(' => Token(SyntaxKind.OpenParenToken, start, 1),
+            ')' => Token(SyntaxKind.CloseParenToken, start, 1),
+            ',' => Token(SyntaxKind.CommaToken, start, 1),
+            ':' => Token(SyntaxKind.ColonToken, start, 1),
+            '.' => Token(SyntaxKind.DotToken, start, 1),
+            '[' => Token(SyntaxKind.OpenBracketToken, start, 1),
+            ']' => Token(SyntaxKind.CloseBracketToken, start, 1),
+            '+' => Token(SyntaxKind.PlusToken, start, 1),
+            '-' => Token(SyntaxKind.MinusToken, start, 1),
+            '*' => Token(SyntaxKind.StarToken, start, 1),
+            '/' => Token(SyntaxKind.SlashToken, start, 1),
+            '\\' => Token(SyntaxKind.BackslashToken, start, 1),
+            '^' => Token(SyntaxKind.CaretToken, start, 1),
+            '&' => Token(SyntaxKind.AmpersandToken, start, 1),
+            '=' => Token(SyntaxKind.EqualsToken, start, 1),
+            '<' when Current == '=' => ConsumeSecond(SyntaxKind.LessOrEqualsToken, start),
+            '<' when Current == '>' => ConsumeSecond(SyntaxKind.LessGreaterToken, start),
+            '<' => Token(SyntaxKind.LessToken, start, 1),
+            '>' when Current == '=' => ConsumeSecond(SyntaxKind.GreaterOrEqualsToken, start),
+            '>' => Token(SyntaxKind.GreaterToken, start, 1),
+            _ => BadToken(start)
+        };
+    }
+
+    private char Current => _position < _text.Length ? _text[_position] : '\0';
+    private char Peek(int offset) => _position + offset < _text.Length ? _text[_position + offset] : '\0';
+    private char CurrentAt(int position) => position < _text.Length ? _text[position] : '\0';
+
+    private static long? TryScale(long value, long multiplier)
+    {
+        try
+        {
+            return checked(value * multiplier);
+        }
+        catch (OverflowException)
+        {
+            return null;
+        }
+    }
+
+    private bool IsMemberName(int start)
+    {
+        var previous = start - 1;
+        while (previous >= 0 && _text[previous] is ' ' or '\t')
+            previous--;
+        return previous >= 0 && _text[previous] == '.';
+    }
+
+    private bool IsRemCommentStart()
+    {
+        var before = _position - 1;
+        while (before >= 0 && _text[before] is ' ' or '\t') before--;
+        if (before >= 0 && _text[before] is not '\r' and not '\n' and not ':') return false;
+        if (!_text.AsSpan(_position, Math.Min(3, _text.Length - _position)).Equals("Rem", StringComparison.OrdinalIgnoreCase)) return false;
+        var after = _position + 3;
+        return after >= _text.Length || char.IsWhiteSpace(_text[after]);
+    }
+
+    private bool IsContinuationMarker()
+    {
+        if (Current != '_') return false;
+        var after = Peek(1);
+        if (after is not ' ' and not '\t' and not '\r' and not '\n') return false;
+        var before = _position - 1;
+        return before < 0 || char.IsWhiteSpace(_text[before]) || _text[before] is ':' or '(' or ',' or '+' or '-' or '*' or '/' or '&' or '=';
+    }
+
+    private SyntaxToken BadToken(int start)
+    {
+        var token = Token(SyntaxKind.BadToken, start, 1);
+        _diagnostics.Add(new LexerDiagnostic("XPS1012", $"Invalid character '{token.Text}'.", token.Span));
+        return token;
+    }
+
+    private SyntaxToken ConsumeSecond(SyntaxKind kind, int start)
+    {
+        _position++;
+        return Token(kind, start, 2);
+    }
+
+    private TextSpan Span(int start, int length) => new(_baseOffset + start, length);
+
+    private SyntaxToken Token(SyntaxKind kind, int start, int length) =>
+        new(kind, _text.Substring(start, length), null, Span(start, length));
+
+    private static SyntaxKind KeywordKind(string text) => text.ToUpperInvariant() switch
+    {
+        "NOT" => SyntaxKind.NotKeyword,
+        "AND" => SyntaxKind.AndKeyword,
+        "OR" => SyntaxKind.OrKeyword,
+        "XOR" => SyntaxKind.XorKeyword,
+        "EQV" => SyntaxKind.EqvKeyword,
+        "IMP" => SyntaxKind.ImpKeyword,
+        "MOD" => SyntaxKind.ModKeyword,
+        "LIKE" => SyntaxKind.LikeKeyword,
+        "TRUE" => SyntaxKind.TrueKeyword,
+        "FALSE" => SyntaxKind.FalseKeyword,
+        "NULL" => SyntaxKind.NullKeyword,
+        "EMPTY" => SyntaxKind.EmptyKeyword,
+        "NOTHING" => SyntaxKind.NothingKeyword,
+        "IF" => SyntaxKind.IfKeyword,
+        "THEN" => SyntaxKind.ThenKeyword,
+        "ELSE" => SyntaxKind.ElseKeyword,
+        "ELSEIF" => SyntaxKind.ElseIfKeyword,
+        "END" => SyntaxKind.EndKeyword,
+        "SET" => SyntaxKind.SetKeyword,
+        "DIM" => SyntaxKind.DimKeyword,
+        "AS" => SyntaxKind.AsKeyword,
+        "WHILE" => SyntaxKind.WhileKeyword,
+        "WEND" => SyntaxKind.WendKeyword,
+        "FOR" => SyntaxKind.ForKeyword,
+        "TO" => SyntaxKind.ToKeyword,
+        "STEP" => SyntaxKind.StepKeyword,
+        "NEXT" => SyntaxKind.NextKeyword,
+        "FORALL" => SyntaxKind.ForAllKeyword,
+        "IN" => SyntaxKind.InKeyword,
+        "DO" => SyntaxKind.DoKeyword,
+        "LOOP" => SyntaxKind.LoopKeyword,
+        "UNTIL" => SyntaxKind.UntilKeyword,
+        "SELECT" => SyntaxKind.SelectKeyword,
+        "CASE" => SyntaxKind.CaseKeyword,
+        "IS" => SyntaxKind.IsKeyword,
+        "CALL" => SyntaxKind.CallKeyword,
+        "ON" => SyntaxKind.OnKeyword,
+        "EVENT" => SyntaxKind.EventKeyword,
+        "FROM" => SyntaxKind.FromKeyword,
+        "REMOVE" => SyntaxKind.RemoveKeyword,
+        "OPEN" => SyntaxKind.OpenKeyword,
+        "CLOSE" => SyntaxKind.CloseKeyword,
+        "INPUT" => SyntaxKind.InputKeyword,
+        "OUTPUT" => SyntaxKind.OutputKeyword,
+        "APPEND" => SyntaxKind.AppendKeyword,
+        "BINARY" => SyntaxKind.BinaryKeyword,
+        "RANDOM" => SyntaxKind.RandomKeyword,
+        "LEN" => SyntaxKind.LenKeyword,
+        "ERROR" => SyntaxKind.ErrorKeyword,
+        "GOTO" => SyntaxKind.GoToKeyword,
+        "GOSUB" => SyntaxKind.GoSubKeyword,
+        "RESUME" => SyntaxKind.ResumeKeyword,
+        "RETURN" => SyntaxKind.ReturnKeyword,
+        "EXIT" => SyntaxKind.ExitKeyword,
+        "SUB" => SyntaxKind.SubKeyword,
+        "FUNCTION" => SyntaxKind.FunctionKeyword,
+        "PUBLIC" => SyntaxKind.PublicKeyword,
+        "PRIVATE" => SyntaxKind.PrivateKeyword,
+        "BYREF" => SyntaxKind.ByRefKeyword,
+        "BYVAL" => SyntaxKind.ByValKeyword,
+        "CLASS" => SyntaxKind.ClassKeyword,
+        "EXTEND" => SyntaxKind.ExtendKeyword,
+        "ME" => SyntaxKind.MeKeyword,
+        "PARENT" => SyntaxKind.ParentKeyword,
+        "PROPERTY" => SyntaxKind.PropertyKeyword,
+        "GET" => SyntaxKind.GetKeyword,
+        "LET" => SyntaxKind.LetKeyword,
+        "NEW" => SyntaxKind.NewKeyword,
+        _ => SyntaxKind.IdentifierToken
+    };
+}

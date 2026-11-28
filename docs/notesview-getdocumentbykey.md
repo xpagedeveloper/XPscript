@@ -19,4 +19,6 @@ NotesView.GetDocumentByKey(key, exactMatch) As NotesDocument
 
 The one-argument form performs a partial match, equivalent to `exactMatch = False`, matching LotusScript semantics. Pass `True` as the second argument to require an exact match.
 
+Both compiler routes preserve this runtime method name and normalize a missing result to XPscript Nothing. The local native regression `samples/notes-view-key-runtime-test.xps` exercises exact, partial and missing-key lookups.
+
 `GetFirstDocumentByKey` was the previous XPscript name and is no longer supported. Code using it produces a compiler error directing callers to `GetDocumentByKey`.

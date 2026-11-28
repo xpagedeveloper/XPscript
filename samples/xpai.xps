@@ -36,8 +36,8 @@ Sub Main()
     Dim providerExtra As XPJsonObject
     Dim http As New XPHttpClient
     Dim httpRequest As Variant
-    Dim retrievalTool As New AITool("retrieval")
-    Dim mcpTool As New AITool("mcp")
+    Dim retrievalTool As New XPAITool("retrieval")
+    Dim mcpTool As New XPAITool("mcp")
     Dim toolNames As Variant
     Dim toolLookup As Variant
 
@@ -97,7 +97,7 @@ Sub Main()
         Print response.Text
         Call ai.Dispose()
 
-        Dim weatherTool As New AITool("weather")
+        Dim weatherTool As New XPAITool("weather")
         weatherTool.Description = "Weather information"
         Call weatherTool.AddFunction("get_weather", "Returns weather for a city", "HandleGetWeather", "tenant-42")
         Call weatherTool.AddParameter("get_weather", "city", "string", "City name", True)

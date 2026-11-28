@@ -1,0 +1,11 @@
+Sub Main()
+    Dim firstForm As New UIForm("First")
+    Dim secondForm As New UIForm("Second")
+    Call firstForm.Show(False)
+    If Not firstForm.Visible Then Error 5, "First form was not activated."
+    Call secondForm.Show(False)
+    If firstForm.Visible Or Not secondForm.Visible Then Error 5, "UIForm stack activation failed."
+    Call secondForm.Hide()
+    If Not firstForm.Visible Then Error 5, "UIForm stack restore failed."
+    Print "UIFORM-MULTIPLE-STACK-OK"
+End Sub

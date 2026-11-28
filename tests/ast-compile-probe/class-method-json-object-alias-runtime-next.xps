@@ -1,0 +1,20 @@
+Option Declare
+
+Class JsonObjectAliasMethods
+    Public Function Identity(ByVal value As XPJSONObject) As XPJSONObject
+        Call value.Set("mutation", 7)
+        Set Identity = value
+    End Function
+End Class
+
+Sub Main()
+    Dim methods As New JsonObjectAliasMethods
+    Dim original As New XPJSONObject
+    Dim current As XPJSONObject
+    Dim returned As XPJSONObject
+    Set current = original
+    Set returned = methods.Identity(current)
+    If Not (returned Is original) Then Error 4310
+    If CLng(original.Get("mutation")) <> 7 Then Error 4311
+    Print "AST_JSON_OBJECT_ALIAS_BYVAL_OK"
+End Sub

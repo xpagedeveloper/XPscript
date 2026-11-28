@@ -1,0 +1,21 @@
+Sub Main()
+    Print "AST_HTTP_ASYNC_UIFORM_OK"
+End Sub
+
+Sub CompileSurface()
+    Dim http As New XPHttpClient
+    Dim form As New UIForm("HTTP")
+    Dim request As Variant
+    Dim response As XPHttpResponse
+    Set request = http.GetAsync("http://127.0.0.1:1/get", "OnComplete", "get")
+    Set request = http.DeleteAsync("http://127.0.0.1:1/delete", "OnComplete", "delete")
+    Set request = http.PostAsync("http://127.0.0.1:1/post", "body", "OnComplete", "post")
+    Set request = http.PutAsync("http://127.0.0.1:1/put", "body", "OnComplete", "put")
+    Set request = http.PatchAsync("http://127.0.0.1:1/patch", "body", "OnComplete", "patch")
+    Call http.LoadForm(form, "http://127.0.0.1:1/form")
+    Set response = http.SaveForm(form, "http://127.0.0.1:1/form")
+    Set response = http.PutForm(form, "http://127.0.0.1:1/form")
+End Sub
+
+Sub OnComplete(response As Variant, label As String)
+End Sub

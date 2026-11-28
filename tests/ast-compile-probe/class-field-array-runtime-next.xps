@@ -1,0 +1,25 @@
+Class Holder
+    Public values() As Long
+
+    Public Sub New()
+        Dim initial(3 To 4) As Long
+        Set values = initial
+    End Sub
+
+    Public Sub SetValue(ByVal index As Long, ByVal value As Long)
+        values(index) = value
+    End Sub
+
+    Public Function GetValue(ByVal index As Long) As Long
+        GetValue = values(index)
+    End Function
+End Class
+
+Sub Main()
+    Dim item As New Holder
+    Call item.SetValue(3, 7)
+    If item.GetValue(3) <> 7 Then Error 6, "class-field array indexed write failed"
+    Call item.SetValue(4, 9)
+    If item.GetValue(4) <> 9 Then Error 6, "class-field array upper bound changed"
+    Print "CLASS_FIELD_ARRAY_RUNTIME_OK"
+End Sub

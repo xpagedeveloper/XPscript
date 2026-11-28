@@ -1,0 +1,11 @@
+Function Touch(ByRef value As Long) As Long
+    value = value + 5
+    Touch = value
+End Function
+
+Sub Main()
+    Dim values List As Long
+    values("x") = 2
+    Print CStr(Touch(values("x")))
+    Print CStr(values("x"))
+End Sub

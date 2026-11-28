@@ -1,0 +1,242 @@
+name: Platform FullTest
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, test-openapi-import-class-skeletons]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dialog-host-contracts:
+    name: Desktop dialog host contracts (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Verify desktop dialogs use blocking modal host
+        shell: pwsh
+        run: |
+          Write-Host 'BEGIN DESKTOP_DIALOG_MODAL_CONTRACT'
+          dotnet run --project tests/DesktopUIFormBridgeSmoke/DesktopUIFormBridgeSmoke.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop modal dialog host contract failed.' }
+          Write-Host 'END DESKTOP_DIALOG_MODAL_CONTRACT'
+      - name: Run AST-generated modal UIForm through the desktop host
+        shell: pwsh
+        run: |
+          Write-Host 'BEGIN AST_DESKTOP_MODAL_UIFORM'
+          dotnet run --project tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release -- --headless-ast-generated
+          if ($LASTEXITCODE -ne 0) { throw 'AST-generated desktop modal UIForm failed.' }
+          Write-Host 'END AST_DESKTOP_MODAL_UIFORM'
+
+  web-hosting:
+    name: Web and REST hosting (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run REST multipart uploads, Kestrel, CGI and FastCGI smoke tests
+        shell: pwsh
+        run: |
+          $projects = @(
+            'tests/WebCompilerSmoke/WebCompilerSmoke.csproj',
+            'tests/WebRestApiSmoke/WebRestApiSmoke.csproj',
+            'tests/WebKestrelSmoke/WebKestrelSmoke.csproj',
+            'tests/WebUIFormKestrelSmoke/WebUIFormKestrelSmoke.csproj',
+            'tests/WebUIListViewKestrelSmoke/WebUIListViewKestrelSmoke.csproj',
+            'tests/WebCgiSmoke/WebCgiSmoke.csproj',
+            'tests/WebFastCgiSmoke/WebFastCgiSmoke.csproj'
+          )
+          . ./tests/ast-compile-probe/cli-common.ps1
+          foreach ($project in $projects) {
+            Write-Host "BEGIN $project"
+            $result = Invoke-BoundedDotnetRun @('run', '--project', $project, '-c', 'Release') 300000
+            Write-Host $result.Output
+            if ($result.TimedOut -or $result.ExitCode -ne 0) { throw "Web hosting smoke test failed: $project" }
+            Write-Host "END $project"
+          }
+
+  openapi:
+    name: OpenAPI generation and compilation (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Verify OpenAPI client methods that share runtime names
+        timeout-minutes: 5
+        shell: pwsh
+        run: |
+          Write-Host 'OPENAPI_RUNTIME_NAME_SCOPE=begin'
+          dotnet run --project tests/OpenApiGeneratorSmoke -c Release -- --verify-definition-client tests/OpenApiGeneratorSmoke/fixtures/cross-scope-runtime-names.yaml 'GET /runtime'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet src/XPScript.Compiler/bin/Release/net10.0/xpscriptc.dll ast-run tests/ast-compile-probe/jsonparse-member-scope.xps --no-daemon --debug
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Write-Host 'OPENAPI_RUNTIME_NAME_SCOPE=passed'
+      - name: Run focused regressions, CLI chain and complete OpenAPI suite
+        shell: bash
+        run: bash tests/OpenApiGeneratorSmoke/run-rest-host-ci.sh
+
+  ast-cli-targets:
+    name: AST CLI target (${{ matrix.rid }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: ubuntu-latest
+            rid: linux-arm64
+          - os: macos-latest
+            rid: osx-x64
+          - os: macos-latest
+            rid: osx-arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build AST compiler and compile target
+        shell: pwsh
+        run: |
+          $output = Join-Path $env:RUNNER_TEMP ('ast-' + '${{ matrix.rid }}')
+          dotnet run --project ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile ./tests/ast-compile-probe/shared-runtime.xps --output $output --rid '${{ matrix.rid }}' --runtime=false --debug
+          if (-not (Test-Path (Join-Path $output 'Generated.dll'))) { throw 'AST target compilation did not produce Generated.dll.' }
+
+  browser-wasm:
+    name: Browser WASM and server-side Notes boundary (.NET ${{ matrix.framework }}, ${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Playwright 1.55 provides Chromium for Ubuntu 24.04.
+        os: [ubuntu-24.04, windows-latest, macos-latest]
+        framework: ['10', '11']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '${{ matrix.framework }}.0.x'
+      - name: Select the matrix .NET SDK
+        shell: pwsh
+        run: |
+          $major = '${{ matrix.framework }}'
+          $sdk = (dotnet --list-sdks |
+            Select-String -Pattern "^$major\.0\.\d+" |
+            ForEach-Object { ($_.Line -split '\s+')[0] } |
+            Sort-Object { [version]$_ } |
+            Select-Object -Last 1)
+          if ([string]::IsNullOrWhiteSpace($sdk)) { throw "No installed .NET SDK found for major version $major." }
+          @{ sdk = @{ version = $sdk; rollForward = 'latestPatch'; allowPrerelease = $false } } |
+            ConvertTo-Json -Depth 4 | Set-Content -Path global.json -Encoding utf8
+          Write-Host "Selected .NET SDK for browser-WASM matrix: $sdk"
+          dotnet --version
+      - name: Install browser-WASM workload
+        shell: pwsh
+        run: dotnet workload install wasm-tools --skip-manifest-update
+      - name: Run browser-WASM and Notes server-boundary smoke test
+        shell: pwsh
+        run: |
+          $framework = 'net${{ matrix.framework }}.0'
+          $env:XPSCRIPT_TARGET_FRAMEWORK = $framework
+          # Generated SDK projects must inherit the matrix global.json.
+          $env:XPSCRIPT_TEMP_ROOT = Join-Path $PWD 'out/wasm-fulltest'
+          New-Item -ItemType Directory -Force $env:XPSCRIPT_TEMP_ROOT | Out-Null
+          $astOutput = Join-Path $env:RUNNER_TEMP 'browser-wasm-ast-attachments'
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/browser-wasm-attachment-download.xps --output $astOutput --platform browser-wasm --target-framework $framework --runtime=false --debug
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $astOutput 'Generated.dll'))) { throw 'Browser-WASM AST XPHttpDbSupabase.Attachments compilation failed.' }
+          $controlsOutput = Join-Path $env:RUNNER_TEMP 'browser-wasm-uiform-controls'
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/android-uiform-controls-api.xps --output $controlsOutput --platform browser-wasm --target-framework $framework --runtime=false --debug
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $controlsOutput 'Generated.dll'))) { throw 'Browser-WASM AST UIForm controls compilation failed.' }
+          $toastOutput = Join-Path $env:RUNNER_TEMP 'browser-wasm-toasts'
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release -- ast-compile samples/ui-toast-notifications.xps --output $toastOutput --platform browser-wasm --target-framework $framework --runtime=false --debug
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $toastOutput 'Generated.dll'))) { throw 'Browser-WASM ShowToast API compilation failed.' }
+          dotnet restore tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj --force-evaluate -p:WasmSmokeTargetFramework=$framework
+          if ($LASTEXITCODE -ne 0) { throw 'Playwright smoke project restore failed.' }
+          dotnet build tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-restore -p:WasmSmokeTargetFramework=$framework -p:UseSharedCompilation=false
+          if ($LASTEXITCODE -ne 0) { throw 'Playwright smoke project build failed.' }
+          & (Join-Path $PWD "tests/WebBrowserWasmServerSideBrowserSmoke/bin/Release/$framework/playwright.ps1") install chromium
+          if ($LASTEXITCODE -ne 0) { throw 'Playwright Chromium installation failed.' }
+          Write-Host 'BEGIN WASM spreadsheet boundary and UIForm interaction'
+          dotnet run --project tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release -p:WasmSmokeTargetFramework=$framework -p:UseSharedCompilation=false
+          if ($LASTEXITCODE -ne 0) { throw 'WASM spreadsheet boundary or UIForm interaction failed.' }
+          Write-Host 'END WASM spreadsheet boundary and UIForm interaction'
+          dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release -p:WasmSmokeTargetFramework=$framework
+          if ($LASTEXITCODE -ne 0) { throw 'Browser-WASM or Notes server-boundary smoke test failed.' }
+          dotnet run --project tests/WebBrowserWasmServerSideBrowserSmoke/WebBrowserWasmServerSideBrowserSmoke.csproj -c Release --no-build -p:WasmSmokeTargetFramework=$framework
+          if ($LASTEXITCODE -ne 0) { throw 'Browser-WASM client/server/client event smoke test failed.' }
+
+  android-ast:
+    name: Android AST target (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install Android workload
+        shell: bash
+        run: dotnet workload install android
+      - name: Configure the preinstalled Android SDK tools
+        shell: bash
+        run: |
+          test -x /usr/local/lib/android/sdk/platform-tools/adb
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "/usr/local/lib/android/sdk/platform-tools" >> "$GITHUB_PATH"
+          echo "/usr/local/lib/android/sdk/emulator" >> "$GITHUB_PATH"
+      - name: Build compiler, verify Android metadata and compile AST target
+        shell: bash
+        run: |
+          export XPSCRIPT_TARGET_FRAMEWORK=net10.0
+          dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          dotnet run --project tests/AndroidCompilerProbe/AndroidCompilerProbe.csproj -c Release
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-debug-print.xps --output "$RUNNER_TEMP/ast-android-arm64" --runtime=false --platform android-arm64 --target-framework 10 --debug
+          test -f "$RUNNER_TEMP/ast-android-arm64/Generated.dll"
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-uiform-controls-api.xps --output "$RUNNER_TEMP/ast-android-x64-controls" --runtime=false --platform android-x64 --target-framework 10 --debug
+          test -f "$RUNNER_TEMP/ast-android-x64-controls/Generated.dll"
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/ui-toast-notifications.xps --output "$RUNNER_TEMP/ast-android-x64-toasts" --runtime=false --platform android-x64 --target-framework 10 --debug
+          test -f "$RUNNER_TEMP/ast-android-x64-toasts/Generated.dll"
+          echo 'AST_ANDROID_X64_CONTROLS_BUILD=OK'
+          echo 'AST_ANDROID_TARGET_BUILD=OK'
+      - name: Build Android modal form regression APK
+        timeout-minutes: 8
+        shell: bash
+        run: |
+          echo 'AST_ANDROID_MODAL=begin'
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- ast-compile samples/android-uiform-modal-regression.xps --output "$RUNNER_TEMP/ast-android-modal" --runtime=false --platform android-x64 --target-framework 10 --debug
+          test -n "$(find "$RUNNER_TEMP/ast-android-modal" -name '*-Signed.apk' -print -quit)"
+          echo 'AST_ANDROID_MODAL=passed'

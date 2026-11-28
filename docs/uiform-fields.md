@@ -2,6 +2,8 @@
 
 XPScript UIForm supports additional data-entry fields for web and desktop applications.
 
+All field objects support `Clear()`. Choice fields (`Select`, `RadioGroup`, `ListBox`, `MultiSelect`, `CheckBoxGroup`, `LookupField` and `AutoCompleteField`) additionally support `ClearOptions()` and `AddOption(value)`. Use `form.RefreshForm()` after changing a displayed form when the new state must be visible immediately.
+
 ## FileField
 
 ```xpscript
@@ -20,7 +22,7 @@ On web forms this uses multipart/form-data. A single file is stored in `form.Dat
 }
 ```
 
-The configured per-file maximum is enforced before the value is exposed to the form. The supported maximum configuration is 64 MiB per file. Desktop currently presents FileField as a text/path field. Use the existing desktop file-dialog API when a native picker is required.
+The configured per-file maximum is enforced before the value is exposed to the form. The supported maximum configuration is 64 MiB per file. On web/WASM this is an HTML upload field; on desktop it is a native file-picker button whose value is the selected path. Android remains capability-dependent until the picker result is connected to the generated UI host.
 
 ## MultiSelect
 
@@ -221,6 +223,21 @@ Call form.SetRemoteSearchOptions("productId", "q", "value", 3, 20)
 ```
 
 The web renderer performs a debounced search after the configured minimum number of characters. The visible label and stored value remain separate. The posted value is validated server-side using the exact-value lookup before it is accepted.
+
+For a local provider on WASM, Android or desktop, register a function that receives the current type-ahead text and returns an `XPJsonArray` of option values:
+
+```xpscript
+Call form.AddAutoCompleteField("product", "Product", "https://unused.local/provider")
+Call form.SetAutoCompleteProvider("product", "FindProducts")
+
+Function FindProducts(query As String) As XPJsonArray
+    Dim result As New XPJsonArray
+    Call result.Add(query & " result")
+    Set FindProducts = result
+End Function
+```
+
+The provider is called on each change event with the text currently typed. Its returned list replaces the field options and is sent back to the control. This local provider can also be used with `LookupField`; remote endpoint search remains available for server-rendered web and WASM forms.
 
 ## Example XPS lookup endpoint
 

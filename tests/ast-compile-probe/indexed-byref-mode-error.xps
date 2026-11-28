@@ -1,0 +1,9 @@
+Class Counter
+    Public Property Get Item(ByRef index As Long) As Long
+        Item = index
+    End Property
+    Public Property Let Item(index As Long, incoming As Long)
+    End Property
+End Class
+Sub Main()
+End Sub

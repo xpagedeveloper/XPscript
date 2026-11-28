@@ -4,6 +4,18 @@ This page documents the complete XPScript `Application` runtime surface plus the
 
 The complete runnable reference is [samples/application-object.xps](../samples/application-object.xps).
 
+## AST compilation
+
+Application compiles directly through AST using the same runtime as normal compilation, not an ExpandoObject placeholder. Members and overloads are derived from the shared source; unknown members, invalid construction and read-only writes are diagnosed with source spans. `Application` is provided by the runtime, not created with `New`. Both `With Application` and `With Application.State` support implicit members.
+
+`With Application` is an AST capability extension: normal compilation currently rejects that namespace-value form. It has a dedicated AST-only executable/MCP fixture; shared runtime APIs are compared separately through both compilers.
+
+The generated entry point initializes the shared argument runtimes before invoking `Sub Main`. Bare `Application.Args` (or `Application.Args()`) returns an independent native LSArray snapshot; `Application.Args(index)` reads an argument with bounds error 9. The argument property itself is read-only, but editing a snapshot does not change the process arguments. `Application.NewLine` uses the active platform's line ending.
+
+The shared state proxies, metadata, Debug, SystemLog, Registry, Crypto, Secrets, Log and Audit retain their existing platform/host/security contracts. Log/Audit still require the web host, and Secrets still requires an Application.Id and the OS credential service; AST does not replace them with permissive stubs. Subsystem code is selected only on actual use. Pure argument/state programs omit registry/crypto/secrets code, and unused names in strings/comments omit Application runtime. No external NuGet addon is introduced.
+
+Literal executable metadata uses the existing generated-project packaging path, including version/product/company and platform icon handling. Runtime-only metadata assignments remain shared state. Permanent tests in `tests/AstApplicationRuntimeProbe` compare real normal/AST execution, isolated registry storage, crypto context validation, credential/host guards, debug activation, assembly metadata and ExitCode; the binder/MCP probes cover mapped errors.
+
 ## Application runtime information
 
 | Member | Syntax | Parameters | Description | Example |
@@ -40,7 +52,7 @@ These properties are writable. Their values are stored in the application state 
 |---|---|---|---|---|
 | `Application.Id` | `Application.Id = value` | `value`: stable application identifier. | Gets or sets the application identity. `Application.Secrets` requires it before credential-store access and binds to the first value used. | [application-registry-secrets.xps](../samples/application-registry-secrets.xps) |
 | `Application.Title` | `Application.Title = value` | `value`: application/window title. | Gets or sets the application title metadata. | [application-object.xps](../samples/application-object.xps) |
-| `Application.Icon` | `Application.Icon = path` | `path`: icon path/value. | Compatibility alias for `Application.Executable.Icon`. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
+| `Application.Icon` | `Application.Icon = path` | `path`: icon path/value. | Compatibility alias for `Application.Executable.Icon`; supplies the desktop UIForm window icon and the browser tab favicon for WebUI and Browser-WASM. | [application-icon-test.xps](../samples/application-icon-test.xps) |
 | `Application.Width` | `Application.Width = value` | `value`: preferred application/window width. | Gets or sets width metadata. | [application-object.xps](../samples/application-object.xps) |
 | `Application.Height` | `Application.Height = value` | `value`: preferred application/window height. | Gets or sets height metadata. | [application-object.xps](../samples/application-object.xps) |
 
@@ -48,7 +60,7 @@ These properties are writable. Their values are stored in the application state 
 
 `Application.Executable` exposes metadata that the compiler writes into the generated application. Assign string literals when you want the values embedded in the build output. The same values are also readable through the XPScript application state during execution.
 
-`Application.Icon` and `Application.Executable.Icon` address the same icon value. `Application.Icon` remains available as a compatibility alias.
+`Application.Icon` and `Application.Executable.Icon` address the same icon value. `Application.Icon` remains available as a compatibility alias. UIForm desktop windows use the configured local icon file. WebUI and Browser-WASM set the browser favicon to the configured URL or bundled `assets/` path. When no icon is configured, the host/browser keeps its normal default icon.
 
 | Member | Syntax | Parameters | Description | Example |
 |---|---|---|---|---|
@@ -58,6 +70,7 @@ These properties are writable. Their values are stored in the application state 
 | `Application.Executable.Company` | `Application.Executable.Company = value` | `value`: company name. | Sets the generated executable/assembly company metadata. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
 | `Application.Executable.Version` | `Application.Executable.Version = value` | `value`: version string. | Sets version metadata used for the generated assembly and file version. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
 | `Application.Executable.Copyright` | `Application.Executable.Copyright = value` | `value`: copyright text. | Sets the generated executable/assembly copyright metadata. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
+| `Application.Executable.Comments` | `Application.Executable.Comments = value` | `value`: comments text. | Sets the generated executable/assembly comments metadata. | [application-executable-metadata.xps](../samples/application-executable-metadata.xps) |
 
 Generated applications receive fixed compiler identification metadata. Assembly metadata contains `XPScriptCompiler = XPScript`, `XPScriptWebsite = https://xpagedeveloper.com` and `Compiled With = XPScript - XPageDeveloper.com`. If `Application.Executable.FileDescription` is not set, the file description defaults to `Application compiled with XPScript`.
 

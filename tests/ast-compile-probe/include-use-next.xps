@@ -1,0 +1,8 @@
+Include "include-use-lib/helper.xps"
+Include "include-use-lib/helper.xps"
+Use "include-use-lib/helper"
+
+Sub Main()
+    If IncludeUseValue() <> 42 Then Error 4278
+    Print "AST_INCLUDE_USE_OK"
+End Sub

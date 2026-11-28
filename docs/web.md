@@ -171,13 +171,21 @@ Examples are `10;30s`, `100;1m`, `1000;1h` and `5000;1d`. An authenticated reque
 
 ## PreCompile
 
+For deployment validation, run `xpscript web precompile --root ./site`. The command uses the same AST web compiler and persistent cache as the host, scans every `.xps` file below the web root (including nested directories), reports each compilation failure, and returns a non-zero exit code if any file fails. Generated runtime artifacts remain in the compiler cache rather than the web root.
+
 `[PreCompile:file.xps]` asks the web engine to warm another route. If the extension is omitted, the engine also tries `.xps`. A missing target is reported and skipped rather than stopping the server.
 
 Startup warms the default document and its direct precompile targets. Nested targets are not recursively warmed at startup. If `index.xps` precompiles `kalle.xps`, and `kalle.xps` declares `[PreCompile:nisse.xps]`, `nisse.xps` is warmed after the first real request to `kalle.xps`.
 
 Already compiled files are reused while their source/dependency snapshot remains unchanged. Ordinary server-side `.xps` pages also persist their compiled DLL/PDB artifact on disk. The persistent cache survives process restarts and is reused only when the source/dependency snapshot, runtime/compiler configuration, compiler build identity and web runtime build identity still match. Changed source or dependencies automatically invalidate the artifact. Browser-WASM pages keep their separate bundle cache. The response is allowed to complete before sublevel warmup runs in the background.
 
-`XpsWebCompilationCacheOptions.EnablePersistentCache` controls persistent artifact reuse for custom hosts. `PersistentCacheDirectory` can override the default per-site cache directory under the process user's local application data directory.
+`XpsWebCompilationCacheOptions.EnablePersistentCache` controls persistent artifact reuse for custom hosts. `PersistentCacheDirectory` can override the default per-site cache directory under the process user's local application data directory. Cache snapshots include the root source, `Include` dependencies and referenced managed/native files, so changing any of them invalidates the compiled artifact.
+
+`XpsWebCompilationCacheOptions.MaxConcurrentCompilations` limits the number of different cold/stale source files that a cache instance compiles at once. It defaults to `4` and accepts values from `1` through `256`. A worker-process-wide limit of `16` also applies across cache instances. Requests for the same source continue to share one single-flight compilation. This keeps a burst of requests from starting an unbounded number of AST/MSBuild compilations while allowing unrelated sources to compile concurrently.
+
+Kestrel and FastCGI create one dispatcher/cache for the lifetime of the host process, so warm requests reuse the live compiled unit and only cold or invalidated sources enter the compiler. CGI is process-per-request by design; it still reuses persistent compiled artifacts when enabled, but cannot retain an in-memory live compiler between requests. Custom hosts should likewise create one `XpsWebDispatcher` and keep it alive for the host lifetime rather than constructing one inside each request handler.
+
+WebIIS uses the generated out-of-process worker behind ASP.NET Core Module V2; that worker uses the same long-lived dispatcher/cache and the `.xpscript-cache` persistent artifact directory. An IIS application-pool recycle starts a new hot compiler instance and preserves only artifacts that remain valid for the new compiler/runtime identity.
 
 ## Request
 
@@ -233,6 +241,9 @@ Request value methods:
 Query and form names are case-insensitive. Repeated query and form fields preserve their values through the `All` methods. Header lookup is case-insensitive and preserves multiple header values.
 
 Body and upload methods include `BodyText()`, `BodyBytes()`, `Files()`, `Files(name)` and `FileFirst(name)`. These methods enforce their configured size and count limits.
+
+In an AST web route, assign `Request.FileFirst(name)` to a `Variant` and check for `Nothing` before reading the upload with `Bytes()` or `Text()`.
+Use `ForAll` with `Request.Files()` to visit every upload or with `Request.Files(name)` to visit the uploads for one form field.
 
 `Request.Authorization` is a convenience alias for `Request.Header("Authorization")`. `Request.BearerToken` only accepts one Authorization header whose scheme is Bearer and whose token is non-empty. Multiple Authorization values are treated as ambiguous and produce `Null`.
 

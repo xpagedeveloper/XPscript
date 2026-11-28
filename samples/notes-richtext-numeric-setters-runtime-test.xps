@@ -1,0 +1,30 @@
+Option Declare
+Sub Main()
+    Dim session As NotesSession
+    Dim style As NotesRichTextStyle
+    Dim paragraph As NotesRichTextParagraphStyle
+    Dim number As Variant
+    Dim errorCode As Long
+    Set session = New NotesSession()
+    Set style = session.CreateRichTextStyle()
+    style.FontSize = 12
+    style.NotesColor = 0
+    style.NotesFont = 1
+    If style.FontSize <> 12 Then Error 5, "FontSize literal assignment"
+    number = 14
+    style.fontsize = number
+    If style.FontSize <> 14 Then Error 5, "FontSize Variant/case-insensitive assignment"
+    On Error Resume Next
+    style.FontSize = 2147483648
+    errorCode = Err
+    On Error GoTo 0
+    If errorCode = 0 Then Error 5, "Overflow must be rejected"
+    If style.FontSize <> 14 Then Error 5, "Overflow changed the previous value"
+    Set paragraph = session.CreateRichTextParagraphStyle()
+    paragraph.Alignment = 0
+    If paragraph.Alignment <> 0 Then Error 5, "Paragraph numeric assignment"
+    Call paragraph.Recycle()
+    Call style.Recycle()
+    Call session.Recycle()
+    Print "NOTES-RICHTEXT-NUMERIC-SETTERS=PASS"
+End Sub

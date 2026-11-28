@@ -1,0 +1,259 @@
+name: AST UIForm Show Hide Platforms
+# Push changes to this workflow deliberately retrigger the platform probe.
+# The macOS desktop UIForm job is included in this focused platform run.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Select affected platform tests
+    runs-on: ubuntu-latest
+    outputs:
+      all: ${{ steps.select.outputs.all }}
+      desktop: ${{ steps.select.outputs.desktop }}
+      android: ${{ steps.select.outputs.android }}
+      wasm: ${{ steps.select.outputs.wasm }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+      - id: select
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo 'all=true' >> "$GITHUB_OUTPUT"
+            echo 'desktop=true' >> "$GITHUB_OUTPUT"
+            echo 'android=true' >> "$GITHUB_OUTPUT"
+            echo 'wasm=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff --name-only HEAD^ HEAD)"
+          subject="$(git log -1 --format=%s)"
+          all=false
+          desktop=false
+          android=false
+          wasm=false
+          if [[ "$subject" == \[wasm-only\]* ]]; then
+            wasm=true
+            echo "all=$all" >> "$GITHUB_OUTPUT"
+            echo "desktop=$desktop" >> "$GITHUB_OUTPUT"
+            echo "android=$android" >> "$GITHUB_OUTPUT"
+            echo "wasm=$wasm" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -q '^\.github/workflows/ast-uiform-platforms.yml$' <<< "$changed"; then all=true; fi
+          if grep -Eq '^src/XPScript.Compiler/' <<< "$changed"; then
+            desktop=true
+            android=true
+            wasm=true
+          fi
+          if grep -Eq '^(src/XPScript.UI.Desktop/|tests/DesktopUIFormLifecycleSmoke/)' <<< "$changed"; then desktop=true; fi
+          if grep -Eq '^(tests/AndroidAstBackendProbe/|src/XPScript.UI.Android/)' <<< "$changed"; then android=true; fi
+          if grep -Eq '^(src/XPScript.Web.Compiler/|src/XPScript.Web.Runtime/|tests/WebBrowserWasm)' <<< "$changed"; then wasm=true; fi
+          echo "all=$all" >> "$GITHUB_OUTPUT"
+          echo "desktop=$desktop" >> "$GITHUB_OUTPUT"
+          echo "android=$android" >> "$GITHUB_OUTPUT"
+          echo "wasm=$wasm" >> "$GITHUB_OUTPUT"
+
+  desktop-windows:
+    needs: changes
+    if: needs.changes.outputs.all == 'true' || needs.changes.outputs.desktop == 'true'
+    name: AST UIForm Show Hide (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build and run AST desktop lifecycle probe
+        shell: pwsh
+        run: |
+          dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+          $process = Start-Process dotnet -ArgumentList @('run', '--project', './tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj', '-c', 'Release', '--no-build', '--', '--ast-only') -PassThru -NoNewWindow
+          if (-not $process.WaitForExit(180000)) {
+            Stop-Process -Id $process.Id -Force
+            throw 'AST Windows UIForm probe timed out after 180 seconds.'
+          }
+          if ($process.ExitCode -ne 0) { throw "AST Windows UIForm probe failed with exit code $($process.ExitCode)." }
+          dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
+          dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uiform-custom-result
+          dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uilistview
+
+  desktop-linux:
+    needs: changes
+    if: needs.changes.outputs.all == 'true' || needs.changes.outputs.desktop == 'true'
+    name: AST UIForm Show Hide (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Install Xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Build and run AST desktop lifecycle probe
+        run: |
+          set -euo pipefail
+          dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+          run_probe() {
+            name="$1"
+            shift
+            echo "BEGIN $name"
+            set +e
+            timeout --kill-after=5s 180s xvfb-run -a "$@" 2>&1 | tee "$name.log"
+            status=${PIPESTATUS[0]}
+            set -e
+            test "$status" -eq 0
+          }
+          run_probe AST_UIFORM_LIFECYCLE dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --ast-only
+          run_probe AST_HOST dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-host-probe
+          run_probe AST_GENERATED dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-ast-generated
+          run_probe AST_UIFORM_CUSTOM_RESULT dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uiform-custom-result
+          run_probe AST_UILISTVIEW dotnet run --project ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release --no-build -- --headless-uilistview
+      - name: Upload Linux desktop probe logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ast-linux-desktop-probe-logs
+          path: '*.log'
+          if-no-files-found: ignore
+
+  desktop-macos:
+    needs: changes
+    if: needs.changes.outputs.all == 'true' || needs.changes.outputs.desktop == 'true'
+    name: AST UIForm Show Hide (macOS)
+    runs-on: macos-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build and run AST desktop lifecycle probe
+        run: |
+          set -euo pipefail
+          dotnet build ./tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj -c Release
+          python3 - <<'PY'
+          import subprocess
+          import sys
+          command = [
+              'dotnet', 'run', '--project', './tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj',
+              '-c', 'Release', '--no-build', '--', '--ast-only'
+          ]
+          process = subprocess.Popen(command)
+          try:
+              exit_code = process.wait(timeout=180)
+          except subprocess.TimeoutExpired:
+              process.kill()
+              process.wait()
+              raise SystemExit('AST macOS UIForm probe timed out after 180 seconds.')
+          if exit_code != 0:
+              raise SystemExit(exit_code)
+          probe = subprocess.run([
+              'dotnet', 'run', '--project', './tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj',
+              '-c', 'Release', '--no-build', '--', '--headless-host-probe'
+          ], timeout=180)
+          if probe.returncode != 0:
+              raise SystemExit(probe.returncode)
+          probe = subprocess.run([
+              'dotnet', 'run', '--project', './tests/DesktopUIFormLifecycleSmoke/DesktopUIFormLifecycleSmoke.csproj',
+              '-c', 'Release', '--no-build', '--', '--headless-uilistview'
+          ], timeout=180)
+          if probe.returncode != 0:
+              raise SystemExit(probe.returncode)
+          PY
+
+  android:
+    needs: changes
+    if: needs.changes.outputs.all == 'true' || needs.changes.outputs.android == 'true'
+    name: AST UIForm target (Android)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Cache Android workload and NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+            ~/.dotnet/packs
+            ~/.dotnet/sdk-manifests
+          key: android-${{ runner.os }}-${{ hashFiles('global.json', '**/*.csproj', '**/packages.lock.json') }}
+      - name: Install Android workload
+        run: dotnet workload install android --skip-manifest-update
+      - name: Build and run Android AST probe
+        run: |
+          set -euo pipefail
+          dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          dotnet run --project tests/AndroidAstBackendProbe/AndroidAstBackendProbe.csproj -c Release
+
+  browser-wasm:
+    needs: changes
+    if: needs.changes.outputs.all == 'true' || needs.changes.outputs.wasm == 'true'
+    name: AST browser WASM probe (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Report WASM toolchain
+        run: |
+          dotnet --info
+          dotnet workload list
+      - name: Cache WASM workload and NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+            ~/.dotnet/packs
+            ~/.dotnet/sdk-manifests
+          key: wasm-${{ runner.os }}-${{ hashFiles('global.json', '**/*.csproj', '**/packages.lock.json') }}
+      - name: Install browser WASM workload
+        run: dotnet workload install wasm-tools --skip-manifest-update
+      - name: Build browser interaction probe
+        run: dotnet build tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release
+      - name: Install Playwright Chromium on macOS
+        if: matrix.os == 'macos-latest'
+        run: pwsh -File tests/WebBrowserWasmBrowserSmoke/bin/Release/net10.0/playwright.ps1 install chromium
+      - name: Install Playwright Chromium on Windows
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: ./tests/WebBrowserWasmBrowserSmoke/bin/Release/net10.0/playwright.ps1 install chromium
+      - name: Build browser WASM smoke probe
+        run: dotnet build tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release
+      - name: Run browser WASM probe
+        if: matrix.os != 'windows-latest'
+        run: |
+          set -o pipefail
+          python3 -c 'import subprocess; subprocess.run(["dotnet", "run", "--project", "tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj", "-c", "Release", "--no-build", "--no-restore"], timeout=900, check=True)' 2>&1 | tee wasm-smoke.log
+      - name: Run browser WASM probe on Windows
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          dotnet run --project tests/WebBrowserWasmSmoke/WebBrowserWasmSmoke.csproj -c Release --no-build --no-restore 2>&1 | Tee-Object wasm-smoke.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload WASM smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ast-wasm-smoke-log-${{ matrix.os }}
+          path: wasm-smoke.log
+          if-no-files-found: ignore
+      - name: Run browser interaction probe
+        run: dotnet run --project tests/WebBrowserWasmBrowserSmoke/WebBrowserWasmBrowserSmoke.csproj -c Release --no-build

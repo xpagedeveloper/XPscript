@@ -14,7 +14,7 @@ Sub Main()
     Dim baseUrl As String
     Dim ai As XPAi
     Dim response As XPAiResponse
-    Dim weather As New AITool("weather")
+    Dim weather As New XPAITool("weather")
 
     baseUrl = Environ("XPSCRIPT_AI_COMPAT_BASE")
     If baseUrl = "" Then

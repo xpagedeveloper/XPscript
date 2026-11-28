@@ -1,0 +1,26 @@
+Sub Main()
+    Dim values List As Long
+    values("a") = 1
+    values("b") = 2
+    Erase values("missing")
+    Erase values("a")
+    Print IsElement(values("a"))
+    Print IsElement(values("b"))
+    Erase values
+    Print IsElement(values("b"))
+
+    values("first") = 1
+    values("later") = 2
+    Dim count As Long
+    count = 0
+    ForAll entry In values
+        Print ListTag(entry)
+        count = count + 1
+        Erase values("later")
+        Erase values("first")
+    End ForAll
+    Print count
+    Print IsElement(values("first"))
+    Print IsElement(values("later"))
+    Print "LIST_ERASE_OK"
+End Sub

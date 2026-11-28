@@ -1,0 +1,4 @@
+Sub Main()
+    Rem comment before the statement
+    Print "COMMENTS_OK" ' trailing apostrophe comment
+End Sub

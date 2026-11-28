@@ -1,0 +1,11 @@
+Sub Main()
+    Dim total As Long
+    Dim item As Variant
+    ForAll item In Array(1, 2, 3)
+        total = total + item
+        GoTo finished
+    End ForAll
+    total = 99
+finished:
+    Print total
+End Sub

@@ -1,0 +1,15 @@
+Sub Main()
+    Dim form As New UIForm("Android modal form regression")
+    Dim data As New XPJsonObject
+    Call form.BindData(data)
+    Call form.AddTextField("entry", "Enter QA value")
+    Call form.SetRequired("entry", True)
+    Dim schema As XPJsonSchema
+    Set schema = XPJsonSchema.Parse("{""type"":""object"",""properties"":{""entry"":{""type"":""string"",""minLength"":1}},""required"":[""entry""]}")
+    Call form.SetValidationSchema(schema)
+    Print "ANDROID-MODAL-FORM_READY"
+    Dim result As String
+    result = form.ShowDialog()
+    Print "ANDROID-MODAL-RESULT=" & result
+    Print "ANDROID-MODAL-VALUE=" & form.GetFieldValueString("entry")
+End Sub

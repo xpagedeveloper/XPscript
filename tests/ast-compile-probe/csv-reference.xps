@@ -1,0 +1,50 @@
+Function MakeTable() As XPCsvDocument
+    Dim result As New XPCsvDocument("id,name" & Application.NewLine & "001,Åsa")
+    Set MakeTable = result
+End Function
+
+Sub Mutate(ByVal table As XPCsvDocument)
+    table.Rows[0].Set("name", "shared")
+End Sub
+
+Sub Replace(table As XPCsvDocument)
+    Set table = New XPCsvDocument("value" & Application.NewLine & "replacement")
+End Sub
+
+Sub Retain()
+    Static stored As New XPCsvDocument
+    Call stored.AddHeader("value")
+    Print stored.ColumnCount
+End Sub
+
+Function ReplaceAndEncode(table As XPCsvDocument) As Variant
+    Set table = New XPCsvDocument("a;b", ";")
+    ReplaceAndEncode = Array(120, 59, 121, 10, 49, 59, 50)
+End Function
+
+Sub Main()
+    Dim data As XPCsvDocument
+    Set data = MakeTable()
+    Call Mutate(data)
+    Print data.Rows[0]["name"]
+    Call Mutate(MakeTable())
+    Call Replace(data)
+    Print data.Rows[0][0]
+    data.FromBytes(ReplaceAndEncode(data))
+    Print data.ColumnCount
+    Print data.Rows[0][1]
+    On Error Resume Next
+    Call Retain()
+    Call Retain()
+    Print Err
+    On Error GoTo 0
+    Dim csv As String
+    Dim copy As Long
+    Dim row As String
+    csv = "ordinary name"
+    copy = 7
+    row = "ordinary row"
+    Print csv
+    Print copy
+    Print row
+End Sub

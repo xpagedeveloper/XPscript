@@ -1,0 +1,7 @@
+Sub Helper()
+    Print "ok"
+End Sub
+
+Sub Main()
+    Call Helper()
+End Sub

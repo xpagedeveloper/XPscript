@@ -1,0 +1,115 @@
+Class ImageOwner
+    Public Sub Accept(ByVal value As XPImage)
+        value.Resize(1, 1)
+    End Sub
+
+    Public Sub Replace(ByRef value As XPImage)
+        Set value = New XPImage(7, 3)
+    End Sub
+
+    Public Sub AcceptOptional(Optional ByVal value As XPImage = Nothing)
+        If Not (value Is Nothing) Then Error 6, "omitted Optional class-method XPImage was not Nothing"
+    End Sub
+
+    Public Sub AcceptOptionalClone(Optional ByVal value As XPImage = Nothing)
+        If value Is Nothing Then Error 6, "supplied Optional class-method XPImage was Nothing"
+        value.Resize(3, 3)
+    End Sub
+
+    Public Sub Fail(ByRef value As XPImage)
+        Set value = New XPImage(8, 2)
+        Error 4987, "XPImage class-method ByRef failure"
+    End Sub
+
+    Public Sub FailOptional(Optional ByRef value As XPImage = Nothing)
+        Set value = New XPImage(10, 2)
+        Error 4989, "Optional XPImage class-method failure"
+    End Sub
+End Class
+
+Sub AcceptImage(ByVal value As XPImage)
+    value.Resize(2, 2)
+End Sub
+
+Sub AcceptOptionalImage(Optional ByVal value As XPImage = Nothing)
+    If Not (value Is Nothing) Then Error 6, "omitted Optional procedure XPImage was not Nothing"
+End Sub
+
+Sub AcceptOptionalImageClone(Optional ByVal value As XPImage = Nothing)
+    If value Is Nothing Then Error 6, "supplied Optional procedure XPImage was Nothing"
+    value.Resize(4, 4)
+End Sub
+
+Sub FailImage(ByRef value As XPImage)
+    Set value = New XPImage(9, 1)
+    Error 4986, "XPImage procedure ByRef failure"
+End Sub
+
+Sub FailOptionalImage(Optional ByRef value As XPImage = Nothing)
+    Set value = New XPImage(11, 2)
+    Error 4988, "Optional XPImage procedure failure"
+End Sub
+
+Sub Main()
+    Dim image As New XPImage(6, 4)
+    Call AcceptImage(image)
+    If image.Width <> 6 Or image.Height <> 4 Then Error 6, "XPImage procedure ByVal parameter aliased caller"
+    Dim owner As New ImageOwner
+    Call owner.Accept(image)
+    If image.Width <> 6 Or image.Height <> 4 Then Error 6, "XPImage class-method ByVal parameter aliased caller"
+    Dim previous As XPImage
+    Set previous = image
+    Call owner.Replace(image)
+    If image.Width <> 7 Or image.Height <> 3 Then Error 6, "XPImage class-method ByRef replacement failed"
+    On Error Resume Next
+    Dim oldFailure As Long
+    oldFailure = previous.Width
+    oldFailure = Err
+    Err.Clear
+    On Error GoTo 0
+    If oldFailure = 0 Then Error 6, "XPImage class-method ByRef replacement preserved recycled alias"
+    On Error Resume Next
+    Call FailImage(image)
+    Dim procedureFailure As Long
+    procedureFailure = Err
+    Err.Clear
+    On Error GoTo 0
+    If procedureFailure = 0 Or Not (image Is Nothing) Then Error 6, "XPImage procedure ByRef failure retained a target"
+    Set image = New XPImage(6, 4)
+    On Error Resume Next
+    Call owner.Fail(image)
+    Dim methodFailure As Long
+    methodFailure = Err
+    Err.Clear
+    On Error GoTo 0
+    If methodFailure = 0 Or Not (image Is Nothing) Then Error 6, "XPImage class-method ByRef failure retained a target"
+    Call AcceptOptionalImage()
+    Call owner.AcceptOptional()
+    Dim supplied As New XPImage(6, 4)
+    Call AcceptOptionalImageClone(supplied)
+    If supplied.Width <> 6 Or supplied.Height <> 4 Then Error 6, "supplied Optional procedure XPImage aliased caller"
+    Call owner.AcceptOptionalClone(supplied)
+    If supplied.Width <> 6 Or supplied.Height <> 4 Then Error 6, "supplied Optional class-method XPImage aliased caller"
+    Dim optionalFailure As New XPImage(6, 4)
+    On Error Resume Next
+    Call FailOptionalImage(optionalFailure)
+    Dim optionalProcedureFailure As Long
+    optionalProcedureFailure = Err
+    Err.Clear
+    On Error GoTo 0
+    If optionalProcedureFailure = 0 Or Not (optionalFailure Is Nothing) Then Error 6, "Optional XPImage procedure failure retained target"
+    Set optionalFailure = New XPImage(6, 4)
+    On Error Resume Next
+    Call owner.FailOptional(optionalFailure)
+    Dim optionalMethodFailure As Long
+    optionalMethodFailure = Err
+    Err.Clear
+    On Error GoTo 0
+    If optionalMethodFailure = 0 Or Not (optionalFailure Is Nothing) Then Error 6, "Optional XPImage class-method failure retained target"
+    Print "XPIMAGE_BYVAL_PARAMETER_CLONE_OK"
+    Print "XPIMAGE_BYREF_METHOD_REPLACEMENT_OK"
+    Print "XPIMAGE_BYREF_FAILURE_CLEAR_OK"
+    Print "XPIMAGE_OPTIONAL_PARAMETER_NOTHING_OK"
+    Print "XPIMAGE_OPTIONAL_PARAMETER_CLONE_OK"
+    Print "XPIMAGE_OPTIONAL_FAILURE_CLEAR_OK"
+End Sub

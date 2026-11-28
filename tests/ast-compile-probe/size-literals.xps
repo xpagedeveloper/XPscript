@@ -1,0 +1,13 @@
+Option Declare
+
+Sub Main()
+    Dim kilobytes As Long
+    Dim megabytes As Long
+    Dim gigabytes As Long
+    kilobytes = 2kb
+    megabytes = 100mb
+    gigabytes = 3gb
+    If kilobytes <> 2048 Then Error 5, "kb literal failed"
+    If megabytes <> 104857600 Then Error 5, "mb literal failed"
+    If gigabytes <> 3221225472 Then Error 5, "gb literal failed"
+End Sub

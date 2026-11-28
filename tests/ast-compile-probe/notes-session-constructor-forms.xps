@@ -1,0 +1,12 @@
+Option Declare
+
+Const NOTES_RUNTIME = "."
+Const NOTES_INI = "notes.ini"
+
+Sub Main()
+    Dim session As NotesSession
+    Set session = New NotesSession
+    Set session = New NotesSession(NOTES_RUNTIME)
+    Set session = New NotesSession(NOTES_RUNTIME, NOTES_INI)
+    Print "NOTES_SESSION_CONSTRUCTORS_OK"
+End Sub

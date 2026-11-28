@@ -1,0 +1,6 @@
+Sub Main()
+    GoTo afterDeclaration
+    Dim value As Long
+afterDeclaration:
+    Print "GOTO_DECLARATION_HOIST_OK"
+End Sub

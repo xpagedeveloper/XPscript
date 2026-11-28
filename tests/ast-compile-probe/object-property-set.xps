@@ -1,0 +1,29 @@
+Class Child
+    Public Value As Long
+End Class
+Class Holder
+    Private item As Object
+    Public Property Set Value(ByVal incoming As Object)
+        Set item = incoming
+    End Property
+    Public Property Get Value() As Object
+        Set Value = item
+    End Property
+End Class
+Sub Main()
+    Dim holder As New Holder
+    Dim first As New Child
+    Dim second As New Child
+    first.Value = 7
+    Set holder.Value = first
+    If holder.Value Is Nothing Then Error 6, "Set alias"
+    Set holder.Value = second
+    If holder.Value Is first Then Error 6, "Set replacement"
+    If holder.Value Is Nothing Then Error 6, "Set replacement"
+    Set holder.Value = Nothing
+    If holder.Value Is Nothing Then
+        Print "OBJECT_PROPERTY_SET_OK"
+    Else
+        Error 6, "Set Nothing"
+    End If
+End Sub

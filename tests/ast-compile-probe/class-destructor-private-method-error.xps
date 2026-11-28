@@ -1,0 +1,11 @@
+Class Root
+    Private Sub Hidden()
+    End Sub
+End Class
+Class Child Extend Root
+    Public Sub Delete()
+        Call Me.Hidden()
+    End Sub
+End Class
+Sub Main()
+End Sub

@@ -1,0 +1,15 @@
+Option Declare
+
+Sub Main()
+    Dim db As XPDBMsSQL
+    Dim candidate As XPDBMsSQL
+    If False Then
+        Set candidate = New XPDBMsSQL("Server=example.invalid;Database=test")
+    End If
+    If Not AliasSurface(db) Then Error 1201, "MSSQL alias AST binding failed"
+    Print "MSSQL_ALIAS_AST_SAFE_OK"
+End Sub
+
+Function AliasSurface(ByVal db As XPDBMsSQL) As Boolean
+    AliasSurface = True
+End Function

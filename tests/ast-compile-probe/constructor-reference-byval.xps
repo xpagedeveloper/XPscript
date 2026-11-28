@@ -1,0 +1,13 @@
+Class Record
+    Public Stored As Object
+    Public Sub New(ByVal value As Object)
+        Set Stored = value
+        Set value = Nothing
+    End Sub
+End Class
+Sub Main()
+    Dim value As New Object
+    Dim item As New Record(value)
+    If Not (item.Stored Is value) Then Error 6, "Object constructor snapshot lost"
+    Print "CONSTRUCTOR_REFERENCE_BYVAL_OK"
+End Sub

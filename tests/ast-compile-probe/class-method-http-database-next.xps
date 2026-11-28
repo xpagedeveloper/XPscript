@@ -1,0 +1,23 @@
+Class DatabaseHolder
+    Public Function EchoSupabase(ByVal value As XPHttpDbSupabase) As XPHttpDbSupabase
+        Set EchoSupabase = value
+    End Function
+    Public Function EchoDomino(ByVal value As XPHttpDbDominoRest) As XPHttpDbDominoRest
+        Set EchoDomino = value
+    End Function
+End Class
+
+Sub Main()
+    Dim holder As New DatabaseHolder
+    Dim supabase As XPHttpDbSupabase
+    Dim domino As XPHttpDbDominoRest
+    Dim returnedSupabase As XPHttpDbSupabase
+    Dim returnedDomino As XPHttpDbDominoRest
+    Set returnedSupabase = holder.EchoSupabase(supabase)
+    Set returnedDomino = holder.EchoDomino(domino)
+    If returnedSupabase Is Nothing And returnedDomino Is Nothing Then
+        Print "CLASS_METHOD_HTTP_DATABASE_OK"
+    Else
+        Error 6, "HTTP database class-method Nothing identity"
+    End If
+End Sub

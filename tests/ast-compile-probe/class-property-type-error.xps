@@ -1,0 +1,9 @@
+Class Box
+    Public Property Get Value As Long
+        Value = 1
+    End Property
+    Public Property Let Value(ByVal incoming As String)
+    End Property
+End Class
+Sub Main()
+End Sub

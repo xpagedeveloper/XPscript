@@ -1,0 +1,7 @@
+Class Record
+    Public Sub New(Optional ByVal first As Long = 1, Optional ByVal second As Long = 2)
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Record(, 3)
+End Sub

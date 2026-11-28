@@ -1,0 +1,3 @@
+Sub Main()
+    Put #MissingFile, 1, 2
+End Sub

@@ -1,0 +1,48 @@
+name: AST CLI Shards (Windows)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cli-shard:
+    name: AST CLI Shard ${{ matrix.shard }}
+    runs-on: windows-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: 1
+            script: run-ast-cli.ps1
+            arguments: '-Shard 1'
+          - shard: 2
+            script: run-ast-cli-shard-2.ps1
+            arguments: ''
+          - shard: 3
+            script: run-ast-cli-shard-3.ps1
+            arguments: ''
+          - shard: 4
+            script: run-ast-cli-shard-4.ps1
+            arguments: ''
+          - shard: 5
+            script: run-ast-cli-shard-5.ps1
+            arguments: ''
+          - shard: 6
+            script: run-ast-cli-shard-6.ps1
+            arguments: ''
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Run shard ${{ matrix.shard }}
+        shell: pwsh
+        run: pwsh -NoProfile -File ./tests/ast-compile-probe/${{ matrix.script }} ${{ matrix.arguments }}

@@ -34,16 +34,18 @@ dotnet build .\src\XPScript.Web.Cgi\XPScript.Web.Cgi.csproj -c Release
 ## Run XPScript directly
 
 ```text
-xpscriptc run hello.xps
-xpscriptc run hello.xps first "second value"
+xpscript run hello.xps
+xpscript run hello.xps --Args "first second value"
 ```
 
 When using `xpscript run`, program arguments must be supplied explicitly with `--Args`, for example `xpscript run main.xps --Args "first second"`. This starts the generated program with `first` and `second` as its two command-line arguments. Arguments are available through `Application.ArgCount` and `Application.Args(index)`. `--info` is an XPScript CLI option and may be placed before or after `run`; it is not forwarded to the program.
 
+`compile` and `run` use the AST compiler by default. Use `ast-compile` or `ast-run` when the compiler choice should be explicit. During migration, `legacy-compile` (also `compilev1`) and `legacy-run` (also `runv1`) select the previous compiler path.
+
 ## Compile code
 
 ```text
-xpscriptc hello.xps -o hello
+xpscript compile hello.xps -o hello
 ```
 
 Target another runtime:

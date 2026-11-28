@@ -14,6 +14,16 @@ internal static class XPScriptNotes
     public static XPScriptNotesSession CreateSession(object? runtimeDirectory, object? notesIni, object? idPassword) =>
         new(XPScriptRuntime.CStr(runtimeDirectory), XPScriptRuntime.CStr(notesIni), XPScriptRuntime.CStr(idPassword));
 
+    public static void SetConvertMIME(object? sessionValue, object? value)
+    {
+        if (sessionValue is not XPScriptNotesSession session)
+            throw new XPScriptRuntimeException(13, "ConvertMIME requires a NotesSession.");
+        session.ConvertMIME = XPScriptRuntime.CBool(value);
+    }
+
+    public static bool IsNothing(object? value) => value is ILSObjectReference reference ? reference.IsNothing : value is null;
+    public static bool IsNotNothing(object? value) => !IsNothing(value);
+
     public static void RecycleValue(object? value)
     {
         if (value is null) return;
@@ -97,10 +107,15 @@ internal sealed class XPScriptNotesSession : IDisposable
             Api = new XPScriptNotesNativeApi(RuntimeDirectory);
             try
             {
+                var userId = ResolveUserIdFile();
+                if (userId.Length > 0)
+                    Environment.SetEnvironmentVariable("KeyFileName", userId);
                 if (string.IsNullOrEmpty(idPassword))
                     Api.Initialize(NotesIni.Length == 0 ? null : NotesIni);
                 else
                     Api.Initialize(NotesIni.Length == 0 ? null : NotesIni, idPassword);
+                if (userId.Length > 0)
+                    Api.SetEnvironmentVariable("KeyFileName", userId);
                 Username = Api.GetUserName();
                 CommonUsername = ExtractCommonUsername(Api.CanonicalizeName(Username));
                 NotesVersion = ResolveNotesVersion(RuntimeDirectory, NotesIni);
@@ -122,11 +137,14 @@ internal sealed class XPScriptNotesSession : IDisposable
     public string NotesIni { get; }
     public string Username { get; }
     public string UserName => Username;
+    public string EffectiveUserName => Username;
     public string CommonUsername { get; }
     public string CommonUserName => CommonUsername;
+    public XPScriptNotesName UserNameObject => CreateName(Username);
     public string NotesVersion { get; }
     public long NotesBuildVersion { get; }
     public string Platform { get; }
+    public bool ConvertMIME { get; set; } = true;
     public bool IsRecycled => _recycled;
 
     private static void RecycleActiveSessionAtProcessExit()
@@ -164,6 +182,17 @@ internal sealed class XPScriptNotesSession : IDisposable
                 .Select(group => group.Key + " x" + group.Count().ToString(System.Globalization.CultureInfo.InvariantCulture))
                 .ToList();
         }
+    }
+
+    private string ResolveUserIdFile()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(DataDir, "user.id"),
+            Path.Combine(RuntimeDirectory, "Data", "user.id"),
+            Path.Combine(RuntimeDirectory, "user.id")
+        };
+        return candidates.FirstOrDefault(File.Exists) ?? "";
     }
 
     private static string ExtractCommonUsername(string canonical)

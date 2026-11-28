@@ -7,6 +7,9 @@ internal sealed class ClassOverloadValidator
     private sealed record Parameter(string Name, string Type, bool IsArray, bool IsOptional, bool IsByRef);
     private sealed record Method(string ClassName, string Name, bool IsFunction, IReadOnlyList<Parameter> Parameters, int Line);
     private sealed record CallSite(string ClassName, string MethodName, string DisplayName, IReadOnlyList<string> Arguments);
+    private sealed record InheritanceMember(string Name, string Kind, string Visibility, int Line);
+    private sealed record InheritanceClass(string Name, string? BaseName, Dictionary<string, List<InheritanceMember>> Members);
+    private sealed record OverrideMember(string ClassName, string Name, string Kind, string Visibility, string Signature, int Line);
 
     private static readonly Dictionary<string, int> NumericRank = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -17,11 +20,250 @@ internal sealed class ClassOverloadValidator
     {
         var lines = source.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
         ValidateMemberConflicts(lines, sourceName);
+        ValidateParentVisibility(lines, sourceName);
+        ValidateOverrideSignatures(lines, sourceName);
         var methods = CollectMethods(lines);
         if (methods.Count == 0) return;
         ValidateDuplicateSignatures(methods, sourceName, lines);
         ValidateCalls(lines, methods, sourceName);
     }
+
+    private static void ValidateOverrideSignatures(string[] lines, string sourceName)
+    {
+        var bases = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var members = new Dictionary<string, List<OverrideMember>>(StringComparer.OrdinalIgnoreCase);
+        string? currentClass = null;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = StripComment(lines[i]).Trim();
+            if (line.Length == 0) continue;
+
+            var classMatch = Regex.Match(line, @"^(?:(?:Public|Private)\s+)?Class\s+([A-Za-z_]\w*)(?:\s+Extend\s+([A-Za-z_]\w*))?\s*$", RegexOptions.IgnoreCase);
+            if (classMatch.Success)
+            {
+                currentClass = classMatch.Groups[1].Value;
+                bases[currentClass] = classMatch.Groups[2].Success ? classMatch.Groups[2].Value : null;
+                members.TryAdd(currentClass, []);
+                continue;
+            }
+            if (Regex.IsMatch(line, @"^End\s+Class$", RegexOptions.IgnoreCase)) { currentClass = null; continue; }
+            if (currentClass is null) continue;
+
+            var proc = Regex.Match(line, @"^(?:(Public|Private)\s+)?(Sub|Function)\s+([A-Za-z_]\w*)\s*\((.*)\)\s*(?:As\s+([A-Za-z_]\w*))?\s*$", RegexOptions.IgnoreCase);
+            if (proc.Success)
+            {
+                var name = proc.Groups[3].Value;
+                if (name.Equals("New", StringComparison.OrdinalIgnoreCase) || name.Equals("Delete", StringComparison.OrdinalIgnoreCase)) continue;
+                var kind = proc.Groups[2].Value.Equals("Function", StringComparison.OrdinalIgnoreCase) ? "Function" : "Sub";
+                var returnType = kind == "Function" ? NormalizeType(proc.Groups[5].Success ? proc.Groups[5].Value : "Variant") : "";
+                var signature = BuildOverrideParameterSignature(ParseParameters(proc.Groups[4].Value)) + "->" + returnType;
+                members[currentClass].Add(new OverrideMember(currentClass, name, kind, NormalizeVisibilityForInheritance(proc.Groups[1].Value), signature, i + 1));
+                continue;
+            }
+
+            var property = Regex.Match(line, @"^(?:(Public|Private)\s+)?Property\s+(Get|Set|Let)\s+([A-Za-z_]\w*)\s*(?:\((.*)\))?\s*(?:As\s+([A-Za-z_]\w*))?\s*$", RegexOptions.IgnoreCase);
+            if (property.Success)
+            {
+                var accessor = property.Groups[2].Value.ToUpperInvariant();
+                var type = NormalizeType(property.Groups[5].Success ? property.Groups[5].Value : "Variant");
+                var signature = accessor + ":" + BuildOverrideParameterSignature(ParseParameters(property.Groups[4].Value)) + "->" + type;
+                members[currentClass].Add(new OverrideMember(currentClass, property.Groups[3].Value, "Property", NormalizeVisibilityForInheritance(property.Groups[1].Value), signature, i + 1));
+            }
+        }
+
+        foreach (var pair in members)
+        {
+            if (!bases.TryGetValue(pair.Key, out var baseName) || string.IsNullOrWhiteSpace(baseName) || !members.TryGetValue(baseName, out var baseMembers))
+                continue;
+
+            foreach (var child in pair.Value)
+            {
+                var inherited = FindInheritedOverrideMembers(baseName, child.Name, bases, members).ToArray();
+                if (inherited.Length == 0) continue;
+                if (inherited.Any(parent => parent.Kind.Equals(child.Kind, StringComparison.OrdinalIgnoreCase) && parent.Signature.Equals(child.Signature, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                var original = lines[child.Line - 1];
+                var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
+                var description = $"Class '{child.ClassName}' has an incompatible override for inherited member '{child.Name}'.";
+                var diagnostic = new CompileDiagnostic
+                {
+                    File = sourceName,
+                    Line = child.Line,
+                    Position = 1,
+                    Description = description,
+                    DiagnosticCode = CompilerDiagnosticCodes.ConflictingClassMember,
+                    Category = "member-resolution",
+                    Properties =
+                    [
+                        new() { Name = "receiverType", Value = child.ClassName },
+                        new() { Name = "symbol", Value = child.Name },
+                        new() { Name = "symbolKind", Value = child.Kind },
+                        new() { Name = "signature", Value = child.Signature },
+                        new() { Name = "baseType", Value = baseName },
+                        new() { Name = "baseSignature", Value = string.Join(" | ", inherited.Select(m => m.Kind + ":" + m.Signature)) }
+                    ],
+                    SourceCode = safeSource,
+                    MarkedCode = safeSource + Environment.NewLine + "^"
+                };
+                throw new CompilerException(description, CompilerDiagnosticCodes.ConflictingClassMember, "member-resolution", [diagnostic]);
+            }
+        }
+    }
+
+    private static string BuildOverrideParameterSignature(IReadOnlyList<Parameter> parameters) =>
+        string.Join("|", parameters.Select(p => $"{NormalizeType(p.Type)}:{p.IsArray}:{p.IsByRef}"));
+
+    private static IEnumerable<OverrideMember> FindInheritedOverrideMembers(
+        string baseName,
+        string memberName,
+        IReadOnlyDictionary<string, string?> bases,
+        IReadOnlyDictionary<string, List<OverrideMember>> members)
+    {
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var current = baseName;
+        while (!string.IsNullOrWhiteSpace(current) && visited.Add(current))
+        {
+            if (members.TryGetValue(current, out var declared))
+            {
+                var accessible = declared
+                    .Where(m => m.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase) &&
+                                !m.Visibility.Equals("Private", StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+                if (accessible.Length > 0)
+                    return accessible;
+            }
+
+            if (!bases.TryGetValue(current, out var next) || string.IsNullOrWhiteSpace(next))
+                break;
+            current = next;
+        }
+
+        return [];
+    }
+
+    private static void ValidateParentVisibility(string[] lines, string sourceName)
+    {
+        var classes = new Dictionary<string, InheritanceClass>(StringComparer.OrdinalIgnoreCase);
+        InheritanceClass? current = null;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = StripComment(lines[i]).Trim();
+            if (line.Length == 0) continue;
+
+            var classMatch = Regex.Match(line, @"^(?:(?:Public|Private)\s+)?Class\s+([A-Za-z_]\w*)(?:\s+Extend\s+([A-Za-z_]\w*))?\s*$", RegexOptions.IgnoreCase);
+            if (classMatch.Success)
+            {
+                var name = classMatch.Groups[1].Value;
+                var baseName = classMatch.Groups[2].Success ? classMatch.Groups[2].Value : null;
+                current = new InheritanceClass(name, baseName, new Dictionary<string, List<InheritanceMember>>(StringComparer.OrdinalIgnoreCase));
+                classes[name] = current;
+                continue;
+            }
+            if (Regex.IsMatch(line, @"^End\s+Class$", RegexOptions.IgnoreCase)) { current = null; continue; }
+            if (current is null) continue;
+
+            var procedure = Regex.Match(line, @"^(?:(Public|Private)\s+)?(Sub|Function)\s+([A-Za-z_]\w*)\s*\(", RegexOptions.IgnoreCase);
+            if (procedure.Success)
+            {
+                var name = procedure.Groups[3].Value;
+                if (!name.Equals("Delete", StringComparison.OrdinalIgnoreCase))
+                {
+                    var kind = name.Equals("New", StringComparison.OrdinalIgnoreCase) ? "Constructor" : procedure.Groups[2].Value;
+                    AddInheritanceMember(current, new InheritanceMember(name, kind, NormalizeVisibilityForInheritance(procedure.Groups[1].Value), i + 1));
+                }
+                continue;
+            }
+
+            var property = Regex.Match(line, @"^(?:(Public|Private)\s+)?Property\s+(Get|Set|Let)\s+([A-Za-z_]\w*)\b", RegexOptions.IgnoreCase);
+            if (property.Success)
+                AddInheritanceMember(current, new InheritanceMember(property.Groups[3].Value, "Property", NormalizeVisibilityForInheritance(property.Groups[1].Value), i + 1));
+        }
+
+        string? currentClass = null;
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var original = lines[i];
+            var line = StripComment(original);
+            var trimmed = line.Trim();
+            var classMatch = Regex.Match(trimmed, @"^(?:(?:Public|Private)\s+)?Class\s+([A-Za-z_]\w*)(?:\s+Extend\s+([A-Za-z_]\w*))?\s*$", RegexOptions.IgnoreCase);
+            if (classMatch.Success) { currentClass = classMatch.Groups[1].Value; continue; }
+            if (Regex.IsMatch(trimmed, @"^End\s+Class$", RegexOptions.IgnoreCase)) { currentClass = null; continue; }
+            if (currentClass is null || !classes.TryGetValue(currentClass, out var child) || string.IsNullOrWhiteSpace(child.BaseName) || !classes.TryGetValue(child.BaseName, out var baseClass))
+                continue;
+
+            foreach (Match access in Regex.Matches(line, @"\bParent\.(?<name>[A-Za-z_]\w*)\b", RegexOptions.IgnoreCase))
+            {
+                var name = access.Groups["name"].Value;
+                // Parent.New has structural constructor-placement rules. Leave it
+                // to AstClassConstructorSupport.Body so late, duplicate, nested and
+                // root Parent.New uses retain the dedicated XPS1012 diagnostic
+                // instead of being classified as an unknown base member here.
+                if (name.Equals("New", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!baseClass.Members.TryGetValue(name, out var members) || members.Count == 0)
+                {
+                    var description = $"Parent base type '{baseClass.Name}' has no member '{name}'.";
+                    var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
+                    var diagnostic = new CompileDiagnostic
+                    {
+                        File = sourceName,
+                        Line = i + 1,
+                        Position = access.Index + 1,
+                        Description = description,
+                        DiagnosticCode = CompilerDiagnosticCodes.UnknownMember,
+                        Category = "member-resolution",
+                        Properties =
+                        [
+                            new() { Name = "receiverType", Value = baseClass.Name },
+                            new() { Name = "symbol", Value = name },
+                            new() { Name = "symbolKind", Value = "member" }
+                        ],
+                        SourceCode = safeSource,
+                        MarkedCode = safeSource + Environment.NewLine + new string(' ', Math.Max(0, access.Index)) + "^"
+                    };
+                    throw new CompilerException(description, CompilerDiagnosticCodes.UnknownMember, "member-resolution", [diagnostic]);
+                }
+
+                if (members.Any(m => !m.Visibility.Equals("Private", StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                var privateDescription = $"Parent cannot access Private base member '{baseClass.Name}.{name}'.";
+                var privateSafeSource = CompilerDiagnosticRedaction.MaskStringLiterals(original).TrimEnd();
+                var privateDiagnostic = new CompileDiagnostic
+                {
+                    File = sourceName,
+                    Line = i + 1,
+                    Position = access.Index + 1,
+                    Description = privateDescription,
+                    DiagnosticCode = CompilerDiagnosticCodes.UnknownMember,
+                    Category = "member-resolution",
+                    Properties =
+                    [
+                        new() { Name = "receiverType", Value = baseClass.Name },
+                        new() { Name = "symbol", Value = name },
+                        new() { Name = "symbolKind", Value = members[0].Kind },
+                        new() { Name = "visibility", Value = "Private" }
+                    ],
+                    SourceCode = privateSafeSource,
+                    MarkedCode = privateSafeSource + Environment.NewLine + new string(' ', Math.Max(0, access.Index)) + "^"
+                };
+                throw new CompilerException(privateDescription, CompilerDiagnosticCodes.UnknownMember, "member-resolution", [privateDiagnostic]);
+            }
+        }
+    }
+
+    private static void AddInheritanceMember(InheritanceClass target, InheritanceMember member)
+    {
+        if (!target.Members.TryGetValue(member.Name, out var members))
+            target.Members[member.Name] = members = [];
+        members.Add(member);
+    }
+
+    private static string NormalizeVisibilityForInheritance(string value) =>
+        value.Equals("Private", StringComparison.OrdinalIgnoreCase) ? "Private" : "Public";
 
     private static void ValidateMemberConflicts(string[] lines, string sourceName)
     {

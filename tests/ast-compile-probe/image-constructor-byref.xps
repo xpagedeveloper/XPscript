@@ -1,0 +1,109 @@
+Public escaped As Variant
+Public rootImage As Variant
+Public childImage As Variant
+Public rootLocal As Variant
+Public childLocal As Variant
+Public forwardLocal As Variant
+Public destructorCalls As Long
+Public trace As String
+Class Root
+    Private picture As XPImage
+    Public Property Get Width As Long
+        If Not (picture Is Nothing) Then
+            Width = picture.Width
+        End If
+    End Property
+    Public Sub New(ByRef value As Long, ByVal mode As Long)
+        value = value + 1
+        escaped = Me
+        trace = trace & "R"
+        Dim local As New XPImage(4, 3)
+        rootLocal = local
+        Set picture = local
+        rootImage = picture
+        If mode = 1 Then Error 3861, "root failed"
+    End Sub
+    Public Sub Delete()
+        destructorCalls = destructorCalls + 1
+    End Sub
+End Class
+Class Child Extend Root
+    Public Picture As XPImage
+    Public Sub New(ByRef value As Long, ByVal mode As Long)
+        Call Parent.New(value, Forward(value, mode))
+        value = value + 100
+        trace = trace & "C"
+        Dim local As New XPImage(5, 3)
+        childLocal = local
+        Set Picture = local
+        childImage = Picture
+        If mode = 2 Then Error 3862, "child failed"
+    End Sub
+    Public Sub Delete()
+        destructorCalls = destructorCalls + 1
+    End Sub
+End Class
+Function Forward(ByRef value As Long, ByVal mode As Long) As Long
+    trace = trace & "F"
+    value = value + 10
+    Dim local As New XPImage(3, 2)
+    forwardLocal = local
+    If mode = 3 Then Error 3863, "argument failed"
+    Forward = mode
+End Function
+Sub AssertExpired(ByVal value As Variant)
+    If value Is Nothing Then
+        Exit Sub
+    End If
+    Dim image As XPImage = value
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = image.Width
+    failure = Err
+    On Error GoTo 0
+    If width <> -1 Or failure = 0 Then Error 6, "ByRef construction image leaked"
+End Sub
+Sub Main()
+    Dim value As Long = 1
+    Dim item As New Child(value, 0)
+    Dim original As Child = item
+    If value <> 112 Or trace <> "FRC" Or item.Width <> 4 Or item.Picture.Width <> 5 Then Error 6, "successful ByRef construction"
+    Call AssertExpired(rootLocal)
+    Call AssertExpired(childLocal)
+    Call AssertExpired(forwardLocal)
+    Dim mode As Long
+    For mode = 1 To 3
+        escaped = Nothing
+        rootImage = Nothing
+        childImage = Nothing
+        rootLocal = Nothing
+        childLocal = Nothing
+        forwardLocal = Nothing
+        trace = ""
+        value = 1
+        Dim failure As Long
+        On Error Resume Next
+        Set item = New Child(value, mode)
+        failure = Err
+        On Error GoTo 0
+        If failure <> 3860 + mode Or Not (item Is original) Or destructorCalls <> 0 Then Error 6, "failed ByRef construction replaced target or ran Delete"
+        If mode = 1 And (value <> 12 Or trace <> "FR") Then Error 6, "base error lost ByRef update"
+        If mode = 2 And (value <> 112 Or trace <> "FRC") Then Error 6, "derived error lost ByRef update"
+        If mode = 3 Then
+            If value <> 11 Or trace <> "F" Or Not (escaped Is Nothing) Then Error 6, "argument error lost reference mutation or entered body"
+        Else
+            Dim failed As Child = escaped
+            If failed.Width <> 0 Or Not (failed.Picture Is Nothing) Then Error 6, "completed fields not cleared"
+        End If
+        Call AssertExpired(rootImage)
+        Call AssertExpired(childImage)
+        Call AssertExpired(rootLocal)
+        Call AssertExpired(childLocal)
+        Call AssertExpired(forwardLocal)
+    Next
+    If item.Width <> 4 Or item.Picture.Width <> 5 Then Error 6, "failed replacement damaged original"
+    Delete item
+    If destructorCalls <> 2 Then Error 6, "explicit Delete chain"
+    Print "IMAGE_BYREF_CONSTRUCTORS_OK"
+End Sub

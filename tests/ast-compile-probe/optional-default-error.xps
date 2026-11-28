@@ -1,0 +1,6 @@
+Sub Main()
+End Sub
+
+Function InvalidDefault(Optional ByVal value As Long = "wrong type") As Long
+    InvalidDefault = value
+End Function

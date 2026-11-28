@@ -137,9 +137,16 @@ internal sealed class UIFormRemoteSearchPostProcessor
                     html.Append(XPScriptUIRemoteSearchRuntime.LookupScript(field));
                     break;
 """;
-        if (!generated.Contains(oldLookup, StringComparison.Ordinal))
-            throw new CompilerException("Unable to install UIForm LookupField server search renderer.");
-        generated = generated.Replace(oldLookup, newLookup, StringComparison.Ordinal);
+        if (generated.Contains(oldLookup, StringComparison.Ordinal))
+            generated = generated.Replace(oldLookup, newLookup, StringComparison.Ordinal);
+        else
+        {
+            var lookupStart = generated.IndexOf("                case \"LookupField\":", StringComparison.Ordinal);
+            var lookupEnd = lookupStart < 0 ? -1 : generated.IndexOf("                case \"AutoCompleteField\":", lookupStart + 1, StringComparison.Ordinal);
+            if (lookupStart < 0 || lookupEnd < 0)
+                throw new CompilerException("Unable to install UIForm LookupField server search renderer.");
+            generated = generated[..lookupStart] + newLookup + generated[lookupEnd..];
+        }
 
         const string oldAuto = """
                 case "AutoCompleteField":
@@ -158,9 +165,13 @@ internal sealed class UIFormRemoteSearchPostProcessor
                     html.Append(XPScriptUIRemoteSearchRuntime.AutoCompleteScript(field));
                     break;
 """;
-        if (!generated.Contains(oldAuto, StringComparison.Ordinal))
+        if (generated.Contains(oldAuto, StringComparison.Ordinal))
+            return generated.Replace(oldAuto, newAuto, StringComparison.Ordinal);
+        var autoStart = generated.IndexOf("                case \"AutoCompleteField\":", StringComparison.Ordinal);
+        var autoEnd = autoStart < 0 ? -1 : generated.IndexOf("                case \"", autoStart + 1, StringComparison.Ordinal);
+        if (autoStart < 0 || autoEnd < 0)
             throw new CompilerException("Unable to install UIForm AutoCompleteField server search renderer.");
-        return generated.Replace(oldAuto, newAuto, StringComparison.Ordinal);
+        return generated[..autoStart] + newAuto + generated[autoEnd..];
     }
 
     private const string Runtime = """

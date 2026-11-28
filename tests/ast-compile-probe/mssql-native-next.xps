@@ -1,0 +1,6 @@
+Option Declare
+
+Sub Main()
+    Dim db As XPDbMsSql
+    Print "MSSQL_AST_OK"
+End Sub

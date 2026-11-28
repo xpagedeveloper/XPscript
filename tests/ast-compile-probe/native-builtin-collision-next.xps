@@ -1,0 +1,11 @@
+Option Declare
+
+Declare Sub Sleep Lib "kernel32.dll" Alias "Sleep" (ByVal milliseconds As Long)
+Declare Function GetTickCount Lib "kernel32.dll" Alias "GetTickCount" () As Long
+
+Sub Main()
+    Call Sleep(0)
+    Dim tick As Long
+    tick = GetTickCount()
+    Print "NATIVE_BUILTIN_COLLISION_OK"
+End Sub

@@ -1,0 +1,3 @@
+Sub Main()
+    GoTo missing
+End Sub

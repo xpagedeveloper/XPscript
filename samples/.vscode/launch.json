@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "xpscript",
+      "request": "launch",
+      "name": "Debug current XPscript file",
+      "program": "${file}",
+      "target": "cli",
+      "stopOnEntry": true
+    }
+  ]
+}

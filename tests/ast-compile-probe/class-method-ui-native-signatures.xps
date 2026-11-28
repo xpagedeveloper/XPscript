@@ -1,0 +1,18 @@
+Class UiBridge
+    Public Sub AcceptForm(ByVal form As UIForm)
+    End Sub
+
+    Public Function ReturnList() As UIListView
+        ReturnList = Nothing
+    End Function
+
+    Public Function ReturnEntries() As NotesViewEntryCollection
+        ReturnEntries = Nothing
+    End Function
+
+End Class
+
+Sub Main()
+    Dim bridge As New UiBridge
+    Print "AST_CLASS_UI_SIGNATURES_OK"
+End Sub

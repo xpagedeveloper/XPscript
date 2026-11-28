@@ -1,0 +1,13 @@
+Class Record
+    Public Sub New(ByRef value As Long, Optional ByRef extra As Long = 1)
+        value = value + extra
+        extra = extra + 1
+    End Sub
+End Class
+Sub Main()
+    Dim value As Long = 1
+    Dim first As New Record(value)
+    Dim second As New Record(value)
+    If value <> 3 Then Error 6, "required ref or fresh Optional ref lost"
+    Print "CONSTRUCTOR_BYREF_OPTIONAL_OK"
+End Sub

@@ -1,0 +1,18 @@
+Class Base
+    Public value As Long
+End Class
+
+Class Child Extend Base
+    Public Property Let Alias As Long
+        value = Alias
+    End Property
+    Public Property Get Alias As Long
+        Alias = value
+    End Property
+End Class
+
+Sub Main()
+    Dim item As New Child
+    item.Alias = 9
+    Print CStr(item.Alias)
+End Sub

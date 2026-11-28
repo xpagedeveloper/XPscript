@@ -1,0 +1,7 @@
+Class Vault
+    Private Sub New()
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Vault
+End Sub

@@ -1,0 +1,4 @@
+Sub Main()
+    Dim table As XPCsvDocument
+    Print table.UnknownMember
+End Sub

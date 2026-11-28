@@ -1,0 +1,6 @@
+Class Record
+    Public Sub New(ByRef value As Long, Optional ByVal extra As Long = missing)
+    End Sub
+End Class
+Sub Main()
+End Sub

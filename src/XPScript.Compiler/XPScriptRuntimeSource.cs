@@ -72,7 +72,9 @@ internal static class XPScriptRuntime
     public static int CInt(object? value) => Convert.ToInt32(value, CultureInfo.CurrentCulture);
     public static long CLng(object? value) => Convert.ToInt64(value, CultureInfo.CurrentCulture);
     public static double CDbl(object? value) =>
-        value is DateTime dt ? dt.ToOADate() : Convert.ToDouble(value, CultureInfo.CurrentCulture);
+        value is DateTime dt ? dt.ToOADate() :
+        value?.GetType().Name == "XpDate" && value.GetType().GetProperty("Value")?.GetValue(value) is DateTime xpDate ? xpDate.ToOADate() :
+        Convert.ToDouble(value, CultureInfo.CurrentCulture);
     public static float CSng(object? value) => Convert.ToSingle(value, CultureInfo.CurrentCulture);
     public static decimal CCur(object? value) => Convert.ToDecimal(value, CultureInfo.CurrentCulture);
     public static bool CBool(object? value) => Convert.ToBoolean(value, CultureInfo.CurrentCulture);
@@ -200,6 +202,13 @@ internal static class XPScriptRuntime
         return index < 0 ? 0 : index + 1;
     }
 
+    // XPscript accepts case-insensitive intrinsic names, while generated C#
+    // calls are case-sensitive. Keep the documented InStr spelling as an
+    // alias for the existing runtime implementation.
+    public static int InStr(object? source, object? find) => Instr(source, find);
+    public static int InStr(int start, object? source, object? find) => Instr(start, source, find);
+    public static int InStr(int start, object? source, object? find, int compare) => Instr(start, source, find, compare);
+
     public static int StrComp(object? left, object? right, int compare = 0) =>
         string.Compare(CStr(left), CStr(right),
             compare == 1 ? StringComparison.CurrentCultureIgnoreCase : StringComparison.CurrentCulture);
@@ -250,8 +259,19 @@ internal static class XPScriptRuntime
         var text = CStr(value);
         var sep = delimiter is null ? " " : CStr(delimiter);
         if (count == 0) return [];
-        if (count < 0) return text.Split([sep], StringSplitOptions.None);
-        return text.Split([sep], count, StringSplitOptions.None);
+        if (sep.Length == 0) return [text];
+        var comparison = compare is 1 or 5 ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var parts = new List<string>();
+        var position = 0;
+        while (position <= text.Length && (count < 0 || parts.Count < count - 1))
+        {
+            var found = text.IndexOf(sep, position, comparison);
+            if (found < 0) break;
+            parts.Add(text[position..found]);
+            position = found + sep.Length;
+        }
+        parts.Add(text[position..]);
+        return parts.ToArray();
     }
 
     public static string Join(object? values, object? delimiter = null)

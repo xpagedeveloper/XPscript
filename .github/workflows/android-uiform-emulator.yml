@@ -1,0 +1,118 @@
+name: Android UIForm AST Emulator
+# Temporary verification on the AST compiler branch.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    name: Build Android AST UIForm APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+            ~/.dotnet/packs
+            ~/.dotnet/sdk-manifests
+          key: android-emulator-${{ runner.os }}-${{ hashFiles('global.json', '**/*.csproj', '**/packages.lock.json') }}
+      - name: Configure GitHub-hosted Android SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x /usr/local/lib/android/sdk/platform-tools/adb
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          echo "/usr/local/lib/android/sdk/platform-tools" >> "$GITHUB_PATH"
+          echo "/usr/local/lib/android/sdk/build-tools/$(find /usr/local/lib/android/sdk/build-tools -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n 1)" >> "$GITHUB_PATH"
+      - name: Install Android workload
+        run: dotnet workload install android --skip-manifest-update
+      - name: Build compiler and Android UIForm APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet build src/XPScript.Compiler/XPScript.Compiler.csproj -c Release
+          rm -rf out/android-uiform-emulator
+          dotnet run --project src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-build -- \
+            compile \
+            samples/android-uiform-minimal.xps \
+            -o out/android-uiform-emulator \
+            --runtime=true --platform android-x64 --debug
+          apk="$(find out/android-uiform-emulator -type f -name '*.apk' | head -n 1)"
+          test -s "$apk"
+          keytool -genkeypair \
+            -keystore out/android-debug.keystore \
+            -storepass android \
+            -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          apksigner sign \
+            --ks out/android-debug.keystore \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            "$apk"
+          apksigner verify --verbose "$apk"
+          cp "$apk" out/android-uiform-emulator.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-uiform-emulator-apk
+          path: out/android-uiform-emulator.apk
+
+  emulator:
+    name: Run Android AST UIForm on emulator
+    needs: build-apk
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          name: android-uiform-emulator-apk
+          path: out
+      - name: Enable and verify KVM acceleration
+        run: |
+          test -c /dev/kvm
+          sudo chmod a+rw /dev/kvm
+      - name: Install Android UI automation
+        run: |
+          python3 -m venv .android-ui-venv
+          .android-ui-venv/bin/pip install 'uiautomator2==3.2.10'
+          echo "$PWD/.android-ui-venv/bin" >> "$GITHUB_PATH"
+      - name: Run APK and verify logcat
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          disable-animations: false
+          disable-linux-hw-accel: false
+          pre-emulator-launch-script: '"$ANDROID_HOME/emulator/emulator" -accel-check'
+          emulator-boot-timeout: 180
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -accel on
+          script: |
+            bash .github/scripts/android-uiform-emulator.sh
+      - name: Upload emulator logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-uiform-emulator-logcat
+          path: |
+            android-uiform-logcat.txt
+            android-uiform-ui.xml
+          if-no-files-found: ignore

@@ -26,6 +26,60 @@ End Sub
 
 `Sub New` is the constructor. `Me` references the current instance. Class variables use reference semantics.
 
+For inherited classes, call the direct base-class constructor explicitly with `Parent.New(...)` as the first statement in the child `Sub New` when the base constructor requires arguments:
+
+```xpscript
+Class BasePerson
+    Public Name As String
+
+    Public Sub New(ByVal name As String)
+        Name = name
+    End Sub
+End Class
+
+Class Employee Extend BasePerson
+    Public Role As String
+
+    Public Sub New(ByVal name As String, ByVal role As String)
+        Call Parent.New(name)
+        Role = role
+    End Sub
+End Class
+```
+
+`Parent.New(...)` targets the direct base class. The base constructor completes before the remaining child-constructor statements execute. A derived constructor that does not use `Parent.New(...)` relies on the base class having a parameterless constructor.
+
+### AST constructor forwarding contract
+
+In the experimental AST path, `Parent.New(...)` must be the first statement in a
+derived `Sub New` and may occur exactly once. It targets only the direct base
+class; it does not dispatch virtually and it must not be used from a root class.
+
+Arguments are evaluated once, left to right. Required and trailing Optional
+parameters use the same type, ByVal/ByRef, default-value and writable-storage
+rules as a direct `New` call. Omitted Optional arguments are forwarded as fresh
+storage where the parameter is Optional ByRef; defaults run in declaration order
+and may observe earlier arguments. A failed base call preserves the caller's
+existing assignment target and cleans only ownership completed by the new
+instance's construction path.
+
+The AST compiler rejects late or duplicate `Parent.New` calls, root-class calls,
+private/inaccessible base constructors, invalid arity, incompatible argument
+types and non-writable ByRef arguments with mapped diagnostics. These rules are
+covered by the constructor-parent and constructor-optional fixtures; normal
+compiler parity is claimed only for the documented supported subset.
+
+### AST lifecycle migration scope
+
+The current AST lifecycle matrix covers root and derived `Sub New`/`Sub Delete`, scalar ByVal and ByRef parameters, trailing Optional parameters, Object/user-class references, Variant, List, array and the supported native/reference constructor families. It also covers `Parent.New`, derived virtual dispatch, failed-construction cleanup, repeated deletion and the test-only GC/finalizer observation seam.
+
+The supported normal/AST parity claim is intentionally narrower: parity is established for the documented scalar ByVal constructor/destructor fixtures and selected native/reference families. AST capability tests cover Optional and ByRef behavior where the legacy compiler requires different arity or has known runtime limitations; those tests are not presented as legacy parity.
+
+The following remain separate follow-up work and do not change production ownership semantics: Optional/ByRef `XPImage` constructor ownership, whole-array constructor ownership (distinct from array storage), broader GC/derived-method migration boundaries, and platform-specific desktop/mobile lifecycle behavior. The Linux lifecycle workflow verifies the completed image-get, constructor and destructor families as separate steps.
+
+For the remaining XPImage Optional/ByRef constructor work, the ownership contract is explicit: a supplied XPImage value is cloned before it is stored in an object-owned field; an omitted Optional XPImage value is `Nothing`, not an owned temporary. If initialization fails, the new object's image field and failed assignment target are set to `Nothing` so a failed `Set` cannot appear successful. Replacement first creates the new clone, then releases the old owned field; a failed clone preserves the old field. ByRef copy-back may update the caller's reference, but it does not transfer ownership of the caller's original image and all object-owned clones are released on failed construction.
+
+
 ## Default visibility and Option Public
 
 Without an explicit visibility modifier, variables, procedures and properties are `Private` by default.

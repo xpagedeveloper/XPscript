@@ -6,11 +6,37 @@ internal static class UIExtensionDesktopRuntimeSource
 internal static class XPScriptUIDesktopAdapter
 {
     private const string HostTypeName = "XPScript.UI.Desktop.DesktopFormHost, XPScript.UI.Desktop";
+    private const string AndroidHostTypeName = "XPScript.UI.Android.AndroidFormHost, XPScript.UI.Android";
     private static bool IsBrowserHost => HostTypeName.Contains("XPScript.UI.Browser", StringComparison.Ordinal);
     private static string LifecycleHostTypeName => IsBrowserHost
         ? "XPScript.UI.Browser.BrowserFormLifecycleHost, XPScript.UI.Browser"
         : "XPScript.UI.Desktop.DesktopFormLifecycleHost, XPScript.UI.Desktop";
-    private static Type? HostType => Type.GetType(HostTypeName, throwOnError: false, ignoreCase: false);
+    private static Type? HostType => ResolveHostType();
+
+    private static Type? ResolveHostType()
+    {
+        var names = global::System.OperatingSystem.IsAndroid()
+            ? new[] { AndroidHostTypeName, HostTypeName }
+            : new[] { HostTypeName };
+
+        foreach (var name in names)
+        {
+            var direct = Type.GetType(name, throwOnError: false, ignoreCase: false);
+            if (direct is not null) return direct;
+        }
+
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            foreach (var name in names)
+            {
+                var typeName = name.Split(',', 2)[0].Trim();
+                var candidate = assembly.GetType(typeName, throwOnError: false, ignoreCase: false);
+                if (candidate is not null) return candidate;
+            }
+        }
+
+        return null;
+    }
     private static Type? LifecycleHostType => Type.GetType(LifecycleHostTypeName, throwOnError: false, ignoreCase: false);
 
     private static System.Reflection.MethodInfo? ResolveShowDialog(Type type) =>
@@ -49,6 +75,17 @@ internal static class XPScriptUIDesktopAdapter
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "UIForm.Close failed: " + ex.InnerException.Message); }
     }
 
+    public static void BringToFront(string instanceId) => InvokeLifecycle("BringToFront", instanceId);
+    public static void Center(string instanceId) => InvokeLifecycle("Center", instanceId);
+
+    private static void InvokeLifecycle(string methodName, string instanceId)
+    {
+        var method = LifecycleHostType?.GetMethod(methodName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(string)], null);
+        if (method is null) return;
+        try { method.Invoke(null, [instanceId]); }
+        catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "UIForm " + methodName + " failed: " + ex.InnerException.Message); }
+    }
+
     public static bool TryIsVisible(string instanceId, bool fallback)
     {
         var type = LifecycleHostType;
@@ -57,6 +94,12 @@ internal static class XPScriptUIDesktopAdapter
         try { return method.Invoke(null, [instanceId]) is true; }
         catch { return fallback; }
     }
+
+    private static bool ReadHasValidationSchema(XPScriptUIForm form)
+        => form.GetType().GetProperty("HasValidationSchema")?.GetValue(form) as bool? == true;
+
+    private static string ReadValidationError(XPScriptUIForm form, string fieldName)
+        => form.GetType().GetMethod("GetValidationError", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)?.Invoke(form, [fieldName]) as string ?? string.Empty;
 
     private static string ShowCore(XPScriptUIForm form, IReadOnlyList<XPScriptUIField> fields, XPScriptJsonObject data, Action<XPScriptUIField, string> apply, Action<XPScriptUIField, IReadOnlyList<string>> applyMany, bool modal)
     {
@@ -73,14 +116,48 @@ internal static class XPScriptUIDesktopAdapter
             title = form.Title,
             width = form.Width > 0 ? form.Width : (int?)null,
             height = form.Height > 0 ? form.Height : (int?)null,
+            top = form.Top,
+            left = form.Left,
+            right = form.Right,
+            bottom = form.Bottom,
+            center = form.Centered,
             resizable = form.Resizable,
+            theme = form.Theme,
+            background = form.Background,
+            showValidationErrors = form.ShowValidationErrors,
+            showDefaultButtons = form.ShowDefaultButtons,
+            defaultButtonCornerRadius = form.DefaultButtonCornerRadius,
+            gridColumns = form.GridColumns,
+            hasValidationSchema = ReadHasValidationSchema(form),
+            bootText = form.BootText,
+            bootImage = form.BootImage,
             fields = fields.Select(field => new
             {
-                name = field.Name, label = field.Label, type = field.Type, required = field.Required,
+                name = field.Name, id = field.Id, label = field.Label, type = field.Type, parentId = field.Parent?.Id ?? string.Empty, required = field.Required, layoutRow = field.LayoutRow, layoutColumn = field.LayoutColumn, columnSpan = field.ColumnSpan, rowSpan = field.RowSpan,
+                placeholder = field.Placeholder, tooltip = field.Tooltip, imageSource = field.ImageSource, imageAltText = field.ImageAltText, imageCertificateValidation = field.ImageCertificateValidation,
+                hasChangeHandler = field.OnChangeHandler.Length > 0 || field.RefreshHandler.Length > 0,
+                regexPattern = field.RegexPattern, schemaValidationError = ReadValidationError(form, field.Name),
                 value = field.Type is "PasswordField" or "MultiListBox" ? null : (data.Contains(field.Name) ? form.GetFieldValueString(field.Name) : null),
                 values = field.Type == "MultiListBox" ? ReadValues(data, field.Name) : Array.Empty<string>(),
-                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, options = field.Options,
-                webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground
+                minLength = field.MinLength, maxLength = field.MaxLength, minimum = field.Minimum, maximum = field.Maximum, step = field.Type == "RangeField" ? field.Step : (double?)null, options = field.Options, dataSourceUrl = field.DataSourceUrl, valueMember = field.ValueMember, labelMember = field.LabelMember, cornerRadius = field.CornerRadius, width = field.Width, height = field.Height, font = field.Font, fontSize = field.FontSize, tabName = field.TabName, gridName = field.GridName,
+                webViewSource = field.WebViewSource, webViewHtml = field.WebViewHtml, webViewUserAgent = field.WebViewUserAgent, webViewBackground = field.WebViewBackground, icon = field.IconName,
+                source = field.Type is "Video" or "Audio" ? field.Source : null,
+                carouselSources = field.Type == "Carousel" ? (IReadOnlyList<string>)field.CarouselSources : Array.Empty<string>(),
+                carouselIndex = field.Type == "Carousel" ? field.CarouselIndex : 0,
+                carouselLoop = field.Type == "Carousel" && field.CarouselLoop,
+                carouselAutoAdvance = field.Type == "Carousel" ? field.CarouselAutoAdvanceMilliseconds : null,
+                progressValue = field.Type == "ProgressBar" ? (double?)field.Value : null,
+                progressIndeterminate = field.Type == "ProgressBar" ? (bool?)field.IsIndeterminate : null,
+                activityRunning = field.Type == "ActivityIndicator" ? (bool?)field.IsRunning : null
+            }).ToArray(),
+            tabs = form.Tabs.Select(tab => new { name = tab.Name, label = tab.Label, background = tab.Background, fontColor = tab.FontColor, font = tab.Font, fontSize = tab.FontSize, bold = tab.Bold, selectedBackground = tab.SelectedBackground, selectedFontColor = tab.SelectedFontColor, selectedFont = tab.SelectedFont, selectedFontSize = tab.SelectedFontSize, selectedBold = tab.SelectedBold }).ToArray(),
+            grids = form.Grids.Select(grid => new { name = grid.Name, columns = grid.Columns, tabName = grid.TabName }).ToArray(),
+            activeTab = form.ActiveTab,
+            tabPlacement = form.TabPlacement,
+            buttons = form.Buttons.Select(button => new
+            {
+                name = button.Name, label = button.Label, result = button.Result.Length > 0 ? button.Result : button.Name, visible = button.Visible, enabled = button.Enabled, style = button.Style, icon = button.Icon, image = button.Image, cornerRadius = button.CornerRadius, width = button.Width, height = button.Height, font = button.Font, fontSize = button.FontSize,
+                layoutRow = button.LayoutRow, layoutColumn = button.LayoutColumn, columnSpan = button.ColumnSpan, rowSpan = button.RowSpan
             }).ToArray()
         };
 
@@ -88,13 +165,19 @@ internal static class XPScriptUIDesktopAdapter
         try
         {
             var args = method.GetParameters().Length == 2
-                ? new object?[] { System.Text.Json.JsonSerializer.Serialize(request), new Func<string, string, string>((eventToken, submittedValue) => form.DispatchRegisteredEvent(eventToken, submittedValue)) }
+                ? new object?[] { System.Text.Json.JsonSerializer.Serialize(request), new Func<string, string, string>(form.DispatchRegisteredEvent) }
                 : new object?[] { System.Text.Json.JsonSerializer.Serialize(request) };
             resultJson = Convert.ToString(method.Invoke(null, args), System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
         }
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null)
         {
-            throw new XPScriptRuntimeException(5, "UIForm failed: " + ex.InnerException.Message);
+            var failedComponent = form.Tabs.Count > 0
+                ? "tabs=" + string.Join(",", form.Tabs.Select(tab => tab.Name))
+                : "fields=" + string.Join(",", fields.Select(field => field.Name));
+            var diagnostic = Environment.GetEnvironmentVariable("XPSCRIPT_RUNTIME_DEBUG") == "1" || Environment.GetEnvironmentVariable("XPSCRIPT_WEB_DEBUG") == "1"
+                ? "\n" + ex.InnerException
+                : string.Empty;
+            throw new XPScriptRuntimeException(5, $"UIForm failed (title='{form.Title}', {failedComponent}): {ex.InnerException.Message}{diagnostic}");
         }
 
         if (!modal || string.IsNullOrWhiteSpace(resultJson)) return "Pending";
@@ -109,37 +192,39 @@ internal static class XPScriptUIDesktopAdapter
             DispatchCompiledNavigation(ReadNavigationValue(navigationValues, "__xps_navigation_target"));
             return "Navigate";
         }
-        if (!result.Equals("OK", StringComparison.OrdinalIgnoreCase)) return "Cancel";
-        if (!root.TryGetProperty("values", out var values) || values.ValueKind != System.Text.Json.JsonValueKind.Object) return "OK";
-        foreach (var property in values.EnumerateObject())
+        if (root.TryGetProperty("values", out var values) && values.ValueKind == System.Text.Json.JsonValueKind.Object)
         {
-            var field = fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
-            if (field is null) continue;
-            if (field.Type == "MultiListBox")
+            foreach (var property in values.EnumerateObject())
             {
-                if (property.Value.ValueKind != System.Text.Json.JsonValueKind.Array) throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' returned an unsupported multi-value type.");
-                applyMany(field, property.Value.EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray());
-                continue;
+                var field = fields.FirstOrDefault(candidate => candidate.Name.Equals(property.Name, StringComparison.OrdinalIgnoreCase));
+                if (field is null) continue;
+                if (field.Type == "MultiListBox")
+                {
+                    if (property.Value.ValueKind != System.Text.Json.JsonValueKind.Array) throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' returned an unsupported multi-value type.");
+                    applyMany(field, property.Value.EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray());
+                    continue;
+                }
+                var submitted = property.Value.ValueKind switch
+                {
+                    System.Text.Json.JsonValueKind.String => property.Value.GetString() ?? string.Empty,
+                    System.Text.Json.JsonValueKind.Number => property.Value.GetRawText(),
+                    System.Text.Json.JsonValueKind.True => "true",
+                    System.Text.Json.JsonValueKind.False => "false",
+                    System.Text.Json.JsonValueKind.Null => string.Empty,
+                    _ => throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' returned an unsupported value type.")
+                };
+                apply(field, submitted);
             }
-            var submitted = property.Value.ValueKind switch
-            {
-                System.Text.Json.JsonValueKind.String => property.Value.GetString() ?? string.Empty,
-                System.Text.Json.JsonValueKind.Number => property.Value.GetRawText(),
-                System.Text.Json.JsonValueKind.True => "true",
-                System.Text.Json.JsonValueKind.False => "false",
-                System.Text.Json.JsonValueKind.Null => string.Empty,
-                _ => throw new XPScriptRuntimeException(13, $"UIForm field '{field.Name}' returned an unsupported value type.")
-            };
-            apply(field, submitted);
         }
-        return "OK";
+        if (result.Equals("Cancel", StringComparison.OrdinalIgnoreCase)) return "Cancel";
+        return result.Equals("OK", StringComparison.OrdinalIgnoreCase) ? "OK" : result;
     }
 
     private static void RegisterEventDispatcher(Type type, XPScriptUIForm form)
     {
         var register = type.GetMethod("SetEventDispatcher", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static, null, [typeof(Func<string, string, string>)], null);
         if (register is null) return;
-        try { register.Invoke(null, [new Func<string, string, string>((eventToken, submittedValue) => form.DispatchRegisteredEvent(eventToken, submittedValue))]); }
+        try { register.Invoke(null, [new Func<string, string, string>(form.DispatchRegisteredEvent)]); }
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "UIForm event dispatcher registration failed: " + ex.InnerException.Message); }
     }
 
@@ -149,8 +234,9 @@ internal static class XPScriptUIDesktopAdapter
     private static void DispatchCompiledNavigation(string target)
     {
         if (string.IsNullOrWhiteSpace(target)) throw new XPScriptRuntimeException(5, "UIForm navigation target is empty.");
-        var method = typeof(Script).GetMethod("XpsCompilerGeneratedNavigationDispatch", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase)
-            ?? throw new XPScriptRuntimeException(5, "Navigation requires the target to be part of a [Compile:folder] desktop application.");
+        var scriptType = Type.GetType("Script", throwOnError: false);
+        var method = scriptType?.GetMethod("XpsCompilerGeneratedNavigationDispatch", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase)
+            ?? throw new XPScriptRuntimeException(5, "UIForm navigation target is not available in this compiled application.");
         try { method.Invoke(null, [target]); }
         catch (System.Reflection.TargetInvocationException ex) when (ex.InnerException is not null) { throw new XPScriptRuntimeException(5, "Navigation failed: " + ex.InnerException.Message); }
     }

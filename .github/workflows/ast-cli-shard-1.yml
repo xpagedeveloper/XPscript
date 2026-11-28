@@ -1,0 +1,26 @@
+name: AST CLI Shard 1 (Windows)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cli-shard-1:
+    name: CLI options and target setup
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore and build compiler
+        shell: pwsh
+        run: |
+          dotnet restore ./src/XPScript.Compiler/XPScript.Compiler.csproj
+          dotnet build ./src/XPScript.Compiler/XPScript.Compiler.csproj -c Release --no-restore
+      - name: Run CLI shard 1
+        shell: pwsh
+        run: pwsh -NoProfile -File ./tests/ast-compile-probe/run-ast-cli.ps1 -Shard 1

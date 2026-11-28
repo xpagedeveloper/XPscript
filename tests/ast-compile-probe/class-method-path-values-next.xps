@@ -1,0 +1,17 @@
+Class PathHolder
+    Public Function Echo(ByVal value As XPPathValue) As XPPathValue
+        Set Echo = value
+    End Function
+End Class
+
+Sub Main()
+    Dim original As New XPPathValue("samples")
+    Dim holder As New PathHolder
+    Dim returned As XPPathValue
+    Set returned = holder.Echo(original)
+    If returned Is original Then
+        Print "CLASS_METHOD_PATH_VALUE_OK"
+    Else
+        Error 6, "XPPathValue class-method reference identity"
+    End If
+End Sub

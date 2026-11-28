@@ -13,7 +13,7 @@ The platform mapping is:
 
 | XPscript store | Windows | Linux | macOS |
 |---|---|---|---|
-| `Application.Registry.User` | `HKEY_CURRENT_USER` | `~/.config/<app>/` | `~/Library/Preferences/<app>/` |
+| `Application.Registry.User` | `HKEY_CURRENT_USER` | `$XDG_CONFIG_HOME/<app>/` when absolute; otherwise `~/.config/<app>/` | `~/Library/Preferences/<app>/` |
 | `Application.Registry.System` | `HKEY_LOCAL_MACHINE` | `/etc/<app>/` | `/Library/Preferences/<app>/` |
 
 On Linux and macOS, `<app>` is derived from `Application.ExecutableFileName` without the file extension. Registry key path segments and value names are encoded below that application directory so arbitrary names cannot escape the application storage root.

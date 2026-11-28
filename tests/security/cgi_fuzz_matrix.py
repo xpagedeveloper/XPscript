@@ -22,12 +22,12 @@ HEADER_CASES = [
 ]
 
 
-def run_case(cgi_dll, root, script, path, query, headers):
+def run_case(cgi_dll, root, script, path, query, headers, body=b"", content_type=""):
     env = os.environ.copy()
     env.update({
         "XPSCRIPT_WEB_ROOT": str(root),
         "XPSCRIPT_SITE_ID": "cgi-fuzz-matrix",
-        "REQUEST_METHOD": "GET",
+        "REQUEST_METHOD": "POST" if body else "GET",
         "SCRIPT_NAME": path,
         "SCRIPT_FILENAME": str(script),
         "QUERY_STRING": query,
@@ -36,10 +36,13 @@ def run_case(cgi_dll, root, script, path, query, headers):
         "REMOTE_ADDR": "127.0.0.1",
         "HTTPS": "off",
     })
+    if body:
+        env["CONTENT_LENGTH"] = str(len(body))
+        env["CONTENT_TYPE"] = content_type
     env.update(headers)
     proc = subprocess.run(
         ["dotnet", str(cgi_dll)],
-        input=b"",
+        input=body,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         env=env,
@@ -93,6 +96,36 @@ def main():
             result["target"] = kind
             results.append(result)
             failed |= not result["passed"]
+
+        boundary = "----xpscript-cgi-security-boundary"
+        multipart = (
+            f"--{boundary}\r\n"
+            "Content-Disposition: form-data; name=command\r\n\r\n"
+            "$(XPSCRIPT_PHP2SHELL_SENTINEL); & echo XPSCRIPT_PHP2SHELL_SENTINEL\r\n"
+            f"--{boundary}--\r\n"
+        ).encode("ascii")
+        result = run_case(
+            cgi_dll, root, script, path, "", {}, multipart,
+            f"multipart/form-data; boundary={boundary}")
+        result["target"] = kind
+        result["case"] = "multipart-input-is-inert-and-does-not-execute"
+        result["passed"] = result["passed"] and "xpscript_php2shell_sentinel" not in result["status"].lower()
+        results.append(result)
+        failed |= not result["passed"]
+
+        truncated = (
+            f"--{boundary}\r\n"
+            "Content-Disposition: form-data; name=file; filename=probe.bin\r\n"
+            "Content-Type: application/octet-stream\r\n\r\n"
+            + ("A" * 8192)
+        ).encode("ascii")
+        result = run_case(
+            cgi_dll, root, script, path, "", {}, truncated + b"\r\n",
+            f"multipart/form-data; boundary={boundary}")
+        result["target"] = kind
+        result["case"] = "truncated-multipart-cleanup-is-safe"
+        results.append(result)
+        failed |= not result["passed"]
 
     Path(args.json).write_text(json.dumps(results, indent=2) + "\n", encoding="utf-8")
     if failed:

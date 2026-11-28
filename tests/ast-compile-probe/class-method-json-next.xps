@@ -1,0 +1,12 @@
+Class Reader
+    Public Function Read(ByVal value As XPJsonObject) As Long
+        Read = CLng(value.Get("value")) + 1
+    End Function
+End Class
+
+Sub Main()
+    Dim value As New XPJsonObject
+    Call value.Set("value", 4)
+    Dim reader As New Reader
+    Print CStr(reader.Read(value))
+End Sub

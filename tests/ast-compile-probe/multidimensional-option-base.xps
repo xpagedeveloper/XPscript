@@ -1,0 +1,9 @@
+Option Base 1
+
+Sub Main()
+    Dim matrix(2, 2) As Long
+    matrix(1, 1) = 6
+    Print matrix(1, 1)
+    Print LBound(matrix, 1)
+    Print LBound(matrix, 2)
+End Sub

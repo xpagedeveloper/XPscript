@@ -1,0 +1,3 @@
+# XPScript files are executable source. Use Graphify's C# syntax extractor
+# until its optional Visual Basic extractor is available without installation.
+language.xps=.cs

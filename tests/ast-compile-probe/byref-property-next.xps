@@ -1,0 +1,59 @@
+Option Declare
+
+Class Box
+    Private stored As Long
+
+    Public Property Get Value As Long
+        Value = stored
+    End Property
+
+    Public Property Let Value(ByVal incoming As Long)
+        stored = incoming
+    End Property
+End Class
+
+Class Holder
+    Public Child As Box
+End Class
+
+Class PropertyMethods
+    Public Sub Increment(ByRef value As Long)
+        value = value + 1
+    End Sub
+
+    Public Function IncrementAndReturn(ByRef value As Long) As Long
+        value = value + 1
+        IncrementAndReturn = value
+    End Function
+
+    Public Sub IncrementAndFail(ByRef value As Long)
+        value = value + 1
+        Error 4343, "property copy-back follows successful calls"
+    End Sub
+End Class
+
+Sub AddTwo(ByRef value As Long)
+    value = value + 2
+End Sub
+
+Sub Main()
+    Dim box As New Box
+    box.Value = 40
+    Dim holder As New Holder
+    Set holder.Child = box
+    Call AddTwo(holder.Child.Value)
+    If box.Value <> 42 Then Error 4341
+
+    Dim methods As New PropertyMethods
+    Call methods.Increment(box.Value)
+    If box.Value <> 43 Then Error 4342
+    If methods.IncrementAndReturn(box.Value) <> 44 Or box.Value <> 44 Then Error 4344
+
+    On Error GoTo ExpectedPropertyFailure
+    Call methods.IncrementAndFail(box.Value)
+    Error 4345, "expected property ByRef error missing"
+    Exit Sub
+ExpectedPropertyFailure:
+    If Err <> 4343 Or box.Value <> 44 Then Error 4346
+    Print "AST_BYREF_PROPERTY_COPYBACK_OK"
+End Sub

@@ -1,0 +1,17 @@
+Class Counter
+    Public Value As Long
+End Class
+
+Sub Tick()
+    Static item As Counter
+    If item Is Nothing Then
+        Set item = New Counter()
+    End If
+    item.Value = item.Value + 1
+    Print item.Value
+End Sub
+
+Sub Main()
+    Call Tick()
+    Call Tick()
+End Sub

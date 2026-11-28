@@ -29,15 +29,11 @@ internal static class NotesRuntimeMemberTrapPostProcessor
         {
             if (OperatingSystem.IsWindows())
             {
-                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\HCL\Notes\Installer");
-                var raw = key?.GetValue("PROGDIR") as string;
-                if (string.IsNullOrWhiteSpace(raw)) return null;
-
-                var expanded = Environment.ExpandEnvironmentVariables(raw.Trim().Trim('\"'));
-                var path = Path.GetFullPath(expanded);
-                if (!Directory.Exists(path)) return null;
-                if (!File.Exists(Path.Combine(path, "nnotes.dll"))) return null;
-                return path;
+                var notesPath = TryResolveWindowsRuntimeDirectory(@"Software\HCL\Notes\Installer");
+                if (notesPath is not null) return notesPath;
+                var dominoPath = TryResolveWindowsRuntimeDirectory(@"Software\HCL\Domino\Installer");
+                if (dominoPath is not null) return dominoPath;
+                return TryResolveWindowsStandardRuntimeDirectory();
             }
 
             if (OperatingSystem.IsMacOS())
@@ -55,6 +51,52 @@ internal static class NotesRuntimeMemberTrapPostProcessor
         {
             return null;
         }
+    }
+
+    private static string? TryResolveWindowsRuntimeDirectory(string registryPath)
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(registryPath);
+            var raw = key?.GetValue("PROGDIR") as string;
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+
+            var expanded = Environment.ExpandEnvironmentVariables(raw.Trim().Trim('\"'));
+            var path = Path.GetFullPath(expanded);
+            if (!Directory.Exists(path)) return null;
+            if (!File.Exists(Path.Combine(path, "nnotes.dll")) || !HasNotesIni(path)) return null;
+            return path;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool HasNotesIni(string programDirectory)
+    {
+        return File.Exists(Path.Combine(programDirectory, "notes.ini")) ||
+               File.Exists(Path.Combine(programDirectory, "Data", "notes.ini"));
+    }
+
+    private static string? TryResolveWindowsStandardRuntimeDirectory()
+    {
+        var roots = new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+        };
+        foreach (var root in roots.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            foreach (var relative in new[] { Path.Combine("HCL", "Notes"), Path.Combine("HCL", "Domino") })
+            {
+                var path = Path.Combine(root, relative);
+                if (Directory.Exists(path) &&
+                    File.Exists(Path.Combine(path, "nnotes.dll")) &&
+                    HasNotesIni(path)) return path;
+            }
+        }
+        return null;
     }
 
     public static XPScriptNotesSession CreateSession(object? runtimeDirectory) =>
@@ -93,12 +135,17 @@ internal static class NotesRuntimeMemberTrapPostProcessor
 
     public override bool TrySetMember(System.Dynamic.SetMemberBinder binder, object? value)
     {
-        if (HasExactPublicProperty(binder.Name, requireSetter: true)) return false;
-
         var property = FindPublicPropertyIgnoreCase(binder.Name, requireSetter: true);
         if (property is not null)
         {
-            property.SetValue(this, value);
+            var converted = property.PropertyType == typeof(int)
+                ? checked((int)XPScriptRuntime.CLng(value))
+                : value;
+            try { property.SetValue(this, converted); }
+            catch (System.Reflection.TargetInvocationException exception) when (exception.InnerException is not null)
+            {
+                throw exception.InnerException;
+            }
             return true;
         }
 

@@ -99,6 +99,8 @@ browser.Source = "https://example.com"
 
 If `Html` is supplied, web backends render it through `iframe.srcdoc`. Otherwise `Source` is used as the iframe URL.
 
+Use `form.AddYouTube("video", "dQw4w9WgXcQ")` to create a WebView-backed YouTube player on desktop, web, WASM and mobile. The second argument is the YouTube video id, not a full URL. Set `video.RunOnLoad = True` to request autoplay; it defaults to `False` and browser/device autoplay policies still apply.
+
 ## Default OK and Cancel buttons
 
 `ShowDefaultButtons` controls the built-in OK and Cancel buttons. The default is `True`.

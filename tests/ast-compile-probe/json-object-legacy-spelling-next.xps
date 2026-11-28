@@ -1,0 +1,16 @@
+Option Declare
+
+Sub Main()
+    Dim json As New XPJSONObject
+    Call json.AppendElement("Fredrik", "name")
+    If json.Size <> 1 Then Error 4280
+    Dim element As XPJSONElement
+    Set element = json.GetFirstElement()
+    If element.Name <> "name" Or CStr(element.Value) <> "Fredrik" Then Error 4281
+    Call json.AppendObject("child")
+    If json.GetElementByName("child") Is Nothing Then Error 4282
+    Dim copy As New XPJSONObject
+    Call copy.Copy(json)
+    If copy.Size <> 2 Then Error 4283
+    Print "AST_JSON_OBJECT_CANONICAL_OK"
+End Sub

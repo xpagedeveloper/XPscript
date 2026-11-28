@@ -1,0 +1,65 @@
+Public escaped As Variant
+Public borrowed As Variant
+Public localImage As Variant
+Public calls As Long
+Class Source
+    Public Picture As XPImage
+End Class
+Class Owner
+    Public Picture As XPImage
+    Public Borrowed As Source
+    Public Sub New(Optional ByVal value As Source = MakeSource(), Optional ByVal fail As Boolean = False)
+        Set Borrowed = value
+        Set Picture = value.Picture
+        escaped = Me
+        Set value = Nothing
+        If fail Then Error 4030, "body failed"
+    End Sub
+End Class
+Class Child Extend Owner
+    Public Sub New(Optional ByVal value As Source = MakeSource(), Optional ByVal fail As Boolean = False)
+        Call Parent.New(value, fail)
+    End Sub
+End Class
+Function MakeSource() As Variant
+    calls = calls + 1
+    Dim image As New XPImage(3, 2)
+    localImage = image
+    Dim value As New Source()
+    Set value.Picture = image
+    borrowed = value
+    MakeSource = value
+End Function
+Sub Main()
+    Dim first As New Child()
+    Dim firstSource As Source = borrowed
+    Dim second As New Child()
+    Dim secondSource As Source = borrowed
+    If firstSource Is secondSource Then Error 4031, "shared default source"
+    If first.Picture.Width <> 3 Or firstSource.Picture.Width <> 3 Then Error 4032, "default image survival"
+    Dim expired As XPImage = localImage
+    Dim width As Long = -1
+    Dim failure As Long
+    On Error Resume Next
+    width = expired.Width
+    failure = Err
+    On Error GoTo 0
+    If failure = 0 Or width <> -1 Then Error 4033, "factory local leaked"
+    Dim original As Child = first
+    On Error Resume Next
+    Set first = New Child(firstSource, True)
+    failure = Err
+    On Error GoTo 0
+    If failure <> 4030 Or Not (first Is original) Then Error 4034, "failed assignment"
+    Dim failed As Child = escaped
+    If Not (failed.Picture Is Nothing) Then Error 4035, "failed owned field leaked"
+    If Not (failed.Borrowed Is firstSource) Then Error 4036, "borrowed reference cleared"
+    If firstSource.Picture.Width <> 3 Then Error 4037, "borrowed image disposed"
+    If calls <> 2 Then Error 4038, "supplied argument executed default"
+    Delete first
+    Delete second
+    If firstSource.Picture.Width <> 3 Or secondSource.Picture.Width <> 3 Then Error 4039, "Delete consumed default objects"
+    Delete firstSource
+    Delete secondSource
+    Print "IMAGE_OPTIONAL_REFERENCE_CONSTRUCTORS_OK"
+End Sub

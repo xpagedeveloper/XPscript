@@ -4,8 +4,8 @@ namespace XPScript.Compiler;
 
 internal sealed class NativeHttpJsonPreprocessor
 {
-    private const string NativeTypePattern = "XPHttpClient|XPHttpRequest|XPHttpResponse|XPJsonDocument|XPJsonObject|XPJsonArray|XPJsonElement|XPJsonSchema|XPJsonValidationResult|XPHttpDbSupabase|XPDbSupabase|XPHttpDbDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAiResponse|AITool";
-    private static readonly string[] FeatureMarkers = ["XPHttpClient", "XPHttpRequest", "XPHttpResponse", "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJsonSchema", "XPJsonValidationResult", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode", "XPHttpDbSupabase", "XPDbSupabase", "XPHttpDbDominoRest", "XPDBSQLite", "XPDbMsSql", "XPDbMySql", "XPAi", "AITool"];
+    private const string NativeTypePattern = "XPHttpClient|XPHttpRequest|XPHttpResponse|XPJsonDocument|XPJsonObject|XPJsonArray|XPJsonElement|XPJsonSchema|XPJsonValidationResult|XPHttpDbSupabase|XPDbSupabase|XPHttpDbDominoRest|XPDBSQLite|XPDbMsSql|XPDbMySql|XPAi|XPAiResponse|XPAITool";
+    private static readonly string[] FeatureMarkers = ["XPHttpClient", "XPHttpRequest", "XPHttpResponse", "XPJsonDocument", "XPJsonObject", "XPJsonArray", "XPJsonElement", "XPJsonSchema", "XPJsonValidationResult", "JsonParse", "JsonStringify", "JsonEncode", "JsonDecode", "XPHttpDbSupabase", "XPDbSupabase", "XPHttpDbDominoRest", "XPDBSQLite", "XPDbMsSql", "XPDbMySql", "XPAi", "XPAITool"];
 
     public string Transform(string source, string sourceName = "input.xps")
     {
@@ -58,6 +58,7 @@ internal sealed class NativeHttpJsonPreprocessor
             rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "JsonEncode", "XPScriptNativeJson.Stringify");
             rewritten = PreprocessorFeatureGate.ReplaceUnqualifiedCalls(rewritten, "JsonDecode", "XPScriptNativeJson.Parse");
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPHttpClient\s*(?:\(\s*\))?", "XPScriptNativeHttp.CreateClient()", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPHttpRequest\s*(?:\(\s*\))?", "XPScriptNativeHttp.CreateRequest()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPJsonDocument\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateDocument()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPJsonObject\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateObject()", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPJsonArray\s*(?:\(\s*\))?", "XPScriptNativeJson.CreateArray()", RegexOptions.IgnoreCase);
@@ -70,7 +71,7 @@ internal sealed class NativeHttpJsonPreprocessor
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDbMsSql\s*\((.*)\)", "new XPScriptDbMsSql($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPDbMySql\s*\((.*)\)", "new XPScriptDbMySql($1)", RegexOptions.IgnoreCase);
             rewritten = Regex.Replace(rewritten, @"\bNew\s+XPAi\s*\((.*)\)", "new XPScriptAi($1)", RegexOptions.IgnoreCase);
-            rewritten = Regex.Replace(rewritten, @"\bNew\s+AITool\s*\((.*)\)", "new XPScriptAiTool($1)", RegexOptions.IgnoreCase);
+            rewritten = Regex.Replace(rewritten, @"\bNew\s+XPAITool\s*\((.*)\)", "new XPScriptAiTool($1)", RegexOptions.IgnoreCase);
 
             foreach (var pair in nativeTypes)
             {
@@ -99,6 +100,9 @@ internal sealed class NativeHttpJsonPreprocessor
     private static string CreateExpression(string type, string rawArguments, string sourceName, int line, string sourceLine)
     {
         var args = rawArguments.Trim();
+        if (AstHttpSupport.IsHttp(type) && !type.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase) && !type.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase))
+            throw SyntaxFailure("Only XPHttpClient and XPHttpRequest can be created with New.", sourceName, line, sourceLine,
+                "New XPHttpClient or New XPHttpRequest", type, CompilerDiagnosticCodes.InvalidNativeConstructor);
         if (type.Equals("XPHttpClient", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeHttp.CreateClient()";
         if (type.Equals("XPHttpRequest", StringComparison.OrdinalIgnoreCase)) return "XPScriptNativeHttp.CreateRequest()";
         if (type.Equals("XPJsonDocument", StringComparison.OrdinalIgnoreCase)) return string.IsNullOrWhiteSpace(args) ? "XPScriptNativeJson.CreateDocument()" : $"XPScriptNativeJson.Parse({args})";
@@ -111,21 +115,21 @@ internal sealed class NativeHttpJsonPreprocessor
         if (type.Equals("XPDbMsSql", StringComparison.OrdinalIgnoreCase)) { if (string.IsNullOrWhiteSpace(args)) throw SyntaxFailure("XPDbMsSql requires a connection string argument.", sourceName, line, sourceLine, "connection string argument", type); return $"new XPScriptDbMsSql({args})"; }
         if (type.Equals("XPDbMySql", StringComparison.OrdinalIgnoreCase)) { if (string.IsNullOrWhiteSpace(args)) throw SyntaxFailure("XPDbMySql requires a connection string argument.", sourceName, line, sourceLine, "connection string argument", type); return $"new XPScriptDbMySql({args})"; }
         if (type.Equals("XPAi", StringComparison.OrdinalIgnoreCase)) { if (string.IsNullOrWhiteSpace(args)) throw SyntaxFailure("XPAi requires an endpoint argument.", sourceName, line, sourceLine, "endpoint argument", type); return $"new XPScriptAi({args})"; }
-        if (type.Equals("AITool", StringComparison.OrdinalIgnoreCase)) { if (string.IsNullOrWhiteSpace(args)) throw SyntaxFailure("AITool requires a name argument.", sourceName, line, sourceLine, "name argument", type); return $"new XPScriptAiTool({args})"; }
+        if (type.Equals("XPAITool", StringComparison.OrdinalIgnoreCase)) { if (string.IsNullOrWhiteSpace(args)) throw SyntaxFailure("XPAITool requires a name argument.", sourceName, line, sourceLine, "name argument", type); return $"new XPScriptAiTool({args})"; }
         throw SyntaxFailure("Unsupported native runtime type: " + type, sourceName, line, sourceLine, "supported native runtime type", type);
     }
-    private static CompilerException SyntaxFailure(string message, string sourceName, int line, string sourceLine, string expectedConstruct, string foundToken)
+    private static CompilerException SyntaxFailure(string message, string sourceName, int line, string sourceLine, string expectedConstruct, string foundToken, string diagnosticCode = CompilerDiagnosticCodes.InvalidSyntax)
     {
         var safeSource = CompilerDiagnosticRedaction.MaskStringLiterals(sourceLine).TrimEnd();
         var diagnostic = new CompileDiagnostic
         {
             File = Path.GetFileName(sourceName), Line = line, Position = 1, EndLine = line,
             EndColumn = Math.Max(2, safeSource.Length + 1), Description = message,
-            DiagnosticCode = CompilerDiagnosticCodes.InvalidSyntax, Category = "syntax",
+            DiagnosticCode = diagnosticCode, Category = "syntax",
             Properties = [new() { Name = "foundToken", Value = foundToken }, new() { Name = "expectedConstruct", Value = expectedConstruct }],
             SourceCode = safeSource, MarkedCode = safeSource + Environment.NewLine + "^"
         };
-        return new CompilerException(message, CompilerDiagnosticCodes.InvalidSyntax, "syntax", [diagnostic]);
+        return new CompilerException(message, diagnosticCode, "syntax", [diagnostic]);
     }
 
 }

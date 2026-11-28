@@ -1,0 +1,10 @@
+Class Root
+End Class
+Class Child Extend Root
+    Public Sub New()
+        Print "late"
+        Call Parent.New()
+    End Sub
+End Class
+Sub Main()
+End Sub

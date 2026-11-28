@@ -1,0 +1,23 @@
+Function ChooseTag() As String
+    Print "TAG_EVALUATED_ONCE"
+    ChooseTag = "item"
+End Function
+
+Sub Touch(ByRef value As Long)
+    value = value + 10
+End Sub
+
+Sub AppendText(ByRef value As String)
+    value = value & "!"
+End Sub
+
+Sub Main()
+    Dim numbers List As Long
+    numbers("item") = 1
+    Call Touch(numbers(ChooseTag()))
+    Print numbers("item")
+    Dim words List As String
+    words("greeting") = "hello"
+    Call AppendText(words("greeting"))
+    Print words("greeting")
+End Sub

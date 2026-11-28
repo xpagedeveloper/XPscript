@@ -1,0 +1,138 @@
+using System.Diagnostics;
+using System.Reflection;
+using XPScript.Compiler;
+
+var outputRoot = Path.GetFullPath(args.Length == 0 ? "out/generated-dependency-probe" : args[0]);
+var backend = typeof(CompilerDriver).Assembly.GetType("XPScript.Compiler.RunRoslynCompiler", true)!;
+var compile = backend.GetMethod("CompileAsync", BindingFlags.Public | BindingFlags.Static)!;
+async Task<string> Build(string source, string name) => await (Task<string>)compile.Invoke(null,
+    [source, Path.Combine(outputRoot, name), false, CancellationToken.None])!;
+var mappedDiagnosticSource = "#line 42 \"mapped-backend.xps\"\ninternal static class Program { public static void Main() { MissingType value = 1; } }";
+try
+{
+    await Build(mappedDiagnosticSource, "mapped-diagnostic");
+    throw new Exception("Generated backend diagnostic fixture unexpectedly compiled.");
+}
+catch (CompilerException compilerException)
+{
+    if (compilerException.GeneratedDiagnostics.Count != 1)
+        throw new Exception($"Generated backend diagnostic fixture returned {compilerException.GeneratedDiagnostics.Count} mapped diagnostics: {compilerException.Message}", compilerException);
+    var diagnostic = compilerException.GeneratedDiagnostics.Single();
+    if (diagnostic.File != "mapped-backend.xps" || diagnostic.Line != 42 || diagnostic.Position <= 0 ||
+        diagnostic.EndLine != 42 || diagnostic.EndColumn <= diagnostic.Position || diagnostic.Category != "code-generation")
+        throw new Exception("Generated backend diagnostics lost the mapped source span.");
+}
+async Task<string> Run(string assembly)
+{
+    var info = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+    info.ArgumentList.Add(assembly);
+    using var process = Process.Start(info)!;
+    var stdout = process.StandardOutput.ReadToEndAsync();
+    var stderr = process.StandardError.ReadToEndAsync();
+    await process.WaitForExitAsync();
+    var text = await stdout;
+    if (process.ExitCode != 0) throw new Exception(await stderr);
+    return text.Trim();
+}
+
+var plain = "internal static class Program { public static void Main() => System.Console.WriteLine(7); }";
+if (ApplicationDependencyCatalog.Detect(plain).Count != 0) throw new Exception("Plain program selected packages.");
+var markerText = """
+// XPImage XPScriptDbSqlite XPScriptDbMsSql XPScriptDbMySql XPScriptDbSupabase
+internal static class Program
+{
+    public static void Main() => System.Console.WriteLine("XPImage XPScriptDbSqlite XPScriptUI.CreateForm( XPScriptExtendedArchive");
+}
+""";
+if (ApplicationDependencyCatalog.Detect(markerText).Count != 0)
+    throw new Exception("Names in generated strings/comments selected unused packages.");
+var plainAssembly = await Build(plain, "plain");
+if (await Run(plainAssembly) != "7" || Directory.EnumerateFiles(Path.GetDirectoryName(plainAssembly)!, "Magick*", SearchOption.AllDirectories).Any())
+    throw new Exception("Plain output unexpectedly acquired image dependencies.");
+
+var markerSourcePath = Path.Combine(outputRoot, "marker-text.xps");
+await File.WriteAllTextAsync(markerSourcePath, "Sub Main()\n    ' XPImage XPScriptDbSqlite XPScriptUI\n    Print \"XPImage XPScriptDbSqlite XPScriptUI.CreateForm( XPScriptExtendedArchive\"\nEnd Sub\n");
+var markerOutput = Path.Combine(outputRoot, "marker-text-ast");
+await AstCompiler.CompileAsync(markerSourcePath, markerOutput);
+if (Directory.EnumerateFiles(markerOutput, "Magick*", SearchOption.AllDirectories).Any() ||
+    Directory.EnumerateFiles(markerOutput, "*Sqlite*", SearchOption.AllDirectories).Any() ||
+    File.Exists(Path.Combine(markerOutput, "Third-party-license.txt")))
+    throw new Exception("AST marker-text fixture acquired an unused XP runtime or package.");
+
+var inspectedSourcePath = Path.Combine(outputRoot, "inspected-image.xps");
+await File.WriteAllTextAsync(inspectedSourcePath, "Sub Main()\n    Dim image As New XPImage(4, 3, \"#ff0000\")\nEnd Sub\n");
+var inspectedGeneratedSource = await AstCompiler.GenerateSourceAsync(inspectedSourcePath, Path.Combine(outputRoot, "inspected-image-source"), "win-x64");
+var inspectedPackages = ApplicationDependencyCatalog.Detect(inspectedGeneratedSource);
+if (inspectedPackages.Count != 1 || inspectedPackages[0].Name != "Magick.NET-Q16-AnyCPU")
+    throw new Exception("AST-generated XPImage source did not expose its runtime package to dependency inspection.");
+
+var auditedUnusedObjects = new[]
+{
+    "XPNetworkTools", "XPDate", "XPAttachmentCollection", "XPAttachment", "XPCell", "XPRange", "XPWorksheet",
+    "XPAi", "XPAiResponse", "XPAITool", "XPAIToolFunction", "XPAIToolCall", "UIForm", "UIView", "UIListView"
+};
+foreach (var objectName in auditedUnusedObjects)
+{
+    var isolatedSourcePath = Path.Combine(outputRoot, "unused-" + objectName + ".xps");
+    await File.WriteAllTextAsync(isolatedSourcePath,
+        $"Sub Main()\n    ' {objectName}\n    Print \"{objectName}\"\nEnd Sub\n");
+    var isolatedOutput = Path.Combine(outputRoot, "unused-" + objectName);
+    await AstCompiler.CompileAsync(isolatedSourcePath, isolatedOutput);
+    if (Directory.EnumerateFiles(isolatedOutput, "*", SearchOption.AllDirectories)
+            .Any(path => Path.GetFileName(path).Contains(objectName, StringComparison.OrdinalIgnoreCase) ||
+                         Path.GetFileName(path).Contains("Magick", StringComparison.OrdinalIgnoreCase) ||
+                         Path.GetFileName(path).Contains("Sqlite", StringComparison.OrdinalIgnoreCase) ||
+                         Path.GetFileName(path).Equals("Third-party-license.txt", StringComparison.OrdinalIgnoreCase)))
+        throw new Exception($"Unused AST object marker acquired dependencies: {objectName}");
+}
+
+var source = """
+internal sealed class XPImage { }
+internal static class Program
+{
+    public static void Main()
+    {
+        using var image = new ImageMagick.MagickImage(ImageMagick.MagickColors.Red, 2, 3);
+        System.Console.WriteLine(image.Width);
+        System.Console.WriteLine(image.Height);
+    }
+}
+""";
+var imagePackages = ApplicationDependencyCatalog.Detect(source);
+if (imagePackages.Count != 1 || imagePackages[0].Name != "Magick.NET-Q16-AnyCPU") throw new Exception("Image program selected the wrong packages.");
+foreach (var name in new[] { "image", "image-cached" })
+{
+    var assembly = await Build(source, name);
+    if ((await Run(assembly)).Replace("\r\n", "\n") != "2\n3") throw new Exception("Native image runtime did not execute.");
+    var notice = await File.ReadAllTextAsync(Path.Combine(Path.GetDirectoryName(assembly)!, "Third-party-license.txt"));
+    if (!notice.Contains("Magick.NET-Q16-AnyCPU") || !notice.Contains("Magick.NET.Core") || !notice.Contains("Apache License") || notice.Contains("No package-local license text was found"))
+        throw new Exception("Direct/transitive image licenses were lost, including on cached builds.");
+}
+
+// A second addon proves selection is catalog-driven, rather than an image-only branch.
+var sqliteSource = """
+internal sealed class XPScriptDbSqlite { }
+internal static class Program
+{
+    public static void Main()
+    {
+        using var connection = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "select 42";
+        System.Console.WriteLine(command.ExecuteScalar());
+    }
+}
+""";
+var sqliteAssembly = await Build(sqliteSource, "sqlite");
+if (await Run(sqliteAssembly) != "42") throw new Exception("Second addon native runtime did not execute.");
+var sqliteNotice = await File.ReadAllTextAsync(Path.Combine(Path.GetDirectoryName(sqliteAssembly)!, "Third-party-license.txt"));
+if (!sqliteNotice.Contains("Microsoft.Data.Sqlite") || sqliteNotice.Contains("Magick.NET")) throw new Exception("Unrelated addon notices leaked into SQLite output.");
+var combinedSource = "internal sealed class XPImage { }\n" + sqliteSource.Replace(
+    "System.Console.WriteLine(command.ExecuteScalar());",
+    "using var image = new ImageMagick.MagickImage(ImageMagick.MagickColors.Red, 2, 3); System.Console.WriteLine(image.Width + \":\" + command.ExecuteScalar());");
+var combinedAssembly = await Build(combinedSource, "combined");
+if (await Run(combinedAssembly) != "2:42") throw new Exception("Combined addons did not execute together.");
+var combinedNotice = await File.ReadAllTextAsync(Path.Combine(Path.GetDirectoryName(combinedAssembly)!, "Third-party-license.txt"));
+if (!combinedNotice.Contains("Magick.NET.Core") || !combinedNotice.Contains("Microsoft.Data.Sqlite")) throw new Exception("Combined addon notices lost part of the dependency graph.");
+Console.WriteLine("GENERATED_DEPENDENCIES_OK");

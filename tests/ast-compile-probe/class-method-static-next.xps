@@ -1,0 +1,15 @@
+Class Counter
+    Public Function NextValue() As Long
+        Static value As Long
+        value = value + 1
+        NextValue = value
+    End Function
+End Class
+
+Sub Main()
+    Dim first As New Counter
+    Dim second As New Counter
+    Print CStr(first.NextValue())
+    Print CStr(first.NextValue())
+    Print CStr(second.NextValue())
+End Sub

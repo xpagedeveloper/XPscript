@@ -13,12 +13,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../XPScript.Compiler/**/*.cs"
-             Exclude="../XPScript.Compiler/Program.cs;../XPScript.Compiler/bin/**;../XPScript.Compiler/obj/**" />
+             Exclude="../XPScript.Compiler/Program.cs;../XPScript.Compiler/bin/**;../XPScript.Compiler/obj/**;../XPScript.Compiler/out/**" />
     <EmbeddedResource Include="../../LICENSE" LogicalName="XPScript.LICENSE" />
     <EmbeddedResource Include="../../NOTICE" LogicalName="XPScript.NOTICE" Condition="Exists('../../NOTICE')" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../XPScript.UI.Desktop/XPScript.UI.Desktop.csproj" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
   </ItemGroup>
 </Project>

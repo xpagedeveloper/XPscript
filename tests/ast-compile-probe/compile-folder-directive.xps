@@ -1,0 +1,4 @@
+[Compile:folder]
+Sub Main()
+    Print "This directive is no longer supported."
+End Sub

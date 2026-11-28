@@ -17,7 +17,7 @@ internal sealed class XPScriptDbMsSql : XPScriptCaseInsensitiveDynamicObject, ID
     private Microsoft.Data.SqlClient.SqlConnection? _connection;
     private Microsoft.Data.SqlClient.SqlTransaction? _transaction;
     private double _timeout = 30;
-    private int _maxRows = 10_000;
+    private long _maxRows = 10_000;
 
     public XPScriptDbMsSql(object? connectionString)
     {
@@ -73,7 +73,7 @@ internal sealed class XPScriptDbMsSql : XPScriptCaseInsensitiveDynamicObject, ID
         }
     }
 
-    public int MaxRows
+    public long MaxRows
     {
         get
         {
@@ -270,6 +270,9 @@ internal sealed class XPScriptDbMsSql : XPScriptCaseInsensitiveDynamicObject, ID
             }
         }
     }
+
+    public XPScriptAttachmentCollectionV3 Attachments(object? table, object? keyColumn, object? keyValue)
+        => XPScriptDatabaseAttachmentApi.ForMsSql(this, table, keyColumn, keyValue);
 
     public void Dispose() => Close();
 

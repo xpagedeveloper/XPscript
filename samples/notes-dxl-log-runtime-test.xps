@@ -1,0 +1,30 @@
+' Requires the local xpscript.nsf test database and the standard DXL fixture.
+Option Declare
+
+Sub Main()
+    Dim session As NotesSession
+    Dim db As NotesDatabase
+    Dim importer As NotesDXLImporter
+    Dim firstLog As String
+    Dim secondLog As String
+    Set session = New NotesSession()
+    Set db = session.OpenDatabase("", "xpscript.nsf")
+    Set importer = session.CreateDXLImporter()
+    importer.ExitOnFirstFatalError = True
+    If Not importer.ExitOnFirstFatalError Then Error 5, "DXL Boolean setter failed"
+    On Error Resume Next
+    If importer Is Nothing Then Error 91, "DXL importer was not created"
+    If Err <> 0 Then Error 5, "DXL importer predicate failed"
+    On Error GoTo 0
+    Print "DXL-IMPORT-BEGIN"
+    Call importer.Import("xpscript-notes-runtime-fixture.dxl", db)
+    Print "DXL-IMPORT-END"
+    firstLog = importer.Log
+    secondLog = importer.Log
+    If firstLog <> secondLog Then Error 5, "DXL log changed between reads"
+    Print firstLog
+    Print "DXL-LOG-REPEATED-READ=PASS"
+    Call importer.Recycle()
+    Call db.Recycle()
+    Call session.Recycle()
+End Sub

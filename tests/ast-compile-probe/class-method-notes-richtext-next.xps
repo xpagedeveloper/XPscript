@@ -1,0 +1,13 @@
+Option Declare
+
+Class NotesRichTextMethods
+    Public Function Accept(ByVal item As NotesRichTextItem, ByVal navigator As NotesRichTextNavigator, ByVal style As NotesRichTextStyle, ByVal paragraph As NotesRichTextParagraphStyle, ByVal range As NotesRichTextRange, ByVal section As NotesRichTextSection, ByVal tab As NotesRichTextTab, ByVal table As NotesRichTextTable, ByVal docLink As NotesRichTextDocLink) As Boolean
+        Accept = (item Is Nothing) And (navigator Is Nothing) And (style Is Nothing) And (paragraph Is Nothing) And (range Is Nothing) And (section Is Nothing) And (tab Is Nothing) And (table Is Nothing) And (docLink Is Nothing)
+    End Function
+End Class
+
+Sub Main()
+    Dim methods As New NotesRichTextMethods
+    If Not methods.Accept(Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing) Then Error 4266
+    Print "AST_NOTES_RICHTEXT_CLASS_METHOD_OK"
+End Sub

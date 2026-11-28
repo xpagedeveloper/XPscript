@@ -1,5 +1,7 @@
 # XPSpreadsheet
 
+Experimental AST supports user-class Get/Set properties typed as XPSpreadsheet, XPWorksheet, XPCell or XPRange, including scalar Optional/ByRef indexes. Use Set for reference assignment; getter member chains preserve the native type and shared mutations. Replacing the setter's incoming parameter does not replace the caller's variable. Unassigned reference results start as Nothing. Existing constructor and read-only-member restrictions still apply. See [tabular accessor regression](../tests/ast-compile-probe/tabular-reference-properties.xps).
+
 `XPSpreadsheet` is XPScript's native API for creating and working with simple `.xlsx` workbooks.
 
 > **Supported model:** XPSpreadsheet supports workbook data, multiple worksheets/tabs, formulas, ranges, AutoFilter, cell/range formatting, row heights, column widths, and AutoFit. Existing external `.xlsx` files can be opened and read, but are read-only by default so XPSpreadsheet does not accidentally remove spreadsheet features it does not understand.
@@ -428,7 +430,7 @@ XPSpreadsheet still does not provide a full spreadsheet application or calculati
 
 Because of that limitation, XPSpreadsheet deliberately refuses to overwrite external/unmarked XLSX workbooks. `SaveAsSimple()` is the explicit opt-in operation for creating a simplified XPScript workbook from data that XPSpreadsheet can read.
 
-The file-based API is not available for `browser-wasm` targets in this version.
+In `browser-wasm`, use `ToBytes()` and `FromBytes(data)` for in-memory workbook data. Opening or saving a workbook by path raises a runtime error.
 
 
 ## CSV interoperability example
@@ -450,6 +452,16 @@ Set sheet = book.Worksheet("Data")
 Set csv = sheet.ToCsv(True)
 Call csv.Save("output.csv")
 ```
+
+## AST compilation and runtime selection
+
+`XPSpreadsheet`, `XPWorksheet`, `XPCell` and `XPRange` compile directly through AST, reusing the normal compiler's ZIP/XML runtime. This engine uses framework libraries, not ClosedXML or an external NuGet package. Pure spreadsheet programs omit CSV code; CSV interoperability includes both engines only when used. Unused object names in comments or strings do not include spreadsheet code. Existing addon packaging and third-party notices remain unchanged.
+
+Only the workbook is directly constructible. Worksheet/cell/range results are typed, including procedure parameters, return values, initialized declarations and Static storage. ByVal shares the same reference; ByRef can replace it. Worksheet `Name` and `Index` are read-only: rename through the workbook. Relative XLSX filenames resolve against the source script directory, consistently with normal compilation.
+
+CSV conversion uses the existing shared helpers: `csv.ToSpreadsheet([sheetName])`, `worksheet.ToCsv([hasHeaders])` and `XPCsvDocument.FromWorksheet(worksheet[, hasHeaders])`. No separate converter is introduced. `Range.Values` returns a native, zero-based, one-dimensional LSArray; indexing, bounds and ForAll use the shared runtime. Multidimensional range extraction remains unsupported by this runtime.
+
+Permanent tests compile and execute the existing basic, worksheet, style, range, formatting, autofilter and CSV-interoperability demos through both normal and AST compilers. Focused tests also exercise reference semantics, byte/file round trips, conditional inclusion, XLSX safety guards and source-mapped CLI/MCP diagnostics. See `tests/AstSpreadsheetRuntimeProbe` and `tests/ast-compile-probe/spreadsheet-*.xps`.
 
 ## XLSX input safety limits
 
@@ -478,4 +490,4 @@ Call copy.FromJson(rows)
 Print copy.Rows[0].Get("name")
 ```
 
-The runtime regression is `samples/csv-json-roundtrip.xps`.
+The runtime regression is [`samples/csv-json-roundtrip.xps`](../samples/csv-json-roundtrip.xps).

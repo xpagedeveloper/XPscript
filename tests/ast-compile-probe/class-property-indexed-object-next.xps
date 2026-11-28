@@ -1,0 +1,42 @@
+Class Box
+    Public Value As Long
+End Class
+
+Class Store
+    Public first As Box
+    Public second As Box
+
+    Public Property Get Item(ByVal index As Long) As Box
+        If index = 1 Then
+            Set Item = first
+        Else
+            Set Item = second
+        End If
+    End Property
+
+    Public Property Set Item(ByVal index As Long, ByVal incoming As Box)
+        If index = 1 Then
+            Set first = incoming
+        Else
+            Set second = incoming
+        End If
+    End Property
+End Class
+
+Sub Main()
+    Dim store As New Store
+    Dim first As New Box
+    Dim second As New Box
+    first.Value = 11
+    second.Value = 22
+
+    Set store.Item(1) = first
+    Set store.Item(2) = second
+    If store.Item(1).Value <> 11 Or store.Item(2).Value <> 22 Then Error 4276
+
+    Dim replacement As New Box
+    replacement.Value = 33
+    Set store.Item(1) = replacement
+    If store.Item(1).Value <> 33 Then Error 4277
+    Print "CLASS_INDEXED_PROPERTY_OBJECT_OK"
+End Sub

@@ -1,0 +1,4 @@
+Sub Main()
+    Dim picture As XPImage
+    Print picture.UnknownMember
+End Sub

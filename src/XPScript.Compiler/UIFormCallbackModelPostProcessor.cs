@@ -16,6 +16,11 @@ internal sealed class UIFormCallbackModelPostProcessor
             "    public string OnChangeHandler { get; set; } = string.Empty;",
             """
     public string OnChangeHandler { get; set; } = string.Empty;
+    public string OnPlayHandler { get; set; } = string.Empty;
+    public string OnPauseHandler { get; set; } = string.Empty;
+    public string OnEndedHandler { get; set; } = string.Empty;
+    public string OnErrorHandler { get; set; } = string.Empty;
+    public string AutoCompleteProviderHandler { get; set; } = string.Empty;
     public bool UseEventCallback { get; set; }
     public object?[] EventCallbackArguments { get; set; } = [];
 """,
@@ -33,9 +38,9 @@ internal sealed class UIFormCallbackModelPostProcessor
 
         generated = ReplaceRequired(
             generated,
-            "internal sealed class XPScriptUIForm\n{",
+            "internal sealed partial class XPScriptUIForm\n{",
             """
-internal sealed class XPScriptUIFormEvent
+public sealed class XPScriptUIFormEvent
 {
     internal XPScriptUIFormEvent(
         XPScriptUIForm form,
@@ -51,12 +56,13 @@ internal sealed class XPScriptUIFormEvent
         Values = values is null ? [] : [.. values];
     }
 
-    public XPScriptUIForm Form { get; }
+    public object Form { get; }
     public string EventType { get; }
     public string ControlName { get; }
     public object? Value { get; }
     public IReadOnlyList<string> Values { get; }
     public int ValueCount => Values.Count;
+    public void SetFieldValue(object? name, object? value) => ((XPScriptUIForm)Form).SetFieldValue(name, value);
 
     public string GetValue(object? indexValue)
     {
@@ -71,7 +77,7 @@ internal sealed class XPScriptUIFormEvent
         return Values[index];
     }
 
-    public XPScriptJsonObject ToJsonObject()
+    internal XPScriptJsonObject ToJsonObject()
     {
         var node = new System.Text.Json.Nodes.JsonObject
         {
@@ -86,7 +92,7 @@ internal sealed class XPScriptUIFormEvent
     public string ToJson() => ToJsonObject().Stringify();
 }
 
-internal sealed class XPScriptUIForm
+internal sealed partial class XPScriptUIForm
 {
 """,
             "event-type");
@@ -115,6 +121,44 @@ internal sealed class XPScriptUIForm
         field.OnChangeHandler = NormalizeHandlerName(handlerName);
         field.UseEventCallback = true;
         field.EventCallbackArguments = CopyEventCallbackArguments(callbackArguments);
+    }
+
+    public void SetAutoCompleteProvider(object? name, object? handlerName)
+    {
+        var field = FindField(name);
+        if (field.Type is not ("AutoCompleteField" or "LookupField"))
+            throw new XPScriptRuntimeException(5, "UIForm autocomplete providers require an AutoCompleteField or LookupField.");
+        field.AutoCompleteProviderHandler = NormalizeHandlerName(handlerName);
+        field.OnChangeHandler = field.AutoCompleteProviderHandler;
+        field.UseEventCallback = false;
+        field.EventCallbackArguments = [];
+    }
+
+    public void SetOnPlay(object? name, object? handlerName)
+        => SetMediaHandler(name, handlerName, "play");
+
+    public void SetOnPause(object? name, object? handlerName)
+        => SetMediaHandler(name, handlerName, "pause");
+
+    public void SetOnEnded(object? name, object? handlerName)
+        => SetMediaHandler(name, handlerName, "ended");
+
+    public void SetOnError(object? name, object? handlerName)
+        => SetMediaHandler(name, handlerName, "error");
+
+    private void SetMediaHandler(object? name, object? handlerName, string eventType)
+    {
+        var field = FindField(name);
+        if (field.Type is not ("Audio" or "Video"))
+            throw new XPScriptRuntimeException(5, "Media event handlers require an Audio or Video field.");
+        var normalized = NormalizeHandlerName(handlerName);
+        switch (eventType)
+        {
+            case "play": field.OnPlayHandler = normalized; break;
+            case "pause": field.OnPauseHandler = normalized; break;
+            case "ended": field.OnEndedHandler = normalized; break;
+            case "error": field.OnErrorHandler = normalized; break;
+        }
     }
 """,
             "change-callback-api");
@@ -150,6 +194,11 @@ internal sealed class XPScriptUIForm
     {
         if (!source.Contains(oldValue, StringComparison.Ordinal))
             throw new CompilerException($"Unable to install UIForm callback model runtime extension ({stage}).");
+        if (oldValue.Contains("XPScriptUIForm", StringComparison.Ordinal))
+        {
+            var index = source.IndexOf(oldValue, StringComparison.Ordinal);
+            return source[..index] + newValue + source[(index + oldValue.Length)..];
+        }
         return source.Replace(oldValue, newValue, StringComparison.Ordinal);
     }
 }

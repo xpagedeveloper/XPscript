@@ -5,13 +5,34 @@ internal static class FileSystemPortabilityRuntimeSource
     public const string Code = """
 internal static class XPScriptFileSystemRuntime
 {
+    // Shared primitive used by byte-file APIs and CSV output. Preserve the
+    // existing current-directory path policy rather than image source-directory policy.
+    public static void WriteBytes(object? path, byte[] bytes)
+    {
+        var fullPath = ResolvePath(path);
+        var parent = Path.GetDirectoryName(fullPath);
+        if (string.IsNullOrWhiteSpace(parent) || !Directory.Exists(parent))
+            throw new DirectoryNotFoundException("Destination directory does not exist.");
+        File.WriteAllBytes(fullPath, bytes);
+    }
     public static Encoding LegacyEncoding { get; } = Encoding.Latin1;
     private static string _scriptDirectory = Environment.CurrentDirectory;
+    private static string _assetDirectory = Path.Combine(Environment.CurrentDirectory, "assets");
 
     public static void SetScriptDirectory(string directory)
     {
         if (!string.IsNullOrWhiteSpace(directory))
             _scriptDirectory = Path.GetFullPath(directory);
+        _assetDirectory = ResolveAssetDirectory();
+    }
+
+    private static string ResolveAssetDirectory()
+    {
+        if (OperatingSystem.IsAndroid())
+            return Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "assets"));
+        var published = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "assets"));
+        if (Directory.Exists(published)) return published;
+        return Path.GetFullPath(Path.Combine(_scriptDirectory, "assets"));
     }
 
     private const int DarwinOpenReadWrite = 0x0002;
@@ -71,11 +92,40 @@ internal static class XPScriptFileSystemRuntime
         var path = XPScriptRuntime.CStr(value);
         if (string.IsNullOrWhiteSpace(path))
             throw new XPScriptRuntimeException(5, "File path must not be empty.");
-        try { return Path.GetFullPath(path, _scriptDirectory); }
+        try
+        {
+            var normalized = path.Replace('\\', '/');
+            if (normalized.Equals("assets", StringComparison.OrdinalIgnoreCase))
+                return _assetDirectory;
+            if (normalized.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+            {
+                var resolvedAsset = Path.GetFullPath(Path.Combine(_assetDirectory, normalized["assets/".Length..].Replace('/', Path.DirectorySeparatorChar)));
+                if (!IsAssetPath(resolvedAsset))
+                    throw new XPScriptRuntimeException(5, "Application asset path escapes the assets directory.");
+                return resolvedAsset;
+            }
+            return Path.GetFullPath(path, _scriptDirectory);
+        }
         catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
             throw new XPScriptRuntimeException(5, "Invalid file path.");
         }
+    }
+
+    public static bool IsAssetPath(string path)
+    {
+        var full = Path.GetFullPath(path);
+        var assetRoot = _assetDirectory;
+        if (full.Equals(assetRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            return true;
+        var prefix = assetRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        return full.StartsWith(prefix, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+    }
+
+    public static void EnsureWritablePath(string path)
+    {
+        if (IsAssetPath(path))
+            throw new XPScriptRuntimeException(5, "Application assets are read-only.");
     }
 
     public static string NewLine => Environment.NewLine;
@@ -87,15 +137,20 @@ internal static class XPScriptFileSystemRuntime
         Share = FileShare.ReadWrite
     });
 
-    public static FileStream OpenOutputStream(string path, bool append) => new(path, new FileStreamOptions
+    public static FileStream OpenOutputStream(string path, bool append)
+    {
+        EnsureWritablePath(path);
+        return new FileStream(path, new FileStreamOptions
     {
         Mode = append ? FileMode.Append : FileMode.Create,
         Access = FileAccess.Write,
         Share = FileShare.Read
-    });
+        });
+    }
 
     public static FileStream OpenBinaryStream(string path)
     {
+        EnsureWritablePath(path);
         if (!OperatingSystem.IsMacOS())
         {
             return new FileStream(path, new FileStreamOptions
@@ -165,6 +220,7 @@ internal static class XPScriptFileSystemRuntime
     public static void SetFileAttr(object? value, int attributesValue)
     {
         var path = RequireExistingPath(value);
+        EnsureWritablePath(path);
         var attributes = (FileAttributes)attributesValue;
         if (!OperatingSystem.IsWindows() && attributes.HasFlag(FileAttributes.Hidden) && !IsDotHidden(path))
             throw new XPScriptRuntimeException(5,
@@ -180,6 +236,7 @@ internal static class XPScriptFileSystemRuntime
     {
         var source = RequireExistingFile(sourceValue);
         var destination = ResolvePath(destinationValue);
+        EnsureWritablePath(destination);
         EnsureDifferentPaths(source, destination, "FileCopy");
         RejectLinkedPath(source, "FileCopy", "source");
         RejectLinkedPath(destination, "FileCopy", "destination");
@@ -282,6 +339,7 @@ internal static class XPScriptFileSystemRuntime
     public static void DeleteFile(object? value)
     {
         var path = ResolvePath(value);
+        EnsureWritablePath(path);
         if (!File.Exists(path)) return;
         RejectLinkedPath(path, "Kill", "target");
         try
@@ -301,7 +359,9 @@ internal static class XPScriptFileSystemRuntime
     public static void MoveFile(object? sourceValue, object? destinationValue, bool overwrite = true)
     {
         var source = RequireExistingFile(sourceValue);
+        EnsureWritablePath(source);
         var destination = ResolvePath(destinationValue);
+        EnsureWritablePath(destination);
         EnsureDifferentPaths(source, destination, "Name");
         RejectLinkedPath(source, "Name", "source");
         RejectLinkedPath(destination, "Name", "destination");
@@ -321,11 +381,17 @@ internal static class XPScriptFileSystemRuntime
         }
     }
 
-    public static void MakeDirectory(object? value) => Directory.CreateDirectory(ResolvePath(value));
+    public static void MakeDirectory(object? value)
+    {
+        var path = ResolvePath(value);
+        EnsureWritablePath(path);
+        Directory.CreateDirectory(path);
+    }
 
     public static void RemoveDirectory(object? value)
     {
         var path = ResolvePath(value);
+        EnsureWritablePath(path);
         RejectLinkedPath(path, "RmDir", "target");
         RejectLinkedPath(path, "RmDir", "target");
         Directory.Delete(path, recursive: false);

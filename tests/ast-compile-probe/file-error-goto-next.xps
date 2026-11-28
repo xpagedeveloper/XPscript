@@ -1,0 +1,14 @@
+Sub Main()
+    Dim handled As Boolean
+    On Error GoTo FileFailure
+    Open "ast-error-goto-missing/missing.bin" For Binary As #91
+    Error 9859, "missing-file error was not raised"
+    Exit Sub
+
+FileFailure:
+    handled = True
+    If Err = 0 Then Error 9860, "On Error GoTo did not preserve Err"
+    On Error GoTo 0
+    If Not handled Then Error 9861, "On Error GoTo handler did not run"
+    Print "FILE_ERROR_GOTO_OK"
+End Sub

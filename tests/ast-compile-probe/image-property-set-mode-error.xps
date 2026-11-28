@@ -1,0 +1,9 @@
+Class Store
+    Public Property Set Image(ByVal incoming As XPImage)
+    End Property
+End Class
+Sub Main()
+    Dim store As New Store
+    Dim picture As XPImage
+    store.Image = picture
+End Sub

@@ -1,0 +1,28 @@
+Class Box
+    Private stored As Long
+    Public Property Get Value As Long
+        Value = stored
+    End Property
+    Public Property Let Value(incoming As Long)
+        stored = incoming + 1
+        incoming = 99
+    End Property
+    Public Property Let WriteOnly(ByVal incoming As Long)
+        stored = incoming
+    End Property
+    Public Sub Reset()
+        WriteOnly = 7
+    End Sub
+End Class
+Sub Main()
+    Dim item As New Box
+    With item
+        .vAlUe = 3
+        If .VaLuE <> 4 Then Error 5, "implicit member"
+        .WriteOnly = 8
+    End With
+    If item.Value <> 8 Then Error 5, "write-only"
+    Call item.Reset()
+    If item.Value <> 7 Then Error 5, "internal setter"
+    Print "CLASS_PROPERTIES_CAPABILITY_OK"
+End Sub

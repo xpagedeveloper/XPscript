@@ -1,0 +1,12 @@
+Option Declare
+
+Sub Main()
+    Dim element As New XPJSONElement("name", "Fredrik")
+    If element.Name <> "name" Or CStr(element.Value) <> "Fredrik" Then Error 4270
+    element.Value = "Ada"
+    If CStr(element.Value) <> "Ada" Then Error 4271
+    Dim copy As New XPJSONElement
+    Call copy.Copy(element)
+    If CStr(copy.Value) <> "Ada" Then Error 4272
+    Print "AST_JSON_ELEMENT_CANONICAL_OK"
+End Sub

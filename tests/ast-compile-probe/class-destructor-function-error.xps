@@ -1,0 +1,6 @@
+Class Invalid
+    Public Function Delete() As Long
+    End Function
+End Class
+Sub Main()
+End Sub

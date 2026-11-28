@@ -1,0 +1,7 @@
+Sub Main()
+    Dim db As New XPDBSQLite(":memory:")
+    If db.IsOpen Then
+        Print "AST_DATABASE_TRANSITIVE_RUNTIME_OK"
+    End If
+    Call db.Close()
+End Sub

@@ -5,6 +5,8 @@ namespace XPScript.Compiler;
 
 internal static class WebIisPackageTarget
 {
+    private static readonly TimeSpan HostPublishTimeout = TimeSpan.FromMinutes(5);
+
     public static async Task<CompileResult> BuildAsync(string sourcePath, string? outputPath, bool selfContained, string resultFormat)
     {
         if (!File.Exists(sourcePath))
@@ -49,11 +51,23 @@ internal static class WebIisPackageTarget
         if (project is null)
             throw new CompilerException("Unable to locate src/XPScript.Cli/XPScript.Cli.csproj required to create a webiis package.");
 
+        var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
+        var tempRoot = string.IsNullOrWhiteSpace(configuredTempRoot)
+            ? Path.Combine(Path.GetTempPath(), "XPScript")
+            : Path.GetFullPath(configuredTempRoot);
+        // Keep the per-build workspace isolated while avoiding Windows MAX_PATH
+        // failures when XPSCRIPT_TEMP_ROOT is itself a long repository path.
+        var isolatedBuildRoot = Path.Combine(tempRoot, "w", Guid.NewGuid().ToString("N")[..12]);
+        Directory.CreateDirectory(isolatedBuildRoot);
+
         var args = new List<string>
         {
             "publish", project, "-c", "Release", "-o", destination,
             "--self-contained", selfContained ? "true" : "false",
-            "-p:SkipUnifiedPublish=true"
+            "-p:SkipUnifiedPublish=true",
+            "-p:BuildInParallel=false",
+            "--artifacts-path", isolatedBuildRoot,
+            "--nologo"
         };
         if (selfContained)
         {
@@ -68,13 +82,29 @@ internal static class WebIisPackageTarget
             UseShellExecute = false
         };
         foreach (var arg in args) start.ArgumentList.Add(arg);
-        using var process = System.Diagnostics.Process.Start(start)
-            ?? throw new CompilerException("Unable to start dotnet publish for webiis target.");
-        var stdout = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-        var stderr = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
-        await process.WaitForExitAsync().ConfigureAwait(false);
-        if (process.ExitCode != 0)
-            throw new CompilerException("Unable to publish IIS host: " + (stderr.Length > 0 ? stderr : stdout));
+        try
+        {
+            using var process = System.Diagnostics.Process.Start(start)
+                ?? throw new CompilerException("Unable to start dotnet publish for webiis target.");
+            var stdout = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
+            var stderr = await process.StandardError.ReadToEndAsync().ConfigureAwait(false);
+            var waitTask = process.WaitForExitAsync();
+            var completed = await Task.WhenAny(waitTask, Task.Delay(HostPublishTimeout)).ConfigureAwait(false);
+            if (completed != waitTask)
+            {
+                try { process.Kill(entireProcessTree: true); } catch { }
+                await process.WaitForExitAsync().ConfigureAwait(false);
+                throw new CompilerException($"Unable to publish IIS host: dotnet publish exceeded the {HostPublishTimeout.TotalMinutes:0} minute timeout.");
+            }
+            await waitTask.ConfigureAwait(false);
+            if (process.ExitCode != 0)
+                throw new CompilerException("Unable to publish IIS host: " + (stderr.Length > 0 ? stderr : stdout));
+        }
+        finally
+        {
+            try { if (Directory.Exists(isolatedBuildRoot)) Directory.Delete(isolatedBuildRoot, recursive: true); }
+            catch { /* The package itself remains valid if cleanup races a released build handle. */ }
+        }
 
         if (selfContained)
         {

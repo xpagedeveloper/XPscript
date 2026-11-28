@@ -1,0 +1,5 @@
+Sub Main()
+    If True Then
+        GoSub worker
+    End If
+End Sub

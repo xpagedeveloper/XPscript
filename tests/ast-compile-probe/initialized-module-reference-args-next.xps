@@ -1,0 +1,19 @@
+Public current As Box = New Box(12)
+
+Class Box
+    Public Value As Long
+    Public Sub New(ByVal initial As Long)
+        Value = initial
+    End Sub
+End Class
+
+Class ReferenceOwner
+    Public Sub New(ByRef value As Box)
+        value.Value = value.Value + 1
+    End Sub
+End Class
+
+Sub Main()
+    Dim item As New ReferenceOwner(current)
+    Print CStr(current.Value)
+End Sub

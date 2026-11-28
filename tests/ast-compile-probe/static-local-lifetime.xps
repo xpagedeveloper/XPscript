@@ -1,0 +1,60 @@
+Sub Tick()
+    Static state As Long
+    state = state + 1
+    Print state
+End Sub
+
+Sub Other()
+    Static state As Long
+    state = state + 10
+    Print state
+End Sub
+
+Function NextValue(ByVal ignored As Long) As Long
+    Static visits As Long
+    visits = visits + 1
+    NextValue = visits
+End Function
+
+Function NextValue(ByVal ignored As String) As Long
+    Static visits As Long
+    visits = visits + 10
+    NextValue = visits
+End Function
+
+Sub Defaults()
+    Static text As String
+    Static ready As Boolean
+    If ready Then
+        Print text
+    ElseIf text = "" Then
+        Print "STATIC_DEFAULTS_OK"
+    End If
+    text = "STATIC_RETAINED_OK"
+    ready = True
+End Sub
+
+Sub Bump(ByRef value As Long)
+    value = value + 1
+End Sub
+
+Function StaticRef() As Long
+    Static total As Long
+    Call Bump(total)
+    StaticRef = total
+End Function
+
+Sub Main()
+    Call Tick()
+    Call Other()
+    Call Tick()
+    Call Other()
+    Print NextValue(0)
+    Print NextValue("a")
+    Print NextValue(0)
+    Print NextValue("a")
+    Call Defaults()
+    Call Defaults()
+    Print StaticRef()
+    Print StaticRef()
+End Sub

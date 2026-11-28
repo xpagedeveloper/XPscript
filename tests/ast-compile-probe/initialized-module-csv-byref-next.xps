@@ -1,0 +1,11 @@
+Public sharedCsv As XPCsvDocument = New XPCsvDocument()
+
+Sub Touch(ByRef value As XPCsvDocument)
+    Set value = New XPCsvDocument()
+End Sub
+
+Sub Main()
+    Call Touch(sharedCsv)
+    If sharedCsv Is Nothing Then Error 6, "initialized CSV module ByRef storage failed"
+    Print "INITIALIZED_MODULE_CSV_BYREF_OK"
+End Sub
