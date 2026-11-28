@@ -1410,17 +1410,18 @@ Run this phase only after all preceding implementation work, permanent FullTest 
 - [x] Classify direct calls to the legacy transpiler entry points. No production
   callers remain after removing the web fallback. `tests/ast-lexer` separately
   uses a narrow expression transformation helper as a legacy comparison oracle.
-- [x] Inventory direct legacy compiler entry references. `RunCompiler` and the
-  web compiler route through AST; `XPScriptTranspiler.Transpile*` and
-  `AdvancedXPScriptTranspiler.Transpile` are blocked by `LegacyCompilationGuard`
-  before transpilation. The direct remaining references are test-only: the
-  AST lexer probe calls the legacy expression helper, AndroidCompilerProbe
-  checks an Android diagnostic snippet in the old transpiler source, and
-  AstCompileProbe asserts the disabled public entry point. These references do
-  not justify retaining the unused `CoreCompatibilityTranspiler` and
-  `ExtendedCompatibilityTranspiler` bodies; remove or isolate those bodies
-  after preserving their still-needed test/runtime helpers. Legacy cleanup is
-  therefore still open.
+- [x] Remove the unreachable `CoreCompatibilityTranspiler` and
+  `ExtendedCompatibilityTranspiler` bodies. `XPScriptTranspiler.Transpile*`
+  now rejects immediately, before service parsing or Include expansion, and
+  the obsolete code files are deleted. Runtime-source providers remain where
+  AST compilation still consumes them. `AstCompileProbe --legacy-guards-only`
+  and a Release compiler build pass locally.
+- [ ] Finish the remaining legacy inventory. The public legacy transpiler
+  class is retained as a rejected compatibility API; `AdvancedXPScriptTranspiler`
+  is retained only for the expression-comparison oracle and its disabled
+  entry-point diagnostic. Decide whether to migrate/remove that oracle and
+  whether to retain the rejected CLI/API aliases after compatibility policy is
+  explicit.
 - [x] Retire the unsupported `[Compile:folder]` feature. Multi-file source is
   composed with `Include`; the compile-folder module dispatcher depended on a
   legacy-only route and was not part of the supported language contract. The
@@ -1457,10 +1458,6 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   focused compiler/runtime and documentation guards. This confirms the current
   checked-in coverage and debugger/include changes; it does not close the
   published-0.9.3 compatibility inventory or prove untested CLI/MCP behavior.
-- [ ] Remove the unreachable `CoreCompatibilityTranspiler` and
-  `ExtendedCompatibilityTranspiler` implementation bodies. Production
-  compilation is AST-only and the public legacy compiler entry rejects before
-  reaching them, but their dead pipeline still compiles into Compiler.Core.
-  Preserve separately used runtime source providers and the narrow expression
-  compatibility oracle until each caller is migrated or explicitly justified.
+- [ ] Re-run the full platform matrix after the legacy transpiler deletion is
+  committed; the focused Release build and disabled-entry guard pass locally.
 

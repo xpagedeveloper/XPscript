@@ -16,7 +16,7 @@ The AST compiler is the production path for normal CLI and MCP compilation. The 
 - The Definition of Done remains open: audit every supported syntax and runtime behavior against the published legacy compiler, and verify consistent results from CLI and MCP. Passing the current FullTest proves the covered fixtures, not complete language compatibility.
 - Expand parity fixtures where the current MCP probe validates source but does not compare executed behavior with the legacy compiler.
 - Investigate XPImage end-to-end runtime behavior and lifecycle parity beyond dependency selection and current platform-specific coverage.
-- Remove or explicitly justify each remaining legacy parser/transpiler route only after the relevant compatibility evidence is green.
+- The unused `CoreCompatibilityTranspiler` and `ExtendedCompatibilityTranspiler` bodies have been removed; a local Release build and disabled-entry guard pass. The remaining `AdvancedXPScriptTranspiler` reference is a test-only expression compatibility oracle, and the public rejected legacy API aliases remain pending an explicit compatibility-policy decision.
 
 ## Platform FullTest coverage
 

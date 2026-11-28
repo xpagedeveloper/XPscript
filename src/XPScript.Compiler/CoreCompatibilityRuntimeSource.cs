@@ -1011,7 +1011,7 @@ internal static class LSFileRuntime
     }
 }
 
-// Marker calls are removed by CoreCompatibilityTranspiler after the normal transpiler emits C#.
+// Legacy marker helpers are retained for runtime-source parity; AST compilation does not emit them.
 internal static class LSCoreMarker
 {
     public static void Label(string name) { }
