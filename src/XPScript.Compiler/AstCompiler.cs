@@ -7,7 +7,7 @@ using XPScript.Compiler.Syntax;
 
 namespace XPScript.Compiler;
 
-/// <summary>Experimental CLI bridge for the currently supported AST compilation slice.</summary>
+/// <summary>Compiler entry point for XPscript parsing, binding and AST-based code generation.</summary>
 public static class AstCompiler
 {
     public static string EnsureUiComponentHierarchy(string generated)

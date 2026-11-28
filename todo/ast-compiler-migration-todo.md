@@ -52,7 +52,7 @@ Release gate: when the AST compiler becomes the supported production compilation
 - [x] Never mark a syntax feature migrated until old and new paths have been compared against representative fixtures.
 - [x] Preserve the current public compiler diagnostic contract where compatibility is required. Focused AST CLI regressions retain stable parser, entry-point and Optional validation messages; binder and MCP probes retain stable codes, source locations and structured properties. Feature-specific diagnostic migration remains tracked by the later source-mapping items.
 - [x] Keep normal compiler and machine/MCP compiler behavior synchronized for the current diagnostic surface. The protocol probe compares normal/debug MCP identities with normal/debug CLI identities and rejects drift; broader migrated-feature exposure remains tracked separately.
-- [x] CLI compilation and MCP/AI machine compilation consume the same experimental AST compiler entry point; `xpscript ast-compile` and `xpscript_ast_validate` both call `AstCompiler`, so machine validation does not create a second language implementation.
+- [x] CLI compilation and MCP/AI machine compilation consume the same production AST compiler entry point; normal CLI commands and source-oriented MCP tools use `AstCompiler`, so machine validation does not create a second language implementation.
 - [x] Every currently migrated AST syntax/semantic feature exposed through the machine interface is verified through both normal AST compilation and AST-MCP validation. The Static lifetime parity fixture is the first permanent paired regression; additional migrated features must extend the same pattern before being exposed.
 - [x] AST diagnostic changes are verified in both human-readable CLI output and the structured machine/MCP diagnostic contract. AST-MCP now preserves diagnostic code, source filename, positions, severity and category; the protocol probe covers both successful AST validation and a source-mapped AST error.
 - [x] Every AST diagnostic preserves the original XPscript source filename, mapped line/column and end span in structured MCP output and human-readable AST CLI output. The parser-error regression verifies the same source location contract in both surfaces.
@@ -970,10 +970,10 @@ The first AST proof of concept is complete when:
     the appropriate FullTest. Run the relevant suite on each supported OS or
     target; keep environment-dependent cases explicitly identified rather than
     counting compilation alone as runtime coverage.
-- [x] Parsing no longer depends on line-by-line regex/string transformation in the opt-in AST path; lexer and declaration/statement parsers consume tokens.
-- [x] Semantic analysis operates on XPscript syntax/bound nodes in the opt-in AST path.
-- [x] C# generation operates from the bound representation in the opt-in AST path; legacy transpiler migration remains open.
-- [ ] Roslyn is used as the C#/.NET backend, not as the primary XPscript parser/type checker.
+- [x] Parsing no longer depends on line-by-line regex/string transformation in the AST parser; lexer and declaration/statement parsers consume tokens. Some separate compatibility/runtime transforms remain and are inventoried below.
+- [x] Semantic analysis operates on XPscript syntax/bound nodes in the production AST path.
+- [x] C# generation operates from the bound representation in the production AST path; disabled legacy implementation cleanup remains open below.
+- [x] Roslyn is used as the C#/.NET backend, not as the primary XPscript parser/type checker.
 - [ ] Existing supported runtime behavior passes compatibility tests.
   - [ ] For each inventory entry, compare observable runtime results and
     normalized diagnostics through the normal CLI and MCP interfaces. Use the
@@ -982,8 +982,12 @@ The first AST proof of concept is complete when:
   - [ ] Add or update executable samples and permanent FullTest assertions for
     every discrepancy found. The audit closes only when all inventory entries
     have evidence or a documented, accepted exclusion.
-- [ ] Normal compiler and machine/MCP interfaces use the same AST/binder
+- [ ] Normal CLI and machine/MCP interfaces use the same AST/binder
   implementation and report consistent diagnostics.
+  - [x] Confirm normal CLI compilation and source-oriented MCP compilation both
+    call `AstCompiler`; the MCP protocol regression exercises validation,
+    virtual compilation and artifact compilation. This proves the route, not
+    exhaustive behavior parity.
   - [ ] Exercise the same valid and invalid sources through CLI and MCP, and
     compare success, generated/runtime behavior, diagnostic codes, source paths,
     lines, and columns. Keep these comparisons in `CompilerMcpProtocolProbe`
@@ -1001,11 +1005,12 @@ The first AST proof of concept is complete when:
     the legacy route, or document why it must remain, who uses it, and the test
     that protects that contract. Remove unused legacy code and stale tests only
     after equivalent AST FullTest coverage is green.
-  - [ ] Port debugger source-line instrumentation to AST-generated output.
-    Preserve source mapping, breakpoints, stepping, and runtime error locations;
-    add focused `DebuggerCoreProbe` regressions and run them in Language
-    FullTest. Until this passes, debugger runtime parity is an explicit open
-    compatibility gap.
+  - [x] Port debugger source-line instrumentation to AST-generated output.
+    `DebuggerCoreProbe` verifies root/include source mapping, breakpoints,
+    stepping, value history, completion and runtime error locations through a
+    generated AST application. It runs in Language FullTest and passed in the
+    complete Windows run on 2026-11-28. Broader syntax/runtime parity remains
+    open independently of this debugger slice.
 - [x] Compiler architecture and extension guidance are documented in `docs/ast-compiler-extension-guide.md`.
 - [ ] Update the compiler/package version to `0.9.4 Beta` only after all AST migration gates above pass and published `0.9.3 Beta` compatibility verification is recorded.
 
@@ -1187,13 +1192,21 @@ Current migration checkpoint (2026-10-22, branch `investigate-ast-compiler`):
 - [x] Resolve the target-specific generated-source FullTest failure on Windows/Linux/macOS. The AstCompileProbe now compiles its executable UIList event fixture for `RuntimeInformation.RuntimeIdentifier` before loading the assembly. Full Language FullTest run `45956338657` passed on Windows, Linux and macOS at commit `4aa67a49`.
 - [ ] Continue the Definition of Done audit in bounded slices: expand legacy-vs-AST compatibility coverage for supported syntax/runtime behavior and CLI/MCP behavior, then remove or explicitly justify each remaining legacy route. Do not close the rollout/default and legacy-cleanup gates until the relevant FullTest evidence is green.
 
+- [x] Run the complete Language FullTest locally on Windows on 2026-11-28
+  after the Include/MCP and source-mapped GoSub changes. All six AST CLI
+  shards, debugger runtime regression, compatibility/diagnostic corpus,
+  lexer/parser, binder/emitter, AstCompileProbe and MCP protocol probe passed.
+  This closes the current Windows Language-suite verification only; native
+  Linux/macOS verification of the latest commit and the exhaustive compatibility
+  inventory remain open.
+
 ## Language FullTest compatibility audit — 2026-11-26
 
 - [x] Split the Windows Language FullTest CLI corpus into six separately bounded processes, each with a 30-minute timeout and a required shard completion marker. This prevents the prior monolithic 40-minute timeout from obscuring completed coverage. All six shards passed in the orchestrated run and again during the post-fix verification.
 - [x] Restore default-ByRef function calls with expression arguments on the AST route. User-declared procedures now lower non-writable ByRef expressions through typed temporary storage; writable caller locations retain their existing alias/copy-back behavior, and native API ByRef checks are unchanged. `samples/function-not-byref-regression.xps` passes with `FUNCTION-NOT-BYREF=OK`.
 - [x] Restore XPS2014 for a local declaration that shadows its enclosing Function result name. `function-result-name-conflict-error.xps` now reports the diagnostic at the declaration.
 - [x] Parse continued procedure, class and property headers as one logical token sequence. The parser now uses lexer continuation handling and starts the body after the logical header, preserving original offsets. `samples/statement-layout-audit.xps` compiles and executes.
-- [x] Re-run compatibility baseline, diagnostics, ByRef, array, six AST CLI shards, lexer/parser, binder, emission, AstCompileProbe and the Language FullTest tail on Windows after the changes. The original rerun stopped at each of the three compatibility gaps above; focused checks for all three now pass. Re-run the complete Language FullTest once from start to finish before marking the language gate closed.
+- [x] Re-run compatibility baseline, diagnostics, ByRef, array, six AST CLI shards, lexer/parser, binder, emission, AstCompileProbe and the complete Windows Language FullTest after the changes. The 2026-11-28 run passed end-to-end; the original rerun's three focused compatibility gaps remain covered by permanent regressions.
 - [x] Fix the List-element ByRef expression failure found by the MCP protocol FullTest. A user-defined Function call such as `Touch(values("item"), other)` was routed through the accessor lambda before the named List-call wrapper, capturing the enclosing ByRef `other` parameter and producing CS1628. Route calls requiring `BoundListCallLowering` first and retain a focused emitter assertion. `list-functions.xps` now compiles and executes with its exact expected output, and the complete `CompilerMcpProtocolProbe` passes, including CLI/MCP diagnostic identity checks.
 - [x] Fix the default-ByRef temporary argument rejection found by the Language FullTest tail. `ParameterModesMatch` accepted temporary expressions provisionally but then still required a variable symbol, rejecting `Probe("test", Array("arg"))` with XPS2004. Continue overload matching after confirming a non-writable argument is a supported temporary; the existing typed temporary/copy-back emitter then handles the call. `samples/function-not-byref-regression.xps` now passes, and the MCP protocol probe passes with the change.
 - [x] Re-run the complete Windows Language FullTest after the default-ByRef temporary fix. Run `pwsh -NoProfile -File .github/scripts/run-fulltests.ps1 -Suite language` passed end-to-end, including all six AST CLI shards, semantic binder/emitter probes, AstCompileProbe target generation and the Language FullTest tail. The `function-not-byref-regression.xps` fixture now runs before the slow shards and passes.
@@ -1311,18 +1324,20 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   the .NET 10 Android workload but relied on an environment variable that
   `ast-compile` did not use when choosing a framework; each Android compilation
   now explicitly selects .NET 10.
-- [ ] Close the follow-up regressions from commit `7c634a4b`. Platform FullTest
+- [x] Close the follow-up regressions from commit `7c634a4b`. Platform FullTest
   exposed that the desktop modal bridge must only be installed for direct
   desktop AST generation; transformed Kestrel output must retain its web form
   submission path. The condition is narrowed and the isolated local Kestrel
-  smoke passes (`WEB-UIFORM-KESTREL=OK`). Android compilation also exposed that
-  `Panel.SetZIndex` is unavailable in the Android UI framework; switch toast
-  ordering to the control's `ZIndex` property and update its source contract.
-  Re-run the focused Android compiler probe/build and verify both fixes in CI.
+  smoke passes (`WEB-UIFORM-KESTREL=OK`). Android toast ordering uses the
+  control's `ZIndex` property; `AndroidCompilerProbe` passes. Android APK
+  compilation still needs CI or a local SDK Platform 36 installation.
 - [ ] Verify Android compilation in GitHub Actions. The local machine has the
-  Android workload but lacks Android SDK Platform 36, so no local APK build was
-  attempted beyond the prerequisite diagnostic.
-- [ ] Push these fixes and wait for Platform, XPImage and FullTest workflows.
+  Android workload and SDK platforms 30 and 37, but the compiler currently
+  requires Platform 36. Per the installation constraint, do not install it;
+  verify generated APKs in the Android workflow instead.
+- [ ] Wait for Platform, XPImage and FullTest workflow results on the current
+  branch revision. The fixes have been pushed, but the branch has no open PR
+  and push-triggered workflows target `main` only.
 - [x] Port debugger instrumentation through AST before claiming debugger
   runtime parity. The AST `DebuggerCoreProbe` now verifies source lines,
   breakpoints, stepping, variable history and runtime error locations through
@@ -1367,7 +1382,12 @@ Run this phase only after all preceding implementation work, permanent FullTest 
     point paths so `../` resolution can be exercised within the package.
   - [x] Document and test Include path resolution: absolute paths; bare
     filenames in the including file's directory; and one or more leading
-    `../` segments. `[Compile:folder]` remains unsupported.
+    `../` segments. The CLI regression executes `app/sub/main.xps`, which
+    includes `../../shared/helper.xps`; that helper then resolves its bare
+    filename from `shared/`. The MCP package regression covers the same
+    two-level parent-relative path through validation, AST validation, virtual
+    compilation and artifact compilation, while still rejecting package keys
+    that escape the virtual workspace. `[Compile:folder]` remains unsupported.
   - [x] Keep generated `GoSub` helpers in the source-mapped AST emission path.
     The CLI FullTest shard verifies nested GoSub execution; the MCP protocol
     probe now compiles and executes the same fixture through `xpscript_compile`.
@@ -1385,6 +1405,17 @@ Run this phase only after all preceding implementation work, permanent FullTest 
 - [x] Classify direct calls to the legacy transpiler entry points. No production
   callers remain after removing the web fallback. `tests/ast-lexer` separately
   uses a narrow expression transformation helper as a legacy comparison oracle.
+- [x] Inventory direct legacy compiler entry references. `RunCompiler` and the
+  web compiler route through AST; `XPScriptTranspiler.Transpile*` and
+  `AdvancedXPScriptTranspiler.Transpile` are blocked by `LegacyCompilationGuard`
+  before transpilation. The direct remaining references are test-only: the
+  AST lexer probe calls the legacy expression helper, AndroidCompilerProbe
+  checks an Android diagnostic snippet in the old transpiler source, and
+  AstCompileProbe asserts the disabled public entry point. These references do
+  not justify retaining the unused `CoreCompatibilityTranspiler` and
+  `ExtendedCompatibilityTranspiler` bodies; remove or isolate those bodies
+  after preserving their still-needed test/runtime helpers. Legacy cleanup is
+  therefore still open.
 - [x] Retire the unsupported `[Compile:folder]` feature. Multi-file source is
   composed with `Include`; the compile-folder module dispatcher depended on a
   legacy-only route and was not part of the supported language contract. The

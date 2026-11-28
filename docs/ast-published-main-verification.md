@@ -1,6 +1,6 @@
 # AST verification against published main
 
-The published main binary is a compatibility baseline alongside the branch's legacy compiler and experimental AST compiler. Do not rebuild or replace it while collecting comparison results.
+The published main binary is a compatibility baseline alongside the branch's disabled legacy entry points and production AST compiler. Do not rebuild or replace it while collecting comparison results.
 
 ## Baseline recorded on 2026-10-08
 
@@ -52,17 +52,17 @@ The print-parentheses-literal.xps follow-up is fixed: published main and AST bot
 
 The reserved-compiler-identifier.xps fixture now produces the same reserved-identifier rejection through AST CLI and MCP as the legacy rule for `__xps` user names. The published executable remains unchanged.
 
-For `unsupported-goto.xps`, published main compiles and runs with output `done`. AST now emits real GoTo transfers. GoSub has been excluded from AST support by user decision; see below.
+For `unsupported-goto.xps`, published main compiles and runs with output `done`. AST now emits real GoTo transfers. GoSub is also supported through AST-generated local helpers; see the current GoSub results below. The following removal/rejection notes describe an intermediate implementation and are superseded by the current support.
 
-This GoTo comparison was repeated after removing GoSub: both preserved published main (framework-dependent output) and AST compiled and executed the fixture with exit code 0 and output `done`.
+This GoTo comparison was repeated with a fixture that did not use GoSub: both preserved published main (framework-dependent output) and AST compiled and executed the fixture with exit code 0 and output `done`.
 
 The broader audit identified additional AST-only semantic loss: Resume/On Error and implicit member statements are rewritten to no-op calls, while XPImage operations are replaced with object construction. These are recorded as separate open parity tasks rather than treated as equivalent behavior.
 
-The original `gosub-parity-audit.xps` comparison produced `worker` then `after` with published main and only `after` with AST. AST now explicitly rejects GoSub instead of silently discarding it.
+The original `gosub-parity-audit.xps` comparison produced `worker` then `after` with published main and only `after` with AST. That AST gap was fixed: `gosub-parity-audit.xps`, sequential/nested/error-flow GoSub fixtures and the nested GoSub CLI/MCP regression now execute through generated local helpers. The full Windows Language FullTest passed on 2026-11-28, including the nested GoSub CLI and MCP checks.
 
 ## Nested GoSub continuations
 
-During the 2026-10-08 investigation, a temporary six-call GoSub fixture (ElseIf, While, post-test Do and Select, followed by a nested GoTo) failed compilation with the preserved published executable: CS0159 reported missing `__ls_gosub_return_*` labels and CS0163 reported case fall-through. Flat AST branches passed that fixture and an expanded ten-call version. The user subsequently chose to remove GoSub support and use Sub/Function calls instead. The final implementation removes the experimental GoSub stack and continuations, explicitly rejects GoSub and retains flat branches for procedure-scoped GoTo. The temporary GoSub execution fixture was replaced by a permanent rejection fixture. The published executable's SHA-256 remains unchanged.
+During the 2026-10-08 investigation, a temporary six-call GoSub fixture (ElseIf, While, post-test Do and Select, followed by a nested GoTo) failed compilation with the preserved published executable: CS0159 reported missing `__ls_gosub_return_*` labels and CS0163 reported case fall-through. That historical failure concerns the old published baseline, not current branch support. AST GoSub lowering uses local helper functions, and the permanent CLI/MCP regressions protect nested calls and source-mapped emission. The published executable's SHA-256 remains unchanged.
 
 ## Static procedure-local lifetime
 
