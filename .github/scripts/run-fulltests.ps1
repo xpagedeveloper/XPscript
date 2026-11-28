@@ -363,6 +363,12 @@ if (Should-Run 'platform') {
   # compatibility gate here.
   $androidAst = Invoke-Bounded 'dotnet' @($compilerDll,'ast-compile','./Android/setup-android-dev.xps','-o','./out/fulltest/android-setup-dev-ast') $compileTimeoutMilliseconds 'AST compile Android setup'
   if ($androidAst.ExitCode -ne 0) { throw 'AST Android setup compilation failed.' }
+  Write-Host 'BEGIN AST desktop and web state scope isolation'
+  $stateScopes = Invoke-Bounded 'dotnet' @('run','--project','./tests/StateScopeObjectProbe/StateScopeObjectProbe.csproj','-c','Release') 300000 'AST state scope isolation'
+  if ($stateScopes.ExitCode -ne 0 -or $stateScopes.Output -notmatch 'STATE-SCOPES-OK') {
+    throw "AST state scope isolation failed.`n$($stateScopes.Output)"
+  }
+  Write-Host 'END AST desktop and web state scope isolation'
   # Process execution is a core platform primitive. Keep its smallest regression first.
   $shellExecuteMissing = Run-Xps ./samples/shellexecute-missing.xps shellexecute-missing
   if ($shellExecuteMissing.Output -notmatch 'SHELLEXECUTE-MISSING=OK') { throw 'ShellExecute missing executable regression did not complete.' }

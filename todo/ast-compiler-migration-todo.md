@@ -1371,11 +1371,13 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   Language FullTest checks that diagnostic. The stale `CompileFolderProbe` and
   its platform-workflow entry were removed. `Include` expansion remains the
   supported multi-file path and is covered by the existing AST CLI shard.
-- [ ] Port the useful assertions from those unreferenced probes to AST coverage
-  or remove the stale probes (`PreprocessorPipelineProbe`,
-  `JsonErrorInstrumentationProbe`, `StateScopeObjectProbe`); retain only
-  compatibility helpers that are exercised by a permanent regression suite and
-  whose legacy-only purpose is documented.
+- [x] Remove stale `PreprocessorPipelineProbe` and
+  `JsonErrorInstrumentationProbe`, which were not referenced by a workflow and
+  failed immediately at the legacy compilation guard. Their legacy-only source
+  generation checks no longer describe supported behavior; malformed JSON
+  handling remains exercised by `json-runtime.xps` in Language FullTest.
+  Migrate `StateScopeObjectProbe` to AST source generation and keep its web
+  application/process/session/request isolation checks in Platform FullTest.
 - [x] Port debugger instrumentation to AST-generated output. Bound statements
   now emit physical `#line` mappings and source-line runtime markers for the
   root file and `Include` files. The AST output contains the debugger runtime
