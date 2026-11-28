@@ -1450,3 +1450,17 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   and the runtime error's included-file line. The probe is run early in
   Language FullTest with a bounded timeout.
 
+- [x] Re-verify the current AST migration baseline on 2026-11-28. Commit
+  `1f14514a` passed the complete GitHub workflow set, including Windows,
+  Ubuntu and macOS aggregate FullTests, all three Language FullTests, Platform
+  FullTest, XP Runtime FullTest, XPImage FullTest, Notes FullTest, and the
+  focused compiler/runtime and documentation guards. This confirms the current
+  checked-in coverage and debugger/include changes; it does not close the
+  published-0.9.3 compatibility inventory or prove untested CLI/MCP behavior.
+- [ ] Remove the unreachable `CoreCompatibilityTranspiler` and
+  `ExtendedCompatibilityTranspiler` implementation bodies. Production
+  compilation is AST-only and the public legacy compiler entry rejects before
+  reaching them, but their dead pipeline still compiles into Compiler.Core.
+  Preserve separately used runtime source providers and the narrow expression
+  compatibility oracle until each caller is migrated or explicitly justified.
+
