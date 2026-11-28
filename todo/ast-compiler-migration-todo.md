@@ -1416,12 +1416,14 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   the obsolete code files are deleted. Runtime-source providers remain where
   AST compilation still consumes them. `AstCompileProbe --legacy-guards-only`
   and a Release compiler build pass locally.
-- [ ] Finish the remaining legacy inventory. The public legacy transpiler
-  class is retained as a rejected compatibility API; `AdvancedXPScriptTranspiler`
-  is retained only for the expression-comparison oracle and its disabled
-  entry-point diagnostic. Decide whether to migrate/remove that oracle and
-  whether to retain the rejected CLI/API aliases after compatibility policy is
-  explicit.
+- [x] Finish the remaining legacy inventory. The public legacy transpiler
+  class is retained as a rejected compatibility API so callers receive the
+  stable XPS1012 migration diagnostic. The rejected `legacy-compile`/
+  `compilev1` and run aliases remain to give existing command invocations the
+  same explicit migration hint. `AdvancedXPScriptTranspiler` is retained only
+  for the expression-comparison oracle and its disabled-entry diagnostic; it
+  is not reachable from normal compilation. These are compatibility/test
+  surfaces, not active parser or production compiler routes.
 - [x] Retire the unsupported `[Compile:folder]` feature. Multi-file source is
   composed with `Include`; the compile-folder module dispatcher depended on a
   legacy-only route and was not part of the supported language contract. The
@@ -1458,10 +1460,12 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   focused compiler/runtime and documentation guards. This confirms the current
   checked-in coverage and debugger/include changes; it does not close the
   published-0.9.3 compatibility inventory or prove untested CLI/MCP behavior.
-- [ ] Re-run the full platform matrix after the legacy transpiler deletion is
+- [x] Re-run the full platform matrix after the legacy transpiler deletion is
   committed. The first CI run found that AST file-runtime extraction used a
   comment in the deleted legacy transpiler as its end marker; extraction now
   uses the replacement marker. The focused Notes runtime probe and complete
-  `CompilerMachineInterfaceProbe` pass locally after the fix; CI confirmation
-  is pending.
+  `CompilerMachineInterfaceProbe` pass locally after the fix. Commit
+  `4eaa4fc3` then passed every associated GitHub workflow, including Language,
+  Platform, Notes, XP Runtime, XPImage and aggregate FullTest on Windows,
+  Ubuntu and macOS (run `46145005733`; Language run `46145005580`).
 
