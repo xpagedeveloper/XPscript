@@ -199,7 +199,18 @@ End Function
     if (capturedError.ToString().Contains("Unsupported web route attribute '[ServerSide]'", StringComparison.Ordinal))
         throw new Exception("[ServerSide] was incorrectly treated as a web route attribute.");
 
-    await using var unit = await new XpsWebCompiler().CompileAsync(sourcePath);
+    var previousLegacySetting = Environment.GetEnvironmentVariable("XPSCRIPT_WEB_LEGACY");
+    XpsCompiledWebUnit compiledUnit;
+    try
+    {
+        Environment.SetEnvironmentVariable("XPSCRIPT_WEB_LEGACY", "1");
+        compiledUnit = await new XpsWebCompiler().CompileAsync(sourcePath);
+    }
+    finally
+    {
+        Environment.SetEnvironmentVariable("XPSCRIPT_WEB_LEGACY", previousLegacySetting);
+    }
+    await using var unit = compiledUnit;
     if (!unit.Routes.ContainsKey("WebMain") || !unit.Routes.ContainsKey("Save") || !unit.Routes.ContainsKey("Sqlite") || !unit.Routes.ContainsKey("MsSqlCompileOnly") || !unit.Routes.ContainsKey("AiCompileOnly"))
         throw new Exception("Compiled route table is incomplete.");
 

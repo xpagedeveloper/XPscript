@@ -1354,3 +1354,26 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   aliases while keeping the compiler's symlink protection intact. The expanded
   assertion records platform diagnostics if the next run uncovers another issue.
 
+## Legacy route audit — 2026-11-28
+
+- [x] Remove the unreachable `XPSCRIPT_WEB_LEGACY=1` route from
+  `XpsWebCompiler`. It called `XPScriptTranspiler`, whose entry guard rejects
+  legacy compilation, so the advertised compatibility switch could only fail.
+  The duplicated legacy web build path and cache-key flag are removed. The
+  `WebCompilerSmoke` regression sets the old variable and verifies web
+  compilation still succeeds through AST; the test is now part of Platform
+  FullTest. The focused local smoke passed with `WEB-COMPILER-SMOKE=OK`.
+- [x] Classify direct calls to the legacy transpiler entry points. No production
+  callers remain after removing the web fallback. The remaining direct calls in
+  `CompileFolderProbe`, `PreprocessorPipelineProbe`,
+  `JsonErrorInstrumentationProbe` and `StateScopeObjectProbe` are test-only and
+  are not currently invoked by a workflow. `tests/ast-lexer` separately uses a
+  narrow expression transformation helper as a legacy comparison oracle.
+- [ ] Port the useful assertions from those unreferenced probes to AST coverage
+  or remove the stale probes; retain only compatibility helpers that are
+  exercised by a permanent regression suite and whose legacy-only purpose is
+  documented.
+- [ ] Port debugger source-line instrumentation to AST-generated output.
+  Preserve source mapping, breakpoints, stepping and runtime error locations;
+  add focused `DebuggerCoreProbe` regressions and run them in Language FullTest.
+

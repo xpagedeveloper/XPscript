@@ -214,9 +214,8 @@ public sealed class XpsWebCompilationCache : IAsyncDisposable
 
     private string BuildEffectiveConfigurationIdentity()
     {
-        var legacy = Environment.GetEnvironmentVariable("XPSCRIPT_WEB_LEGACY") ?? string.Empty;
         var preprocessors = string.Join("\u001f", SourcePreprocessorConfigurationContext.Current);
-        return _options.ConfigurationIdentity + "\u001eweb-legacy=" + legacy + "\u001epreprocessors=" + preprocessors;
+        return _options.ConfigurationIdentity + "\u001epreprocessors=" + preprocessors;
     }
 
     private async Task<XpsCompiledWebUnit> CompileMeasuredAsync(

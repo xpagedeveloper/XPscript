@@ -115,83 +115,8 @@ public sealed class XpsWebCompiler
         if (compilerSource.Contains(".Attachments", StringComparison.OrdinalIgnoreCase))
             compilerSource += "\n' XPScript compiler runtime feature: XPDBSQLite Attachments\n";
         compilerSource = EnsureCompilerEntryPoint(compilerSource);
-        // AST is the normal web compiler path. Explicit XPSCRIPT_WEB_LEGACY=1
-        // remains available for compatibility comparisons.
-        if (!string.Equals(Environment.GetEnvironmentVariable("XPSCRIPT_WEB_LEGACY"), "1", StringComparison.Ordinal)
-            )
-        {
-            compilerSource += Environment.NewLine + "Reference \"XPScript.Web.Runtime.dll\"" + Environment.NewLine;
-            return await CompileAstWebAsync(fullSourcePath, fullSourceRoot, compilerSource, parsed, snapshotIdentity, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
-        }
-        string generated;
-        try
-        {
-            DebugStep("transpile:start", fullSourcePath);
-            generated = new XPScriptTranspiler().TranspileRestricted(compilerSource, fullSourcePath, CompilerDriver.CurrentRuntimeIdentifier(), [fullSourceRoot]);
-            generated = InjectWebObjects(generated);
-            generated = AstCompiler.EnsureAttachmentRuntime(generated);
-            DebugStep("transpile:done", fullSourcePath);
-        }
-        catch (CompilerException ex)
-        {
-            throw new XpsWebCompilationException("XPScript web compilation failed: " + ex.Message, ex);
-        }
-
-        ValidateRoutesExist(generated, parsed.Routes);
-        var configuredTempRoot = Environment.GetEnvironmentVariable("XPSCRIPT_TEMP_ROOT");
-        var workspaceRoot = string.IsNullOrWhiteSpace(configuredTempRoot)
-            ? Path.Combine(Path.GetTempPath(), "XPScript")
-            : Path.Combine(Path.GetFullPath(configuredTempRoot), "XPScript");
-        var workspace = Path.Combine(workspaceRoot, "web", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(workspace);
-        CompilerPathSecurity.HardenTemporaryDirectory(workspace);
-        try
-        {
-            // Generated diagnostics retain the original XPScript source name via
-            // #line directives. Stage that document beside the generated source
-            // so Roslyn can resolve the mapped file during web-unit builds.
-            var stagedSourcePath = Path.Combine(workspace, Path.GetFileName(fullSourcePath));
-            File.Copy(fullSourcePath, stagedSourcePath, overwrite: true);
-            var projectPath = Path.Combine(workspace, "WebUnit.csproj");
-            var generatedPath = Path.Combine(workspace, "Generated.cs");
-            var usesSqlite = generated.Contains("internal sealed class XPScriptDbSqlite", StringComparison.Ordinal);
-            var usesMsSql = generated.Contains("internal sealed class XPScriptDbMsSql", StringComparison.Ordinal);
-            var usesImage = generated.Contains("internal sealed class XPImage", StringComparison.Ordinal);
-            await File.WriteAllTextAsync(projectPath, BuildProject(typeof(XpsWebContext).Assembly.Location, usesSqlite, usesMsSql, usesImage), cancellationToken).ConfigureAwait(false);
-            await File.WriteAllTextAsync(generatedPath, generated, cancellationToken).ConfigureAwait(false);
-            DebugStep($"workspace-ready image={usesImage}", fullSourcePath);
-
-            var psi = new ProcessStartInfo { FileName = "dotnet", WorkingDirectory = workspace, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, CreateNoWindow = true };
-            var publishDirectory = Path.Combine(workspace, "publish");
-            Directory.CreateDirectory(publishDirectory);
-            CompilerPathSecurity.HardenTemporaryDirectory(publishDirectory);
-            psi.ArgumentList.Add("publish"); psi.ArgumentList.Add(projectPath); psi.ArgumentList.Add("-c"); psi.ArgumentList.Add("Release"); psi.ArgumentList.Add("--nologo"); psi.ArgumentList.Add("--no-restore"); psi.ArgumentList.Add("-o"); psi.ArgumentList.Add(publishDirectory);
-            DebugStep("restore:start", fullSourcePath);
-            await RunDotNetAsync(workspace, ["restore", projectPath, "--nologo"], cancellationToken).ConfigureAwait(false);
-            DebugStep("restore:done", fullSourcePath);
-            DebugStep("build:start", fullSourcePath);
-            await RunProcessAsync(psi, cancellationToken).ConfigureAwait(false);
-            DebugStep("build:done", fullSourcePath);
-
-            var assemblyPath = Path.Combine(workspace, "publish", "XPScript.WebUnit.dll");
-            if (!File.Exists(assemblyPath)) throw new XpsWebCompilationException("Web compiler completed without producing a loadable assembly.");
-            var assemblyBytes = await File.ReadAllBytesAsync(assemblyPath, cancellationToken).ConfigureAwait(false);
-            var pdbPath = Path.ChangeExtension(assemblyPath, ".pdb");
-            var pdbBytes = File.Exists(pdbPath) ? await File.ReadAllBytesAsync(pdbPath, cancellationToken).ConfigureAwait(false) : null;
-
-            string dependencyDirectory = Path.GetDirectoryName(assemblyPath)!;
-            if (!string.IsNullOrWhiteSpace(snapshotIdentity) && !string.IsNullOrWhiteSpace(persistentCacheDirectory))
-            {
-                dependencyDirectory = await PersistArtifactAsync(persistentCacheDirectory, fullSourceRoot, fullSourcePath, snapshotIdentity, assemblyBytes, pdbBytes, Path.GetDirectoryName(assemblyPath)!, cancellationToken).ConfigureAwait(false);
-                DebugStep("dependencies:persisted", fullSourcePath);
-            }
-
-            DebugStep("load:start", fullSourcePath);
-            var unit = LoadCompiledUnit(assemblyBytes, pdbBytes, parsed, dependencyDirectory, fullSourceRoot);
-            DebugStep("load:done", fullSourcePath);
-            return unit;
-        }
-        finally { try { Directory.Delete(workspace, recursive: true); } catch { } }
+        compilerSource += Environment.NewLine + "Reference \"XPScript.Web.Runtime.dll\"" + Environment.NewLine;
+        return await CompileAstWebAsync(fullSourcePath, fullSourceRoot, compilerSource, parsed, snapshotIdentity, persistentCacheDirectory, cancellationToken).ConfigureAwait(false);
     }
 
     private static XpsCompiledWebUnit LoadCompiledUnit(byte[] assemblyBytes, byte[]? pdbBytes, XpsWebRouteParseResult parsed, string dependencyDirectory, string webRootPath)
@@ -699,12 +624,6 @@ internal static class Script
             }
         }
         return source;
-    }
-
-    private static void ValidateRoutesExist(string generated, IReadOnlyDictionary<string, XpsWebRouteDescriptor> routes)
-    {
-        foreach (var route in routes.Keys)
-            if (!Regex.IsMatch(generated, $@"\b{Regex.Escape(route)}\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)) throw new XpsWebCompilationException($"Exported route '{route}' was not emitted by the XPScript compiler.");
     }
 
     private static void ValidateCompiledRoutes(Assembly assembly, IReadOnlyDictionary<string, XpsWebRouteDescriptor> routes)
