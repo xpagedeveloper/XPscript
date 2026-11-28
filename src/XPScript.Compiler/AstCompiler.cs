@@ -2075,7 +2075,7 @@ internal static class Program
     {
         var source = CoreCompatibilityRuntimeSource.Code;
         var start = source.IndexOf("internal static class LSFileRuntime", StringComparison.Ordinal);
-        var end = source.IndexOf("// Marker calls are removed", start, StringComparison.Ordinal);
+        var end = source.IndexOf("// Legacy marker helpers are retained", start, StringComparison.Ordinal);
         if (start < 0 || end < 0)
             throw new InvalidOperationException("AST file runtime source markers are missing.");
         return source[start..end];

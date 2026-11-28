@@ -1459,5 +1459,9 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   checked-in coverage and debugger/include changes; it does not close the
   published-0.9.3 compatibility inventory or prove untested CLI/MCP behavior.
 - [ ] Re-run the full platform matrix after the legacy transpiler deletion is
-  committed; the focused Release build and disabled-entry guard pass locally.
+  committed. The first CI run found that AST file-runtime extraction used a
+  comment in the deleted legacy transpiler as its end marker; extraction now
+  uses the replacement marker. The focused Notes runtime probe and complete
+  `CompilerMachineInterfaceProbe` pass locally after the fix; CI confirmation
+  is pending.
 
