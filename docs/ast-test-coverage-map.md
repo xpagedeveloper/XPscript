@@ -1,6 +1,6 @@
 # AST test coverage map
 
-The AST compiler is the production path for normal CLI and MCP compilation. The permanent Language FullTest combines focused parser/binder/emitter probes, bounded executable CLI shards, diagnostic checks and the `CompilerMcpProtocolProbe`. On 2026-11-28, commit `1f14514a` passed Language FullTest on Windows, Linux and macOS and the aggregate FullTest on Windows, Ubuntu and macOS (GitHub Actions runs `46138236582` and `46138236280`).
+The AST compiler is the production path for normal CLI and MCP compilation. The permanent Language FullTest combines focused parser/binder/emitter probes, bounded executable CLI shards, diagnostic checks and the `CompilerMcpProtocolProbe`. On 2026-11-28, commit `86121107` passed aggregate FullTest on Windows, macOS and Ubuntu (GitHub Actions run `46150054523`); Language, Platform, Notes, XP Runtime and XPImage FullTests and focused compiler/runtime and documentation guards also completed successfully. This verifies the current regression set, not complete published-0.9.3 compatibility.
 
 ## Covered by the permanent Language FullTest
 
