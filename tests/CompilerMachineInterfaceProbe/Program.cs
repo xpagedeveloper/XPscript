@@ -266,7 +266,7 @@ Require(invalidDefTypeDiagnostic.EndLine == 1 && invalidDefTypeDiagnostic.EndCol
 Require(invalidDefTypeDiagnostic.Properties?.Any(p => p.Name == "foundToken" && p.Value == "A-1") == true, "invalid DefType found token");
 Require(invalidDefTypeDiagnostic.Properties?.Any(p => p.Name == "expectedConstruct" && p.Value == "letter or letter range") == true, "invalid DefType expected construct");
 
-var outputRoot = Path.Combine(Path.GetTempPath(), "XPScript", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
+var outputRoot = Path.Combine(root, "out", "CompilerMachineInterfaceProbe", Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(outputRoot);
 
 var emptySourcePath = Path.Combine(outputRoot, "empty-source.xps");
