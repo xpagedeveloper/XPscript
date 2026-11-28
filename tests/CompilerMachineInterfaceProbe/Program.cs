@@ -765,7 +765,9 @@ foreach (var test in cases)
     var result = await driver.CompileWithResultAsync(source, output, selfContained: false);
     if (test.Source.Equals("samples/null-integer-assignment-error.xps", StringComparison.Ordinal))
     {
-        Require(result.Success && File.Exists(output), "AST compile must preserve its documented Null-to-integer capability improvement");
+        var compileDetails = string.Join(" | ", result.Errors.Select(diagnostic => $"{diagnostic.DiagnosticCode}: {diagnostic.Description}"));
+        Require(result.Success && File.Exists(output),
+            $"AST compile must preserve its documented Null-to-integer capability improvement (success={result.Success}; outputExists={File.Exists(output)}; target={CompilerDriver.CurrentRuntimeIdentifier()}; operation={result.Operation}; errors={compileDetails})");
         continue;
     }
     Require(!result.Success, test.Source + " must fail compilation");

@@ -1308,3 +1308,10 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   aggregate job limits are now raised to 45 minutes. Aggregate CI confirmation
   is still pending.
 
+- [ ] Diagnose macOS aggregate FullTest at `19cb6b0b`. Its machine-interface
+  probe fails while compiling the documented `Null`-to-integer assignment
+  capability case; the same source and `CompilerDriver` succeed locally for
+  Windows and cross-targeted `osx-arm64`/`osx-x64`, and Ubuntu FullTest passes.
+  The probe now includes the full compile-result diagnostics in its assertion
+  so the next macOS run identifies the platform-specific cause.
+
