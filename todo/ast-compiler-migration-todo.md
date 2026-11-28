@@ -1422,7 +1422,10 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   AST pipeline now reports a direct migration hint for the old directive, and
   Language FullTest checks that diagnostic. The stale `CompileFolderProbe` and
   its platform-workflow entry were removed. `Include` expansion remains the
-  supported multi-file path and is covered by the existing AST CLI shard.
+  supported multi-file path and is covered by the existing AST CLI shard. The
+  first PR FullTest run exposed a stale solution entry for the deleted probe;
+  that reference is now removed, and `dotnet restore XPScriptCompiler.slnx`
+  passes locally.
 - [x] Remove stale `PreprocessorPipelineProbe` and
   `JsonErrorInstrumentationProbe`, which were not referenced by a workflow and
   failed immediately at the legacy compilation guard. Their legacy-only source
