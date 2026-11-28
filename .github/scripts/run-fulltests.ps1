@@ -129,6 +129,10 @@ Write-Host "FULLTEST_SUITE=$Suite"
 if (Should-Run 'language') {
   Write-Host '=== LANGUAGE FULLTEST ==='
   Write-Host 'BEGIN AST debugger source map, breakpoints, stepping and value history'
+  $astDebuggerRestore = Invoke-Bounded 'dotnet' @('restore','./tests/DebuggerCoreProbe/DebuggerCoreProbe.csproj') 300000 'AST debugger probe NuGet restore'
+  if ($astDebuggerRestore.ExitCode -ne 0 -or $astDebuggerRestore.TimedOut) {
+    throw "AST debugger probe NuGet restore failed.`n$($astDebuggerRestore.Output)"
+  }
   $astDebugger = Invoke-Bounded 'dotnet' @('run','--project','./tests/DebuggerCoreProbe/DebuggerCoreProbe.csproj','-c','Release','--no-restore') 300000 'AST debugger runtime regression'
   if ($astDebugger.ExitCode -ne 0 -or $astDebugger.Output -notmatch 'DebuggerCoreProbe passed\.') {
     throw "AST debugger runtime regression failed.`n$($astDebugger.Output)"

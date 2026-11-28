@@ -1336,8 +1336,13 @@ Run this phase only after all preceding implementation work, permanent FullTest 
   requires Platform 36. Per the installation constraint, do not install it;
   verify generated APKs in the Android workflow instead.
 - [ ] Wait for Platform, XPImage and FullTest workflow results on the current
-  branch revision. The fixes have been pushed, but the branch has no open PR
-  and push-triggered workflows target `main` only.
+  branch revision. Draft PR #623 now triggers the PR workflows. On the first
+  corrected FullTest run, Windows Gate passed after removing the stale
+  `CompileFolderProbe` solution entry; Windows Language FullTest then exposed
+  missing NuGet assets for `DebuggerCoreProbe` because the aggregate runner
+  used `--no-restore` without restoring that project. The runner now restores
+  that focused probe first; local restore plus probe execution passed, and the
+  pushed CI rerun is still required.
 - [x] Port debugger instrumentation through AST before claiming debugger
   runtime parity. The AST `DebuggerCoreProbe` now verifies source lines,
   breakpoints, stepping, variable history and runtime error locations through
