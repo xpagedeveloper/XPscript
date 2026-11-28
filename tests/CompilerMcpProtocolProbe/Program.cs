@@ -99,6 +99,85 @@ var realCompile = await CallAsync(new { jsonrpc="2.0", id="real-compile", method
 var realContent = realCompile.GetProperty("result").GetProperty("structuredContent");
 if (realContent.GetProperty("result").GetString() != "ok" || realContent.GetProperty("compiler").GetString() != "ast" || !File.Exists(realContent.GetProperty("output").GetString()))
     throw new Exception("MCP real AST compile did not produce an output artifact: " + realCompile);
+var includeRootSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/mcp-include-case/app/sub/main.xps"));
+var includeHelperSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/mcp-include-case/shared/helper.xps"));
+var includeBareHelperSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/mcp-include-case/shared/bare-helper.xps"));
+var includeFiles = new Dictionary<string, string>
+{
+    ["mcp-include-case/shared/helper.xps"] = includeHelperSource,
+    ["mcp-include-case/shared/bare-helper.xps"] = includeBareHelperSource
+};
+foreach (var toolName in new[] { "xpscript_validate", "xpscript_ast_validate", "xpscript_virtual_compile", "xpscript_compile" })
+{
+    var includeOutput = Path.Combine(probeRoot, "include-published-output-" + toolName);
+    var includeArguments = new Dictionary<string, object?>
+    {
+        ["source"] = includeRootSource,
+        ["filename"] = "mcp-include-case/app/sub/main.xps",
+        ["includeFiles"] = includeFiles
+    };
+    if (toolName is "xpscript_virtual_compile" or "xpscript_compile") includeArguments["restricted"] = true;
+    if (toolName == "xpscript_compile") includeArguments["outputDirectory"] = includeOutput;
+    var includeResponse = await CallAsync(new { jsonrpc="2.0", id="include-" + toolName, method="tools/call", @params=new { name=toolName, arguments=includeArguments } });
+    var includeResult = includeResponse.GetProperty("result").GetProperty("structuredContent");
+    if (includeResult.GetProperty("result").GetString() != "ok")
+        throw new Exception($"MCP {toolName} did not resolve Include files supplied by includeFiles: {includeResponse}");
+    if (toolName == "xpscript_compile" && !File.Exists(includeResult.GetProperty("output").GetString()))
+        throw new Exception("MCP compile with Include did not publish its output artifact: " + includeResponse);
+}
+var mcpGoSubSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/nested-gosub.xps"));
+var mcpGoSubOutput = Path.Combine(probeRoot, "mcp-nested-gosub-output");
+var mcpGoSubCompile = await CallAsync(new { jsonrpc="2.0", id="mcp-nested-gosub-compile", method="tools/call", @params=new { name="xpscript_compile", arguments=new { source=mcpGoSubSource, filename="nested-gosub.xps", outputDirectory=mcpGoSubOutput } } });
+var mcpGoSubContent = mcpGoSubCompile.GetProperty("result").GetProperty("structuredContent");
+if (mcpGoSubContent.GetProperty("result").GetString() != "ok")
+    throw new Exception("MCP compilation with mapped GoSub source failed: " + mcpGoSubCompile);
+var mcpGoSubPsi = new ProcessStartInfo("dotnet") { RedirectStandardOutput=true, RedirectStandardError=true, UseShellExecute=false, WorkingDirectory=repo };
+mcpGoSubPsi.ArgumentList.Add(mcpGoSubContent.GetProperty("output").GetString()!);
+using (var mcpGoSubProcess = Process.Start(mcpGoSubPsi) ?? throw new Exception("Could not start MCP-generated GoSub application."))
+{
+    var stdoutTask = mcpGoSubProcess.StandardOutput.ReadToEndAsync();
+    var stderrTask = mcpGoSubProcess.StandardError.ReadToEndAsync();
+    try { await mcpGoSubProcess.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30)); }
+    catch (TimeoutException)
+    {
+        mcpGoSubProcess.Kill(entireProcessTree: true);
+        throw new Exception("MCP-generated GoSub application exceeded its 30 second timeout.");
+    }
+    await Task.WhenAll(stdoutTask, stderrTask);
+    var stdout = await stdoutTask;
+    var stderr = await stderrTask;
+    if (mcpGoSubProcess.ExitCode != 0 || stdout.Trim().Replace(Environment.NewLine, "\n", StringComparison.Ordinal) != "worker\nafter")
+        throw new Exception("MCP-generated GoSub application returned the wrong result: " + stdout + stderr);
+}
+Mark("mcp-nested-gosub-runtime-ok");
+
+var invalidIncludePath = await CallAsync(new { jsonrpc="2.0", id="include-path-traversal", method="tools/call", @params=new { name="xpscript_ast_validate", arguments=new { source="Sub Main()\nEnd Sub", filename="include-path.xps", includeFiles=new Dictionary<string, string> { ["../outside.xps"] = "" } } } });
+if (!invalidIncludePath.GetProperty("error").GetProperty("message").GetString()!.Contains("safe relative .xps path", StringComparison.Ordinal))
+    throw new Exception("MCP accepted a traversal path in includeFiles: " + invalidIncludePath);
+var invalidEntryPath = await CallAsync(new { jsonrpc="2.0", id="entry-path-traversal", method="tools/call", @params=new { name="xpscript_ast_validate", arguments=new { source="Sub Main()\nEnd Sub", filename="../outside.xps" } } });
+if (!invalidEntryPath.GetProperty("error").GetProperty("message").GetString()!.Contains("safe relative .xps path", StringComparison.Ordinal))
+    throw new Exception("MCP accepted a traversal path for the virtual entry point: " + invalidEntryPath);
+
+var includeErrorRootSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/mcp-include-error-case/app/main.xps"));
+var includeErrorHelperSource = await File.ReadAllTextAsync(Path.Combine(repo, "tests/ast-compile-probe/mcp-include-error-case/shared/helper.xps"));
+var includeErrorFiles = new Dictionary<string, string> { ["mcp-include-error-case/shared/helper.xps"] = includeErrorHelperSource };
+foreach (var toolName in new[] { "xpscript_validate", "xpscript_ast_validate", "xpscript_virtual_compile", "xpscript_compile" })
+{
+    var includeErrorOutput = Path.Combine(probeRoot, "include-error-output-" + toolName);
+    var includeArguments = new Dictionary<string, object?>
+    {
+        ["source"] = includeErrorRootSource,
+        ["filename"] = "mcp-include-error-case/app/main.xps",
+        ["includeFiles"] = includeErrorFiles
+    };
+    if (toolName == "xpscript_compile") includeArguments["outputDirectory"] = includeErrorOutput;
+    var includeResponse = await CallAsync(new { jsonrpc="2.0", id="include-error-" + toolName, method="tools/call", @params=new { name=toolName, arguments=includeArguments } });
+    var toolResult = includeResponse.GetProperty("result");
+    var content = toolResult.GetProperty("structuredContent");
+    var includeDiagnostics = content.GetProperty("errors");
+    if (!toolResult.GetProperty("isError").GetBoolean() || includeDiagnostics.GetArrayLength() == 0 || includeDiagnostics[0].GetProperty("file").GetString() != "helper.xps")
+        throw new Exception($"MCP {toolName} did not preserve the included-file diagnostic location: {includeResponse}");
+}
 var notesSendSource = await File.ReadAllTextAsync(Path.Combine(repo, "samples/notes-document-send-surface.xps"));
 var notesSendResponse = await CallAsync(new { jsonrpc = "2.0", id = "notes-send-warning", method = "tools/call",
     @params = new { name = "xpscript_ast_validate", arguments = new { source = notesSendSource, filename = "notes-document-send-surface.xps" } } });

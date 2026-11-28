@@ -155,7 +155,7 @@ XPScript exposes a local Model Context Protocol server over standard input/outpu
 xpscript mcp
 ```
 
-The server implements JSON-RPC MCP initialization, tool discovery and tool calls. It advertises compiler-owned tools for validation, virtual AST compilation, real AST compilation, symbol search, exact symbol description and diagnostic explanation. `xpscript_validate` accepts source text plus a virtual simple `.xps` filename and optional runtime identifier, and returns the normal versioned `CompileResult` object. The server keeps the compiler service warm and supports concurrent requests with isolated per-request staging workspaces.
+The server implements JSON-RPC MCP initialization, tool discovery and tool calls. It advertises compiler-owned tools for validation, virtual AST compilation, real AST compilation, symbol search, exact symbol description and diagnostic explanation. Source tools accept source text plus a virtual safe relative `.xps` filename; the validation tool also accepts an optional runtime identifier and returns the normal versioned `CompileResult` object. All source tools accept optional `includeFiles`, an object mapping safe relative `.xps` paths to source text. MCP stages the complete package in its isolated request directory, with a maximum of 256 included files and 64 MiB of combined source text. The `includeFiles` keys cannot escape that workspace. The source's ordinary `Include` directives retain language path resolution: a bare filename and relative paths (including leading `../`) resolve from the including file. Absolute paths are also accepted by the language; use relative paths within an MCP source package. Include diagnostics retain the included filename and source line.
 
 The MCP transport is local and does not execute the produced application. `xpscript_virtual_compile` performs AST validation/compilation without retaining a published artifact. `xpscript_compile` performs a real AST compilation and returns the published artifact path. Both tools return extended `info` metadata; real compilation accepts `runtimeIdentifier`, `debug`, `securityMode`, `restricted`, `sourceRoots`, `sourcePreprocessors` and an optional `outputDirectory`. When `outputDirectory` is omitted, the artifact is written to the MCP server working directory, never to the per-request temp workspace. An explicit output directory is the recommended integration choice.
 
@@ -189,21 +189,26 @@ xpscript mcp
 
 It communicates over stdin/stdout using JSON-RPC/MCP and exposes `xpscript_validate`, `xpscript_ast_validate`, `xpscript_virtual_compile`, `xpscript_compile`, `xpscript_symbols`, `xpscript_describe` and `xpscript_explain`. It does not execute the compiled application.
 
-A validation tool call accepts `source`, optional `filename`, and optional `runtimeIdentifier`. Virtual compilation accepts the same source-oriented arguments. A real compilation additionally accepts the output and compiler options described above. Example validation arguments:
+A validation tool call accepts `source`, optional relative `filename`, optional `runtimeIdentifier` and optional `includeFiles`. Virtual compilation accepts the same source-package arguments. A real compilation additionally accepts the output and compiler options described above. Example validation arguments with an included file:
 
 ```json
 {
-  "source": "Sub Main()\n    Print MissingValue\nEnd Sub",
+  "source": "Include \"lib/helpers.xps\"\n\nSub Main()\n    Print HelperValue()\nEnd Sub",
   "filename": "agent.xps",
-  "runtimeIdentifier": "linux-x64"
+  "runtimeIdentifier": "linux-x64",
+  "includeFiles": {
+    "lib/helpers.xps": "Function HelperValue() As Integer\n    Return 42\nEnd Function"
+  }
 }
 ```
+
+MCP does not infer or scan directories for source files; send each included file's text explicitly in `includeFiles`.
 
 MCP exposes structured diagnostics and extended compiler information suitable for machine consumers and source-level repair. `debug` on a real compile enables compiler diagnostic reporting; generated `Program.cs` troubleshooting details, raw exceptions and stack traces are not exposed as an unstructured protocol surface. MCP transport/parser/internal server exceptions remain standardized JSON-RPC errors.
 
 Recommended integration flow:
 
-1. Call `xpscript_validate` or `xpscript_virtual_compile` with a simple virtual `.xps` filename.
+1. Call `xpscript_validate` or `xpscript_virtual_compile` with a safe relative virtual `.xps` filename.
 2. Consume `structuredContent` and key repairs on `diagnosticCode`, source range and structured `properties`.
 3. Modify XPScript source, never generated C#.
 4. Validate or virtually compile again until the structured result succeeds.

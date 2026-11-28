@@ -73,6 +73,7 @@ public sealed class BoundStatementEmitter
         }
         foreach (var statement in statements)
             EmitStatement(output, statement, 0);
+        EmitGoSubHelpers(output, statements);
         foreach (var helper in _expressions.ByRefCallHelpers)
             output.Write(helper, 0);
         return output.Finish();

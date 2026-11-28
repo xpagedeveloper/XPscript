@@ -33,7 +33,7 @@ This distinction also applies to properties, methods, parameters, locals, enum m
 
 ## Source files
 
-Use `Include "relative/path.xps"` on its own line to combine another XPscript source file with the current source. Paths are relative to the file containing the directive; included files can include other files, and a file is expanded only once per compilation. `[Compile:folder]` is not supported; use `Include` to compose a multi-file program.
+Use `Include "path.xps"` on its own line to combine another XPscript source file with the current source. An absolute path is accepted. Otherwise, the path is resolved from the directory containing the file with the `Include` directive: a bare filename means that same directory, and one or more leading `../` segments move up from it. Included files can include other files, and a file is expanded only once per compilation. Prefer relative paths when the same project should build on multiple platforms. `[Compile:folder]` is not supported; use `Include` to compose a multi-file program.
 
 ## Numeric literals
 

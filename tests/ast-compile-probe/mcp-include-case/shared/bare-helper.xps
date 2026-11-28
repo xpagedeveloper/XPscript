@@ -1,0 +1,3 @@
+Function BareHelperValue() As Integer
+    Return 42
+End Function

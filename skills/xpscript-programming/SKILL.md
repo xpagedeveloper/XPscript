@@ -35,7 +35,7 @@ When a declared class has a field and method with the same name, `item.JsonParse
 
 The normal CLI `compile` and `run` commands use the AST compiler. Use `ast-compile` or `ast-run` to make that selection explicit. The legacy command aliases `legacy-compile`, `compilev1`, `legacy-run` and `runv1` are disabled.
 
-Combine source files with `Include "relative/path.xps"`; the path is relative to the containing file. `[Compile:folder]` is unsupported.
+Combine source files with `Include "path.xps"`. Absolute paths are accepted; otherwise the path is relative to the file containing the directive. A bare filename means that file's directory, and `../` may appear one or more times at the start to move up directories. Prefer relative paths for cross-platform projects. `[Compile:folder]` is unsupported.
 
 ## Core language model
 

@@ -9,6 +9,7 @@ The AST compiler is the production path for normal CLI and MCP compilation. The 
 - Executable language/runtime fixtures split into six bounded AST CLI shards.
 - Core control flow including `GoTo`, `GoSub`/`Return`, `On Error`, `Resume`, labels and lexical `With` scopes. The executable language suite includes `samples/core-language.xps`; focused GoSub cases are in `tests/ast-compile-probe`, and MCP validation/runtime diagnostics are asserted by `tests/CompilerMcpProtocolProbe/Program.cs`.
 - The object-route registry, generated-source target matrix, UIList event dispatch, source mapping, CLI behavior and MCP protocol/diagnostic contracts.
+- MCP `includeFiles` packages exercise ordinary `Include` resolution through all four source tools, nested virtual entry paths, repeated leading `../`, same-directory bare filenames, restricted request workspaces, rejected package traversal paths, and included-file diagnostic locations. `CompilerMcpProtocolProbe` runs in Language FullTest; absolute, parent-relative and bare-name Include runtime coverage runs in the AST CLI suite. The MCP probe also compiles and executes nested `GoSub` to guard source-mapped helper emission.
 
 ## Remaining compatibility work
 

@@ -125,6 +125,23 @@ public static class AstCompiler
         {
             if (diagnostic.Line <= 0 || diagnostic.Line > includeResult.Map.Count) return diagnostic;
             var location = includeResult.Map.Resolve(diagnostic.Line, sourcePath);
+            if (location.IncludeTrace is not { Count: > 0 })
+            {
+                var quoted = Regex.Matches(diagnostic.Description, @"'(?<value>[^']+)'")
+                    .Select(match => match.Groups["value"].Value)
+                    .Where(value => value.Length > 0)
+                    .ToArray();
+                if (quoted.Length > 0)
+                {
+                    var includedCandidates = Enumerable.Range(1, includeResult.Map.Count)
+                        .Select(line => includeResult.Map.Resolve(line, sourcePath))
+                        .Where(candidate => candidate.IncludeTrace is { Count: > 0 } &&
+                            quoted.Any(value => candidate.SourceText.Contains(value, StringComparison.OrdinalIgnoreCase)))
+                        .ToArray();
+                    if (includedCandidates.Length == 1)
+                        location = includedCandidates[0];
+                }
+            }
             if (location.IncludeTrace is not { Count: > 0 }) return diagnostic;
             var sourceLine = CompilerDiagnosticRedaction.MaskStringLiterals(location.SourceText).TrimEnd();
             diagnostic.File = Path.GetFileName(location.SourcePath);

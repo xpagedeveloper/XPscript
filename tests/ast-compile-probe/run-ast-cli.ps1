@@ -260,6 +260,25 @@ if ($LASTEXITCODE -ne 0) { throw 'AST Include/Use compilation failed.' }
 $includeUseResult = dotnet (Join-Path $includeUseOutput 'Generated.dll')
 if ($LASTEXITCODE -ne 0 -or ($includeUseResult -join "`n") -ne 'AST_INCLUDE_USE_OK') { throw 'AST Include/Use deduplication or relative resolution failed.' }
 Write-Host 'AST_INCLUDE_USE_OK'
+$parentIncludeSource = Join-Path $PSScriptRoot 'mcp-include-case/app/sub/main.xps'
+$parentIncludeOutput = Join-Path $output 'include-parent-relative'
+dotnet $compiler ast-compile $parentIncludeSource -o $parentIncludeOutput --debug
+if ($LASTEXITCODE -ne 0) { throw 'AST Include with repeated ../ and a same-directory bare filename failed to compile.' }
+$parentIncludeResult = dotnet (Join-Path $parentIncludeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($parentIncludeResult -join "`n") -ne '42') { throw 'AST Include with repeated ../ or a same-directory bare filename failed to execute.' }
+Write-Host 'AST_INCLUDE_PARENT_AND_BARE_FILENAME_OK'
+$absoluteIncludeRoot = Join-Path $output 'include-absolute-path'
+New-Item -ItemType Directory -Force -Path $absoluteIncludeRoot | Out-Null
+$absoluteIncludeHelper = Join-Path $absoluteIncludeRoot 'helper.xps'
+$absoluteIncludeMain = Join-Path $absoluteIncludeRoot 'main.xps'
+[System.IO.File]::WriteAllText($absoluteIncludeHelper, "Function AbsoluteHelperValue() As Integer`n    Return 84`nEnd Function`n")
+[System.IO.File]::WriteAllText($absoluteIncludeMain, "Include `"$absoluteIncludeHelper`"`nSub Main()`n    Print AbsoluteHelperValue()`nEnd Sub`n")
+$absoluteIncludeOutput = Join-Path $output 'include-absolute-output'
+dotnet $compiler ast-compile $absoluteIncludeMain -o $absoluteIncludeOutput --debug
+if ($LASTEXITCODE -ne 0) { throw 'AST Include with an absolute path failed to compile.' }
+$absoluteIncludeResult = dotnet (Join-Path $absoluteIncludeOutput 'Generated.dll')
+if ($LASTEXITCODE -ne 0 -or ($absoluteIncludeResult -join "`n") -ne '84') { throw 'AST Include with an absolute path failed to execute.' }
+Write-Host 'AST_INCLUDE_ABSOLUTE_PATH_OK'
 $includeSpanOutput = dotnet $compiler ast-compile (Join-Path $PSScriptRoot 'include-span-error-next.xps') -o (Join-Path $output 'include-span-error-next') 2>&1
 if ($LASTEXITCODE -eq 0 -or ($includeSpanOutput -join "`n") -notmatch 'helper\.xps:2:') { throw 'AST included-source span mapping regression failed.' }
 Write-Host 'AST_INCLUDED_SOURCE_SPAN_MAPPING_OK'

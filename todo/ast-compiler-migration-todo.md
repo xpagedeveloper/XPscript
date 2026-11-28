@@ -1354,6 +1354,27 @@ Run this phase only after all preceding implementation work, permanent FullTest 
 
 ## Legacy route audit — 2026-11-28
 
+- [ ] Close the remaining compatibility inventory and CLI/MCP behavior gaps.
+  - [x] Keep `[Compile:folder]` unsupported; `Include` is the sole documented
+    way to compose multiple source files. The AST preprocessor rejects the old
+    directive and Language FullTest protects that contract.
+  - [x] Let all source-oriented MCP tools receive included `.xps` contents via
+    `includeFiles`, while the program itself still uses ordinary `Include`
+    directives. Restrict package paths to the request workspace, bound file
+    count and aggregate size, preserve included-file diagnostic locations, and
+    cover validation, virtual compilation and artifact compilation in
+    `CompilerMcpProtocolProbe` (Language FullTest). Permit safe relative entry
+    point paths so `../` resolution can be exercised within the package.
+  - [x] Document and test Include path resolution: absolute paths; bare
+    filenames in the including file's directory; and one or more leading
+    `../` segments. `[Compile:folder]` remains unsupported.
+  - [x] Keep generated `GoSub` helpers in the source-mapped AST emission path.
+    The CLI FullTest shard verifies nested GoSub execution; the MCP protocol
+    probe now compiles and executes the same fixture through `xpscript_compile`.
+  - [ ] Continue comparing each documented syntax/runtime behavior against
+    published 0.9.3 where available, and compare observable CLI/MCP results;
+    track target-specific or environment-dependent exclusions explicitly.
+
 - [x] Remove the unreachable `XPSCRIPT_WEB_LEGACY=1` route from
   `XpsWebCompiler`. It called `XPScriptTranspiler`, whose entry guard rejects
   legacy compilation, so the advertised compatibility switch could only fail.
